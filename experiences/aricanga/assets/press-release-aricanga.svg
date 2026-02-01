@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#f8f9fa"/>
+      <stop offset="100%" style="stop-color:#e9ecef"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Document background -->
+  <rect width="400" height="300" fill="url(#bg)" rx="8"/>
+
+  <!-- Document shadow effect -->
+  <rect x="10" y="10" width="380" height="280" fill="white" rx="4" filter="drop-shadow(0 2px 4px rgba(0,0,0,0.1))"/>
+
+  <!-- Header bar -->
+  <rect x="10" y="10" width="380" height="40" fill="#1a365d" rx="4 4 0 0"/>
+  <text x="25" y="36" fill="white" font-family="Arial, sans-serif" font-size="14" font-weight="bold">MINISTRY OF RESOURCES</text>
+
+  <!-- "PRESS RELEASE" label -->
+  <rect x="25" y="60" width="100" height="20" fill="#e53e3e" rx="2"/>
+  <text x="35" y="74" fill="white" font-family="Arial, sans-serif" font-size="10" font-weight="bold">PRESS RELEASE</text>
+
+  <!-- Title -->
+  <text x="25" y="105" fill="#1a202c" font-family="Arial, sans-serif" font-size="16" font-weight="bold">Aricanga Mining Partnership</text>
+  <text x="25" y="125" fill="#1a202c" font-family="Arial, sans-serif" font-size="16" font-weight="bold">Agreement Signed</text>
+
+  <!-- Highlight marks (yellow) -->
+  <rect x="20" y="145" width="360" height="18" fill="#fef08a" opacity="0.7"/>
+  <rect x="20" y="165" width="280" height="18" fill="#fef08a" opacity="0.7"/>
+
+  <!-- Text lines (simulated) -->
+  <rect x="25" y="148" width="350" height="8" fill="#4a5568" rx="1"/>
+  <rect x="25" y="168" width="270" height="8" fill="#4a5568" rx="1"/>
+  <rect x="25" y="195" width="340" height="6" fill="#a0aec0" rx="1"/>
+  <rect x="25" y="210" width="320" height="6" fill="#a0aec0" rx="1"/>
+  <rect x="25" y="225" width="350" height="6" fill="#a0aec0" rx="1"/>
+  <rect x="25" y="240" width="280" height="6" fill="#a0aec0" rx="1"/>
+
+  <!-- Date -->
+  <text x="25" y="270" fill="#718096" font-family="Arial, sans-serif" font-size="10">FOR IMMEDIATE RELEASE</text>
+</svg>
