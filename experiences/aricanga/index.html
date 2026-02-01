@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://*.amazonaws.com; img-src 'self' data:;">
+  <title>Capital Chronicle</title>
+  <link rel="icon" type="image/svg+xml" href="./favicon.svg">
+  <!-- Inter font (non-blocking) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+  <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"></noscript>
+  <!-- Material Symbols subset for status bar icons (self-hosted, 1KB) -->
+  <style>
+    @font-face {
+      font-family: 'Material Symbols Outlined';
+      font-style: normal;
+      font-weight: 400;
+      font-display: block;
+      src: url('./assets/fonts/material-symbols-status.woff2') format('woff2');
+    }
+  </style>
+  <!-- Restore theme before first paint to prevent FOUC -->
+  <script>
+    try { const t = localStorage.getItem('cc-theme'); if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t); } catch(e) {}
+  </script>
+  <!-- Generated theme variables (from TOML) -->
+  <link rel="stylesheet" href="./css/generated/theme-vars.css">
+  <!-- Base theme (typography, spacing, resets) -->
+  <link rel="stylesheet" href="./css/theme.css">
+  <!-- Light theme overrides -->
+  <link rel="stylesheet" href="./css/theme-light.css">
+</head>
+<body>
+  <div id="app">
+    <lock-screen style="background:linear-gradient(180deg,#0d3d4d 0%,#0a2832 50%,#061820 100%)"></lock-screen>
+    <phone-status-bar></phone-status-bar>
+    <main id="content-area">
+      <chat-hub hidden></chat-hub>
+      <chat-thread hidden></chat-thread>
+      <conversation-settings hidden></conversation-settings>
+      <player-profile hidden></player-profile>
+      <settings-page hidden></settings-page>
+      <about-page hidden></about-page>
+      <glossary-page hidden></glossary-page>
+    </main>
+    <notification-popup></notification-popup>
+    <notification-drawer></notification-drawer>
+    <connection-overlay hidden></connection-overlay>
+    <home-indicator></home-indicator>
+  </div>
+  <debug-panel></debug-panel>
+  <script src="./src/vendor/ink.js"></script>
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+{
+  "name": "aricanga",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@narratives/framework": "workspace:*"
+  },
+  "devDependencies": {
+    "@narratives/test-utils": "workspace:*"
+  }
+}

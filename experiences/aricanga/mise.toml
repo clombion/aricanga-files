@@ -1,0 +1,40 @@
+# experiences/aricanga/mise.toml
+#
+# Writer tasks for aricanga implementation.
+# These wrap root tasks with correct paths.
+
+[env]
+IMPL = "aricanga"
+PROJECT_ROOT = "../.."
+
+[tasks.build]
+description = "Compile ink and config"
+run = "cd $PROJECT_ROOT && mise run build"
+
+[tasks.play]
+description = "Play story in terminal"
+run = "cd $PROJECT_ROOT && mise run play"
+
+[tasks.serve]
+description = "Start dev server"
+run = "cd $PROJECT_ROOT && mise run serve"
+
+[tasks.test]
+description = "Run implementation tests"
+run = "cd $PROJECT_ROOT && pnpm test"
+
+[tasks.qa]
+description = "Run quality checks"
+run = "cd $PROJECT_ROOT && mise run qa"
+
+[tasks.lint]
+description = "Run linters"
+run = "cd $PROJECT_ROOT && mise run lint"
+
+[tasks."build:prod"]
+description = "Production build"
+run = "cd $PROJECT_ROOT && mise run build:prod"
+
+[tasks.preview]
+description = "Preview production build"
+run = "cd $PROJECT_ROOT && mise run preview"

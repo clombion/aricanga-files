@@ -1,0 +1,29 @@
+version: "0.5"
+
+environment:
+  - IMPL=${IMPL}
+
+
+processes:
+  vite-app:
+    command: "mise run serve"
+    readiness_probe:
+      http_get:
+        host: localhost
+        port: 8000
+      initial_delay_seconds: 2
+      period_seconds: 1
+    availability:
+      restart: always
+
+  browser:
+    command: "mise run browser"
+    depends_on:
+      vite-app:
+        condition: process_healthy
+
+  # 1. THE REBUILDER (Persistent Watcher)
+  compiler:
+    command: "mise watch build:ink"
+    availability:
+      restart: always

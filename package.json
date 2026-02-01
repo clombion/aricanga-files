@@ -1,0 +1,53 @@
+{
+  "name": "capital-chronicle",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "vite": "vite",
+    "vite:build": "vite build",
+    "vite:preview": "vite preview",
+    "test": "playwright test",
+    "test:ui": "playwright test --ui",
+    "test:debug": "playwright test --debug",
+    "test:engine": "playwright test --project=engine",
+    "test:impl": "playwright test --project=implementation",
+    "test:quality": "playwright test --project=quality",
+    "test:mobile": "playwright test --project='Mobile Safari'",
+    "test:a11y": "playwright test packages/tests/quality/accessibility/accessibility.spec.ts",
+    "test:unit": "vitest run",
+    "test:unit:watch": "vitest",
+    "playwright:install": "playwright install",
+    "lint:js": "biome check packages/framework/src/ experiences/"
+  },
+  "devDependencies": {
+    "@ai-sdk/anthropic": "^3.0.14",
+    "@ai-sdk/openai": "^3.0.11",
+    "@axe-core/playwright": "^4.11.0",
+    "@biomejs/biome": "^2.3.11",
+    "@iarna/toml": "^2.2.5",
+    "@narratives/framework": "workspace:*",
+    "@narratives/test-utils": "workspace:*",
+    "@playwright/test": "^1.40.0",
+    "@types/iarna__toml": "^2.0.5",
+    "@types/node": "^20.10.0",
+    "ai": "^6.0.37",
+    "happy-dom": "^20.3.1",
+    "inkjs": "^2.3.2",
+    "remark-parse": "^11.0.0",
+    "sharp": "^0.34.5",
+    "unified": "^11.0.5",
+    "unist-util-visit": "^5.1.0",
+    "vite": "^7.3.1",
+    "vitest": "^4.0.17"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["sharp"]
+  },
+  "dependencies": {
+    "@ai-sdk/google": "^3.0.10",
+    "@viz-js/viz": "^3.24.0",
+    "xstate": "^5.25.0",
+    "zod": "^4.3.5"
+  }
+}

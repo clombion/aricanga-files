@@ -1,0 +1,586 @@
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# ║                         MISE.TOML - Task Runner                              ║
+# ║                     Interactive Fiction Development                          ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
+#
+# TABLE OF CONTENTS
+# ─────────────────────────────────────────────────────────────────────────────────
+#
+# WRITER TASKS (narrative development & QA)
+#   - play           Play story in terminal
+#   - stats          Print story statistics
+#   - qa             Run full QA suite (coverage, graphs, accessibility)
+#   - qa:coverage    Run random agent for coverage analysis
+#   - qa:guided      Run guided agent to verify progression
+#   - qa:a11y        Run accessibility tests with axe-core
+#   - ink:graph      Generate narrative flow graph (DOT + SVG)
+#   - ink:heatmap    Generate coverage heatmap visualization
+#   - ink:deps       Analyze cross-chat variable dependencies
+#
+# TRANSLATION TASKS
+#   - tl             Extract strings for translation
+#   - tl:import      Import translated strings
+#   - tl:status      Show translation progress
+#   - tl:validate    Validate translation file
+#   - tl:init        Initialize new locale
+#   - tl:names       Suggest localized names
+#
+# DEV TASKS (build, serve, test)
+#   - build          Build config, expectations, and compile Ink
+#   - build:prod     Build for production
+#   - serve          Start Vite dev server
+#   - dev            Start interactive dev dashboard
+#   - browser        Launch Chromium with remote debugging for MCP
+#   - preview        Preview production build
+#   - clean          Remove compiled files
+#   - test           Run all tests
+#   - lint           Run all linters
+#   - check          Build + lint (pre-commit)
+#
+# SETUP TASKS
+#   - setup          First-time project setup
+#   - setup:check    Verify prerequisites
+#   - start          Create new story from template
+#
+# ALIASES
+#   - ib → build, ip → play, is → serve, it → test
+#
+# ─────────────────────────────────────────────────────────────────────────────────
+
+[env]
+IMPL = "aricanga"
+_.path = ["./utils/bin", "$PATH"]
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#                              WRITER TASKS
+#              Narrative development, playtesting, and QA
+# ═══════════════════════════════════════════════════════════════════════════════
+
+[tasks.play]
+description = "Play story in terminal (requires IMPL, use LOCALE=xx for other languages)"
+run = """
+if [ -z "$IMPL" ]; then
+    echo "Error: IMPL env var required (e.g., IMPL=my-story mise run play)"
+    exit 1
+fi
+inklecate -p experiences/$IMPL/ink/${LOCALE:-en}/main.${LOCALE:-en}.ink
+"""
+
+[tasks.stats]
+description = "Print story statistics (English, requires IMPL)"
+run = """
+if [ -z "$IMPL" ]; then
+    echo "Error: IMPL env var required (e.g., IMPL=aricanga mise run stats)"
+    exit 1
+fi
+inklecate -s experiences/$IMPL/ink/en/main.en.ink
+"""
+
+# ───────────────────────────────────────────────────────────────────────────────
+#                            QA & Analysis
+# ───────────────────────────────────────────────────────────────────────────────
+
+[tasks.qa]
+description = "Run QA analysis (coverage, graphs, validation)"
+depends = ["qa:coverage", "qa:guided", "qa:a11y", "ink:graph", "ink:heatmap", "ink:deps", "lint:tags:compiled"]
+
+[tasks."qa:coverage"]
+description = "Run random agent for ink coverage analysis"
+run = "node experiences/aricanga/utils/qa/random-agent.js"
+depends = ["build"]
+
+[tasks."qa:guided"]
+description = "Run guided agent to verify story progression"
+run = "node experiences/aricanga/utils/qa/guided-agent.js"
+depends = ["build"]
+
+[tasks."qa:a11y"]
+description = "CQO-8: Run accessibility tests with axe-core"
+run = "pnpm run test:a11y"
+
+[tasks."ink:graph"]
+description = "Generate narrative graph (DOT + SVG)"
+run = "node experiences/aricanga/utils/qa/ink-graph.js"
+
+[tasks."ink:heatmap"]
+description = "Generate coverage heatmap (DOT + SVG)"
+run = "node experiences/aricanga/utils/qa/ink-heatmap.js"
+depends = ["build"]
+
+[tasks."ink:deps"]
+description = "Analyze cross-chat variable dependencies"
+run = "node experiences/aricanga/utils/qa/ink-dependencies.js"
+
+# ───────────────────────────────────────────────────────────────────────────────
+#                             Translation
+# ───────────────────────────────────────────────────────────────────────────────
+
+[tasks.tl]
+description = "Extract strings for translation (prompt format)"
+run = "node experiences/aricanga/utils/translation/cli.js extract"
+
+[tasks."tl:import"]
+description = "Import translated strings"
+run = "node experiences/aricanga/utils/translation/cli.js import"
+
+[tasks."tl:status"]
+description = "Show translation progress"
+run = "node experiences/aricanga/utils/translation/cli.js status"
+
+[tasks."tl:validate"]
+description = "Validate translation file"
+run = "node experiences/aricanga/utils/translation/cli.js validate"
+
+[tasks."tl:init"]
+description = "Initialize new locale"
+run = "node experiences/aricanga/utils/translation/cli.js init"
+
+[tasks."tl:names"]
+description = "Suggest localized names for characters/entities"
+run = "node experiences/aricanga/utils/translation/cli.js names"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#                               DEV TASKS
+#                    Build, serve, test, and lint
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# ───────────────────────────────────────────────────────────────────────────────
+#                               Build
+# ───────────────────────────────────────────────────────────────────────────────
+
+[tasks."build:images"]
+description = "Optimize profile images (resize + JPEG)"
+run = "node utils/build/optimize-images.js"
+sources = ["experiences/$IMPL/assets/profile_images/*.png"]
+outputs = ["experiences/$IMPL/assets/profile_images/optimized/*.jpg"]
+
+[tasks."build:config"]
+description = "Generate config.js from TOML (requires IMPL env var)"
+run = "node utils/build/build-config.js"
+sources = ["experiences/$IMPL/data/base-config.toml", "experiences/$IMPL/data/locales/*.toml"]
+outputs = ["experiences/$IMPL/src/generated/config.js", "experiences/$IMPL/css/generated/theme-vars.css", "experiences/$IMPL/src/dist/locales/*.json"]
+
+[tasks."build:test-expectations"]
+description = "Generate test expectations from TOML"
+run = "node utils/build/generate-test-expectations.js"
+sources = ["experiences/$IMPL/data/base-config.toml", "experiences/$IMPL/data/locales/*.toml"]
+outputs = ["experiences/$IMPL/tests/fixtures/generated-expectations.ts"]
+
+[tasks."build:ink"]
+description = "Compile all locale ink files (requires IMPL env var)"
+run = """
+if [ -z "$IMPL" ]; then
+    echo "Error: IMPL env var required (e.g., IMPL=my-story mise run build:ink)"
+    exit 1
+fi
+config_path="experiences/$IMPL/data/base-config.toml"
+if [ ! -f "$config_path" ]; then
+    echo "Error: Config not found at $config_path"
+    echo "Set IMPL to a valid implementation name."
+    exit 1
+fi
+ink_dir="experiences/$IMPL/ink"
+# Read available locales from config
+locales=$(grep 'available_locales' "$config_path" | grep -oE '"[a-z]{2}"' | tr -d '"')
+dist_dir="experiences/$IMPL/src/dist"
+for locale in $locales; do
+    echo "Building $locale..."
+    mkdir -p "$dist_dir/$locale"
+    inklecate -j "$ink_dir/$locale/main.$locale.ink"
+    mv "$ink_dir/$locale/main.$locale.ink.json" "$dist_dir/$locale/story.json"
+done
+echo "✓ All locales built"
+"""
+sources = ["experiences/$IMPL/ink/**/*.ink"]
+outputs = ["experiences/$IMPL/src/dist/*/story.json"]
+
+[tasks."build:seeds"]
+description = "Extract seed messages from compiled ink"
+run = "node utils/build/build-seeds.js"
+depends = ["build:ink", "build:config"]
+sources = ["experiences/$IMPL/src/dist/*/story.json", "experiences/$IMPL/src/generated/config.js"]
+outputs = ["experiences/$IMPL/src/generated/seeds.js"]
+
+[tasks.build]
+description = "Build config, test expectations, compile Ink, and extract seeds"
+depends = ["build:images", "build:config", "build:test-expectations", "build:ink", "build:seeds"]
+
+[tasks."build:prod"]
+description = "Build for production (requires IMPL env var)"
+run = """
+if [ -z "$IMPL" ]; then
+    echo "Error: IMPL env var required (e.g., IMPL=aricanga mise run build:prod)"
+    exit 1
+fi
+pnpm run vite:build experiences/$IMPL -c vite.config.js
+"""
+depends = ["build"]
+
+# ───────────────────────────────────────────────────────────────────────────────
+#                            Development Server
+# ───────────────────────────────────────────────────────────────────────────────
+
+[tasks.serve]
+description = "Start Vite dev server (requires IMPL env var)"
+run = """
+if [ -z "$IMPL" ]; then
+    echo "Error: IMPL env var required (e.g., IMPL=aricanga mise run serve)"
+    exit 1
+fi
+pnpm run vite experiences/$IMPL -c vite.config.js
+"""
+
+[tasks.browser]
+description = "Launch Chromium with remote debugging for MCP"
+run = """
+"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
+  --remote-debugging-port=9222 \
+  --user-data-dir=$HOME/tmp/chrome-mcp-profile \
+  --window-size=414,896 \
+  --force-device-scale-factor=2 \
+  --no-first-run
+"""
+
+[tasks.preview]
+description = "Preview production build (requires IMPL env var)"
+run = """
+if [ -z "$IMPL" ]; then
+    echo "Error: IMPL env var required (e.g., IMPL=aricanga mise run preview)"
+    exit 1
+fi
+pnpm run vite:preview experiences/$IMPL -c vite.config.js
+"""
+
+[tasks.dev]
+description = "Start the interactive dev dashboard"
+run = """
+if [ -f "process-compose.local.yml" ]; then
+    process-compose up -f process-compose.yml -f process-compose.local.yml
+else
+    process-compose up
+fi
+"""
+env = { IMPL = "{{ env.IMPL }}" }
+
+[tasks.clean]
+description = "Remove compiled files (requires IMPL)"
+run = """
+if [ -z "$IMPL" ]; then
+    echo "Error: IMPL env var required (e.g., IMPL=aricanga mise run clean)"
+    exit 1
+fi
+rm -rf experiences/$IMPL/src/dist/*/story.json
+"""
+
+# ───────────────────────────────────────────────────────────────────────────────
+#                               Testing
+# ───────────────────────────────────────────────────────────────────────────────
+
+[tasks.test]
+description = "Run all tests"
+depends = ["test:unit", "test:e2e"]
+
+[tasks."test:unit"]
+description = "Run unit tests with Vitest"
+run = "pnpm run test:unit"
+
+[tasks."test:e2e"]
+description = "Run Playwright E2E tests"
+run = "pnpm run test"
+
+[tasks."test:engine"]
+description = "Run engine tests only (fast, no game data needed)"
+run = "pnpm run test:engine && pnpm run test:unit -- --testPathPattern=engine"
+
+[tasks."test:impl"]
+description = "Run implementation tests (requires game data)"
+run = "pnpm run test:impl && pnpm run test:unit -- --testPathPattern=implementation"
+
+[tasks."test:quality"]
+description = "Run quality/CQO tests"
+run = "pnpm run test:quality"
+
+[tasks."test:e2e:ui"]
+description = "Run Playwright with UI"
+run = "pnpm run test:ui"
+
+[tasks."test:e2e:debug"]
+description = "Debug Playwright tests"
+run = "pnpm run test:debug"
+
+[tasks."test:e2e:mobile"]
+description = "Run only mobile tests"
+run = "pnpm run test:mobile"
+
+[tasks."test:setup"]
+description = "Install Playwright browsers"
+run = "pnpm run playwright:install"
+
+# ───────────────────────────────────────────────────────────────────────────────
+#                               Linting
+# ───────────────────────────────────────────────────────────────────────────────
+
+[tasks.lint]
+description = "Run all linters"
+depends = ["lint:ink", "lint:tags", "lint:image-paths", "lint:css", "lint:toml", "lint:ink-comments", "lint:dom", "lint:svg-a11y", "lint:globals", "lint:events", "lint:ink-access", "lint:js", "lint:doc-links", "lint:imports", "lint:test-paths", "lint:file-structure", "lint:time-tags", "lint:locale-parity", "lint:i18n-parity", "lint:glossary-parity", "lint:config-ink", "lint:current-chat", "lint:cross-chat", "lint:component-registration", "lint:link-preview"]
+
+[tasks.check]
+description = "Build and lint (pre-commit)"
+depends = ["build", "lint"]
+
+# --- Ink Linting ---
+
+[tasks."lint:ink"]
+description = "Check all locale ink compiles without warnings (requires IMPL env var)"
+run = """
+if [ -z "$IMPL" ]; then
+    echo "Error: IMPL env var required (e.g., IMPL=aricanga mise run lint:ink)"
+    exit 1
+fi
+config_path="experiences/$IMPL/data/base-config.toml"
+if [ ! -f "$config_path" ]; then
+    echo "Error: Config not found at $config_path"
+    exit 1
+fi
+ink_dir="experiences/$IMPL/ink"
+locales=$(grep 'available_locales' "$config_path" | grep -oE '"[a-z]{2}"' | tr -d '"')
+for locale in $locales; do
+    output=$(inklecate -c "$ink_dir/$locale/main.$locale.ink" -o /dev/null 2>&1) || true
+    if echo "$output" | grep -qi "error\\|warning"; then
+        echo "[$locale] Compilation issues:"
+        echo "$output"
+        exit 1
+    fi
+    echo "✓ [$locale] Ink compiles clean"
+done
+"""
+
+[tasks."lint:tags"]
+description = "Validate ink tags against schema"
+run = "bash experiences/aricanga/utils/ink/lint-tags.sh"
+
+[tasks."lint:image-paths"]
+description = "Validate image tag paths are absolute"
+run = "bash experiences/aricanga/utils/ink/lint-image-paths.sh"
+
+[tasks."lint:tags:compiled"]
+description = "Validate tag hygiene in compiled story (inkjs-based)"
+run = "node experiences/aricanga/utils/qa/ink-tag-audit.js"
+depends = ["build"]
+
+[tasks."lint:ink-comments"]
+description = "CQO-5: Validate complex ink has comments"
+run = "bash experiences/aricanga/utils/ink/lint-ink-comments.sh"
+
+[tasks."lint:time-tags"]
+description = "CQO-13: Validate time tag progression in ink"
+run = "node experiences/aricanga/utils/ink/lint-time-tags.js"
+
+[tasks."lint:locale-parity"]
+description = "Validate ink file structure parity across locales"
+run = "node experiences/aricanga/utils/ink/lint-locale-parity.js"
+
+[tasks."lint:i18n-parity"]
+description = "Validate TOML key parity across locales"
+run = "node experiences/aricanga/utils/ink/lint-i18n-parity.js"
+
+[tasks."lint:glossary-parity"]
+description = "Validate glossary terms have translations in all locales"
+run = "node experiences/aricanga/utils/ink/lint-glossary-parity.js"
+
+[tasks."lint:link-preview"]
+description = "Validate link preview tag dependencies"
+run = "node experiences/aricanga/utils/ink/lint-link-preview.js"
+
+[tasks."lint:config-ink"]
+description = "Validate config↔ink mapping consistency"
+run = "node experiences/aricanga/utils/ink/lint-config-ink.js"
+
+[tasks."lint:current-chat"]
+description = "CQO-18: Verify chat knots set current_chat"
+run = "bash experiences/aricanga/utils/ink/lint-current-chat.sh"
+
+[tasks."lint:cross-chat"]
+description = "CQO-20: Flag deprecated cross-chat patterns"
+run = "bash experiences/aricanga/utils/ink/lint-cross-chat.sh"
+
+[tasks."lint:seeds"]
+description = "Verify seeds.js is fresh and complete"
+run = "node utils/linting/repo/lint-seeds.js"
+depends = ["build:seeds"]
+
+[tasks."lint:external-functions"]
+description = "CQO-27: Check external functions use shared module"
+run = "node utils/linting/repo/lint-external-functions.js"
+
+[tasks."lint:dead-code"]
+description = "Check for unreachable ink content"
+run = "pnpm run test:unit -- packages/tests/quality/architecture/dead-code.test.ts"
+
+# --- Code Linting ---
+
+[tasks."lint:js"]
+description = "Lint JavaScript with Biome"
+run = "pnpm run lint:js"
+
+[tasks."lint:css"]
+description = "Check for hardcoded colors in components"
+run = "bash experiences/aricanga/utils/implementation/lint-css.sh"
+
+[tasks."lint:toml"]
+description = "Validate TOML config files"
+run = "node experiences/aricanga/utils/ink/lint-toml.js"
+
+[tasks."lint:dom"]
+description = "CQO-7: Detect DOM mutations outside components"
+run = "node utils/linting/source/lint-dom.js"
+
+[tasks."lint:svg-a11y"]
+description = "CQO-8: Validate SVG accessibility attributes"
+run = "node utils/linting/source/lint-svg-a11y.js"
+
+[tasks."lint:globals"]
+description = "CQO-12: Check for undeclared window globals"
+run = "node utils/linting/source/lint-globals.js"
+
+[tasks."lint:events"]
+description = "CQO-14: Check eventBus.emit uses factories"
+run = "node utils/linting/source/lint-events.js"
+
+[tasks."lint:ink-access"]
+description = "CQO-15: Check ink variable access uses typed accessors"
+run = "node experiences/aricanga/utils/implementation/lint-ink-access.js"
+
+[tasks."lint:action-guards"]
+description = "CQO-16: Check XState actions have guards (advisory)"
+run = "node experiences/aricanga/utils/implementation/lint-action-guards.js"
+
+[tasks."lint:component-params"]
+description = "CQO-17: Check component methods validate params (advisory)"
+run = "node experiences/aricanga/utils/implementation/lint-component-params.js"
+
+# --- Repo Structure Linting ---
+
+[tasks."lint:doc-links"]
+description = "Verify markdown links resolve to existing files"
+run = "node utils/linting/repo/lint-doc-links.js"
+
+[tasks."lint:imports"]
+description = "Verify named imports exist in target modules"
+run = "node utils/linting/source/lint-imports.js"
+
+[tasks."lint:component-registration"]
+description = "Verify all expected components are registered via imports"
+run = "node utils/linting/source/lint-component-registration.js"
+
+[tasks."lint:test-paths"]
+description = "Detect hardcoded locale paths in test files"
+run = "node utils/linting/repo/lint-test-paths.js"
+
+[tasks."lint:file-structure"]
+description = "Validate file structure (no orphaned files/dirs)"
+run = "node utils/linting/repo/lint-file-structure.js"
+
+[tasks."lint:import-graph"]
+description = "Build import graph and check for circular deps"
+run = "node utils/linting/repo/lint-import-graph.js"
+
+[tasks."lint:barrel-completeness"]
+description = "Check barrel files export all modules"
+run = "node utils/linting/repo/lint-barrel-completeness.js"
+
+[tasks."lint:export-parity"]
+description = "Compare exports against snapshot (restructure only)"
+run = "node utils/linting/repo/lint-export-parity.js --compare"
+
+[tasks."lint:export-parity:snapshot"]
+description = "Capture export snapshot before restructure"
+run = "node utils/linting/repo/lint-export-parity.js --snapshot"
+
+[tasks."lint:event-wiring"]
+description = "Verify event subscriptions match emissions"
+run = "node utils/linting/repo/lint-event-wiring.js"
+
+[tasks."lint:event-wiring:snapshot"]
+description = "Capture event wiring snapshot before restructure"
+run = "node utils/linting/repo/lint-event-wiring.js --snapshot"
+
+[tasks."lint:test-assumptions"]
+description = "CQO-23: Verify test structural dependencies are documented"
+run = "node utils/linting/repo/lint-test-assumptions.js"
+
+[tasks."lint:test-assumptions:warnings"]
+description = "CQO-24: Check for weak assertions (advisory)"
+run = "node utils/linting/repo/lint-test-assumptions.js --warnings"
+
+[tasks."lint:doc-code-refs"]
+description = "CQO-26: Verify doc references match actual code"
+run = "node utils/linting/repo/lint-doc-code-refs.js"
+
+[tasks."lint:html-imports"]
+description = "Verify HTML script/link tags resolve"
+run = "node utils/linting/repo/lint-html-imports.js"
+
+[tasks."lint:test-parity"]
+description = "Compare test inventory against snapshot (restructure only)"
+run = "node utils/linting/repo/lint-test-parity.js --compare"
+
+[tasks."lint:test-parity:snapshot"]
+description = "Capture test inventory snapshot before restructure"
+run = "node utils/linting/repo/lint-test-parity.js --snapshot"
+
+[tasks."lint:workspace-resolution"]
+description = "Verify workspace:* dependencies resolve"
+run = "node utils/linting/repo/lint-workspace-resolution.js"
+
+[tasks."lint:path-mapping"]
+description = "Preview restructure path breakage"
+run = "node utils/linting/repo/lint-path-mapping.js"
+
+# --- Lint Aggregates ---
+
+[tasks."lint:boundaries"]
+description = "Run boundary safety linters (CQO 14-17)"
+depends = ["lint:events", "lint:ink-access", "lint:action-guards", "lint:component-params"]
+
+[tasks."lint:code"]
+description = "Lint JavaScript code (CQO 7, 12, 14, 15)"
+depends = ["lint:dom", "lint:globals", "lint:events", "lint:ink-access"]
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#                              SETUP TASKS
+#                    Project initialization and configuration
+# ═══════════════════════════════════════════════════════════════════════════════
+
+[tasks.start]
+description = "Create a new story from template"
+run = "node utils/start/new-project.js"
+
+[tasks.setup]
+description = "First-time project setup"
+run = """
+pnpm install
+pnpm run playwright:install
+IMPL=aricanga mise run build
+echo "Setup complete! Run: IMPL=aricanga mise run serve"
+"""
+
+[tasks."setup:check"]
+description = "Verify prerequisites"
+run = """
+which inklecate || (echo "Missing: inklecate" && exit 1)
+which mise || (echo "Missing: mise" && exit 1)
+node --version || (echo "Missing: Node.js" && exit 1)
+echo "All prerequisites installed"
+"""
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#                               ALIASES
+#                          Shorthand commands
+# ═══════════════════════════════════════════════════════════════════════════════
+
+[tool_alias]
+ib = "build"
+ip = "play"
+is = "serve"
+it = "test"

@@ -1,0 +1,16 @@
+{
+  "name": "@narratives/framework",
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.js",
+    "./foundation": "./src/foundation/index.js",
+    "./systems/conversation": "./src/systems/conversation/index.js"
+  },
+  "devDependencies": {
+    "@narratives/test-utils": "workspace:*"
+  },
+  "files": [
+    "src"
+  ]
+}

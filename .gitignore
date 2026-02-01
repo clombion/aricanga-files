@@ -1,0 +1,59 @@
+# Optimized profile images (build output)
+**/profile_images/optimized/
+
+# Compiled output and Vite build output
+experiences/*/src/dist/
+*.ink.json
+
+# Generated test fixtures
+experiences/*/tests/fixtures/generated-expectations.ts
+
+# Translation workflow state
+experiences/*/utils/translation/.state/
+
+# Translation CLI temp files
+tests/.tmp-translation-cli/
+
+# Generated artifacts (graphs, coverage reports)
+experiences/*/generated/
+
+# Node
+node_modules/
+package-lock.json
+
+# Playwright
+packages/tests/.output/
+playwright/.cache/
+
+# Linting cache (restructure snapshots)
+.lint-cache/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+*.swp
+*.swo
+.idea/
+.vscode/
+
+# LLM
+.claude
+.gemini
+.codex
+docs/agents
+docs/aricanga/transcripts
+
+# Editors
+.zed
+
+# Misc
+*.log
+local
+backlog
+
+# Secrets
+.env
+experiences/*/utils/translation/.env
+

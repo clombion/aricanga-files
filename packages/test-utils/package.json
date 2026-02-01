@@ -1,0 +1,19 @@
+{
+  "name": "@narratives/test-utils",
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    "./fakes": "./src/fakes/index.ts",
+    "./fixtures": "./src/fixtures/index.ts",
+    "./pages": "./src/pages/index.ts",
+    "./helpers": "./src/helpers/index.ts"
+  },
+  "peerDependencies": {
+    "@narratives/framework": "workspace:*",
+    "@playwright/test": "^1.40.0",
+    "vitest": "^4.0.0"
+  },
+  "files": [
+    "src"
+  ]
+}
