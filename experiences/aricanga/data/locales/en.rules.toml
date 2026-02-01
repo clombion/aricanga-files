@@ -1,0 +1,92 @@
+# ============================================================================
+# en.rules.toml - English linguistic rules for translation
+# ============================================================================
+#
+# This file contains metadata for translators working with English content.
+# It helps inform translation decisions and validation checks.
+#
+# ============================================================================
+
+[meta]
+code = "en"
+name = "English"
+native_name = "English"
+direction = "ltr"
+# Text typically expands 20-30% when translated TO other languages
+text_expansion = 1.0
+
+# ============================================================================
+# PLURALIZATION
+# English has simple singular/plural (one/other)
+# ============================================================================
+
+[plurals]
+# CLDR plural categories used by this locale
+forms = ["one", "other"]
+# Human-readable rule explanation
+rule = "one: n = 1; other: all else"
+# Examples
+examples = [
+  { n = 0, form = "other", text = "0 messages" },
+  { n = 1, form = "one", text = "1 message" },
+  { n = 2, form = "other", text = "2 messages" },
+]
+
+# ============================================================================
+# GRAMMATICAL GENDER
+# English has no grammatical gender for nouns
+# Personal pronouns use natural gender
+# ============================================================================
+
+[gender]
+# No grammatical gender in English
+has_grammatical_gender = false
+# How to handle neutral gender references
+neutral_strategy = "they/them"
+# Examples of gender patterns used in narrative
+patterns = [
+  { condition = "player_gender == 'male'", text = "He walked in." },
+  { condition = "player_gender == 'female'", text = "She walked in." },
+  { condition = "else", text = "They walked in." },
+]
+
+# ============================================================================
+# FORMALITY
+# English doesn't distinguish formal/informal "you"
+# ============================================================================
+
+[formality]
+has_formal_informal = false
+default_register = "informal"
+
+# ============================================================================
+# DATE/TIME FORMATS
+# Used for displaying timestamps in messages
+# ============================================================================
+
+[datetime]
+time_format_12h = "h:mm A"       # 2:30 PM
+time_format_24h = "HH:mm"        # 14:30
+date_short = "MMM d"             # Jan 15
+date_full = "MMMM d, yyyy"       # January 15, 2025
+datetime_relative = true         # "5 min ago", "Yesterday"
+
+# ============================================================================
+# STYLE GUIDE
+# Notes for translators about tone and voice
+# ============================================================================
+
+[style_guide]
+overall_tone = "Conversational, contemporary. Natural dialogue flow."
+
+[style_guide.characters]
+pat = "Mentor figure. Direct but supportive. Uses journalism jargon. Contractions natural."
+spectre = "Cryptic, paranoid. Short sentences. No small talk. Terse."
+news = "Formal, bureaucratic. Official press release tone. No contractions."
+activist = "Passionate, sometimes impatient. Activist/organizer language."
+notes = "Player's internal voice. Casual, stream-of-consciousness."
+
+[style_guide.special_elements]
+learning_highlights = "Keep ((text::source)) markers exactly as-is"
+variables = "Keep {variable_name} exactly as-is"
+choices = "Keep [Choice text] brackets - only translate inside"

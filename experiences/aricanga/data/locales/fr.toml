@@ -1,0 +1,231 @@
+[app]
+name = "Civichat"
+game_title = "Capital Chronicle"
+
+[ui.hub]
+pinned = "Épinglés"
+chats = "Conversations"
+tap_to_open = "Appuyez pour ouvrir"
+search = "Rechercher"
+profile = "Profil"
+you = "Toi"
+
+[ui.drawer]
+notifications = "Notifications"
+clear_all = "Tout effacer"
+no_notifications = "Aucune nouvelle notification"
+
+[ui.tiles]
+restart = "Recommencer"
+glossary = "Glossaire"
+settings = "Paramètres"
+about = "À propos"
+history = "Historique"
+notification_settings = "Paramètres de notification"
+coming_soon = "(bientôt disponible)"
+theme_toggle = "Changer de thème"
+
+[ui.lock_screen]
+more_notifications = "+{n} de plus"
+
+[ui.settings]
+title = "Paramètres"
+language = "Langue"
+game_language = "Langue du jeu"
+motion = "Animations"
+motion_description = "Animations de transition"
+
+[ui.settings.motion_options]
+full = "Complètes"
+reduced = "Réduites"
+off = "Désactivées"
+os_preference = "(préférence système)"
+
+[ui.about]
+title = "À propos"
+about_game = "À propos de ce jeu"
+game_description = "Aricanga est un jeu éducatif conçu pour rendre les données des industries extractives plus accessibles. À travers une narration interactive, les joueurs apprennent à enquêter et interpréter les données réelles de l'Initiative pour la Transparence dans les Industries Extractives (ITIE)."
+version = "Version"
+credits = "Crédits"
+designed_by = "Jeu conçu par"
+cli_name = "Civic Literacy Initiative"
+
+[ui.glossary]
+title = "Glossaire"
+search = "Rechercher..."
+no_results = "Aucun terme trouvé"
+
+[ui.profile]
+title = "Profil"
+name = "Nom"
+about = "À propos"
+contact = "Contact"
+
+[ui.conversation_settings]
+contact = "Contact"
+search = "Rechercher"
+disappearing_messages = "Messages éphémères"
+chat_color_wallpaper = "Couleur et fond d'écran"
+off = "Désactivé"
+
+[ui.dialog]
+reset_title = "RÉINITIALISATION"
+reset_message = """
+Cela effacera toute la progression de l'histoire et réinitialisera la chronologie.
+
+Êtes-vous sûr ?"""
+
+[ui.status]
+online = "en ligne"
+offline = "hors ligne"
+last_seen = "vu à {time}"
+no_service = "Pas de service"
+typing = "{name} écrit"
+someone_typing = "Quelqu'un écrit"
+
+[ui.time]
+now = "Maintenant"
+
+[ui.dates]
+today = "Aujourd'hui"
+yesterday = "Hier"
+
+[ui.messages]
+sent = "Envoyé"
+delivered = "Distribué"
+read = "Lu"
+unread = "non lu"
+unread_singular = "1 message non lu"
+unread_plural = "{count} messages non lus"
+read_more = "Lire la suite"
+read_less = "Réduire"
+
+[ui.a11y]
+back = "Retour"
+back_to_chat_list = "Retour à la liste des conversations"
+open_contact_settings = "Ouvrir les paramètres du contact"
+message_history = "Historique des messages"
+available_responses = "Réponses disponibles"
+send_message = "Envoyer le message"
+new_message_notification = "Notification de nouveau message"
+dismiss_notification = "Fermer la notification"
+notification_shade = "Volet de notifications"
+open_notification_shade = "Ouvrir le volet de notifications"
+notifications_count = "{count} notifications"
+view_image = "Voir l'image"
+image_preview = "Aperçu de l'image"
+close_image = "Fermer l'image"
+play_voice_message = "Lire le message vocal (transcription disponible ci-dessous)"
+battery_level = "Batterie {percent}%"
+clear_notification = "Effacer la notification"
+
+[ui.plural]
+notification_one = "notification"
+notification_other = "notifications"
+
+[chat_types.normal]
+system_message = "Certains messages peuvent ne pas être visibles. L'historique des messages a été partiellement récupéré après le transfert vers cet appareil."
+
+[chat_types.disappearing]
+system_message = "Les messages éphémères sont activés. Les messages seront supprimés après {duration}."
+
+[chat_types.channel]
+system_message = "Ceci est la chaîne officielle de {name}. Appuyez pour en savoir plus."
+input_placeholder = "Seul {name} peut envoyer des messages"
+
+[characters.news]
+display_name = "Fil Info Gouv"
+description = "Communiqués de presse et annonces officielles du gouvernement"
+personality = "Ton formel et bureaucratique. Toujours factuel, jamais éditorial."
+story_role = "Source d'information officielle. Le joueur compare cela à la vérité."
+
+[characters.pat]
+display_name = "Pat (Rédacteur)"
+description = "Votre rédacteur en chef au Capital Chronicle"
+status = "Rédacteur en chef au Capital Chronicle"
+personality = "Journaliste professionnel. Direct, économe en mots. Utilise le jargon de la rédaction. Chaleureux mais jamais familier."
+story_role = "Assigne les articles, fournit des conseils. Connaît la politique de la rédaction mais pas les détails de la corruption."
+knowledge = "Conscient des pressions de l'industrie. Soupçonne que quelque chose ne va pas mais n'a pas enquêté."
+
+[characters.notes]
+display_name = "Mes Notes"
+description = "Mémos vocaux, rappels et notes de recherche"
+
+[characters.spectre]
+display_name = "TonyGov"
+description = "Contact anonyme"
+personality = "Initié gouvernemental, bureaucrate frustré. Utilise le jargon extractif ('direction', 'termes de concession', 'cadre de conformité'). Mesuré, pas paranoïaque."
+story_role = "Lanceur d'alerte connaissant les défaillances des processus ministériels. Remet en question le journalisme du joueur."
+knowledge = "Connaît les processus de révision contournés et les évaluations techniques enterrées. Possède des documents."
+
+[characters.attache]
+display_name = "Jean-Marc Diallo"
+description = "Attaché de presse, Ministère des Ressources Naturelles"
+status = "Attaché de presse · Ministère des Ressources Naturelles"
+personality = "Poli, efficace, formel mais accessible. Professionnel de la communication gouvernementale."
+story_role = "Liaison officielle entre le Ministère et la presse. Fournit les dossiers de presse et la planification."
+knowledge = "Connaît la communication officielle et le calendrier ministériel. Ignore la dissidence interne."
+
+[characters.activist]
+display_name = "Maria Santos"
+description = "Militante communautaire, suit les accords de l'industrie extractive"
+status = "((Droits fonciers::glossary:land-rights)) · Avocate en environnement"
+personality = "Organisatrice communautaire articulée. Mesurée mais persistante. Utilise un langage juridique et militant précis."
+story_role = "Représente la communauté affectée. Fournit une perspective de terrain."
+knowledge = "Connaît l'impact sur la communauté. A des contacts dans les zones touchées. Ne connaît pas les acteurs corporatifs."
+
+# ============================================================
+# GLOSSARY TERMS - Terminologie des industries extractives
+# ============================================================
+
+[glossary.terms.eiti]
+term = "ITIE"
+definition = "L'Initiative pour la Transparence dans les Industries Extractives - une norme mondiale pour une gestion ouverte et responsable des ressources pétrolières, gazières et minérales. Les pays membres publient des rapports sur les revenus des projets extractifs."
+
+[glossary.terms.beneficial-ownership]
+term = "Bénéficiaire effectif"
+definition = "Informations sur les personnes réelles qui possèdent ou contrôlent ultimement une entreprise, au-delà des actionnaires enregistrés. La transparence sur les bénéficiaires effectifs aide à prévenir la corruption et le blanchiment d'argent."
+
+[glossary.terms.royalties]
+term = "Redevances"
+definition = "Paiements effectués au gouvernement ou au propriétaire foncier par les entreprises qui extraient des ressources naturelles, généralement calculés en pourcentage de la valeur des ressources extraites."
+
+[glossary.terms.mining-license]
+term = "Permis minier"
+definition = "Une autorisation légale accordée par le gouvernement qui permet à une entreprise d'explorer ou d'extraire des ressources minérales d'une zone spécifique pendant une période déterminée."
+
+[glossary.terms.environmental-assessment]
+term = "Évaluation environnementale"
+definition = "Une étude menée avant le début d'un projet pour évaluer ses impacts environnementaux potentiels et proposer des mesures d'atténuation. Requise pour la plupart des grands projets extractifs."
+
+[glossary.terms.extractive-industries]
+term = "Industries extractives"
+definition = "Industries qui extraient des matières premières de la terre, y compris l'exploitation minière (métaux, minéraux, charbon) et l'extraction de pétrole/gaz. Une source de revenus majeure pour de nombreux pays en développement."
+
+[glossary.terms.resource-governance]
+term = "Gouvernance des ressources"
+definition = "Les systèmes, politiques et institutions qui gèrent la façon dont les ressources naturelles sont extraites, comment les revenus sont collectés et dépensés, et comment les communautés affectées participent aux décisions."
+
+[glossary.terms.tax-payments]
+term = "Paiements fiscaux"
+definition = "Paiements obligatoires effectués par les entreprises extractives au gouvernement, incluant l'impôt sur les sociétés, la retenue à la source et diverses taxes spécifiques au secteur minier ou pétrolier."
+
+[glossary.terms.corporate-registry]
+term = "Registre des sociétés"
+definition = "Une base de données gouvernementale officielle contenant des informations sur les entreprises enregistrées, y compris la structure de propriété, les administrateurs et les documents de constitution."
+
+[glossary.terms.offshore-company]
+term = "Société offshore"
+definition = "Une entreprise enregistrée dans une juridiction différente de celle où elle opère principalement, souvent dans des endroits avec des impôts bas ou des exigences de divulgation limitées. Peut être légitime mais aussi utilisée pour dissimuler la propriété."
+
+[glossary.terms.land-rights]
+term = "Droits fonciers"
+definition = "Droits légaux des individus ou des communautés d'occuper, d'utiliser ou de bénéficier de la terre. Les projets extractifs affectent souvent les droits fonciers coutumiers des communautés autochtones et locales."
+
+[glossary.terms.transparency]
+term = "Transparence extractive"
+definition = "La pratique de rendre l'information publiquement disponible et accessible. Dans les industries extractives, cela inclut la publication des contrats, des paiements, des données de production et des informations sur les bénéficiaires effectifs."
+
+[glossary.terms.soe-database]
+term = "Base de données des EPE"
+definition = "La base de données des entreprises publiques de l'ITIE suit les participations gouvernementales et les flux financiers dans les industries extractives à travers le monde."

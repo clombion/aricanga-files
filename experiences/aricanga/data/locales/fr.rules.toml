@@ -1,0 +1,114 @@
+# ============================================================================
+# fr.rules.toml - French linguistic rules for translation
+# ============================================================================
+#
+# This file contains metadata for translators working with French content.
+# It helps inform translation decisions and validation checks.
+#
+# ============================================================================
+
+[meta]
+code = "fr"
+name = "French"
+native_name = "Français"
+direction = "ltr"
+# French text is typically 15-20% longer than English
+text_expansion = 1.2
+
+# ============================================================================
+# PLURALIZATION
+# French uses singular (one) and plural (other)
+# Zero typically uses plural form
+# ============================================================================
+
+[plurals]
+# CLDR plural categories used by this locale
+forms = ["one", "other"]
+# Human-readable rule explanation
+rule = "one: n = 0..1; other: all else (note: 0 can be singular or plural)"
+# Examples
+examples = [
+  { n = 0, form = "one", text = "0 message" },
+  { n = 1, form = "one", text = "1 message" },
+  { n = 2, form = "other", text = "2 messages" },
+]
+
+# ============================================================================
+# GRAMMATICAL GENDER
+# French has masculine/feminine for all nouns
+# Adjectives and articles must agree
+# ============================================================================
+
+[gender]
+has_grammatical_gender = true
+forms = ["masculine", "feminine"]
+# How to handle neutral player gender
+neutral_strategy = "rephrase or use 'iel'"
+# Agreement examples
+agreement_notes = """
+- Adjectives agree with noun gender: un message important / une notification importante
+- Past participles with être agree: il est arrivé / elle est arrivée
+- For neutral player: use 'iel' (neo-pronoun) or rephrase to avoid gendered forms
+"""
+# Examples of gender patterns used in narrative
+patterns = [
+  { condition = "player_gender == 'male'", text = "Il est entré." },
+  { condition = "player_gender == 'female'", text = "Elle est entrée." },
+  { condition = "else", text = "Iel est entré·e." },
+]
+
+# ============================================================================
+# FORMALITY
+# French distinguishes tu (informal) and vous (formal)
+# ============================================================================
+
+[formality]
+has_formal_informal = true
+informal = "tu/toi"
+formal = "vous"
+default_register = "informal"
+notes = """
+- Pat uses 'tu' (mentor relationship, newsroom casual)
+- TonyGov uses 'tu' (informal, direct)
+- News channel is formal by nature (impersonal)
+- Activist uses 'tu' (solidarity, equal standing)
+"""
+
+# ============================================================================
+# DATE/TIME FORMATS
+# French uses 24h time, different date order
+# ============================================================================
+
+[datetime]
+time_format_12h = "h:mm"         # Not commonly used
+time_format_24h = "HH:mm"        # 14:30 (standard)
+date_short = "d MMM"             # 15 janv.
+date_full = "d MMMM yyyy"        # 15 janvier 2025
+datetime_relative = true         # "il y a 5 min", "Hier"
+
+# ============================================================================
+# STYLE GUIDE
+# Notes for translators about tone and voice
+# ============================================================================
+
+[style_guide]
+overall_tone = "Conversationnel, contemporain. Dialogue naturel. Utiliser le tutoiement sauf pour le canal officiel."
+
+[style_guide.characters]
+pat = "Figure de mentor. Direct mais bienveillant. Jargon journalistique. Tutoiement naturel."
+spectre = "Cryptique, paranoïaque. Phrases courtes. Pas de bavardage. Laconique."
+news = "Formel, bureaucratique. Ton de communiqué de presse. Vouvoiement implicite."
+activist = "Passionnée, parfois impatiente. Langage militant/organisateur."
+notes = "Voix intérieure du joueur. Décontracté, flux de conscience."
+
+[style_guide.special_elements]
+learning_highlights = "Garder les marqueurs ((texte::source)) exactement tels quels"
+variables = "Garder {nom_variable} exactement tel quel"
+choices = "Garder les crochets [Texte du choix] - ne traduire que l'intérieur"
+
+[style_guide.typography]
+notes = """
+- Use French quotes: « guillemets » with non-breaking spaces
+- Use narrow non-breaking space before : ; ? !
+- Ellipsis: use real ellipsis character (…) not three dots
+"""

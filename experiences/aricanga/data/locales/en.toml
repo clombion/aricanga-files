@@ -1,0 +1,305 @@
+# Capital Chronicle - English Locale
+# All user-facing translatable strings
+#
+# Structure:
+# - [ui.*] - Interface labels, buttons, status text
+# - [chat_types.*] - System messages for chat types
+# - [characters.*] - Character names and descriptions
+
+# ============================================================
+# APP BRANDING
+# ============================================================
+
+[app]
+name = "Civichat"
+game_title = "Capital Chronicle"
+
+# ============================================================
+# UI STRINGS - Hub and Navigation
+# ============================================================
+
+[ui.hub]
+pinned = "Pinned"
+chats = "Chats"
+tap_to_open = "Tap to open"
+search = "Search"
+profile = "Profile"
+you = "You"
+
+# ============================================================
+# UI STRINGS - Notification Drawer
+# ============================================================
+
+[ui.drawer]
+notifications = "Notifications"
+clear_all = "Clear all"
+no_notifications = "No new notifications"
+
+# ============================================================
+# UI STRINGS - Tiles
+# ============================================================
+
+[ui.tiles]
+restart = "Restart"
+glossary = "Glossary"
+settings = "Settings"
+about = "About"
+history = "History"
+notification_settings = "Notification settings"
+coming_soon = "(coming soon)"
+theme_toggle = "Toggle theme"
+
+# ============================================================
+# UI STRINGS - Lock Screen
+# ============================================================
+
+[ui.lock_screen]
+more_notifications = "+{n} more"
+
+# ============================================================
+# UI STRINGS - Settings Page
+# ============================================================
+
+[ui.settings]
+title = "Settings"
+language = "Language"
+game_language = "Game language"
+motion = "Motion"
+motion_description = "Page transition animations"
+
+[ui.settings.motion_options]
+full = "Full"
+reduced = "Reduced"
+off = "Off"
+os_preference = "(OS preference)"
+
+# ============================================================
+# UI STRINGS - About Page
+# ============================================================
+
+[ui.about]
+title = "About"
+about_game = "About This Game"
+game_description = "Aricanga is an educational game designed to make extractive industries data more accessible. Through interactive storytelling, players learn to investigate and interpret real-world data from the Extractive Industries Transparency Initiative (EITI)."
+version = "Version"
+credits = "Credits"
+designed_by = "Game designed by"
+cli_name = "Civic Literacy Initiative"
+
+# ============================================================
+# UI STRINGS - Glossary Page
+# ============================================================
+
+[ui.glossary]
+title = "Glossary"
+search = "Search terms..."
+no_results = "No terms found"
+
+# ============================================================
+# UI STRINGS - Conversation Settings (per-chat settings page)
+# ============================================================
+
+[ui.profile]
+title = "Profile"
+name = "Name"
+about = "About"
+contact = "Contact"
+
+[ui.conversation_settings]
+contact = "Contact"
+search = "Search"
+disappearing_messages = "Disappearing messages"
+chat_color_wallpaper = "Chat color & wallpaper"
+off = "Off"
+
+# ============================================================
+# UI STRINGS - Dialog
+# ============================================================
+
+[ui.dialog]
+reset_title = "SYSTEM RESET"
+reset_message = "This will wipe all story progress and reset the timeline.\n\nAre you sure?"
+
+# ============================================================
+# UI STRINGS - Status
+# ============================================================
+
+[ui.status]
+online = "online"
+offline = "offline"
+last_seen = "last seen {time}"
+no_service = "No Service"
+typing = "{name} is typing"
+someone_typing = "Someone is typing"
+
+# ============================================================
+# UI STRINGS - Dates
+# ============================================================
+
+[ui.time]
+now = "Now"
+
+[ui.dates]
+today = "Today"
+yesterday = "Yesterday"
+
+# ============================================================
+# UI STRINGS - Messages
+# ============================================================
+
+[ui.messages]
+sent = "Sent"
+delivered = "Delivered"
+read = "Read"
+unread = "unread"
+unread_singular = "1 unread message"
+unread_plural = "{count} unread messages"
+read_more = "Read more"
+read_less = "Read less"
+
+# ============================================================
+# UI STRINGS - Accessibility (aria-labels)
+# ============================================================
+
+[ui.a11y]
+back = "Back"
+back_to_chat_list = "Back to chat list"
+open_contact_settings = "Open contact settings"
+message_history = "Message history"
+available_responses = "Available responses"
+send_message = "Send message"
+new_message_notification = "New message notification"
+dismiss_notification = "Dismiss notification"
+notification_shade = "Notification Shade"
+open_notification_shade = "Open notification shade"
+notifications_count = "{count} notifications"
+view_image = "View image"
+image_preview = "Image preview"
+close_image = "Close image"
+play_voice_message = "Play voice message (transcript available below)"
+battery_level = "Battery {percent}%"
+clear_notification = "Clear notification"
+
+# ============================================================
+# UI STRINGS - Pluralization
+# ============================================================
+
+[ui.plural]
+notification_one = "notification"
+notification_other = "notifications"
+
+# ============================================================
+# CHAT TYPES - System Messages
+# ============================================================
+
+[chat_types.normal]
+system_message = "Some messages may not be visible. Message history was partially recovered after transferring to this device."
+
+[chat_types.disappearing]
+system_message = "Disappearing messages are on. Messages will be deleted after {duration}."
+
+[chat_types.channel]
+system_message = "This is the official channel of {name}. Tap to learn more."
+input_placeholder = "Only {name} can send messages"
+
+# ============================================================
+# CHARACTERS - Display Names and Descriptions
+# ============================================================
+
+[characters.news]
+display_name = "Gov News Wire"
+description = "Official government press releases and announcements"
+# Narrative metadata (for consistency review, not shown to user)
+personality = "Formal, bureaucratic tone. Always factual, never editorial."
+story_role = "Source of official information. Player compares this to ground truth."
+
+[characters.pat]
+display_name = "Pat"
+description = "Your editor at the Capital Chronicle"
+status = "Editor at the Capital Chronicle"
+personality = "Professional journalist. Direct, economical with words. Uses newsroom jargon ('buried the lede', 'desk needs 500 words'). Warm but never buddy-buddy."
+story_role = "Assigns stories, provides guidance. Knows newsroom politics but not corruption details."
+knowledge = "Aware of industry pressures. Suspects something is off but hasn't investigated."
+
+[characters.notes]
+display_name = "My Notes"
+description = "Voice memos, reminders, and research notes"
+
+[characters.spectre]
+display_name = "TonyGov"
+description = "Anonymous contact"
+personality = "Government insider, frustrated bureaucrat. Uses extractives jargon ('directorate', 'concession terms', 'compliance framework'). Measured, not paranoid."
+story_role = "Whistleblower with inside knowledge of ministry process failures. Challenges player's journalism."
+knowledge = "Knows about bypassed review processes and buried technical assessments. Has documents."
+
+[characters.attache]
+display_name = "Jean-Marc Diallo"
+description = "Press attaché, Ministry of Natural Resources"
+status = "Press attaché · Ministry of Natural Resources"
+personality = "Polite, efficient, formal but approachable. Government communications professional."
+story_role = "Official liaison between Ministry and press corps. Provides press files and scheduling."
+knowledge = "Knows official messaging and ministry calendar. Does not know about internal dissent."
+
+[characters.activist]
+display_name = "Maria Santos"
+description = "Community advocate, tracks extractive industry deals"
+status = "((Land rights::glossary:land-rights)) advocate · Environmental lawyer"
+personality = "Articulate community organizer. Measured but persistent. Uses precise legal and advocacy language."
+story_role = "Represents affected community. Provides ground-level perspective."
+knowledge = "Knows community impact. Has contacts in affected areas. Doesn't know corporate players."
+
+# ============================================================
+# GLOSSARY TERMS - Extractive Industries Terminology
+# ============================================================
+
+[glossary.terms.eiti]
+term = "EITI"
+definition = "The Extractive Industries Transparency Initiative - a global standard for open and accountable management of oil, gas, and mineral resources. Member countries publish reports on revenues from extractive projects."
+
+[glossary.terms.beneficial-ownership]
+term = "Beneficial Ownership"
+definition = "Information about the real people who ultimately own or control a company, beyond the registered shareholders. Transparency in beneficial ownership helps prevent corruption and money laundering."
+
+[glossary.terms.royalties]
+term = "Royalties"
+definition = "Payments made to the government or landowner by companies extracting natural resources, usually calculated as a percentage of the value of resources extracted."
+
+[glossary.terms.mining-license]
+term = "Mining License"
+definition = "A legal permit granted by the government that allows a company to explore for or extract mineral resources from a specific area for a set period of time."
+
+[glossary.terms.environmental-assessment]
+term = "Environmental Assessment"
+definition = "A study conducted before a project begins to evaluate its potential environmental impacts and propose mitigation measures. Required for most large extractive projects."
+
+[glossary.terms.extractive-industries]
+term = "Extractive Industries"
+definition = "Industries that extract raw materials from the earth, including mining (metals, minerals, coal) and petroleum/gas extraction. A major revenue source for many developing countries."
+
+[glossary.terms.resource-governance]
+term = "Resource Governance"
+definition = "The systems, policies, and institutions that manage how natural resources are extracted, how revenues are collected and spent, and how affected communities participate in decisions."
+
+[glossary.terms.tax-payments]
+term = "Tax Payments"
+definition = "Mandatory payments made by extractive companies to the government, including corporate income tax, withholding tax, and various levies specific to the mining or petroleum sector."
+
+[glossary.terms.corporate-registry]
+term = "Corporate Registry"
+definition = "An official government database containing information about registered companies, including ownership structure, directors, and incorporation documents."
+
+[glossary.terms.offshore-company]
+term = "Offshore Company"
+definition = "A company registered in a jurisdiction different from where it primarily operates, often in locations with low taxes or limited disclosure requirements. Can be legitimate but also used to hide ownership."
+
+[glossary.terms.land-rights]
+term = "Land Rights"
+definition = "Legal rights of individuals or communities to occupy, use, or benefit from land. Extractive projects often affect customary land rights of indigenous and local communities."
+
+[glossary.terms.transparency]
+term = "Extractives Transparency"
+definition = "The practice of making information publicly available and accessible. In extractive industries, this includes publishing contracts, payments, production data, and beneficial ownership information."
+
+[glossary.terms.soe-database]
+term = "SOE Database"
+definition = "EITI's State-Owned Enterprise Database tracks government ownership stakes and financial flows in extractive industries worldwide."
