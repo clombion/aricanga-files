@@ -1,0 +1,94 @@
+{
+  "name": "smartphone-experience",
+  "displayName": "Smartphone Chat Experience",
+  "description": "A messaging app narrative where readers text with characters",
+  "version": "1.0.0",
+  "systems": ["conversation"],
+  "prompts": [
+    {
+      "key": "name",
+      "label": "Project name",
+      "hint": "lowercase with dashes, like: my-first-story",
+      "type": "text",
+      "required": true,
+      "validation": {
+        "pattern": "^[a-z][a-z0-9-]*$",
+        "message": "Use lowercase letters, numbers, and dashes only"
+      }
+    },
+    {
+      "key": "title",
+      "label": "Display title",
+      "hint": "shown to readers in the app",
+      "type": "text",
+      "default": "{{name|titlecase}}"
+    },
+    {
+      "key": "locale",
+      "label": "Default language",
+      "hint": "2-letter code like: en, fr, es",
+      "type": "text",
+      "default": "en",
+      "validation": {
+        "pattern": "^[a-z]{2}$",
+        "message": "Use a 2-letter language code"
+      }
+    },
+    {
+      "key": "generateInk",
+      "label": "Create sample story files?",
+      "hint": "gives you a starting point to edit",
+      "type": "confirm",
+      "default": true
+    }
+  ],
+  "files": [
+    { "template": "templates/main.js.tpl", "output": "experiences/{{name}}/src/main.js" },
+    { "template": "templates/experience.js.tpl", "output": "experiences/{{name}}/src/{{name}}-experience.js" },
+    { "template": "templates/config.js.tpl", "output": "experiences/{{name}}/src/config.js" },
+    { "template": "templates/game-controller.js.tpl", "output": "experiences/{{name}}/src/game-controller.js" },
+    { "template": "templates/game-state.js.tpl", "output": "experiences/{{name}}/src/game-state.js" },
+    { "template": "templates/ink-bridge.js.tpl", "output": "experiences/{{name}}/src/ink-bridge.js" },
+    { "template": "templates/index.html.tpl", "output": "experiences/{{name}}/index.html" },
+    { "template": "templates/services/data-service.js.tpl", "output": "experiences/{{name}}/src/services/data-service.js" },
+    { "template": "templates/services/data-loader.js.tpl", "output": "experiences/{{name}}/src/services/data-loader.js" },
+    { "template": "templates/services/format.js.tpl", "output": "experiences/{{name}}/src/services/format.js" },
+    { "template": "templates/services/i18n.js.tpl", "output": "experiences/{{name}}/src/services/i18n.js" },
+    { "template": "templates/components/settings-page.js.tpl", "output": "experiences/{{name}}/src/components/settings-page.js" },
+    { "template": "templates/components/debug-panel.js.tpl", "output": "experiences/{{name}}/src/components/debug-panel.js" },
+    { "template": "data/base-config.toml.tpl", "output": "experiences/{{name}}/data/base-config.toml" },
+    { "template": "data/locales/locale.toml.tpl", "output": "experiences/{{name}}/data/locales/{{locale}}.toml" }
+  ],
+  "conditionalFiles": [
+    {
+      "condition": "generateInk",
+      "files": [
+        { "template": "ink/main.ink.tpl", "output": "experiences/{{name}}/ink/{{locale}}/main.{{locale}}.ink" },
+        { "template": "ink/variables.ink.tpl", "output": "experiences/{{name}}/ink/variables.ink" },
+        { "template": "ink/chats/sample.ink.tpl", "output": "experiences/{{name}}/ink/{{locale}}/chats/sample.{{locale}}.ink" }
+      ]
+    }
+  ],
+  "directories": [
+    "experiences/{{name}}/src/generated",
+    "experiences/{{name}}/src/services",
+    "experiences/{{name}}/src/components",
+    "experiences/{{name}}/data/locales",
+    "experiences/{{name}}/ink/{{locale}}/chats",
+    "experiences/{{name}}/assets",
+    "experiences/{{name}}/css"
+  ],
+  "validation": {
+    "reservedNames": ["shared", "common", "base", "core", "aricanga"]
+  },
+  "postCreate": {
+    "message": "Your story is ready!",
+    "steps": [
+      "Open experiences/{{name}}/ink/{{locale}}/ to write your narrative",
+      "Run: IMPL={{name}} mise run build",
+      "Run: IMPL={{name}} mise run serve",
+      "Open http://localhost:8000/ in your browser"
+    ],
+    "helpDoc": "docs/getting-started.md"
+  }
+}
