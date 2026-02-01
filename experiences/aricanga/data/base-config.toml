@@ -1,0 +1,316 @@
+# Capital Chronicle - Base Configuration (Non-Translatable)
+# This file contains technical configuration that doesn't change with language.
+# Translatable strings are in locales/{lang}.toml
+#
+# Run: mise run build:config
+
+[game]
+title = "Capital Chronicle"
+version = "0.1.0"
+
+# ============================================================
+# INTERNATIONALIZATION
+# ============================================================
+
+[i18n]
+default_locale = "en"
+available_locales = ["en", "fr"]
+
+# Locale display names (shown in language selector)
+[i18n.locale_names]
+en = "English"
+fr = "Français"
+
+# Ink folder paths per locale (two-letter ISO code recommended)
+# Each locale MUST have an ink folder with the same file structure as the base locale
+[i18n.ink_folders]
+en = "experiences/aricanga/ink/en"   # Base locale - all ink files must exist here
+fr = "experiences/aricanga/ink/fr"   # Must mirror structure of base locale
+
+# ============================================================
+# APP & PLAYER PROFILE
+# ============================================================
+
+[app]
+# Player profile images — one is randomly selected and persisted per player
+# Three mutually exclusive forms (checked in order):
+#   profile_image_dir = "profile_images/optimized"  — build scans directory
+#   profile_images = [...]                           — explicit array
+#   profile_image = "path.jpg"                       — single image
+profile_image_dir = "profile_images/optimized"
+
+# Player status shown on profile page
+player_status = "Senior reporter at the Capital Chronicle"
+player_email = "aricanga@civicliteraci.es"
+
+# ============================================================
+# UI TIMINGS
+# Animation and interaction delays (in milliseconds)
+# ============================================================
+
+[ui.timings]
+notification_auto_hide = 5000        # How long popup stays visible
+notification_stagger = 1500          # Delay between stacked notifications
+auto_save_interval = 30000           # How often to save progress
+message_group_threshold = 60000      # Time before new message group
+focus_delay = 100                    # Delay before focusing elements
+
+# ============================================================
+# UI DIMENSIONS
+# Layout and sizing values
+# ============================================================
+
+[ui.dimensions]
+image_max_width = 240                # Max image bubble width (px)
+
+# ============================================================
+# UI CONSTRAINTS
+# Maximum character counts per UI element for translation validation
+# Translations exceeding these limits will fail validation
+# ============================================================
+
+[ui.constraints.hub]
+character_name = 20                  # Display name in hub
+character_status = 60                # Status text below name
+
+[ui.constraints.settings]
+option_label = 30                    # Settings option labels
+section_title = 25                   # Section headers
+
+[ui.constraints.notifications]
+title = 40                           # Notification title
+body = 100                           # Notification body text
+
+# ============================================================
+# UI COLORS
+# Theme color palette (hex format)
+# ============================================================
+
+[ui.colors]
+# Core palette
+bg = "#121216"
+surface = "#1e1e24"
+header = "#222228"
+accent = "#5b7cfa"
+accent_hover = "#4a6ae8"
+success = "#5dd879"
+danger = "#ff4444"
+text = "#e8e8ed"
+text_muted = "#71717a"
+text_secondary = "#a1a1aa"
+
+# Message bubbles
+bubble_sent_bg = "#3b5998"
+bubble_sent_text = "#ffffff"
+bubble_received_bg = "#262630"
+bubble_received_text = "#e8e8ed"
+
+# Highlights (for learning/pedagogical content)
+highlight = "#0ea5e9"
+highlight_hover = "#0284c7"
+
+# ============================================================
+# UI OPACITY LEVELS
+# Control transparency of overlays and effects (0-100)
+# ============================================================
+
+[ui.colors.opacity]
+overlay = 60              # Modal/drawer backdrops
+overlay_heavy = 95        # Full overlays (lightbox, expanded images)
+surface_glass = 95        # Glassmorphism surfaces (notification drawer)
+border_subtle = 8         # Subtle divider lines
+border_normal = 20        # Visible borders
+hover_light = 10          # Light hover states
+hover_medium = 15         # Medium hover states
+shadow = 40               # Drop shadows
+
+# Glass effect backgrounds for notification drawer tiles/cards
+[ui.colors.glass]
+tile_bg = "rgba(60, 60, 60, 0.7)"
+tile_hover = "rgba(80, 80, 80, 0.9)"
+card_bg = "rgba(60, 60, 60, 0.9)"
+card_hover = "rgba(80, 80, 80, 0.9)"
+bar_bg = "rgba(20, 20, 20, 0.5)"
+
+[start_state]
+current_time = "8:30 AM"
+battery = 100
+signal = 4
+internet = "mobile4"
+date = "2025-03-15"
+date_format = "weekday_short"
+weather = "sunny"
+temperature = "26°C"
+
+# ============================================================
+# PHONE HARDWARE - Capabilities and constraints
+# These define what the phone CAN and CANNOT do
+# ============================================================
+
+[phone.capabilities]
+messaging = true
+voice_memos = true
+camera = false           # No camera in this phone
+web_browser = false      # No browser access
+forward_messages = false # Cannot forward messages to others
+
+[phone.apps]
+# Available apps shown in phone UI
+available = ["messages", "notes"]
+
+# ============================================================
+# PHONE BEHAVIOR - How systems respond to state changes
+# These rules affect narrative (e.g., tension when battery low)
+# ============================================================
+
+[phone.behavior]
+# Battery behavior
+low_battery_warning = 20      # Show warning at this %
+critical_battery = 5          # Phone behavior changes (dim, slow)
+battery_drain_per_hour = 6.94 # ~14 hours to drain fully
+
+# Signal behavior (cellular bars only — visual indicator)
+no_signal_queues_messages = true  # Messages wait until signal restored
+unstable_connection_delays = true # Adds realistic delays
+
+# Internet connectivity (wifi/mobile data — separate from cellular signal)
+no_internet_shows_banner = true   # Show "No internet" banner on wifi0/mobile0
+
+# Time behavior
+default_drift_minutes = 1     # Auto-advance per message if no # time: tag
+
+# ============================================================
+# CHAT TYPES (behavioral flags only - messages in locale)
+# ============================================================
+
+[chat_types.normal]
+can_send = true
+
+[chat_types.disappearing]
+can_send = true
+
+[chat_types.channel]
+can_send = false
+
+# ============================================================
+# ENTITIES - Fictional organizations, companies, places
+# Name variants enable natural conversation flow.
+# Fields:
+#   name: Full formal name
+#   short: Shortened casual form
+#   alt: Alternative/nickname (optional)
+#   context: Background for LLM name suggestions
+#   skip_localization: If true, name stays same across all locales
+# ============================================================
+
+[entities.companies.aricanga]
+name = "Aricanga Corp"
+short = "Aricanga"
+alt = "Aricanga Mining"
+context = "Fictional extractive mining company. Central to corruption plot."
+
+[entities.government.ministry]
+name = "Ministry of Natural Resources"
+short = "the Ministry"
+reference = "Ministry"
+alt = "Ministry of Resources"
+skip_localization = true
+context = "Generic national government body overseeing resource extraction."
+
+[entities.places.northern_province]
+name = "Northern Province"
+short = "the North"
+skip_localization = true
+context = "Remote mining region. Generic enough to work in any setting."
+
+[entities.organizations.eiti]
+name = "Extractive Industries Transparency Initiative"
+short = "EITI"
+skip_localization = true
+context = "Real international transparency standard. Keep acronym unchanged."
+
+[entities.media.chronicle]
+name = "Capital Chronicle"
+short = "the Chronicle"
+context = "Player's newspaper. Name should feel like local paper of record."
+
+# ============================================================
+# CHARACTER REGISTRY (non-translatable fields)
+# Translatable fields (display_name, description) in locale files
+# Name variants: first_name, last_name, formal (for conversations)
+# ============================================================
+
+[characters.news]
+knot_name = "news_chat"
+pinned = true
+chat_type = "channel"
+# No name variants - channel, not a person
+
+[characters.pat]
+knot_name = "pat_chat"
+default_presence = "online"
+pinned = true
+chat_type = "normal"
+# Name variants for conversation flow
+first_name = "Pat"
+# No last name - colleague uses first name only
+
+[characters.notes]
+knot_name = "notes_chat"
+avatar_color_name = "purple"
+avatar_image = "avatars/notes-icon.svg"
+pinned = false
+chat_type = "normal"
+# Personal diary - player writes to self, no "unread" concept applies
+hide_unread_separator = true
+# No name variants - player's own notes
+
+[characters.spectre]
+knot_name = "spectre_chat"
+default_presence = "offline"
+avatar_color_name = "gray"  # Anonymous source
+pinned = false
+chat_type = "disappearing"
+disappearing_duration = "24 hours"
+# Name variants - codename only
+first_name = "TonyGov"
+# Intentionally no real name - anonymous source
+
+[characters.attache]
+knot_name = "attache_chat"
+default_presence = "online"
+pinned = false
+chat_type = "normal"
+# Name variants for conversation flow
+first_name = "Jean-Marc"
+last_name = "Diallo"
+formal = "Mr Diallo"
+
+[characters.activist]
+knot_name = "activist_chat"
+default_presence = "online"
+pinned = false
+chat_type = "normal"
+# Name variants for conversation flow
+first_name = "Maria"
+last_name = "Santos"
+formal = "Ms Santos"
+
+# ============================================================
+# ANALYTICS - Event logging and community stats
+# Disabled by default - enable for development/production servers
+# ============================================================
+
+[analytics]
+# Master switch - false disables all analytics
+enabled = false
+
+# Server endpoint for batch uploads and stats API
+# Empty string = local logging only (IndexedDB)
+# Example: "http://localhost:3001" for local dev server
+endpoint = ""
+
+[analytics.retention]
+# Local storage limits (IndexedDB)
+max_age_days = 7
+max_entries = 5000

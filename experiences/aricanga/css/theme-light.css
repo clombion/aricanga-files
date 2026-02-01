@@ -1,0 +1,49 @@
+/* Light Theme Overrides
+   Applied when html[data-theme="light"] */
+
+[data-theme='light'] {
+  /* === PALETTE === */
+  --ink-color-bg: #f5f5f7;
+  --ink-color-surface: #ffffff;
+  --ink-color-header: #e8e8ed;
+  --ink-color-accent: #007aff;
+  --ink-color-accent-hover: #0066d6;
+  --ink-color-success: #34c759;
+  --ink-color-danger: #ff3b30;
+  --ink-color-text: #1d1d1f;
+  --ink-color-text-muted: #86868b;
+  --ink-color-text-secondary: #6e6e73;
+  --ink-bubble-sent-bg: #007aff;
+  --ink-bubble-sent-text: #ffffff;
+  --ink-bubble-received-bg: #e9e9eb;
+  --ink-bubble-received-text: #1d1d1f;
+  --ink-highlight: #0077ed;
+  --ink-highlight-hover: #005bb5;
+
+  /* === OPACITY VARIANTS (inverted for light bg) === */
+  --ink-overlay: rgba(0, 0, 0, 0.4);
+  --ink-overlay-heavy: rgba(255, 255, 255, 0.95);
+  --ink-surface-glass: rgba(255, 255, 255, 0.95);
+  --ink-border-subtle: rgba(0, 0, 0, 0.08);
+  --ink-border-normal: rgba(0, 0, 0, 0.15);
+  --ink-hover-light: rgba(0, 0, 0, 0.05);
+  --ink-hover-medium: rgba(0, 0, 0, 0.1);
+  --ink-shadow: rgba(0, 0, 0, 0.15);
+
+  /* === PHONE FRAME === */
+  --ink-phone-bg: #ffffff;
+  --ink-phone-border: #d1d1d6;
+  --ink-statusbar-bg: #e8e8ed;
+
+  /* === GLASS EFFECTS (for notification drawer) === */
+  --ink-tile-bg: rgba(220, 220, 225, 0.9);
+  --ink-tile-hover: rgba(200, 200, 210, 0.95);
+  --ink-card-bg: rgba(230, 230, 235, 0.95);
+  --ink-card-hover: rgba(210, 210, 220, 0.95);
+  --ink-bar-bg: rgba(235, 235, 240, 0.9);
+}
+
+/* Light mode body background */
+[data-theme='light'] body {
+  background-color: #e5e5ea;
+}

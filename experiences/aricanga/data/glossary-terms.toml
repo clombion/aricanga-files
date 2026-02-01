@@ -1,0 +1,55 @@
+# Glossary Terms - Base Configuration (non-translatable)
+# Contains: id, category
+# Translatable strings (term, definition) are in locales/{lang}.toml
+
+[[terms]]
+id = "eiti"
+category = "organizations"
+
+[[terms]]
+id = "beneficial-ownership"
+category = "governance"
+
+[[terms]]
+id = "royalties"
+category = "finance"
+
+[[terms]]
+id = "mining-license"
+category = "legal"
+
+[[terms]]
+id = "environmental-assessment"
+category = "environment"
+
+[[terms]]
+id = "extractive-industries"
+category = "industry"
+
+[[terms]]
+id = "resource-governance"
+category = "governance"
+
+[[terms]]
+id = "tax-payments"
+category = "finance"
+
+[[terms]]
+id = "corporate-registry"
+category = "legal"
+
+[[terms]]
+id = "offshore-company"
+category = "finance"
+
+[[terms]]
+id = "land-rights"
+category = "legal"
+
+[[terms]]
+id = "transparency"
+category = "governance"
+
+[[terms]]
+id = "soe-database"
+category = "resources"

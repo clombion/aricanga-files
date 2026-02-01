@@ -1,0 +1,55 @@
+# Capital Chronicle - Translation Glossary
+# Terms to preserve or translate consistently across all locales
+#
+# Actions:
+#   preserve - Keep exactly as written (proper nouns, brand names)
+#   translate_as - Use specified translation per locale
+#
+# Example:
+#   [[terms]]
+#   term = "Aricanga"
+#   action = "preserve"
+#   note = "Fictional company name"
+#
+#   [[terms]]
+#   term = "Ministry of Natural Resources"
+#   action = "translate_as"
+#   fr = "Ministere des Ressources Naturelles"
+#   es = "Ministerio de Recursos Naturales"
+
+[[terms]]
+term = "Aricanga"
+action = "preserve"
+note = "Fictional mining company - never translate"
+
+[[terms]]
+term = "Aricanga Corp"
+action = "preserve"
+note = "Full company name"
+
+[[terms]]
+term = "Capital Chronicle"
+action = "preserve"
+note = "Publication name - player's newspaper"
+
+[[terms]]
+term = "Northern Province"
+action = "preserve"
+note = "Fictional region name"
+
+[[terms]]
+term = "EITI"
+action = "preserve"
+note = "Extractive Industries Transparency Initiative acronym"
+
+[[terms]]
+term = "Ministry of Natural Resources"
+action = "translate_as"
+note = "Government body name - translate to target language equivalent"
+fr = "Ministere des Ressources Naturelles"
+es = "Ministerio de Recursos Naturales"
+
+[[terms]]
+term = "TonyGov"
+action = "preserve"
+note = "Anonymous source codename"

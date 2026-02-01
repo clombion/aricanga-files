@@ -1,0 +1,17 @@
+# External Data Queries
+# Fetched on game start, injected into ink variables with learning-highlight markers
+# Writers use {variable_name} in ink - values are auto-highlighted
+
+[data_median_revenue]
+source = "eiti"
+query = "revenue_statistics"
+params = "mining_projects"
+field = "median_annual_revenue"
+description = "Median annual revenue from mining projects (EITI database)"
+
+[data_sample_size]
+source = "eiti"
+query = "revenue_statistics"
+params = "mining_projects"
+field = "sample_size"
+description = "Number of projects in EITI sample"
