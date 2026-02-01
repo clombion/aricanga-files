@@ -1,0 +1,18 @@
+# LLM Provider Configuration
+# Update model defaults here without changing code
+
+[anthropic]
+default_model = "claude-sonnet-4-20250514"
+env_key = "ANTHROPIC_API_KEY"
+
+[google]
+default_model = "gemini-2.5-flash"
+env_key = "GOOGLE_GENERATIVE_AI_API_KEY"
+
+[openai]
+default_model = "gpt-4o"
+env_key = "OPENAI_API_KEY"
+
+[fake]
+default_model = "fake-v1"
+# No env_key required for fake provider
