@@ -137,7 +137,14 @@ function getTransforms(direction) {
  * @param {HTMLElement} [overlay]
  * @returns {Promise<void>}
  */
-async function transitionViewsFade(outgoing, incoming, duration, overlay) {
+async function transitionViewsFade(
+  outgoing,
+  incoming,
+  duration,
+  overlay,
+  onReady,
+  onComplete,
+) {
   // Clear any state from previous full-motion transitions
   outgoing.style.transform = '';
   incoming.style.transform = '';
@@ -150,6 +157,8 @@ async function transitionViewsFade(outgoing, incoming, duration, overlay) {
   outgoing.style.zIndex = '2';
   incoming.style.zIndex = '1';
   incoming.hidden = false;
+
+  if (onReady) await onReady();
 
   const animationOptions = {
     duration: duration / 2,
@@ -191,6 +200,8 @@ async function transitionViewsFade(outgoing, incoming, duration, overlay) {
       overlay.hidden = true;
       overlay.style.opacity = '';
     }
+
+    if (onComplete) onComplete();
   }
 }
 
@@ -210,6 +221,10 @@ async function transitionViewsFade(outgoing, incoming, duration, overlay) {
  * @param {number} [options.duration] - Duration in ms (default: 500)
  * @param {HTMLElement} [options.overlay] - Optional overlay element for scrim effect
  * @param {'full'|'reduced'|'off'} [options.motionLevel] - Animation level (default: 'full')
+ * @param {Function} [options.onReady] - Called after incoming is positioned offscreen but before
+ *   animation starts. Use for rendering content (innerHTML, render()). May be async.
+ * @param {Function} [options.onComplete] - Called after animation finishes and cleanup is done.
+ *   Use for scrollIntoView, focus, or other layout-forcing operations.
  * @returns {Promise<void>} Resolves when animation completes
  */
 export async function transitionViews(outgoing, incoming, options = {}) {
@@ -218,6 +233,8 @@ export async function transitionViews(outgoing, incoming, options = {}) {
     duration = 500,
     overlay,
     motionLevel = MOTION_LEVELS.FULL,
+    onReady,
+    onComplete,
   } = options;
 
   // Null check - gracefully handle missing elements
@@ -229,8 +246,10 @@ export async function transitionViews(outgoing, incoming, options = {}) {
 
   // Instant transition if motion is off
   if (motionLevel === MOTION_LEVELS.OFF) {
+    if (onReady) await onReady();
     outgoing.hidden = true;
     incoming.hidden = false;
+    if (onComplete) onComplete();
     return;
   }
 
@@ -241,7 +260,14 @@ export async function transitionViews(outgoing, incoming, options = {}) {
 
   // Fade transition for reduced motion
   if (motionLevel === MOTION_LEVELS.REDUCED) {
-    return transitionViewsFade(outgoing, incoming, duration, overlay);
+    return transitionViewsFade(
+      outgoing,
+      incoming,
+      duration,
+      overlay,
+      onReady,
+      onComplete,
+    );
   }
 
   const transforms = getTransforms(direction);
@@ -279,6 +305,9 @@ export async function transitionViews(outgoing, incoming, options = {}) {
   // Position incoming at start position before revealing
   incoming.style.transform = transforms.incomingStart;
   incoming.hidden = false;
+
+  // Let caller prepare content while incoming is positioned offscreen
+  if (onReady) await onReady();
 
   // Position outgoing for animation
   outgoing.style.transform = transforms.outgoingStart;
@@ -374,5 +403,7 @@ export async function transitionViews(outgoing, incoming, options = {}) {
       overlay.hidden = true;
       overlay.style.opacity = '';
     }
+
+    if (onComplete) onComplete();
   }
 }

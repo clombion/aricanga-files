@@ -355,9 +355,12 @@ document.addEventListener('keydown', (e) => {
 document.addEventListener('chat-selected', (e) => {
   const { chatId } = e.detail;
   controller.openChat(chatId);
-  transition(hub, thread, TRANSITIONS.ENTER_DEEPER).then(() => {
-    _threadFinalize?.();
-    _threadFinalize = null;
+  transition(hub, thread, {
+    ...TRANSITIONS.ENTER_DEEPER,
+    onComplete: () => {
+      _threadFinalize?.();
+      _threadFinalize = null;
+    },
   });
 });
 
@@ -377,9 +380,12 @@ document.addEventListener('notification-clicked', (e) => {
   // Remove from drawer when user opens the chat via notification
   notificationDrawer.remove(chatId);
   controller.openChat(chatId);
-  transition(hub, thread, TRANSITIONS.ENTER_DEEPER).then(() => {
-    _threadFinalize?.();
-    _threadFinalize = null;
+  transition(hub, thread, {
+    ...TRANSITIONS.ENTER_DEEPER,
+    onComplete: () => {
+      _threadFinalize?.();
+      _threadFinalize = null;
+    },
   });
 });
 
@@ -455,10 +461,10 @@ document.addEventListener('about-requested', () => {
 document.addEventListener('glossary-requested', () => {
   wasInChatBeforeSettings = !thread.hidden;
   const outgoing = wasInChatBeforeSettings ? thread : hub;
-  glossaryPage.show();
   transition(outgoing, glossaryPage, {
     ...TRANSITIONS.OPEN_OVERLAY,
     overlay: transitionOverlay,
+    onReady: () => glossaryPage.show(),
   });
 });
 
@@ -466,10 +472,11 @@ document.addEventListener('glossary-requested', () => {
 document.addEventListener('glossary-term-clicked', (e) => {
   wasInChatBeforeSettings = !thread.hidden;
   const outgoing = wasInChatBeforeSettings ? thread : hub;
-  glossaryPage.show(e.detail.termId);
   transition(outgoing, glossaryPage, {
     ...TRANSITIONS.OPEN_OVERLAY,
     overlay: transitionOverlay,
+    onReady: () => glossaryPage.show(e.detail.termId),
+    onComplete: () => glossaryPage.scrollToTerm(e.detail.termId),
   });
 });
 

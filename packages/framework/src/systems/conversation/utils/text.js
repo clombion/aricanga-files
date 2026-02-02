@@ -77,10 +77,13 @@ export const LEARNING_HIGHLIGHT_CSS = `
 /**
  * Wire glossary click delegation on a shadow root.
  * Clicks on .learning-highlight dispatch a composed glossary-term-clicked event.
+ * Idempotent — safe to call from render() without stacking duplicate listeners.
  * @param {ShadowRoot} shadowRoot
  * @param {HTMLElement} host - Element to dispatch the event from
  */
 export function wireGlossaryClicks(shadowRoot, host) {
+  if (shadowRoot._glossaryClicksWired) return;
+  shadowRoot._glossaryClicksWired = true;
   shadowRoot.addEventListener('click', (e) => {
     const highlight = e.target.closest('.learning-highlight');
     if (!highlight) return;
@@ -94,5 +97,26 @@ export function wireGlossaryClicks(shadowRoot, host) {
         }),
       );
     }
+  });
+}
+
+/**
+ * Wire read-more toggle delegation on a shadow root.
+ * Clicks on .read-more-toggle expand/collapse truncated message text.
+ * Idempotent — safe to call from render() without stacking duplicate listeners.
+ * @param {ShadowRoot} shadowRoot
+ */
+export function wireReadMoreToggles(shadowRoot) {
+  if (shadowRoot._readMoreWired) return;
+  shadowRoot._readMoreWired = true;
+  shadowRoot.addEventListener('click', (e) => {
+    const btn = e.target.closest('.read-more-toggle');
+    if (!btn) return;
+    const textSpan = btn.previousElementSibling;
+    const isExpanded = textSpan.classList.toggle('expanded');
+    btn.setAttribute('aria-expanded', String(isExpanded));
+    btn.textContent = isExpanded
+      ? t('messages.read_less')
+      : t('messages.read_more');
   });
 }

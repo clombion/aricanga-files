@@ -43,32 +43,31 @@ export class GlossaryPage extends HTMLElement {
   }
 
   /**
-   * Open the glossary page, optionally scrolling to a specific term
-   * @param {string|null} termId - Term ID to scroll to and highlight
+   * Prepare glossary content. Does NOT set hidden or scroll —
+   * visibility is owned by transitionViews(), scroll by scrollToTerm().
+   * @param {string|null} termId - Term ID to highlight (stored for render)
    */
   async show(termId = null) {
-    // Ensure glossary is loaded
     await loadGlossary();
-
     this._highlightedTermId = termId;
     this._searchQuery = '';
-    this.hidden = false;
     this.render();
     this.setupEventListeners();
+  }
 
-    // Scroll to term if specified
-    if (termId) {
-      requestAnimationFrame(() => {
-        const termEl = this.shadowRoot.querySelector(
-          `.term-card[data-term-id="${termId}"]`,
-        );
-        if (termEl) {
-          termEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          termEl.classList.add('highlighted');
-          // Remove highlight after animation
-          setTimeout(() => termEl.classList.remove('highlighted'), 2000);
-        }
-      });
+  /**
+   * Scroll to and highlight a specific term. Call after transition completes.
+   * @param {string|null} termId - Term ID to scroll to
+   */
+  scrollToTerm(termId) {
+    if (!termId) return;
+    const termEl = this.shadowRoot.querySelector(
+      `.term-card[data-term-id="${termId}"]`,
+    );
+    if (termEl) {
+      termEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      termEl.classList.add('highlighted');
+      setTimeout(() => termEl.classList.remove('highlighted'), 2000);
     }
   }
 

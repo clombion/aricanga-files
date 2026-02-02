@@ -340,7 +340,7 @@ run = "pnpm run playwright:install"
 
 [tasks.lint]
 description = "Run all linters"
-depends = ["lint:ink", "lint:tags", "lint:image-paths", "lint:css", "lint:toml", "lint:ink-comments", "lint:dom", "lint:svg-a11y", "lint:globals", "lint:events", "lint:ink-access", "lint:js", "lint:doc-links", "lint:imports", "lint:test-paths", "lint:file-structure", "lint:time-tags", "lint:locale-parity", "lint:i18n-parity", "lint:glossary-parity", "lint:config-ink", "lint:current-chat", "lint:cross-chat", "lint:component-registration", "lint:link-preview"]
+depends = ["lint:ink", "lint:tags", "lint:image-paths", "lint:css", "lint:toml", "lint:ink-comments", "lint:dom", "lint:svg-a11y", "lint:globals", "lint:events", "lint:ink-access", "lint:js", "lint:doc-links", "lint:imports", "lint:test-paths", "lint:file-structure", "lint:time-tags", "lint:locale-parity", "lint:i18n-parity", "lint:glossary-parity", "lint:config-ink", "lint:current-chat", "lint:cross-chat", "lint:component-registration", "lint:link-preview", "lint:transition-safety"]
 
 [tasks.check]
 description = "Build and lint (pre-commit)"
@@ -375,61 +375,61 @@ done
 
 [tasks."lint:tags"]
 description = "Validate ink tags against schema"
-run = "bash experiences/aricanga/utils/ink/lint-tags.sh"
+run = "pnpm run lint:tags"
 
 [tasks."lint:image-paths"]
 description = "Validate image tag paths are absolute"
-run = "bash experiences/aricanga/utils/ink/lint-image-paths.sh"
+run = "pnpm run lint:image-paths"
 
 [tasks."lint:tags:compiled"]
 description = "Validate tag hygiene in compiled story (inkjs-based)"
-run = "node experiences/aricanga/utils/qa/ink-tag-audit.js"
+run = "pnpm run lint:tags:compiled"
 depends = ["build"]
 
 [tasks."lint:ink-comments"]
 description = "CQO-5: Validate complex ink has comments"
-run = "bash experiences/aricanga/utils/ink/lint-ink-comments.sh"
+run = "pnpm run lint:ink-comments"
 
 [tasks."lint:time-tags"]
 description = "CQO-13: Validate time tag progression in ink"
-run = "node experiences/aricanga/utils/ink/lint-time-tags.js"
+run = "pnpm run lint:time-tags"
 
 [tasks."lint:locale-parity"]
 description = "Validate ink file structure parity across locales"
-run = "node experiences/aricanga/utils/ink/lint-locale-parity.js"
+run = "pnpm run lint:locale-parity"
 
 [tasks."lint:i18n-parity"]
 description = "Validate TOML key parity across locales"
-run = "node experiences/aricanga/utils/ink/lint-i18n-parity.js"
+run = "pnpm run lint:i18n-parity"
 
 [tasks."lint:glossary-parity"]
 description = "Validate glossary terms have translations in all locales"
-run = "node experiences/aricanga/utils/ink/lint-glossary-parity.js"
+run = "pnpm run lint:glossary-parity"
 
 [tasks."lint:link-preview"]
 description = "Validate link preview tag dependencies"
-run = "node experiences/aricanga/utils/ink/lint-link-preview.js"
+run = "pnpm run lint:link-preview"
 
 [tasks."lint:config-ink"]
 description = "Validate config↔ink mapping consistency"
-run = "node experiences/aricanga/utils/ink/lint-config-ink.js"
+run = "pnpm run lint:config-ink"
 
 [tasks."lint:current-chat"]
 description = "CQO-18: Verify chat knots set current_chat"
-run = "bash experiences/aricanga/utils/ink/lint-current-chat.sh"
+run = "pnpm run lint:current-chat"
 
 [tasks."lint:cross-chat"]
 description = "CQO-20: Flag deprecated cross-chat patterns"
-run = "bash experiences/aricanga/utils/ink/lint-cross-chat.sh"
+run = "pnpm run lint:cross-chat"
 
 [tasks."lint:seeds"]
 description = "Verify seeds.js is fresh and complete"
-run = "node utils/linting/repo/lint-seeds.js"
+run = "pnpm run lint:seeds"
 depends = ["build:seeds"]
 
 [tasks."lint:external-functions"]
 description = "CQO-27: Check external functions use shared module"
-run = "node utils/linting/repo/lint-external-functions.js"
+run = "pnpm run lint:external-functions"
 
 [tasks."lint:dead-code"]
 description = "Check for unreachable ink content"
@@ -443,117 +443,121 @@ run = "pnpm run lint:js"
 
 [tasks."lint:css"]
 description = "Check for hardcoded colors in components"
-run = "bash experiences/aricanga/utils/implementation/lint-css.sh"
+run = "pnpm run lint:css"
 
 [tasks."lint:toml"]
 description = "Validate TOML config files"
-run = "node experiences/aricanga/utils/ink/lint-toml.js"
+run = "pnpm run lint:toml"
 
 [tasks."lint:dom"]
 description = "CQO-7: Detect DOM mutations outside components"
-run = "node utils/linting/source/lint-dom.js"
+run = "pnpm run lint:dom"
 
 [tasks."lint:svg-a11y"]
 description = "CQO-8: Validate SVG accessibility attributes"
-run = "node utils/linting/source/lint-svg-a11y.js"
+run = "pnpm run lint:svg-a11y"
 
 [tasks."lint:globals"]
 description = "CQO-12: Check for undeclared window globals"
-run = "node utils/linting/source/lint-globals.js"
+run = "pnpm run lint:globals"
 
 [tasks."lint:events"]
 description = "CQO-14: Check eventBus.emit uses factories"
-run = "node utils/linting/source/lint-events.js"
+run = "pnpm run lint:events"
 
 [tasks."lint:ink-access"]
 description = "CQO-15: Check ink variable access uses typed accessors"
-run = "node experiences/aricanga/utils/implementation/lint-ink-access.js"
+run = "pnpm run lint:ink-access"
 
 [tasks."lint:action-guards"]
 description = "CQO-16: Check XState actions have guards (advisory)"
-run = "node experiences/aricanga/utils/implementation/lint-action-guards.js"
+run = "pnpm run lint:action-guards"
 
 [tasks."lint:component-params"]
 description = "CQO-17: Check component methods validate params (advisory)"
-run = "node experiences/aricanga/utils/implementation/lint-component-params.js"
+run = "pnpm run lint:component-params"
 
 # --- Repo Structure Linting ---
 
 [tasks."lint:doc-links"]
 description = "Verify markdown links resolve to existing files"
-run = "node utils/linting/repo/lint-doc-links.js"
+run = "pnpm run lint:doc-links"
 
 [tasks."lint:imports"]
 description = "Verify named imports exist in target modules"
-run = "node utils/linting/source/lint-imports.js"
+run = "pnpm run lint:imports"
 
 [tasks."lint:component-registration"]
 description = "Verify all expected components are registered via imports"
-run = "node utils/linting/source/lint-component-registration.js"
+run = "pnpm run lint:component-registration"
+
+[tasks."lint:transition-safety"]
+description = "Detect layout-forcing ops in component show() methods"
+run = "pnpm run lint:transition-safety"
 
 [tasks."lint:test-paths"]
 description = "Detect hardcoded locale paths in test files"
-run = "node utils/linting/repo/lint-test-paths.js"
+run = "pnpm run lint:test-paths"
 
 [tasks."lint:file-structure"]
 description = "Validate file structure (no orphaned files/dirs)"
-run = "node utils/linting/repo/lint-file-structure.js"
+run = "pnpm run lint:file-structure"
 
 [tasks."lint:import-graph"]
 description = "Build import graph and check for circular deps"
-run = "node utils/linting/repo/lint-import-graph.js"
+run = "pnpm run lint:import-graph"
 
 [tasks."lint:barrel-completeness"]
 description = "Check barrel files export all modules"
-run = "node utils/linting/repo/lint-barrel-completeness.js"
+run = "pnpm run lint:barrel-completeness"
 
 [tasks."lint:export-parity"]
 description = "Compare exports against snapshot (restructure only)"
-run = "node utils/linting/repo/lint-export-parity.js --compare"
+run = "pnpm run lint:export-parity"
 
 [tasks."lint:export-parity:snapshot"]
 description = "Capture export snapshot before restructure"
-run = "node utils/linting/repo/lint-export-parity.js --snapshot"
+run = "pnpm run lint:export-parity:snapshot"
 
 [tasks."lint:event-wiring"]
 description = "Verify event subscriptions match emissions"
-run = "node utils/linting/repo/lint-event-wiring.js"
+run = "pnpm run lint:event-wiring"
 
 [tasks."lint:event-wiring:snapshot"]
 description = "Capture event wiring snapshot before restructure"
-run = "node utils/linting/repo/lint-event-wiring.js --snapshot"
+run = "pnpm run lint:event-wiring:snapshot"
 
 [tasks."lint:test-assumptions"]
 description = "CQO-23: Verify test structural dependencies are documented"
-run = "node utils/linting/repo/lint-test-assumptions.js"
+run = "pnpm run lint:test-assumptions"
 
 [tasks."lint:test-assumptions:warnings"]
 description = "CQO-24: Check for weak assertions (advisory)"
-run = "node utils/linting/repo/lint-test-assumptions.js --warnings"
+run = "pnpm run lint:test-assumptions:warnings"
 
 [tasks."lint:doc-code-refs"]
 description = "CQO-26: Verify doc references match actual code"
-run = "node utils/linting/repo/lint-doc-code-refs.js"
+run = "pnpm run lint:doc-code-refs"
 
 [tasks."lint:html-imports"]
 description = "Verify HTML script/link tags resolve"
-run = "node utils/linting/repo/lint-html-imports.js"
+run = "pnpm run lint:html-imports"
 
 [tasks."lint:test-parity"]
 description = "Compare test inventory against snapshot (restructure only)"
-run = "node utils/linting/repo/lint-test-parity.js --compare"
+run = "pnpm run lint:test-parity"
 
 [tasks."lint:test-parity:snapshot"]
 description = "Capture test inventory snapshot before restructure"
-run = "node utils/linting/repo/lint-test-parity.js --snapshot"
+run = "pnpm run lint:test-parity:snapshot"
 
 [tasks."lint:workspace-resolution"]
 description = "Verify workspace:* dependencies resolve"
-run = "node utils/linting/repo/lint-workspace-resolution.js"
+run = "pnpm run lint:workspace-resolution"
 
 [tasks."lint:path-mapping"]
 description = "Preview restructure path breakage"
-run = "node utils/linting/repo/lint-path-mapping.js"
+run = "pnpm run lint:path-mapping"
 
 # --- Lint Aggregates ---
 

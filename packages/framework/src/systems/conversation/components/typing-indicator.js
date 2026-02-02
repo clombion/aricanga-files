@@ -21,7 +21,7 @@ export class TypingIndicator extends HTMLElement {
    */
   show(speaker) {
     this._speaker = speaker;
-    this.hidden = false;
+    this.hidden = false; // lint-ignore: direct visibility (not a transition target)
     this.render();
   }
 

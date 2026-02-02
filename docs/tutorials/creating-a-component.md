@@ -202,13 +202,21 @@ this.shadowRoot.innerHTML = `
 `;
 ```
 
-For glossary click handling, use `wireGlossaryClicks`:
+For glossary click handling, use `wireGlossaryClicks`. It's idempotent — safe to call from `render()` without stacking duplicate listeners:
 
 ```javascript
 import { wireGlossaryClicks } from '../utils/text.js';
 
-// In your wireEvents() or after render:
+// In your wireEvents() or render():
 wireGlossaryClicks(this.shadowRoot, this);
+```
+
+For read-more toggle handling on truncated messages, use `wireReadMoreToggles` (also idempotent):
+
+```javascript
+import { wireReadMoreToggles } from '../utils/text.js';
+
+wireReadMoreToggles(this.shadowRoot);
 ```
 
 ---

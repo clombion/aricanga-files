@@ -17,7 +17,7 @@ export class ConnectionOverlay extends HTMLElement {
    */
   show() {
     this._visible = true;
-    this.hidden = false;
+    this.hidden = false; // lint-ignore: direct visibility (not a transition target)
     this.render();
 
     // Animate in

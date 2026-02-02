@@ -374,7 +374,7 @@ export class LockScreen extends HTMLElement {
     this._wakeFlushed = true; // Stack already rendered, no wake gate
     this._pendingNotifs = [];
     this._animationLock = Promise.resolve(); // Reset stale queue
-    this.hidden = false;
+    this.hidden = false; // lint-ignore: direct visibility (not a transition target)
     this.style.opacity = ''; // Clear opacity left by animateOut()
     this.render();
     this._initCanvas();

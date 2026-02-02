@@ -20,7 +20,7 @@ import {
   t,
 } from '../../services/conversation-context.js';
 import { createFocusTrap } from '../../utils/focus-trap.js';
-import { wireGlossaryClicks } from '../../utils/text.js';
+import { wireGlossaryClicks, wireReadMoreToggles } from '../../utils/text.js';
 
 // Import sub-components (registers custom elements)
 import './chat-header.js';
@@ -914,21 +914,7 @@ export class ChatThread extends HTMLElement {
       });
 
     wireGlossaryClicks(this.shadowRoot, this);
-
-    // Wire read-more toggles (delegated, once per instance)
-    if (!this._readMoreWired) {
-      this._readMoreWired = true;
-      this.shadowRoot.addEventListener('click', (e) => {
-        const btn = e.target.closest('.read-more-toggle');
-        if (!btn) return;
-        const textSpan = btn.previousElementSibling;
-        const isExpanded = textSpan.classList.toggle('expanded');
-        btn.setAttribute('aria-expanded', String(isExpanded));
-        btn.textContent = isExpanded
-          ? t('messages.read_less')
-          : t('messages.read_more');
-      });
-    }
+    wireReadMoreToggles(this.shadowRoot);
 
     // Restore lightbox if it was open before render
     if (this._previewImage) {
