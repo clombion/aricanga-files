@@ -11,12 +11,13 @@
 
 import { eventBus } from '@narratives/framework';
 import { GAME, I18N } from '../config.js';
-import { I18N_EVENTS, i18n } from '../services/i18n.js';
+import { i18n } from '../services/i18n.js';
 import {
   MOTION_EVENTS,
   MOTION_LEVELS,
   motionPrefs,
 } from '../services/motion-preferences.js';
+import { withLocaleReactivity } from '../utils/locale-mixin.js';
 
 /**
  * SettingsPage - Full-page settings UI
@@ -30,25 +31,22 @@ export class SettingsPage extends HTMLElement {
     this.attachShadow({ mode: 'open' });
     this._onLocaleChanged = this._onLocaleChanged.bind(this);
     this._onMotionChanged = this._onMotionChanged.bind(this);
+    this._locale = withLocaleReactivity(this._onLocaleChanged);
   }
 
   connectedCallback() {
     this.render();
     this.setupEventListeners();
-    // Listen for locale ready and changes to re-render
-    eventBus.on(I18N_EVENTS.LOCALE_READY, this._onLocaleChanged);
-    eventBus.on(I18N_EVENTS.LOCALE_CHANGED, this._onLocaleChanged);
+    this._locale.connect();
     eventBus.on(MOTION_EVENTS.MOTION_CHANGED, this._onMotionChanged);
   }
 
   disconnectedCallback() {
-    eventBus.off(I18N_EVENTS.LOCALE_READY, this._onLocaleChanged);
-    eventBus.off(I18N_EVENTS.LOCALE_CHANGED, this._onLocaleChanged);
+    this._locale.disconnect();
     eventBus.off(MOTION_EVENTS.MOTION_CHANGED, this._onMotionChanged);
   }
 
   _onLocaleChanged() {
-    // Re-render with new locale strings
     this.render();
     this.setupEventListeners();
   }

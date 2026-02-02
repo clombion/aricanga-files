@@ -1,6 +1,11 @@
 // Connection Overlay - Top banner showing "No internet connection"
 // Triggered by wifi0 or mobile0 internet status
 
+import {
+  DECELERATE_EASING,
+  EXIT_EASING,
+} from '../utils/animation-constants.js';
+
 export class ConnectionOverlay extends HTMLElement {
   constructor() {
     super();
@@ -33,7 +38,7 @@ export class ConnectionOverlay extends HTMLElement {
         ],
         {
           duration: 300,
-          easing: 'cubic-bezier(0.05, 0.7, 0.1, 1.0)',
+          easing: DECELERATE_EASING,
           fill: 'forwards',
         },
       );
@@ -56,7 +61,7 @@ export class ConnectionOverlay extends HTMLElement {
         ],
         {
           duration: 250,
-          easing: 'cubic-bezier(0.3, 0, 0.8, 0.15)',
+          easing: EXIT_EASING,
           fill: 'forwards',
         },
       );

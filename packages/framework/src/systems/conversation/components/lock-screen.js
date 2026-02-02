@@ -20,7 +20,16 @@ import {
   getStartState,
   t,
 } from '../services/conversation-context.js';
+import {
+  DECELERATE_EASING,
+  EXIT_EASING,
+} from '../utils/animation-constants.js';
 import { renderAvatar } from '../utils/avatar.js';
+import {
+  getBatteryIcon,
+  getSignalIcon,
+  renderInternetIcon,
+} from '../utils/status-icons.js';
 import { escapeHtml } from '../utils/text.js';
 
 /**
@@ -183,7 +192,7 @@ export class LockScreen extends HTMLElement {
       return;
 
     stack.style.opacity = '0';
-    const DECELERATE = 'cubic-bezier(0.05, 0.7, 0.1, 1.0)';
+    const DECELERATE = DECELERATE_EASING;
     const anim = stack.animate(
       [
         { opacity: 0, transform: 'scale(0.92)' },
@@ -692,7 +701,7 @@ export class LockScreen extends HTMLElement {
       return;
     }
 
-    const DECELERATE = 'cubic-bezier(0.05, 0.7, 0.1, 1.0)';
+    const DECELERATE = DECELERATE_EASING;
     // Hide child content before stagger — keep .lock-screen background visible
     const childSels = [
       '.status-bar',
@@ -866,7 +875,7 @@ export class LockScreen extends HTMLElement {
       return;
     }
 
-    const EXIT = 'cubic-bezier(0.3, 0, 0.8, 0.15)';
+    const EXIT = EXIT_EASING;
     const wrappers = [...stack.querySelectorAll('.notification-card-wrapper')];
     const anims = wrappers
       .reverse()
@@ -976,72 +985,17 @@ export class LockScreen extends HTMLElement {
     // Transition handler (main.js) hides via transitionViews
   }
 
-  _getSignalIcon(level) {
-    const icons = [
-      'signal_cellular_0_bar',
-      'signal_cellular_1_bar',
-      'signal_cellular_2_bar',
-      'signal_cellular_3_bar',
-      'signal_cellular_4_bar',
-    ];
-    return icons[Math.max(0, Math.min(4, level))] || icons[0];
-  }
-
-  _getBatteryIcon(percent) {
-    if (percent >= 95) return 'battery_full';
-    if (percent >= 83) return 'battery_6_bar';
-    if (percent >= 70) return 'battery_5_bar';
-    if (percent >= 57) return 'battery_4_bar';
-    if (percent >= 43) return 'battery_3_bar';
-    if (percent >= 30) return 'battery_2_bar';
-    if (percent >= 15) return 'battery_1_bar';
-    return 'battery_0_bar';
-  }
-
-  _getWifiIcon(level) {
-    if (level === 0) return 'wifi_off';
-    if (level === 1) return 'wifi_2_bar';
-    return 'wifi';
-  }
-
-  _renderInternetIcon(type) {
-    if (!type || type === 'none') return '';
-    if (type === 'airplane') {
-      return `<span class="material-symbols-outlined status-icon" aria-hidden="true">airplanemode_active</span>`;
-    }
-    const wifiMatch = type.match(/^wifi(\d)$/);
-    if (wifiMatch) {
-      const icon = this._getWifiIcon(parseInt(wifiMatch[1], 10));
-      return `<span class="material-symbols-outlined status-icon" aria-hidden="true">${icon}</span>`;
-    }
-    const mobileMatch = type.match(/^mobile(\d)$/);
-    if (mobileMatch) {
-      return this._renderMobileIcon(parseInt(mobileMatch[1], 10));
-    }
-    return '';
-  }
-
-  _renderMobileIcon(level) {
-    const labels = ['', 'G', 'E', '3G', '4G', '5G'];
-    const label = labels[level] || '';
-    if (!label) {
-      return `<svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><text x="7" y="11" text-anchor="middle" font-size="10" font-weight="700" fill="currentColor" opacity="0.3">G</text><line x1="1" y1="1" x2="13" y2="13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>`;
-    }
-    const w = label.length <= 1 ? 10 : label.length === 2 ? 16 : 20;
-    return `<svg width="${w}" height="14" viewBox="0 0 ${w} 14" aria-hidden="true"><text x="${w / 2}" y="11.5" text-anchor="middle" font-size="11" font-weight="700" fill="currentColor">${label}</text></svg>`;
-  }
-
   _renderStatusBarContent() {
     const batteryPercent = Math.round(this._battery);
     const internetHtml =
       this._internet && this._internet !== 'none'
-        ? `<span class="internet">${this._renderInternetIcon(this._internet)}</span>`
+        ? `<span class="internet">${renderInternetIcon(this._internet, { iconClass: 'status-icon' })}</span>`
         : '';
     return `
-      <span class="signal"><span class="material-symbols-outlined status-icon" aria-hidden="true">${this._getSignalIcon(this._signal)}</span></span>
+      <span class="signal"><span class="material-symbols-outlined status-icon" aria-hidden="true">${getSignalIcon(this._signal)}</span></span>
       ${internetHtml}
       <span class="battery-wrap">
-        <span class="material-symbols-outlined status-icon" aria-hidden="true">${this._getBatteryIcon(this._battery)}</span>
+        <span class="material-symbols-outlined status-icon" aria-hidden="true">${getBatteryIcon(this._battery)}</span>
         <span class="battery-percent">${batteryPercent}</span>
       </span>
     `;

@@ -6,6 +6,7 @@
  */
 
 import { t } from '../../services/conversation-context.js';
+import { EMPHASIZED_EASING } from '../../utils/animation-constants.js';
 import { escapeHtml } from '../../utils/text.js';
 
 /**
@@ -105,7 +106,7 @@ export class ChoiceButtons extends HTMLElement {
     const others = [...buttons].filter((_, i) => i !== index);
 
     const duration = 200;
-    const easing = 'cubic-bezier(0.2, 0, 0, 1)';
+    const easing = EMPHASIZED_EASING;
 
     // Fade out unselected choices
     for (const btn of others) {

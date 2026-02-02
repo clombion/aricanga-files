@@ -11,6 +11,7 @@
 
 import { getChat, t } from '../services/conversation-context.js';
 import { renderAvatar } from '../utils/avatar.js';
+import { backIcon, timerIcon } from '../utils/icons.js';
 import {
   escapeHtml,
   LEARNING_HIGHLIGHT_CSS,
@@ -18,21 +19,14 @@ import {
   wireGlossaryClicks,
 } from '../utils/text.js';
 
-// SVG icons
-const BACK_ICON = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-  <polyline points="15 18 9 12 15 6"/>
-</svg>`;
+const BACK_ICON = backIcon();
 
 const SEARCH_ICON = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
   <circle cx="11" cy="11" r="8"/>
   <path d="M21 21l-4.35-4.35"/>
 </svg>`;
 
-const TIMER_ICON = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-  <circle cx="12" cy="12" r="10"/>
-  <polyline points="12 6 12 12 16 14"/>
-  <line x1="4" y1="4" x2="8" y2="8" stroke-width="2.5"/>
-</svg>`;
+const TIMER_ICON = timerIcon(24, { withAlarm: true });
 
 const PALETTE_ICON = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
   <circle cx="13.5" cy="6.5" r="2"/>

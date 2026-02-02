@@ -11,6 +11,11 @@ import {
   I18N_EVENTS,
   t,
 } from '../services/conversation-context.js';
+import {
+  DECELERATE_EASING,
+  EMPHASIZED_EASING,
+  EXIT_EASING,
+} from '../utils/animation-constants.js';
 import { renderAvatar } from '../utils/avatar.js';
 import { escapeHtml } from '../utils/text.js';
 
@@ -162,8 +167,8 @@ export class NotificationDrawer extends HTMLElement {
     const shade = this.shadowRoot.querySelector('.shade');
     if (!backdrop || !shade) return;
 
-    const EMPHASIZED = 'cubic-bezier(0.2, 0, 0, 1)';
-    const DECELERATE = 'cubic-bezier(0.05, 0.7, 0.1, 1.0)';
+    const EMPHASIZED = EMPHASIZED_EASING;
+    const DECELERATE = DECELERATE_EASING;
 
     // Pre-hide elements so they don't flash at full opacity during stagger delays
     backdrop.style.opacity = '0';
@@ -244,7 +249,7 @@ export class NotificationDrawer extends HTMLElement {
       return;
     }
 
-    const EXIT = 'cubic-bezier(0.3, 0, 0.8, 0.15)';
+    const EXIT = EXIT_EASING;
 
     const shadeAnim = shade.animate(
       [

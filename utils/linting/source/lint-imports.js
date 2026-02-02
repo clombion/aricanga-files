@@ -28,7 +28,7 @@ const PACKAGE_ALIASES = {
     'packages/framework/src/systems/conversation/index.js',
 };
 
-const SKIP_DIRS = ['generated', 'vendor', 'node_modules'];
+const SKIP_DIRS = ['generated', 'vendor', 'node_modules', 'dist'];
 
 // Match: import { foo, bar } from './path.js'
 // Also matches: import { foo as bar } from './path.js'

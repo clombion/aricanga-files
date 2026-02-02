@@ -10,6 +10,7 @@
  */
 
 import { getChat, t } from '../../services/conversation-context.js';
+import { timerIcon } from '../../utils/icons.js';
 import {
   escapeAttr,
   escapeHtml,
@@ -46,10 +47,7 @@ export const RECEIPT_ICONS = {
 };
 
 // Timer icon for disappearing messages
-const TIMER_ICON = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-  <circle cx="12" cy="12" r="10"/>
-  <polyline points="12 6 12 12 16 14"/>
-</svg>`;
+const TIMER_ICON = timerIcon(12);
 
 // Audio icon for quoted audio messages
 const AUDIO_QUOTE_ICON = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">

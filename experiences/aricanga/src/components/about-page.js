@@ -5,9 +5,9 @@
  * Accessible via the About tile in the notification drawer.
  */
 
-import { eventBus } from '@narratives/framework';
 import { GAME } from '../config.js';
-import { I18N_EVENTS, i18n } from '../services/i18n.js';
+import { i18n } from '../services/i18n.js';
+import { withLocaleReactivity } from '../utils/locale-mixin.js';
 
 /**
  * AboutPage - Full-page about UI
@@ -20,18 +20,17 @@ export class AboutPage extends HTMLElement {
     super();
     this.attachShadow({ mode: 'open' });
     this._onLocaleChanged = this._onLocaleChanged.bind(this);
+    this._locale = withLocaleReactivity(this._onLocaleChanged);
   }
 
   connectedCallback() {
     this.render();
     this.setupEventListeners();
-    eventBus.on(I18N_EVENTS.LOCALE_READY, this._onLocaleChanged);
-    eventBus.on(I18N_EVENTS.LOCALE_CHANGED, this._onLocaleChanged);
+    this._locale.connect();
   }
 
   disconnectedCallback() {
-    eventBus.off(I18N_EVENTS.LOCALE_READY, this._onLocaleChanged);
-    eventBus.off(I18N_EVENTS.LOCALE_CHANGED, this._onLocaleChanged);
+    this._locale.disconnect();
   }
 
   _onLocaleChanged() {

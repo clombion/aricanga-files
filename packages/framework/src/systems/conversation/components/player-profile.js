@@ -10,6 +10,7 @@
 import { getApp, t } from '../services/conversation-context.js';
 import { getProfileImage } from '../services/profile-image.js';
 import { renderAvatar } from '../utils/avatar.js';
+import { backIcon } from '../utils/icons.js';
 import {
   escapeHtml,
   LEARNING_HIGHLIGHT_CSS,
@@ -17,9 +18,7 @@ import {
   wireGlossaryClicks,
 } from '../utils/text.js';
 
-const BACK_ICON = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-  <polyline points="15 18 9 12 15 6"/>
-</svg>`;
+const BACK_ICON = backIcon();
 
 const PERSON_ICON = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
   <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>

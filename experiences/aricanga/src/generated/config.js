@@ -5,7 +5,7 @@
 export const GAME = {
   title: 'Capital Chronicle',
   version: '0.1.0',
-  buildId: '20260202.b66c020',
+  buildId: '20260202.b3ed01a',
 };
 
 // Initial state

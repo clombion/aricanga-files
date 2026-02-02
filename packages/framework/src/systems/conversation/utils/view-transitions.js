@@ -11,11 +11,7 @@
  * - Shadow: elevation on incoming view
  */
 
-/**
- * Material 3 Emphasized easing curve
- * Snappy acceleration + long smooth deceleration
- */
-const EMPHASIZED_EASING = 'cubic-bezier(0.2, 0, 0, 1)';
+import { EMPHASIZED_EASING } from './animation-constants.js';
 
 /**
  * Race a promise against a timeout. Ensures cleanup code in `finally` blocks
