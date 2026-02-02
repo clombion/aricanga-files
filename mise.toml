@@ -156,6 +156,7 @@ outputs = ["experiences/$IMPL/assets/profile_images/optimized/*.jpg"]
 
 [tasks."build:config"]
 description = "Generate config.js from TOML (requires IMPL env var)"
+depends = ["build:images"]
 run = "node utils/build/build-config.js"
 sources = ["experiences/$IMPL/data/base-config.toml", "experiences/$IMPL/data/locales/*.toml"]
 outputs = ["experiences/$IMPL/src/generated/config.js", "experiences/$IMPL/css/generated/theme-vars.css", "experiences/$IMPL/src/dist/locales/*.json"]
@@ -213,6 +214,23 @@ if [ -z "$IMPL" ]; then
     exit 1
 fi
 pnpm run vite:build experiences/$IMPL -c vite.config.js
+dist_dir="experiences/$IMPL/dist"
+mkdir -p "$dist_dir/src/vendor" "$dist_dir/src/dist/locales"
+cp packages/framework/src/vendor/ink.js "$dist_dir/src/vendor/"
+cp experiences/$IMPL/src/dist/locales/*.json "$dist_dir/src/dist/locales/"
+# Copy compiled story.json for each locale
+for locale_dir in experiences/$IMPL/src/dist/*/; do
+  locale=$(basename "$locale_dir")
+  if [ -f "$locale_dir/story.json" ]; then
+    mkdir -p "$dist_dir/src/dist/$locale"
+    cp "$locale_dir/story.json" "$dist_dir/src/dist/$locale/"
+  fi
+done
+# Copy all runtime-loaded assets and data (loaded via fetch/URL, not bundled by Vite)
+cp -rn experiences/$IMPL/assets/* "$dist_dir/assets/" 2>/dev/null || true
+cp -r experiences/$IMPL/data "$dist_dir/" 2>/dev/null || true
+# Validate all runtime assets are present
+./utils/build/validate-dist.sh
 """
 depends = ["build"]
 

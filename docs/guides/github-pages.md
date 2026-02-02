@@ -101,3 +101,5 @@ Push to `main`. The Actions tab will show the deployment run. Once complete, the
 - **Subpath hosting**: `vite.config.js` sets `base: './'`, so the site works under any subpath without changes.
 - **inklecate**: Vendored in the repo — no extra CI installation needed.
 - **Multiple locales**: Both `en` and `fr` story files are compiled and bundled. The app handles locale selection at runtime.
+- **Runtime assets**: `build:prod` copies files that Vite can't bundle (loaded at runtime via `fetch` or `<script>` without `type="module"`): `src/vendor/ink.js`, `src/dist/locales/*.json`, and `src/dist/<locale>/story.json`. If you add new runtime-loaded assets, update the copy step in `mise.toml`.
+- **Chunk splitting**: `vite.config.js` uses `manualChunks` to isolate `packages/framework/src/foundation/` into a separate chunk. This prevents a circular dependency deadlock between the entry chunk (which uses top-level `await`) and the component chunk (which imports shared registries). Do not remove this without verifying the production build still initializes.
