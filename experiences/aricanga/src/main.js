@@ -132,8 +132,9 @@ batteryContext.configure({
 });
 batteryContext.connectToTimeContext();
 
-// Initialize status bar with start state (internet, signal from TOML config)
+// Initialize status bar with start state from TOML config
 statusBar.update({
+  time: START_STATE.current_time,
   internet: START_STATE.internet,
   signal: START_STATE.signal,
 });
@@ -257,6 +258,98 @@ document.addEventListener('keydown', (e) => {
   }
   // Lock screen visible → do nothing
 });
+
+// Touch gestures: swipe-down (open drawer), swipe-up (close drawer), swipe-right (back)
+{
+  const appEl = document.querySelector('#app');
+  const contentArea = document.querySelector('#content-area');
+  let touchStartX = null;
+  let touchStartY = null;
+
+  appEl.addEventListener(
+    'touchstart',
+    (e) => {
+      touchStartX = e.touches[0].clientX;
+      touchStartY = e.touches[0].clientY;
+    },
+    { passive: true },
+  );
+
+  appEl.addEventListener(
+    'touchend',
+    (e) => {
+      if (touchStartX === null || touchStartY === null) return;
+      const endX = e.changedTouches[0].clientX;
+      const endY = e.changedTouches[0].clientY;
+      const deltaX = endX - touchStartX;
+      const deltaY = endY - touchStartY;
+      const absDX = Math.abs(deltaX);
+      const absDY = Math.abs(deltaY);
+      touchStartX = null;
+      touchStartY = null;
+
+      // Swipe-up anywhere: close notification drawer
+      if (notificationDrawer.isOpen && deltaY < -50 && absDY > absDX) {
+        notificationDrawer.close();
+        return;
+      }
+
+      // Swipe-down from top half: open notification drawer
+      const contentRect = contentArea.getBoundingClientRect();
+      const contentMidY = contentRect.top + contentRect.height / 2;
+      if (
+        !notificationDrawer.isOpen &&
+        deltaY > 40 &&
+        absDY > absDX &&
+        e.changedTouches[0].clientY - deltaY < contentMidY
+      ) {
+        document.dispatchEvent(new CustomEvent('drawer-open-requested'));
+        return;
+      }
+
+      // Swipe-right from left half: back-navigate (same as ESC)
+      const appRect = appEl.getBoundingClientRect();
+      const appMidX = appRect.left + appRect.width / 2;
+      if (
+        deltaX > 60 &&
+        absDX > absDY &&
+        endX - deltaX < appMidX &&
+        !notificationDrawer.isOpen
+      ) {
+        if (!settingsPage.hidden) {
+          settingsPage.dispatchEvent(
+            new Event('navigate-back', { bubbles: true }),
+          );
+        } else if (!aboutPage.hidden) {
+          aboutPage.dispatchEvent(
+            new Event('navigate-back', { bubbles: true }),
+          );
+        } else if (!glossaryPage.hidden) {
+          glossaryPage.dispatchEvent(
+            new Event('navigate-back', { bubbles: true }),
+          );
+        } else if (!conversationSettings.hidden) {
+          conversationSettings.dispatchEvent(
+            new Event('settings-closed', { bubbles: true }),
+          );
+        } else if (!playerProfile.hidden) {
+          playerProfile.dispatchEvent(
+            new Event('navigate-back', { bubbles: true }),
+          );
+        } else if (!thread.hidden) {
+          thread.dispatchEvent(new Event('thread-closed', { bubbles: true }));
+        } else if (!hub.hidden) {
+          document.dispatchEvent(
+            new CustomEvent('lockscreen-requested', {
+              detail: { notifications: notificationDrawer.notifications },
+            }),
+          );
+        }
+      }
+    },
+    { passive: true },
+  );
+}
 
 // Wire up events from components
 document.addEventListener('chat-selected', (e) => {

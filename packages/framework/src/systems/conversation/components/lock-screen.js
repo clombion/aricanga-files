@@ -794,6 +794,7 @@ export class LockScreen extends HTMLElement {
     this._cancelActiveAnims();
 
     this._expanded = true;
+    this.classList.add('stack-expanded');
     stack.classList.add('expanded');
     this._showScrim();
 
@@ -853,6 +854,7 @@ export class LockScreen extends HTMLElement {
     this._cancelActiveAnims();
 
     this._expanded = false;
+    this.classList.remove('stack-expanded');
     this._hideScrim();
 
     const reducedMotion = window.matchMedia(
@@ -1105,6 +1107,7 @@ export class LockScreen extends HTMLElement {
     this._dateFormat = startState.date_format || 'weekday_short';
     this._weather = startState.weather || 'sunny';
     this._temperature = startState.temperature || '';
+    this._time = startState.current_time || this._time;
     this._internet = startState.internet || this._internet;
     this._signal = startState.signal ?? this._signal;
     this._battery = startState.battery ?? this._battery;
@@ -1214,6 +1217,22 @@ export class LockScreen extends HTMLElement {
           font-size: 13px;
         }
 
+        /* Mirror of .expanded-scrim that covers the status bar area */
+        .status-bar::after {
+          content: '';
+          position: absolute;
+          inset: 0;
+          backdrop-filter: blur(6px);
+          -webkit-backdrop-filter: blur(6px);
+          background: rgba(0, 0, 0, 0.15); /* lint-ignore: scrim overlay */
+          opacity: 0;
+          pointer-events: none;
+          transition: opacity 300ms ease;
+        }
+        :host(.stack-expanded) .status-bar::after {
+          opacity: 1;
+        }
+
         .status-bar .signal {
           display: flex;
           align-items: center;
@@ -1244,7 +1263,6 @@ export class LockScreen extends HTMLElement {
 
         /* Main content - hidden scrollbar (smartphone-style) */
         .content {
-          position: relative;
           z-index: 1;
           flex: 1;
           display: flex;
@@ -1575,10 +1593,14 @@ export class LockScreen extends HTMLElement {
           .expanded-scrim {
             transition: none;
           }
+          .status-bar::after {
+            transition: none;
+          }
         }
         /* Firefox: backdrop-filter causes blurry text with border-radius */
         @-moz-document url-prefix() {
-          .expanded-scrim {
+          .expanded-scrim,
+          .status-bar::after {
             backdrop-filter: none;
           }
         }
