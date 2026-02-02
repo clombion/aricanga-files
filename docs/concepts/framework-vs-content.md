@@ -25,14 +25,15 @@ Understanding the separation between reusable framework code and game-specific c
                               ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │  SYSTEMS LAYER                                                   │
-│  Reusable vocabulary and UI                                      │
-│  Reusable across phone-style stories                             │
+│  Composable domain modules                                       │
+│  Each system is independent and optional                         │
 │                                                                  │
-│  packages/framework/src/systems/conversation/                    │
-│  - Tag handlers (speaker, type, delay, presence, targetChat)     │
-│  - External functions (delay_next, name, advance_day)            │
-│  - Components (chat-hub, chat-thread, notification-drawer/popup) │
-│  - Services (BatteryContext)                                     │
+│  packages/framework/src/systems/chat/     (current)              │
+│  - Tag handlers, external functions, state machine               │
+│  - Components (chat-hub, chat-thread, notifications, typing)     │
+│  packages/framework/src/systems/phone/    (extracting)           │
+│  - Lock screen, status bar, home indicator, battery context      │
+│  (Future: systems/scenes/, systems/cards/)                       │
 └─────────────────────────────────────────────────────────────────┘
                               │
                               ▼
@@ -117,7 +118,7 @@ const context = createSystemContext({
 
 ## Systems Layer: The Vocabulary
 
-Systems define game-type specific concepts. The conversation system provides phone-chat vocabulary:
+Systems define domain-specific concepts. Each system provides vocabulary for a type of interactive experience. The chat system provides real-time conversation vocabulary:
 
 - **State machine factory** - `createConversationMachine()` handles message buffering, delays, cross-chat state
 - **Tag handlers** - Transform `# speaker:Pat` into structured message data, `# targetChat:` for cross-chat messages

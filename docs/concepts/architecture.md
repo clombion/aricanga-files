@@ -85,6 +85,109 @@ This project uses a layered architecture that enforces structural invariants - m
 
 ---
 
+## Architecture Vision
+
+> The diagram above shows the **current state**. This section documents the **target architecture** — the composable systems model that tasks 138-142 are building toward.
+
+### Composable Systems
+
+Systems are independent domain modules. Each provides components, a state machine (optional), events, services, and tag handlers. Experiences pick which systems they need — one or more. Systems never depend on each other; all cross-system communication goes through the foundation EventBus.
+
+**Target file structure:**
+
+```
+packages/framework/src/
+  foundation/
+    core/              # InkRuntime, Foundation
+    services/          # EventBus, TimeContext, StorageAdapter, Analytics
+    events/            # Foundation-level events (TIME_UPDATED, READY, THEME_CHANGED)
+    utils/             # transition-utils (withTimeout, MOTION_LEVELS, crossfade)
+    state/             # StateFactory
+  systems/
+    chat/              # Real-time chat vocabulary (state machine, chat-hub, chat-thread,
+                       # typing indicators, receipts, notifications, tags, events)
+    phone/             # Phone chrome (lock-screen, status-bar, home-indicator,
+                       # battery context)
+    scenes/            # (planned) Scene-based storytelling — environment renderer,
+                       # character posture, dialogue overlays, accumulative state
+    cards/             # (planned) Card-based interaction — card display, stat bars,
+                       # swipe handler
+  vendor/
+    xstate/            # Vendored XState v5.25.0
+```
+
+### Composability Matrix
+
+Experiences compose systems based on what they need:
+
+| Experience | Foundation | Chat | Phone | Scenes | Cards |
+|------------|-----------|------|-------|--------|-------|
+| Aricanga (phone journalism sim) | ✓ | ✓ | ✓ | | |
+| Slack-style desktop chat | ✓ | ✓ | | | |
+| AI Friction Simulator (desk work sim) | ✓ | | | ✓ | |
+| Desk sim with in-story chat | ✓ | ✓ | | ✓ | |
+| Reigns-on-phone | ✓ | | ✓ | | ✓ |
+| Reigns desktop | ✓ | | | | ✓ |
+
+An experience's `main.js` registers only the systems it uses:
+
+```javascript
+// Phone chat experience (Aricanga)
+await registerChatComponents();
+await registerPhoneComponents();
+
+// Desktop chat experience (Slack-style)
+await registerChatComponents();
+
+// Scene + chat hybrid
+await registerSceneComponents();
+await registerChatComponents();
+```
+
+### Dependency Rules
+
+```
+foundation  ← depends on nothing
+systems     ← depend only on foundation, never on each other
+experiences ← depend on foundation + chosen systems
+```
+
+**Event ownership:**
+
+| Layer | Events |
+|-------|--------|
+| Foundation | TIME_UPDATED, DAY_ADVANCED, READY, THEME_CHANGED, DATA_REQUESTED/RECEIVED/ERROR |
+| Chat system | MESSAGE_*, TYPING_*, PRESENCE_*, CHAT_*, NOTIFICATION_*, CHOICES_AVAILABLE |
+| Phone system | BATTERY_CHANGED |
+| Scenes system | (planned) SCENE_CHANGED, POSTURE_CHANGED, ENVIRONMENT_UPDATED |
+| Cards system | (planned) CARD_SHOWN, CHOICE_MADE, STAT_CHANGED |
+
+Cross-system coordination goes through foundation EventBus. Systems never import from each other.
+
+### Ink as Universal Driver
+
+All systems are renderers for ink output. The ink story is the single narrative source; systems provide different ways to present it.
+
+- Each system defines its own **tag vocabulary** (chat: `# speaker:`, `# receipt:`; scenes: `# scene:`, `# posture:`; cards: `# stat:`, `# card:`)
+- Each system owns its own **state machine** (chat has the conversation machine; scenes and cards would have simpler machines)
+- The experience's `main.js` **coordinates** which system is active — one orchestrator per experience, not a shared routing layer
+- A `# system:` routing tag is deferred until a multi-system experience exists (building it now would be speculative)
+
+### Current State vs Target
+
+| Area | Current | Target | Task |
+|------|---------|--------|------|
+| Transition utilities | In conversation system | Foundation `utils/transition-utils.js` | TASK-138 |
+| Foundation events | Mixed in conversation events | Separate `foundation/events/` | TASK-139 |
+| DataService | In Aricanga experience | Chat system services | TASK-140 |
+| Phone components | Inside conversation system | Standalone `systems/phone/` | TASK-141 |
+| GameController base | Template-only, enhancements in Aricanga | Chat system base class | TASK-142 |
+| Scenes system | Does not exist | `systems/scenes/` | Deferred |
+| Cards system | Does not exist | `systems/cards/` | Deferred |
+| `# system:` routing | Does not exist | Experience-level | Deferred |
+
+---
+
 ## Structural Invariants
 
 These properties are enforced by the architecture:
