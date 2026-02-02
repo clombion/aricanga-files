@@ -87,15 +87,17 @@ export const tagHandlers = [
   },
 
   // Image tag: # image:path/to/image.jpg
+  // Strip leading slash so paths work on subpath deployments (base: './')
   {
     tag: 'image',
-    handler: (value, context) => ({ image: value }),
+    handler: (value, context) => ({ image: value.replace(/^\//, '') }),
   },
 
   // Audio tag: # audio:path/to/audio.mp3
+  // Strip leading slash so paths work on subpath deployments (base: './')
   {
     tag: 'audio',
-    handler: (value, context) => ({ audio: value }),
+    handler: (value, context) => ({ audio: value.replace(/^\//, '') }),
   },
 
   // Notification preview override: # notificationPreview:Custom text here
