@@ -47,8 +47,9 @@ about_game = "À propos de ce jeu"
 game_description = "Aricanga est un jeu éducatif conçu pour rendre les données des industries extractives plus accessibles. À travers une narration interactive, les joueurs apprennent à enquêter et interpréter les données réelles de l'Initiative pour la Transparence dans les Industries Extractives (ITIE)."
 version = "Version"
 credits = "Crédits"
-designed_by = "Jeu conçu par"
+designed_by = "Expérience conçue par"
 cli_name = "Civic Literacy Initiative"
+licenses = "Licences Open Source"
 
 [ui.glossary]
 title = "Glossaire"

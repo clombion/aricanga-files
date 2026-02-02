@@ -899,6 +899,15 @@ try {
   }
   if (ARGS.verbose) console.log('  Validation passed');
 
+  // Inject build identifier (YYYYMMDD.shortSHA)
+  try {
+    const sha = execSync('git rev-parse --short HEAD').toString().trim();
+    const date = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    config.game.buildId = `${date}.${sha}`;
+  } catch {
+    config.game.buildId = 'dev';
+  }
+
   // Generate JavaScript
   if (ARGS.verbose) console.log('\nGenerating outputs...');
   const jsContent = generateConfigJS(config);

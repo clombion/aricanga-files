@@ -61,8 +61,9 @@ export class AboutPage extends HTMLElement {
         'Aricanga is an educational game designed to make extractive industries data more accessible.',
       version: i18n.t('about.version') || 'Version',
       credits: i18n.t('about.credits') || 'Credits',
-      designedBy: i18n.t('about.designed_by') || 'Game designed by',
+      designedBy: i18n.t('about.designed_by') || 'Experience designed by',
       cliName: i18n.t('about.cli_name') || 'Civic Literacy Initiative',
+      licenses: i18n.t('about.licenses') || 'Open Source Licenses',
       back: i18n.t('a11y.back') || 'Back',
     };
 
@@ -160,21 +161,51 @@ export class AboutPage extends HTMLElement {
           gap: 4px;
         }
         .credits-label {
-          color: var(--ink-color-text, #e8e8ed);
+          color: var(--ink-color-text-muted, #71717a);
           font-size: 1em;
         }
         .credits-link {
-          color: var(--ink-color-accent, #5b7cfa);
-          text-decoration: none;
+          color: var(--ink-color-text, #e8e8ed);
+          text-decoration: underline;
+          text-underline-offset: 2px;
           font-size: 0.95em;
         }
         .credits-link:hover {
-          text-decoration: underline;
+          opacity: 0.8;
         }
         .credits-link:focus-visible {
           outline: 2px solid var(--ink-color-accent, #5b7cfa);
           outline-offset: 2px;
           border-radius: 2px;
+        }
+
+        /* License list */
+        .license-list {
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+          padding: var(--ink-space-sm, 8px) var(--ink-space-lg, 20px) var(--ink-space-md, 16px);
+        }
+        .license-item {
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+          text-decoration: none;
+        }
+        .license-item:focus-visible {
+          outline: 2px solid var(--ink-color-accent, #5b7cfa);
+          outline-offset: 2px;
+          border-radius: 4px;
+        }
+        .license-name {
+          color: var(--ink-color-text, #e8e8ed);
+          font-size: 1em;
+          font-weight: 600;
+        }
+        .license-author,
+        .license-type {
+          color: var(--ink-color-text-muted, #71717a);
+          font-size: 0.9em;
         }
 
         /* Divider */
@@ -202,7 +233,7 @@ export class AboutPage extends HTMLElement {
 
         <div class="section-header">${strings.version}</div>
         <div class="setting-row">
-          <div class="setting-value">${GAME.version || '0.1.0'}</div>
+          <div class="setting-value">${GAME.version || '0.1.0'}${GAME.buildId ? ` (${GAME.buildId})` : ''}</div>
         </div>
 
         <div class="divider"></div>
@@ -216,6 +247,22 @@ export class AboutPage extends HTMLElement {
             target="_blank"
             rel="noopener noreferrer"
           >${strings.cliName}</a>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="section-header">${strings.licenses}</div>
+        <div class="license-list">
+          <a class="license-item" href="https://github.com/y-lohse/inkjs" target="_blank" rel="noopener noreferrer">
+            <span class="license-name">inkjs</span>
+            <span class="license-author">y-lohse</span>
+            <span class="license-type">MIT License</span>
+          </a>
+          <a class="license-item" href="https://github.com/inkle/ink" target="_blank" rel="noopener noreferrer">
+            <span class="license-name">ink</span>
+            <span class="license-author">inkle</span>
+            <span class="license-type">MIT License</span>
+          </a>
         </div>
       </div>
     `;

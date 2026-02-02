@@ -11,6 +11,18 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',  // Relative to --root
-    emptyOutDir: true
+    emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        // Foundation modules must live in a shared chunk so the component chunk
+        // never imports back into the entry chunk. Without this, top-level await
+        // in the entry creates a circular-dependency deadlock in production builds.
+        manualChunks(id) {
+          if (id.includes('packages/framework/src/foundation/')) {
+            return 'foundation';
+          }
+        }
+      }
+    }
   }
 })

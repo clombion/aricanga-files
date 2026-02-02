@@ -5,6 +5,7 @@
 export const GAME = {
   title: 'Capital Chronicle',
   version: '0.1.0',
+  buildId: '20260202.b66c020',
 };
 
 // Initial state
@@ -211,8 +212,9 @@ export const STRINGS = {
     game_description: 'Aricanga is an educational game designed to make extractive industries data more accessible. Through interactive storytelling, players learn to investigate and interpret real-world data from the Extractive Industries Transparency Initiative (EITI).',
     version: 'Version',
     credits: 'Credits',
-    designed_by: 'Game designed by',
+    designed_by: 'Experience designed by',
     cli_name: 'Civic Literacy Initiative',
+    licenses: 'Open Source Licenses',
   },
   glossary: {
     title: 'Glossary',

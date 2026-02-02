@@ -2,6 +2,7 @@
 **/profile_images/optimized/
 
 # Compiled output and Vite build output
+experiences/*/dist/
 experiences/*/src/dist/
 *.ink.json
 
