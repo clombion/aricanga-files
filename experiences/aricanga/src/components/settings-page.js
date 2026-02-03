@@ -47,14 +47,131 @@ export class SettingsPage extends HTMLElement {
   }
 
   _onLocaleChanged() {
-    this.render();
-    this.setupEventListeners();
+    this._updateLocalizedText();
+    this._updateLocaleActiveState();
   }
 
   _onMotionChanged() {
-    // Re-render with new motion level
-    this.render();
-    this.setupEventListeners();
+    this._updateMotionActiveState();
+  }
+
+  _updateLocalizedText() {
+    const root = this.shadowRoot;
+    const strings = {
+      settings: i18n.t('settings.title') || 'Settings',
+      language: i18n.t('settings.language') || 'Language',
+      gameLanguage: i18n.t('settings.game_language') || 'Game language',
+      motion: i18n.t('settings.motion') || 'Motion',
+      motionDescription:
+        i18n.t('settings.motion_description') || 'Page transition animations',
+      back: i18n.t('a11y.back_to_chat_list') || 'Back to chat list',
+      version: i18n.t('about.version') || 'Version',
+    };
+
+    const title = root.querySelector('.header-title');
+    if (title) title.textContent = strings.settings;
+
+    const backBtn = root.querySelector('.back-button');
+    if (backBtn) backBtn.setAttribute('aria-label', strings.back);
+
+    // Section headers
+    const sectionHeaders = root.querySelectorAll('.section-header');
+    if (sectionHeaders[0]) sectionHeaders[0].textContent = strings.language;
+    if (sectionHeaders[1]) sectionHeaders[1].textContent = strings.motion;
+
+    // Setting rows
+    const settingTitles = root.querySelectorAll('.setting-title');
+    if (settingTitles[0]) settingTitles[0].textContent = strings.gameLanguage;
+    if (settingTitles[1])
+      settingTitles[1].textContent = strings.motionDescription;
+    if (settingTitles[2]) settingTitles[2].textContent = strings.version;
+
+    // Current locale display
+    const settingValues = root.querySelectorAll('.setting-value');
+    if (settingValues[0])
+      settingValues[0].textContent =
+        I18N.localeNames[i18n.locale] || i18n.locale;
+
+    // Radiogroup aria-labels
+    const localeGroup = root.querySelector('.locale-options');
+    if (localeGroup) localeGroup.setAttribute('aria-label', strings.language);
+    const motionGroup = root.querySelector('.motion-options');
+    if (motionGroup) motionGroup.setAttribute('aria-label', strings.motion);
+
+    // Motion option labels (translatable)
+    this._updateMotionLabels();
+  }
+
+  _updateLocaleActiveState() {
+    const root = this.shadowRoot;
+    for (const option of root.querySelectorAll('.locale-option')) {
+      const isActive = option.dataset.locale === i18n.locale;
+      option.classList.toggle('active', isActive);
+      option.setAttribute('aria-checked', String(isActive));
+      option.setAttribute('tabindex', isActive ? '0' : '-1');
+      const checkmark = option.querySelector('.checkmark');
+      if (isActive && !checkmark) {
+        option.insertAdjacentHTML(
+          'beforeend',
+          '<span class="checkmark">✓</span>',
+        );
+      } else if (!isActive && checkmark) {
+        checkmark.remove();
+      }
+    }
+  }
+
+  _updateMotionActiveState() {
+    const root = this.shadowRoot;
+    for (const option of root.querySelectorAll('.motion-option')) {
+      const isActive = option.dataset.level === motionPrefs.level;
+      option.classList.toggle('active', isActive);
+      option.setAttribute('aria-checked', String(isActive));
+      option.setAttribute('tabindex', isActive ? '0' : '-1');
+      const checkmark = option.querySelector('.checkmark');
+      if (isActive && !checkmark) {
+        option.insertAdjacentHTML(
+          'beforeend',
+          '<span class="checkmark">✓</span>',
+        );
+      } else if (!isActive && checkmark) {
+        checkmark.remove();
+      }
+    }
+    this._updateMotionLabels();
+  }
+
+  _updateMotionLabels() {
+    const root = this.shadowRoot;
+    const effectiveLevel = motionPrefs.getEffectiveLevel();
+    const isOsOverriding = effectiveLevel !== motionPrefs.level;
+    const labels = {
+      [MOTION_LEVELS.FULL]: i18n.t('settings.motion_options.full'),
+      [MOTION_LEVELS.REDUCED]: i18n.t('settings.motion_options.reduced'),
+      [MOTION_LEVELS.OFF]: i18n.t('settings.motion_options.off'),
+    };
+
+    for (const option of root.querySelectorAll('.motion-option')) {
+      const level = option.dataset.level;
+      const nameEl = option.querySelector('.option-name');
+      if (nameEl) nameEl.textContent = labels[level] || level;
+
+      const showOsIndicator = isOsOverriding && level === effectiveLevel;
+      const indicator = option.querySelector('.os-indicator');
+      if (showOsIndicator && !indicator) {
+        const labelEl = option.querySelector('.option-label');
+        if (labelEl) {
+          labelEl.insertAdjacentHTML(
+            'beforeend',
+            `<span class="os-indicator">${i18n.t('settings.motion_options.os_preference')}</span>`,
+          );
+        }
+      } else if (!showOsIndicator && indicator) {
+        indicator.remove();
+      } else if (showOsIndicator && indicator) {
+        indicator.textContent = i18n.t('settings.motion_options.os_preference');
+      }
+    }
   }
 
   setupEventListeners() {

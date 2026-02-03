@@ -41,8 +41,26 @@ export class GlossaryPage extends HTMLElement {
   }
 
   _onLocaleChanged() {
-    this.render();
-    this.setupEventListeners();
+    this._updateLocalizedText();
+  }
+
+  _updateLocalizedText() {
+    const root = this.shadowRoot;
+    const strings = this.getStrings();
+
+    const title = root.querySelector('.header-title');
+    if (title) title.textContent = strings.title;
+
+    const backBtn = root.querySelector('.back-button');
+    if (backBtn) backBtn.setAttribute('aria-label', strings.back);
+
+    const searchInput = root.querySelector('.search-input');
+    if (searchInput) {
+      searchInput.placeholder = strings.searchPlaceholder;
+      searchInput.setAttribute('aria-label', strings.searchPlaceholder);
+    }
+
+    this.renderTermsList();
   }
 
   /**

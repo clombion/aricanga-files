@@ -81,7 +81,48 @@ export class NotificationDrawer extends HTMLElement {
   }
 
   _onLocaleChanged() {
-    this.render();
+    this._updateLocalizedText();
+  }
+
+  _updateLocalizedText() {
+    const root = this.shadowRoot;
+
+    // Tile labels
+    const tiles = root.querySelectorAll('.tile');
+    for (const tile of tiles) {
+      const action = tile.dataset.action;
+      if (action) {
+        const label = t(`tiles.${action}`);
+        tile.setAttribute('aria-label', label);
+        const span = tile.querySelector('.tile-label');
+        if (span) span.textContent = label;
+      }
+    }
+
+    // Shade dialog aria-label
+    const shade = root.querySelector('.shade');
+    if (shade) shade.setAttribute('aria-label', t('a11y.notification_shade'));
+
+    // Section header
+    const sectionHeader = root.querySelector('.section-header');
+    if (sectionHeader) sectionHeader.textContent = t('drawer.notifications');
+
+    // Empty state
+    const empty = root.querySelector('.notifications .empty');
+    if (empty) empty.textContent = t('drawer.no_notifications');
+
+    // Clear all button
+    const clearAllBtn = root.querySelector('.clear-all-btn');
+    if (clearAllBtn) clearAllBtn.textContent = t('drawer.clear_all');
+
+    // Theme toggle aria-label
+    const themeBtn = root.querySelector('.theme-toggle-btn');
+    if (themeBtn) themeBtn.setAttribute('aria-label', t('tiles.theme_toggle'));
+
+    // Clear-one button aria-labels
+    for (const btn of root.querySelectorAll('.clear-one-btn')) {
+      btn.setAttribute('aria-label', t('a11y.clear_notification'));
+    }
   }
 
   _onThemeChanged(e) {
