@@ -13,6 +13,7 @@ import {
   createTypingStartEvent,
   EVENTS,
   eventBus,
+  Story,
   storage,
 } from '@narratives/framework';
 import { createActor } from 'xstate';
@@ -21,8 +22,6 @@ import { gameStateMachine } from './game-state.js';
 import { SEEDS } from './generated/seeds.js';
 import { InkBridge } from './ink-bridge.js';
 import { loadExternalData } from './services/data-loader.js';
-
-const { Story } = window.inkjs;
 
 export class GameController extends EventTarget {
   constructor() {

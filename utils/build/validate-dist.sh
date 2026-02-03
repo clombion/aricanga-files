@@ -30,11 +30,7 @@ check "$dist/index.html"
 ls "$dist/assets/"*.js >/dev/null 2>&1 || { echo "  MISSING: $dist/assets/*.js (no JS bundles)"; errors=$((errors + 1)); }
 ls "$dist/assets/"*.css >/dev/null 2>&1 || { echo "  MISSING: $dist/assets/*.css (no CSS)"; errors=$((errors + 1)); }
 
-# 2. ink.js runtime (non-module script)
-echo "  Checking ink runtime..."
-check "$dist/src/vendor/ink.js"
-
-# 3. Story JSON per locale
+# 2. Story JSON per locale
 echo "  Checking story files..."
 for locale_dir in "$src/src/dist"/*/; do
   locale=$(basename "$locale_dir")

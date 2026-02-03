@@ -1,6 +1,7 @@
 // Foundation - Main orchestrator for vocabulary-agnostic interactive fiction
 // Manages story loading and runtime setup
 
+import { Story } from '../runtime/inkjs.js';
 import { InkRuntime } from './ink-runtime.js';
 
 /**
@@ -90,14 +91,6 @@ export class Foundation extends EventTarget {
       // 1. Load and compile story
       const res = await fetch(storyUrl);
       const json = await res.json();
-
-      // Assume inkjs is globally available (loaded via script tag)
-      const Story = window.inkjs?.Story;
-      if (!Story) {
-        throw new Error(
-          'inkjs not found. Include inkjs library before starting.',
-        );
-      }
 
       const story = new Story(json);
 

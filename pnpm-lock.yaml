@@ -90,6 +90,10 @@ importers:
         version: link:../../packages/test-utils
 
   packages/framework:
+    dependencies:
+      inkjs:
+        specifier: ^2.3.2
+        version: 2.3.2
     devDependencies:
       '@narratives/test-utils':
         specifier: workspace:*

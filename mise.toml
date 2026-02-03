@@ -215,8 +215,7 @@ if [ -z "$IMPL" ]; then
 fi
 pnpm run vite:build experiences/$IMPL -c vite.config.js
 dist_dir="experiences/$IMPL/dist"
-mkdir -p "$dist_dir/src/vendor" "$dist_dir/src/dist/locales"
-cp packages/framework/src/vendor/ink.js "$dist_dir/src/vendor/"
+mkdir -p "$dist_dir/src/dist/locales"
 cp experiences/$IMPL/src/dist/locales/*.json "$dist_dir/src/dist/locales/"
 # Copy compiled story.json for each locale
 for locale_dir in experiences/$IMPL/src/dist/*/; do

@@ -50,7 +50,7 @@ import { createMachine, assign, createActor, fromPromise } from '../../vendor/xs
 
 Vitest aliases the vendor path to the npm package for testing.
 
-## ink.js
+## ink.js (removed)
 
-**Source:** inkjs npm package (pre-existing vendor)
-**License:** MIT
+ink.js was previously vendored as a UMD bundle. It is now imported as an ESM module
+from the `inkjs` npm package via `foundation/runtime/inkjs.js`.

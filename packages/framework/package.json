@@ -7,6 +7,9 @@
     "./foundation": "./src/foundation/index.js",
     "./systems/conversation": "./src/systems/conversation/index.js"
   },
+  "dependencies": {
+    "inkjs": "^2.3.2"
+  },
   "devDependencies": {
     "@narratives/test-utils": "workspace:*"
   },

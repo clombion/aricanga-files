@@ -11,6 +11,7 @@ export {
 // Types (JSDoc typedefs for IDE support)
 // Import types.js for @typedef availability: import '../foundation/types.js'
 export { InkRuntime } from './core/ink-runtime.js';
+export { Story } from './runtime/inkjs.js';
 // Analytics
 export {
   getAnalyticsConfig,

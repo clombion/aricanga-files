@@ -4,6 +4,7 @@
 import {
   createActor,
   eventBus,
+  Story,
   storage,
   EVENTS,
   createChatOpenedEvent,
@@ -18,8 +19,6 @@ import { CHATS } from './config.js';
 import { gameStateMachine } from './game-state.js';
 import { InkBridge } from './ink-bridge.js';
 import { loadExternalData } from './services/data-loader.js';
-
-const { Story } = window.inkjs;
 
 export class GameController extends EventTarget {
   constructor() {

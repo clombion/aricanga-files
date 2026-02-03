@@ -454,8 +454,7 @@ packages/
         │       ├── tags/            # Tag handlers
         │       └── components/      # Web components (chat-hub, chat-thread, etc.)
         └── vendor/
-            ├── xstate/              # Vendored XState v5.25.0
-            └── ink.js               # Vendored inkjs runtime
+            └── xstate/              # Vendored XState v5.25.0
 
 experiences/
 └── {impl}/                          # Your specific game
