@@ -548,7 +548,7 @@ eventBus.on(EVENTS.READY, () => {
   // On fresh start, ink already fires NOTIFICATION_SHOW so drawer is populated.
   if (notificationDrawer.count === 0) {
     for (const [chatId] of Object.entries(CHATS)) {
-      if (!controller._unreadState?.[chatId]) continue;
+      if (!snapshot.context.unreadChatIds?.has(chatId)) continue;
       const msgs = messageHistory[chatId] || [];
       const lastMsg = msgs[msgs.length - 1];
       const preview = lastMsg?.text || '';

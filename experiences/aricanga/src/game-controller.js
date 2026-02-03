@@ -28,7 +28,6 @@ export class GameController extends EventTarget {
     super();
     this.story = null;
     this.bridge = null;
-    this._unreadState = {};
     this._lastReceiptChange = null;
 
     this.actor = createActor(gameStateMachine);
@@ -69,6 +68,7 @@ export class GameController extends EventTarget {
         history: initialHistory,
         lastReadMessageId: savedData?.lastReadMessageId || {},
         deferredMessages: savedData?.deferredMessages || {},
+        unreadChatIds: savedData?.unreadChatIds || [],
       });
 
       // Auto-start story at hub knot for fresh games
@@ -155,9 +155,6 @@ export class GameController extends EventTarget {
         }
         this.actor.send({ type: 'CHECK_STORY' });
       }
-
-      // Clear unread state when chat is opened
-      this._unreadState[chatId] = false;
     } else {
       this.actor.send({ type: 'CHECK_STORY' });
     }
@@ -195,7 +192,7 @@ export class GameController extends EventTarget {
       messageHistory: snapshot.context.messageHistory,
       lastReadMessageId: snapshot.context.lastReadMessageId,
       deferredMessages: snapshot.context.deferredMessages,
-      unreadState: this._unreadState,
+      unreadChatIds: [...snapshot.context.unreadChatIds],
       timestamp: Date.now(),
     });
     // Note: notifiedChatIds is NOT persisted - intentional UX decision
@@ -210,8 +207,11 @@ export class GameController extends EventTarget {
       } catch (e) {
         console.warn('Failed to restore ink state:', e);
       }
-      if (state.unreadState) {
-        this._unreadState = state.unreadState;
+      // Migrate old unreadState format to unreadChatIds
+      if (state.unreadState && !state.unreadChatIds) {
+        state.unreadChatIds = Object.keys(state.unreadState).filter(
+          (k) => state.unreadState[k],
+        );
       }
     }
     return state;
@@ -296,9 +296,6 @@ export class GameController extends EventTarget {
               typeof msg.notificationPreview === 'string'
                 ? msg.notificationPreview
                 : msg.text || '';
-
-            // Track unread state for persistence
-            this._unreadState[chatId] = true;
 
             // Emit notification event on both controller and eventBus
             const notificationPayload = createNotificationEvent(

@@ -203,7 +203,7 @@ See [Simulation Physics](../concepts/simulation-physics.md#emergent-notification
 
 ## Example: Live Unread Counter
 
-A component that shows total unread count. Unread state derives from `NOTIFICATION_SHOW` (sets badge) and `CHAT_OPENED` (clears badge), persisted in `game-controller`'s `unreadState`.
+A component that shows total unread count. Unread state derives from `NOTIFICATION_SHOW` (sets badge) and `CHAT_OPENED` (clears badge), persisted in XState context as `unreadChatIds`.
 
 ```javascript
 import { eventBus } from '../services/event-bus.js';

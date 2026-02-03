@@ -238,7 +238,7 @@ The game saves state to localStorage on significant events.
 |------|-------------|--------|
 | Ink story state | `gameState.inkState` | JSON (ink's `state.ToJson()`) |
 | Message history | `gameState.messageHistory` | `{ [chatId]: Message[] }` |
-| Unread state | `gameState.unreadState` | `{ [chatId]: boolean }` |
+| Unread state | `gameState.unreadChatIds` | `string[]` (serialized from XState `Set<chatId>`) |
 | Save timestamp | `gameState.timestamp` | Unix milliseconds |
 
 ### What's NOT Saved

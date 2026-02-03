@@ -34,7 +34,7 @@ Displays key story variables with live updates (refreshes every 500ms):
 | **Story progress** | `seen_announcement`, `player_agreed`, `draft_sent`, `article_published` |
 | **Research** | `research_started`, `research_complete` |
 | **TonyGov arc** | `spectre_contacted`, `agreed_to_meet` |
-| **Unread badges** | Derived from `NOTIFICATION_SHOW` / `CHAT_OPENED` events (persisted in `unreadState`) |
+| **Unread badges** | Derived from `NOTIFICATION_SHOW` / `CHAT_OPENED` events (persisted in XState `unreadChatIds`) |
 
 **Boolean toggle:** Click the ON/OFF button next to any boolean variable to flip its value instantly.
 

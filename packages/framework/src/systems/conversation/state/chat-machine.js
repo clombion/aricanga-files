@@ -221,6 +221,7 @@ export function createChatMachine(options = {}) {
         // HIGH-WATER MARK STATE (for unread separator)
         lastReadMessageId: {}, // { chatId: messageId | null } - cursor for unread separator
         notifiedChatIds: new Set(), // Background chats that got a notification (cleared on open)
+        unreadChatIds: new Set(), // Persisted: chats with unread messages (for badge/drawer restore)
         deferredMessages: {}, // { chatId: Array<{ message, delay }> } - messages awaiting replay
       },
 
@@ -324,6 +325,7 @@ export function createChatMachine(options = {}) {
           },
           lastReadMessageId: ({ event }) => event.lastReadMessageId || {},
           deferredMessages: ({ event }) => event.deferredMessages || {},
+          unreadChatIds: ({ event }) => new Set(event.unreadChatIds || []),
           // Note: notifiedChatIds is NOT restored - intentional UX decision
           // On refresh, first new background message should notify again
         }),
@@ -743,6 +745,10 @@ export function createChatMachine(options = {}) {
           const newNotifiedChatIds = new Set(context.notifiedChatIds);
           newNotifiedChatIds.delete(chatId);
 
+          // Clear unread state (badge/drawer persistence)
+          const newUnreadChatIds = new Set(context.unreadChatIds);
+          newUnreadChatIds.delete(chatId);
+
           // Update lastReadMessageId for PREVIOUS chat (if switching between chats)
           // This ensures the read position is saved when navigating chat-to-chat
           const prevChatId = context.currentView?.chatId;
@@ -766,6 +772,7 @@ export function createChatMachine(options = {}) {
             savedChoicesState: newSavedChoicesState,
             storyStartedThisRender: false,
             notifiedChatIds: newNotifiedChatIds,
+            unreadChatIds: newUnreadChatIds,
             // If buffer was cleared on open, update history and clear buffer state
             ...(clearedBuffer && {
               messageHistory: historyToUse,
@@ -818,7 +825,12 @@ export function createChatMachine(options = {}) {
           if (!chatId) return context;
           const newNotifiedChatIds = new Set(context.notifiedChatIds);
           newNotifiedChatIds.add(chatId);
-          return { notifiedChatIds: newNotifiedChatIds };
+          const newUnreadChatIds = new Set(context.unreadChatIds);
+          newUnreadChatIds.add(chatId);
+          return {
+            notifiedChatIds: newNotifiedChatIds,
+            unreadChatIds: newUnreadChatIds,
+          };
         }),
 
         checkForStall: ({ context }) => {
