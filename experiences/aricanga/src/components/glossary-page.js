@@ -15,6 +15,9 @@ import { withLocaleReactivity } from '../utils/locale-mixin.js';
  * @element glossary-page
  * @fires {CustomEvent} navigate-back - When user presses back button
  */
+const HIGHLIGHT_FLASH_MS = 2000;
+const SEARCH_DEBOUNCE_MS = 200;
+
 export class GlossaryPage extends HTMLElement {
   constructor() {
     super();
@@ -66,7 +69,10 @@ export class GlossaryPage extends HTMLElement {
     if (termEl) {
       termEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
       termEl.classList.add('highlighted');
-      setTimeout(() => termEl.classList.remove('highlighted'), 2000);
+      setTimeout(
+        () => termEl.classList.remove('highlighted'),
+        HIGHLIGHT_FLASH_MS,
+      );
     }
   }
 
@@ -87,7 +93,10 @@ export class GlossaryPage extends HTMLElement {
     searchInput?.addEventListener('input', (e) => {
       this._searchQuery = e.target.value;
       clearTimeout(this._debounceTimer);
-      this._debounceTimer = setTimeout(() => this.renderTermsList(), 200);
+      this._debounceTimer = setTimeout(
+        () => this.renderTermsList(),
+        SEARCH_DEBOUNCE_MS,
+      );
     });
   }
 

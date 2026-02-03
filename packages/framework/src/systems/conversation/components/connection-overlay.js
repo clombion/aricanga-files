@@ -5,6 +5,7 @@ import {
   DECELERATE_EASING,
   EXIT_EASING,
 } from '../utils/animation-constants.js';
+import { TRANSITIONS } from '../utils/view-transitions.js';
 
 export class ConnectionOverlay extends HTMLElement {
   constructor() {
@@ -37,7 +38,7 @@ export class ConnectionOverlay extends HTMLElement {
           { transform: 'translateY(0)', opacity: 1 },
         ],
         {
-          duration: 300,
+          duration: TRANSITIONS.OPEN_OVERLAY.duration,
           easing: DECELERATE_EASING,
           fill: 'forwards',
         },
@@ -60,7 +61,7 @@ export class ConnectionOverlay extends HTMLElement {
           { transform: 'translateY(-100%)', opacity: 0 },
         ],
         {
-          duration: 250,
+          duration: TRANSITIONS.CLOSE_OVERLAY.duration,
           easing: EXIT_EASING,
           fill: 'forwards',
         },

@@ -13,8 +13,12 @@ import {
 } from '../services/conversation-context.js';
 import {
   DECELERATE_EASING,
+  DURATION_FAST,
+  DURATION_MEDIUM,
+  DURATION_QUICK,
   EMPHASIZED_EASING,
   EXIT_EASING,
+  STAGGER_NORMAL,
 } from '../utils/animation-constants.js';
 import { renderAvatar } from '../utils/avatar.js';
 import { escapeHtml } from '../utils/text.js';
@@ -183,7 +187,7 @@ export class NotificationDrawer extends HTMLElement {
     // Backdrop fade in
     this._activeAnimations.push(
       backdrop.animate([{ opacity: 0 }, { opacity: 1 }], {
-        duration: 350,
+        duration: DURATION_FAST,
         easing: EMPHASIZED,
         fill: 'forwards',
       }),
@@ -196,7 +200,7 @@ export class NotificationDrawer extends HTMLElement {
           { opacity: 0, transform: 'translateX(-50%) translateY(-40px)' },
           { opacity: 1, transform: 'translateX(-50%) translateY(0)' },
         ],
-        { duration: 450, easing: DECELERATE, fill: 'forwards' },
+        { duration: DURATION_MEDIUM, easing: DECELERATE, fill: 'forwards' },
       ),
     );
 
@@ -204,8 +208,8 @@ export class NotificationDrawer extends HTMLElement {
     tiles.forEach((tile, i) => {
       this._activeAnimations.push(
         tile.animate([{ opacity: 0 }, { opacity: 1 }], {
-          duration: 300,
-          delay: i * 50,
+          duration: DURATION_FAST,
+          delay: i * STAGGER_NORMAL,
           easing: DECELERATE,
           fill: 'forwards',
         }),
@@ -216,7 +220,7 @@ export class NotificationDrawer extends HTMLElement {
     if (notifSection) {
       this._activeAnimations.push(
         notifSection.animate([{ opacity: 0 }, { opacity: 1 }], {
-          duration: 450,
+          duration: DURATION_MEDIUM,
           easing: DECELERATE,
           fill: 'forwards',
         }),
@@ -256,12 +260,12 @@ export class NotificationDrawer extends HTMLElement {
         { opacity: 1, transform: 'translateX(-50%) translateY(0)' },
         { opacity: 0, transform: 'translateX(-50%) translateY(-20px)' },
       ],
-      { duration: 300, easing: EXIT, fill: 'forwards' },
+      { duration: DURATION_FAST, easing: EXIT, fill: 'forwards' },
     );
     this._activeAnimations.push(shadeAnim);
 
     const backdropAnim = backdrop.animate([{ opacity: 1 }, { opacity: 0 }], {
-      duration: 260,
+      duration: DURATION_QUICK,
       easing: EXIT,
       fill: 'forwards',
     });

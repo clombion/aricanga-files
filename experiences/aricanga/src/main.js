@@ -143,7 +143,10 @@ statusBar.update({
 document.addEventListener('lock-screen-unlocked', () => {
   lockScreen.stopAnimation();
   statusBar.hidden = false;
-  transition(lockScreen, hub, { direction: 'slide-up', duration: 400 });
+  transition(lockScreen, hub, {
+    direction: 'slide-up',
+    duration: TRANSITIONS.UNLOCK.duration,
+  });
 });
 
 // Return to lock screen (for testing)

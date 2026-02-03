@@ -22,7 +22,11 @@ import {
 } from '../services/conversation-context.js';
 import {
   DECELERATE_EASING,
+  DURATION_ELABORATE,
+  DURATION_FAST,
+  DURATION_QUICK,
   EXIT_EASING,
+  STAGGER_TIGHT,
 } from '../utils/animation-constants.js';
 import { renderAvatar } from '../utils/avatar.js';
 import {
@@ -48,6 +52,23 @@ const WEATHER_ICONS = {
   snowy: '❄️',
   foggy: '🌫️',
 };
+
+// Wake animation choreography — staggered entrance sequence
+const WAKE = {
+  BG: { delay: 0, duration: 900 },
+  STATUSBAR: { delay: 200, duration: 500 },
+  DATE_WEATHER: { delay: 350, duration: 600 },
+  CLOCK: { delay: 500, duration: 800 },
+  BOTTOM: { delay: 750, duration: 550 },
+};
+const NOTIFICATION_GATE_MS = 1200;
+const CARD_SETTLE_TIMEOUT = 850;
+const INTER_CARD_DELAY = 150;
+const FINGERPRINT_BOUNCE_MS = 600;
+const STACK_EXPAND_STAGGER = 40;
+const STACK_SHADOW_TRANSITION_MS = 350;
+const CARD_ENTRANCE_MS = 800;
+const SCRIM_TRANSITION_MS = 300;
 
 export class LockScreen extends HTMLElement {
   constructor() {
@@ -196,7 +217,7 @@ export class LockScreen extends HTMLElement {
         { opacity: 0, transform: 'scale(0.92)' },
         { opacity: 1, transform: 'scale(1)' },
       ],
-      { duration: 900, easing: DECELERATE, fill: 'forwards' },
+      { duration: DURATION_ELABORATE, easing: DECELERATE, fill: 'forwards' },
     );
     anim.finished
       .then(() => {
@@ -260,13 +281,13 @@ export class LockScreen extends HTMLElement {
       (card || wrapper).addEventListener('animationend', resolve, {
         once: true,
       });
-      setTimeout(resolve, 850); // Safety timeout (BUG-003 pattern)
+      setTimeout(resolve, CARD_SETTLE_TIMEOUT); // Safety timeout (BUG-003 pattern)
     });
 
     wrapper.classList.remove('entering');
 
     // 5. Stagger delay before next queued notification
-    await new Promise((r) => setTimeout(r, 150));
+    await new Promise((r) => setTimeout(r, INTER_CARD_DELAY));
   }
 
   /** Create the notification stack container for the first notification */
@@ -619,7 +640,7 @@ export class LockScreen extends HTMLElement {
     // Remove after animation completes
     setTimeout(() => {
       fingerprintBtn.classList.remove('bounce');
-    }, 600);
+    }, FINGERPRINT_BOUNCE_MS);
   }
 
   /** Feature 1: Wake-up stagger animation on page load */
@@ -629,7 +650,7 @@ export class LockScreen extends HTMLElement {
       const root = this.shadowRoot.querySelector('.lock-screen');
       if (root) {
         root.animate([{ opacity: 0 }, { opacity: 1 }], {
-          duration: 200,
+          duration: DURATION_QUICK,
           easing: 'ease',
         });
       }
@@ -652,8 +673,8 @@ export class LockScreen extends HTMLElement {
     const elements = [
       {
         sel: '.lock-screen',
-        delay: 0,
-        dur: 900,
+        delay: WAKE.BG.delay,
+        dur: WAKE.BG.duration,
         kf: [
           { opacity: 0.7, transform: 'scale(1.04)' },
           { opacity: 1, transform: 'scale(1)' },
@@ -661,14 +682,14 @@ export class LockScreen extends HTMLElement {
       },
       {
         sel: '.status-bar',
-        delay: 200,
-        dur: 500,
+        delay: WAKE.STATUSBAR.delay,
+        dur: WAKE.STATUSBAR.duration,
         kf: [{ opacity: 0 }, { opacity: 1 }],
       },
       {
         sel: '.date-weather',
-        delay: 350,
-        dur: 600,
+        delay: WAKE.DATE_WEATHER.delay,
+        dur: WAKE.DATE_WEATHER.duration,
         kf: [
           { opacity: 0, transform: 'translateY(12px)' },
           { opacity: 1, transform: 'translateY(0)' },
@@ -676,8 +697,8 @@ export class LockScreen extends HTMLElement {
       },
       {
         sel: '.time-stacked',
-        delay: 500,
-        dur: 800,
+        delay: WAKE.CLOCK.delay,
+        dur: WAKE.CLOCK.duration,
         kf: [
           { opacity: 0, transform: 'scale(0.92)' },
           { opacity: 1, transform: 'scale(1)' },
@@ -685,8 +706,8 @@ export class LockScreen extends HTMLElement {
       },
       {
         sel: '.bottom-section',
-        delay: 750,
-        dur: 550,
+        delay: WAKE.BOTTOM.delay,
+        dur: WAKE.BOTTOM.duration,
         kf: [{ opacity: 0 }, { opacity: 1 }],
       },
     ];
@@ -715,7 +736,7 @@ export class LockScreen extends HTMLElement {
     }
     // Notifications gate: appear after fingerprint is mostly faded in.
     // Bottom-section starts at 750ms + ~450ms to reach full opacity = ~1200ms.
-    this._wakeReady = new Promise((r) => setTimeout(r, 1200));
+    this._wakeReady = new Promise((r) => setTimeout(r, NOTIFICATION_GATE_MS));
   }
 
   /**
@@ -766,7 +787,12 @@ export class LockScreen extends HTMLElement {
             { opacity: 0, transform: 'translateY(20px) scale(0.95)' },
             { opacity: 1, transform: 'translateY(0) scale(1)' },
           ],
-          { duration: 300, delay: i * 40, easing: SPRING, fill: 'forwards' },
+          {
+            duration: DURATION_FAST,
+            delay: i * STACK_EXPAND_STAGGER,
+            easing: SPRING,
+            fill: 'forwards',
+          },
         );
         this._activeAnims.push(anim);
         anim.finished
@@ -819,7 +845,12 @@ export class LockScreen extends HTMLElement {
             { opacity: 1, transform: 'translateY(0) scale(1)' },
             { opacity: 0, transform: 'translateY(-10px) scale(0.95)' },
           ],
-          { duration: 200, delay: i * 30, easing: EXIT, fill: 'forwards' },
+          {
+            duration: DURATION_QUICK,
+            delay: i * STAGGER_TIGHT,
+            easing: EXIT,
+            fill: 'forwards',
+          },
         );
         this._activeAnims = this._activeAnims || [];
         this._activeAnims.push(anim);
@@ -1113,7 +1144,7 @@ export class LockScreen extends HTMLElement {
           background: rgba(0, 0, 0, 0.15); /* lint-ignore: scrim overlay */
           opacity: 0;
           pointer-events: none;
-          transition: opacity 300ms ease;
+          transition: opacity ${SCRIM_TRANSITION_MS}ms ease;
         }
         :host(.stack-expanded) .status-bar::after {
           opacity: 1;
@@ -1211,7 +1242,7 @@ export class LockScreen extends HTMLElement {
 
         /* Notification entrance — card slides up from below and settles */
         .notification-card-wrapper.entering .notification-card {
-          animation: notification-enter-card 800ms cubic-bezier(0.25, 0.1, 0.25, 1.0) both;
+          animation: notification-enter-card ${CARD_ENTRANCE_MS}ms cubic-bezier(0.25, 0.1, 0.25, 1.0) both;
         }
 
         @keyframes notification-enter-card {
@@ -1311,7 +1342,7 @@ export class LockScreen extends HTMLElement {
 
         /* Smooth box-shadow transition when stack depth changes */
         .notification-card[data-stacked="0"] {
-          transition: box-shadow 350ms cubic-bezier(0.05, 0.7, 0.1, 1.0);
+          transition: box-shadow ${STACK_SHADOW_TRANSITION_MS}ms cubic-bezier(0.05, 0.7, 0.1, 1.0);
         }
 
         /*
@@ -1395,7 +1426,7 @@ export class LockScreen extends HTMLElement {
           background: rgba(0, 0, 0, 0.15); /* lint-ignore: scrim overlay */
           opacity: 0;
           pointer-events: none;
-          transition: opacity 300ms ease;
+          transition: opacity ${SCRIM_TRANSITION_MS}ms ease;
           z-index: 2;
         }
         .expanded-scrim.visible {

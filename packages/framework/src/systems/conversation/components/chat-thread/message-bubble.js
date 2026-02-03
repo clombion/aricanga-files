@@ -10,6 +10,7 @@
  */
 
 import { getChat, t } from '../../services/conversation-context.js';
+import { DURATION_FAST } from '../../utils/animation-constants.js';
 import { timerIcon } from '../../utils/icons.js';
 import {
   escapeAttr,
@@ -490,10 +491,10 @@ export const MESSAGE_BUBBLE_STYLES = `
 
   /* Receipt CSS transition classes for animated state changes */
   .receipt-icon .receipt-circle-front {
-    transition: fill 300ms ease-out, opacity 300ms ease-out;
+    transition: fill ${DURATION_FAST}ms ease-out, opacity ${DURATION_FAST}ms ease-out;
   }
   .receipt-icon .receipt-circle-rear {
-    transition: opacity 300ms ease-out;
+    transition: opacity ${DURATION_FAST}ms ease-out;
   }
 
   /* Animation for delivered → read transition */

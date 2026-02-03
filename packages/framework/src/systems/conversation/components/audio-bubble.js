@@ -2,6 +2,10 @@
 // Shows waveform, duration, and expandable transcript
 
 import { t } from '../services/conversation-context.js';
+import {
+  DURATION_FAST,
+  DURATION_GENERATE,
+} from '../utils/animation-constants.js';
 import { escapeHtml, processText } from '../utils/text.js';
 
 export class AudioBubble extends HTMLElement {
@@ -87,7 +91,7 @@ export class AudioBubble extends HTMLElement {
             { maxHeight: '0px', opacity: 0, paddingTop: '0px' },
             { maxHeight: '200px', opacity: 1, paddingTop: '8px' },
           ],
-          { duration: 300, easing: 'ease-out', fill: 'forwards' },
+          { duration: DURATION_FAST, easing: 'ease-out', fill: 'forwards' },
         );
       }
 
@@ -95,7 +99,7 @@ export class AudioBubble extends HTMLElement {
       this.dispatchEvent(
         new CustomEvent('transcript-revealed', { bubbles: true }),
       );
-    }, 1200);
+    }, DURATION_GENERATE);
   }
 
   render() {
