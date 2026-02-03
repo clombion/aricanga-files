@@ -31,7 +31,6 @@ import {
   setupExitTracking,
   TRANSITIONS,
   timeContext,
-  transitionViews,
 } from '@narratives/framework';
 
 // Implementation imports
@@ -124,8 +123,8 @@ const navigation = createNavigationManager({
   overlayElement: transitionOverlay,
 });
 
-// Initialize with hub as root (lock screen is separate flow)
-navigation.init(hub);
+// Initialize with lock screen as root - hub is pushed on unlock
+navigation.init(lockScreen);
 
 // Configure BatteryContext with TOML phone behavior settings
 // Battery is now separate from TimeContext (phone-specific, not foundation)
@@ -144,23 +143,21 @@ statusBar.update({
 });
 
 // ============================================================
-// Lock Screen Transitions (outside navigation stack)
-// Lock screen is a separate overlay, not part of hub→thread→overlay flow
+// Lock Screen Transitions
+// Lock screen is root of navigation stack - unlock pushes hub
 // ============================================================
 document.addEventListener('lock-screen-unlocked', () => {
   lockScreen.stopAnimation();
   statusBar.hidden = false;
-  transitionViews(lockScreen, hub, {
+  navigation.push(hub, {
     direction: 'slide-up',
     duration: TRANSITIONS.UNLOCK.duration,
-    motionLevel: motionPrefs.getEffectiveLevel(),
   });
 });
 
 document.addEventListener('lockscreen-requested', (e) => {
-  transitionViews(hub, lockScreen, {
+  navigation.popToRoot({
     direction: 'slide-down',
-    motionLevel: motionPrefs.getEffectiveLevel(),
     onComplete: () => {
       statusBar.hidden = true;
       lockScreen.show(e.detail.notifications);

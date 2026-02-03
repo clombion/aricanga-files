@@ -9,23 +9,14 @@
  * - Stack tracks navigation history (eliminates boolean state tracking)
  * - Motion level configurable (full/reduced/off)
  * - onReady/onComplete callbacks for deferred operations
+ * - popToRoot() for instant return to root (e.g., lock screen)
  *
- * IMPORTANT: Lock screen is OUTSIDE the navigation stack
- * ---------------------------------------------------
- * The lock screen is a separate overlay layer, not part of hub→thread→overlay flow.
- * Lock screen transitions must use transitionViews() directly, not NavigationManager.
- *
- * Why: NavigationManager tracks a stack of views. If you call init(hub) then
- * replace(hub, ...) on unlock, outgoing===incoming and animation is skipped.
- * Lock screen ↔ hub transitions are conceptually different from in-app navigation.
- *
- * Pattern in main.js:
- *   // Lock screen unlock - use transitionViews directly
- *   transitionViews(lockScreen, hub, { direction: 'slide-up', ... });
- *
- *   // In-app navigation - use NavigationManager
- *   navigation.push(thread);
- *   navigation.pop();
+ * Typical stack progression:
+ *   init(lockScreen)  → [lockScreen]
+ *   push(hub)         → [lockScreen, hub]
+ *   push(thread)      → [lockScreen, hub, thread]
+ *   pop()             → [lockScreen, hub]
+ *   popToRoot()       → [lockScreen]
  */
 
 import {
@@ -269,10 +260,56 @@ export function createNavigationManager(config = {}) {
     stack = [{ element: root, type: 'page' }];
   }
 
+  /**
+   * Pop directly to root with single animation (no intermediate transitions).
+   * Useful for "return to home" or "lock screen" scenarios where you want
+   * to skip animating through every intermediate view.
+   *
+   * @param {NavigationOptions} [options]
+   * @returns {Promise<void>}
+   */
+  function popToRoot(options = {}) {
+    const { onComplete, onReady, ...transitionOptions } = options;
+
+    return enqueue(async () => {
+      if (stack.length <= 1) {
+        // Already at root
+        if (onComplete) onComplete();
+        return;
+      }
+
+      const current = stack[stack.length - 1];
+      const root = stack[0];
+
+      // Hide all intermediate views immediately (no animation)
+      // User won't notice since they're covered by the animating view
+      for (let i = stack.length - 2; i > 0; i--) {
+        stack[i].element.hidden = true;
+      }
+
+      if (onReady) await onReady();
+
+      // Single animation: current → root
+      await transitionViews(current.element, root.element, {
+        direction: transitionOptions.direction || 'slide-right',
+        motionLevel: motionLevelGetter(),
+        ...transitionOptions,
+      });
+
+      current.element.hidden = true;
+
+      // Reset stack to just root
+      stack = [root];
+
+      if (onComplete) onComplete();
+    });
+  }
+
   return {
     push,
     pop,
     replace,
+    popToRoot,
     canGoBack,
     current,
     previous,

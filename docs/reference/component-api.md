@@ -548,7 +548,8 @@ const navigation = createNavigationManager({
   overlayElement: transitionOverlay,
 });
 
-navigation.init(hub);  // Set root view
+// Lock screen is root - hub is pushed on unlock
+navigation.init(lockScreen);
 ```
 
 ### Methods
@@ -558,6 +559,7 @@ navigation.init(hub);  // Set root view
 | `init(root)` | `HTMLElement` | Initialize stack with root view |
 | `push(view, opts?)` | `HTMLElement`, `NavigationOptions` | Add view to stack, animate in |
 | `pop(opts?)` | `NavigationOptions` | Remove current view, animate back |
+| `popToRoot(opts?)` | `NavigationOptions` | Pop directly to root (single animation) |
 | `replace(view, opts?)` | `HTMLElement`, `NavigationOptions` | Swap current view without growing stack |
 | `canGoBack()` | none | Returns `true` if stack depth > 1 |
 | `current` | (getter) | Current view element |
@@ -573,22 +575,15 @@ navigation.init(hub);  // Set root view
 | `onComplete` | `Function` | Called after animation completes |
 | `data` | any | Arbitrary data to associate with view |
 
-### Lock Screen Exception
+### Stack Progression Example
 
-**IMPORTANT:** Lock screen is OUTSIDE the navigation stack. Lock screen ↔ hub transitions must use `transitionViews()` directly, not NavigationManager.
-
-```javascript
-// ❌ WRONG: Don't use NavigationManager for lock screen
-navigation.replace(hub, { direction: 'slide-up' });
-
-// ✅ CORRECT: Use transitionViews directly
-transitionViews(lockScreen, hub, {
-  direction: 'slide-up',
-  motionLevel: motionPrefs.getEffectiveLevel(),
-});
 ```
-
-**Why:** NavigationManager tracks a stack. After `init(hub)`, calling `replace(hub, ...)` means outgoing===incoming and animation is skipped. Lock screen is a separate overlay layer conceptually outside the hub→thread→overlay flow.
+init(lockScreen)  → [lockScreen]
+push(hub)         → [lockScreen, hub]
+push(thread)      → [lockScreen, hub, thread]
+pop()             → [lockScreen, hub]
+popToRoot()       → [lockScreen]
+```
 
 ---
 
