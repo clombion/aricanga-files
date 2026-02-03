@@ -460,7 +460,7 @@ function validateConfig(config) {
 
       // Validate avatar_image exists (if provided)
       if (char.avatar_image) {
-        const imagePath = join(IMPL_DIR, 'assets', char.avatar_image);
+        const imagePath = join(IMPL_DIR, 'public', 'assets', char.avatar_image);
         if (!existsSync(imagePath)) {
           errors.push(
             `Character "${id}" avatar_image not found: ${char.avatar_image}`,
@@ -640,7 +640,7 @@ function generateConfigJS(config) {
   let profileImages = [];
   const profileImageDir = app.profile_image_dir;
   if (profileImageDir) {
-    const absDir = join(IMPL_DIR, 'assets', profileImageDir);
+    const absDir = join(IMPL_DIR, 'public', 'assets', profileImageDir);
     if (!existsSync(absDir)) {
       throw new Error(`profile_image_dir not found: ${absDir}`);
     }

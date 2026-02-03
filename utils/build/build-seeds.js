@@ -24,7 +24,7 @@
  */
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import {
   createBuildExternalFunctions,
   bindExternalFunctions,

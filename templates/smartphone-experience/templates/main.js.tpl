@@ -122,9 +122,12 @@ if (isAnalyticsEnabled(analyticsConfig)) {
       : undefined,
   });
 
-  eventLogStore.init().catch((err) => {
+  // Initialize store before logging to ensure IndexedDB persistence
+  try {
+    await eventLogStore.init();
+  } catch (err) {
     console.warn('[Analytics] Failed to initialize store:', err);
-  });
+  }
 
   eventLogger.start([
     { event: EVENTS.MESSAGE_SENT, type: 'choice' },

@@ -151,21 +151,21 @@ run = "node experiences/aricanga/utils/translation/cli.js names"
 [tasks."build:images"]
 description = "Optimize profile images (resize + JPEG)"
 run = "node utils/build/optimize-images.js"
-sources = ["experiences/$IMPL/assets/profile_images/*.png"]
-outputs = ["experiences/$IMPL/public/assets/profile_images/optimized/*.jpg"]
+sources = ["experiences/*/assets/profile_images/*.png"]
+outputs = ["experiences/*/public/assets/profile_images/optimized/*.jpg"]
 
 [tasks."build:config"]
 description = "Generate config.js from TOML (requires IMPL env var)"
 depends = ["build:images"]
 run = "node utils/build/build-config.js"
-sources = ["experiences/$IMPL/data/base-config.toml", "experiences/$IMPL/data/locales/*.toml"]
-outputs = ["experiences/$IMPL/src/generated/config.js", "experiences/$IMPL/public/css/generated/theme-vars.css", "experiences/$IMPL/public/src/dist/locales/*.json"]
+sources = ["experiences/*/data/base-config.toml", "experiences/*/data/locales/*.toml"]
+outputs = ["experiences/*/src/generated/config.js", "experiences/*/public/css/generated/theme-vars.css", "experiences/*/public/src/dist/locales/*.json"]
 
 [tasks."build:test-expectations"]
 description = "Generate test expectations from TOML"
 run = "node utils/build/generate-test-expectations.js"
-sources = ["experiences/$IMPL/data/base-config.toml", "experiences/$IMPL/data/locales/*.toml"]
-outputs = ["experiences/$IMPL/tests/fixtures/generated-expectations.ts"]
+sources = ["experiences/*/data/base-config.toml", "experiences/*/data/locales/*.toml"]
+outputs = ["experiences/*/tests/fixtures/generated-expectations.ts"]
 
 [tasks."build:ink"]
 description = "Compile all locale ink files (requires IMPL env var)"
@@ -192,15 +192,15 @@ for locale in $locales; do
 done
 echo "✓ All locales built"
 """
-sources = ["experiences/$IMPL/ink/**/*.ink"]
-outputs = ["experiences/$IMPL/public/src/dist/*/story.json"]
+sources = ["experiences/*/ink/**/*.ink"]
+outputs = ["experiences/*/public/src/dist/*/story.json"]
 
 [tasks."build:seeds"]
 description = "Extract seed messages from compiled ink"
 run = "node utils/build/build-seeds.js"
 depends = ["build:ink", "build:config"]
-sources = ["experiences/$IMPL/public/src/dist/*/story.json", "experiences/$IMPL/src/generated/config.js"]
-outputs = ["experiences/$IMPL/src/generated/seeds.js"]
+sources = ["experiences/*/public/src/dist/*/story.json", "experiences/*/src/generated/config.js"]
+outputs = ["experiences/*/src/generated/seeds.js"]
 
 [tasks.build]
 description = "Build config, test expectations, compile Ink, and extract seeds"
