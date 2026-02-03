@@ -8,6 +8,8 @@ import {
   eventBus,
 } from '@narratives/framework';
 
+const DEFAULT_TIMEOUT_MS = 10_000;
+
 /**
  * Mock EITI (Extractive Industries Transparency Initiative) data
  * In production, this would be fetched from real APIs
@@ -88,7 +90,8 @@ const MOCK_EITI_DATA = {
  */
 class DataService {
   constructor() {
-    this._pendingRequests = new Map();
+    /** @type {Map<string, Promise<Object>>} dedup key → in-flight fetch promise */
+    this._inflight = new Map();
     this._requestIdCounter = 0;
   }
 
@@ -119,27 +122,48 @@ class DataService {
    */
   async handleRequest({ source, query, params, requestId }) {
     const id = requestId || this.generateRequestId();
+    const dedupKey = `${source}:${query}:${params}`;
 
     try {
-      // Simulate network delay for realism
-      await this.simulateNetworkDelay();
+      let data;
 
-      const data = await this.fetch(source, query, params);
+      if (this._inflight.has(dedupKey)) {
+        // Reuse the in-flight fetch — one network call for concurrent identical requests
+        data = await this._inflight.get(dedupKey);
+      } else {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), DEFAULT_TIMEOUT_MS);
+
+        const fetchPromise = (async () => {
+          try {
+            await this.simulateNetworkDelay(controller.signal);
+            return await this.fetch(source, query, params);
+          } finally {
+            clearTimeout(timer);
+          }
+        })();
+
+        this._inflight.set(dedupKey, fetchPromise);
+        try {
+          data = await fetchPromise;
+        } finally {
+          this._inflight.delete(dedupKey);
+        }
+      }
 
       eventBus.emit(
         EVENTS.DATA_RECEIVED,
         createDataResponseEvent(id, source, query, params, data),
       );
     } catch (error) {
+      const message =
+        error.name === 'AbortError'
+          ? `Request timed out after ${DEFAULT_TIMEOUT_MS}ms`
+          : error.message || 'Unknown error';
+
       eventBus.emit(
         EVENTS.DATA_ERROR,
-        createDataErrorEvent(
-          id,
-          source,
-          query,
-          params,
-          error.message || 'Unknown error',
-        ),
+        createDataErrorEvent(id, source, query, params, message),
       );
     }
   }
@@ -148,7 +172,7 @@ class DataService {
    * Simulate network delay (500-1500ms)
    * Respects prefers-reduced-motion
    */
-  async simulateNetworkDelay() {
+  async simulateNetworkDelay(signal) {
     const prefersReduced = window.matchMedia(
       '(prefers-reduced-motion: reduce)',
     ).matches;
@@ -156,7 +180,17 @@ class DataService {
     if (prefersReduced) return;
 
     const delay = 500 + Math.random() * 1000;
-    await new Promise((resolve) => setTimeout(resolve, delay));
+    await new Promise((resolve, reject) => {
+      const tid = setTimeout(resolve, delay);
+      signal?.addEventListener(
+        'abort',
+        () => {
+          clearTimeout(tid);
+          reject(new DOMException('Aborted', 'AbortError'));
+        },
+        { once: true },
+      );
+    });
   }
 
   /**
