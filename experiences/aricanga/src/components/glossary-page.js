@@ -36,6 +36,7 @@ export class GlossaryPage extends HTMLElement {
   }
 
   disconnectedCallback() {
+    clearTimeout(this._debounceTimer);
     this._locale.disconnect();
   }
 
