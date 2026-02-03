@@ -114,7 +114,7 @@ Only chats with `lastReadMessageId` create an `unread-separator` element, trigge
 **Fix Applied**:
 - Removed `scrollToUnreadOrBottom()` from `thread.open()` — it now only sets `container.scrollTop = scrollHeight` synchronously (safe, no layout paint)
 - `open()` returns a **finalize function** (deferred scroll) that callers must invoke after the view transition completes. This makes the timing contract structural: forgetting to call finalize means the chat never scrolls to unread — an immediately visible bug, not a subtle animation glitch
-- `_threadFinalize` variable in `main.js` captures the return value from `open()`, consumed by `transition(...).then(() => { _threadFinalize?.(); _threadFinalize = null; })` in both `chat-selected` and `notification-clicked` handlers
+- `_threadFinalize` variable in `main.js` captures the return value from `open()`, consumed by `navigation.push(thread, { onComplete: () => { _threadFinalize?.(); _threadFinalize = null; } })` in both `chat-selected` and `notification-clicked` handlers
 - Defensive stale inline style clearing added at `transitionViews()` entry
 
 **Prevention Added**:

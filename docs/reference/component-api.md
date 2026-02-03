@@ -526,8 +526,63 @@ None. Configuration loaded from `getApp()`.
 
 ```javascript
 document.addEventListener('player-profile-requested', () => {
-  transition(hub, playerProfile, TRANSITIONS.ENTER_DEEPER);
+  navigation.push(playerProfile);
 });
+```
+
+---
+
+## NavigationManager
+
+Stack-based view navigation with animated transitions.
+
+**File:** `packages/framework/src/systems/conversation/navigation.js`
+
+### Factory
+
+```javascript
+import { createNavigationManager } from '@narratives/framework';
+
+const navigation = createNavigationManager({
+  getMotionLevel: () => motionPrefs.getEffectiveLevel(),
+  overlayElement: transitionOverlay,
+});
+
+// Lock screen is root - hub is pushed on unlock
+navigation.init(lockScreen);
+```
+
+### Methods
+
+| Method | Parameters | Description |
+|--------|------------|-------------|
+| `init(root)` | `HTMLElement` | Initialize stack with root view |
+| `push(view, opts?)` | `HTMLElement`, `NavigationOptions` | Add view to stack, animate in |
+| `pop(opts?)` | `NavigationOptions` | Remove current view, animate back |
+| `popToRoot(opts?)` | `NavigationOptions` | Pop directly to root (single animation) |
+| `replace(view, opts?)` | `HTMLElement`, `NavigationOptions` | Swap current view without growing stack |
+| `canGoBack()` | none | Returns `true` if stack depth > 1 |
+| `current` | (getter) | Current view element |
+| `previous` | (getter) | Previous view element (or null) |
+
+### NavigationOptions
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `type` | `'page'` \| `'overlay'` | Page uses slide, overlay uses fade with scrim |
+| `direction` | string | Explicit direction override |
+| `onReady` | `Function` | Called after positioning, before animation |
+| `onComplete` | `Function` | Called after animation completes |
+| `data` | any | Arbitrary data to associate with view |
+
+### Stack Progression Example
+
+```
+init(lockScreen)  → [lockScreen]
+push(hub)         → [lockScreen, hub]
+push(thread)      → [lockScreen, hub, thread]
+pop()             → [lockScreen, hub]
+popToRoot()       → [lockScreen]
 ```
 
 ---

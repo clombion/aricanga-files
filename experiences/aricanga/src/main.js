@@ -17,6 +17,7 @@ window.addEventListener('unhandledrejection', (e) => {
 import {
   batteryContext,
   contextRegistry,
+  createNavigationManager,
   createNotificationEvent,
   EVENTS,
   EventLogger,
@@ -30,7 +31,6 @@ import {
   setupExitTracking,
   TRANSITIONS,
   timeContext,
-  transitionViews,
 } from '@narratives/framework';
 
 // Implementation imports
@@ -46,6 +46,7 @@ import {
   UI,
 } from './config.js';
 import { GameController } from './game-controller.js';
+import { initGestures } from './gestures.js';
 import { dataService } from './services/data-service.js';
 import { i18n, i18nReady } from './services/i18n.js';
 import { motionPrefs } from './services/motion-preferences.js';
@@ -81,22 +82,6 @@ motionPrefs.init();
 // Initialize theme preferences
 themePrefs.init();
 
-/**
- * Wrapper for transitionViews that applies current motion preference.
- * Serializes transitions so a new one waits for the previous to finish,
- * preventing concurrent animations from corrupting element state.
- */
-let transitionQueue = Promise.resolve();
-function transition(outgoing, incoming, options = {}) {
-  const run = () =>
-    transitionViews(outgoing, incoming, {
-      ...options,
-      motionLevel: motionPrefs.getEffectiveLevel(),
-    });
-  transitionQueue = transitionQueue.then(run, run);
-  return transitionQueue;
-}
-
 const controller = new GameController();
 
 /** @returns {Element} the matched element, or throws if missing */
@@ -130,6 +115,17 @@ transitionOverlay.className = 'ink-transition-overlay';
 transitionOverlay.hidden = true;
 requireElement('#content-area').appendChild(transitionOverlay);
 
+// ============================================================
+// Navigation Manager - handles view stack and transitions
+// ============================================================
+const navigation = createNavigationManager({
+  getMotionLevel: () => motionPrefs.getEffectiveLevel(),
+  overlayElement: transitionOverlay,
+});
+
+// Initialize with lock screen as root - hub is pushed on unlock
+navigation.init(lockScreen);
+
 // Configure BatteryContext with TOML phone behavior settings
 // Battery is now separate from TimeContext (phone-specific, not foundation)
 batteryContext.configure({
@@ -146,21 +142,27 @@ statusBar.update({
   signal: START_STATE.signal,
 });
 
-// Lock screen unlock handler
+// ============================================================
+// Lock Screen Transitions
+// Lock screen is root of navigation stack - unlock pushes hub
+// ============================================================
 document.addEventListener('lock-screen-unlocked', () => {
   lockScreen.stopAnimation();
   statusBar.hidden = false;
-  transition(lockScreen, hub, {
+  navigation.push(hub, {
     direction: 'slide-up',
     duration: TRANSITIONS.UNLOCK.duration,
   });
 });
 
-// Return to lock screen (for testing)
 document.addEventListener('lockscreen-requested', (e) => {
-  transition(hub, lockScreen, { direction: 'slide-down' });
-  statusBar.hidden = true;
-  lockScreen.show(e.detail.notifications);
+  navigation.popToRoot({
+    direction: 'slide-down',
+    onComplete: () => {
+      statusBar.hidden = true;
+      lockScreen.show(e.detail.notifications);
+    },
+  });
 });
 
 // ============================================================
@@ -240,25 +242,27 @@ if (isAnalyticsEnabled(analyticsConfig)) {
   );
 }
 
-// Escape key: navigate back to parent view
-document.addEventListener('keydown', (e) => {
-  if (e.key !== 'Escape') return;
+// ============================================================
+// Unified Back Navigation
+// ============================================================
 
-  // Check overlays/modals first (highest z-order), then deeper views
+/**
+ * Handle back navigation from any view.
+ * Priority: drawer → overlays → thread → hub → lock screen
+ */
+function navigateBack() {
   if (notificationDrawer.isOpen) {
     notificationDrawer.close();
   } else if (!settingsPage.hidden) {
-    settingsPage.dispatchEvent(new Event('navigate-back', { bubbles: true }));
+    navigation.pop();
   } else if (!aboutPage.hidden) {
-    aboutPage.dispatchEvent(new Event('navigate-back', { bubbles: true }));
+    navigation.pop();
   } else if (!glossaryPage.hidden) {
-    glossaryPage.dispatchEvent(new Event('navigate-back', { bubbles: true }));
+    navigation.pop();
   } else if (!conversationSettings.hidden) {
-    conversationSettings.dispatchEvent(
-      new Event('settings-closed', { bubbles: true }),
-    );
+    navigation.pop();
   } else if (!playerProfile.hidden) {
-    playerProfile.dispatchEvent(new Event('navigate-back', { bubbles: true }));
+    navigation.pop();
   } else if (!thread.hidden) {
     thread.dispatchEvent(new Event('thread-closed', { bubbles: true }));
   } else if (!hub.hidden) {
@@ -269,106 +273,38 @@ document.addEventListener('keydown', (e) => {
     );
   }
   // Lock screen visible → do nothing
-});
-
-// Touch gestures: swipe-down (open drawer), swipe-up (close drawer), swipe-right (back)
-{
-  const appEl = requireElement('#app');
-  const contentArea = requireElement('#content-area');
-  let touchStartX = null;
-  let touchStartY = null;
-
-  appEl.addEventListener(
-    'touchstart',
-    (e) => {
-      touchStartX = e.touches[0].clientX;
-      touchStartY = e.touches[0].clientY;
-    },
-    { passive: true },
-  );
-
-  appEl.addEventListener(
-    'touchend',
-    (e) => {
-      if (touchStartX === null || touchStartY === null) return;
-      const endX = e.changedTouches[0].clientX;
-      const endY = e.changedTouches[0].clientY;
-      const deltaX = endX - touchStartX;
-      const deltaY = endY - touchStartY;
-      const absDX = Math.abs(deltaX);
-      const absDY = Math.abs(deltaY);
-      touchStartX = null;
-      touchStartY = null;
-
-      // Swipe-up anywhere: close notification drawer
-      if (notificationDrawer.isOpen && deltaY < -50 && absDY > absDX) {
-        notificationDrawer.close();
-        return;
-      }
-
-      // Swipe-down from top half: open notification drawer
-      const contentRect = contentArea.getBoundingClientRect();
-      const contentMidY = contentRect.top + contentRect.height / 2;
-      if (
-        !notificationDrawer.isOpen &&
-        deltaY > 40 &&
-        absDY > absDX &&
-        e.changedTouches[0].clientY - deltaY < contentMidY
-      ) {
-        document.dispatchEvent(new CustomEvent('drawer-open-requested'));
-        return;
-      }
-
-      // Swipe-right from left half: back-navigate (same as ESC)
-      const appRect = appEl.getBoundingClientRect();
-      const appMidX = appRect.left + appRect.width / 2;
-      if (
-        deltaX > 60 &&
-        absDX > absDY &&
-        endX - deltaX < appMidX &&
-        !notificationDrawer.isOpen
-      ) {
-        if (!settingsPage.hidden) {
-          settingsPage.dispatchEvent(
-            new Event('navigate-back', { bubbles: true }),
-          );
-        } else if (!aboutPage.hidden) {
-          aboutPage.dispatchEvent(
-            new Event('navigate-back', { bubbles: true }),
-          );
-        } else if (!glossaryPage.hidden) {
-          glossaryPage.dispatchEvent(
-            new Event('navigate-back', { bubbles: true }),
-          );
-        } else if (!conversationSettings.hidden) {
-          conversationSettings.dispatchEvent(
-            new Event('settings-closed', { bubbles: true }),
-          );
-        } else if (!playerProfile.hidden) {
-          playerProfile.dispatchEvent(
-            new Event('navigate-back', { bubbles: true }),
-          );
-        } else if (!thread.hidden) {
-          thread.dispatchEvent(new Event('thread-closed', { bubbles: true }));
-        } else if (!hub.hidden) {
-          document.dispatchEvent(
-            new CustomEvent('lockscreen-requested', {
-              detail: { notifications: notificationDrawer.notifications },
-            }),
-          );
-        }
-      }
-    },
-    { passive: true },
-  );
 }
 
-// Wire up events from components
+// Escape key: navigate back
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') navigateBack();
+});
+
+// Touch gestures
+initGestures(
+  {
+    appElement: requireElement('#app'),
+    contentArea: requireElement('#content-area'),
+  },
+  {
+    onSwipeRight: navigateBack,
+    onSwipeDown: () =>
+      document.dispatchEvent(new CustomEvent('drawer-open-requested')),
+    onSwipeUp: () => notificationDrawer.close(),
+    isDrawerOpen: () => notificationDrawer.isOpen,
+  },
+);
+
+// ============================================================
+// Chat Navigation Events
+// ============================================================
+
+let _threadFinalize = null;
+
 document.addEventListener('chat-selected', (e) => {
   const { chatId } = e.detail;
   controller.openChat(chatId);
-  transition(hub, thread, {
-    ...TRANSITIONS.ENTER_DEEPER,
+  navigation.push(thread, {
     onComplete: () => {
       _threadFinalize?.();
       _threadFinalize = null;
@@ -377,23 +313,16 @@ document.addEventListener('chat-selected', (e) => {
 });
 
 document.addEventListener('thread-closed', () => {
-  transition(thread, hub, TRANSITIONS.GO_BACK);
+  navigation.pop();
   controller.closeChat();
   controller.saveState();
 });
 
-document.addEventListener('choice-selected', (e) => {
-  thread.clearChoices();
-  controller.selectChoice(e.detail.index);
-});
-
 document.addEventListener('notification-clicked', (e) => {
   const { chatId } = e.detail;
-  // Remove from drawer when user opens the chat via notification
   notificationDrawer.remove(chatId);
   controller.openChat(chatId);
-  transition(hub, thread, {
-    ...TRANSITIONS.ENTER_DEEPER,
+  navigation.push(thread, {
     onComplete: () => {
       _threadFinalize?.();
       _threadFinalize = null;
@@ -401,24 +330,82 @@ document.addEventListener('notification-clicked', (e) => {
   });
 });
 
+// ============================================================
+// Overlay Page Navigation
+// ============================================================
+
+document.addEventListener('settings-requested', () => {
+  navigation.push(settingsPage, { type: 'overlay' });
+});
+
+document.addEventListener('about-requested', () => {
+  navigation.push(aboutPage, { type: 'overlay' });
+});
+
+document.addEventListener('glossary-requested', () => {
+  navigation.push(glossaryPage, {
+    type: 'overlay',
+    onReady: () => glossaryPage.show(),
+  });
+});
+
+document.addEventListener('glossary-term-clicked', (e) => {
+  navigation.push(glossaryPage, {
+    type: 'overlay',
+    onReady: () => glossaryPage.show(e.detail.termId),
+    onComplete: () => glossaryPage.scrollToTerm(e.detail.termId),
+  });
+});
+
+document.addEventListener('player-profile-requested', () => {
+  navigation.push(playerProfile);
+});
+
+document.addEventListener('profile-clicked', (e) => {
+  const { chatId } = e.detail;
+  conversationSettings.chatId = chatId;
+  navigation.push(conversationSettings);
+});
+
+document.addEventListener('settings-closed', (e) => {
+  if (
+    e.target === conversationSettings ||
+    e.composedPath().includes(conversationSettings)
+  ) {
+    navigation.pop();
+  }
+});
+
+document.addEventListener('navigate-back', (e) => {
+  const targets = [settingsPage, aboutPage, glossaryPage, playerProfile];
+  if (targets.some((t) => e.target === t || e.composedPath().includes(t))) {
+    navigation.pop();
+  }
+});
+
+// ============================================================
+// Other Event Handlers
+// ============================================================
+
+document.addEventListener('choice-selected', (e) => {
+  thread.clearChoices();
+  controller.selectChoice(e.detail.index);
+});
+
 document.addEventListener('drawer-open-requested', () => {
   notificationDrawer.open();
 });
 
-// Theme toggle from notification drawer
 document.addEventListener('theme-toggle-requested', () => {
   themePrefs.toggleTheme();
 });
 
-// NEW: Listen for the reset request from ChatHub
 document.addEventListener('game-reset-requested', () => {
-  // End current analytics session before reset
   if (eventLogger) {
     eventLogger.newSession();
     timeContext.resetSessionTimer();
   }
 
-  // Clean up old exit tracking (has stale exitSent flag) and re-setup
   if (cleanupExitTracking) {
     cleanupExitTracking();
     cleanupExitTracking = setupExitTracking(
@@ -431,106 +418,20 @@ document.addEventListener('game-reset-requested', () => {
   controller.resetGame();
 });
 
-// Settings page navigation
-let wasInChatBeforeSettings = false;
+// ============================================================
+// EventBus Subscriptions
+// ============================================================
 
-document.addEventListener('settings-requested', () => {
-  wasInChatBeforeSettings = !thread.hidden;
-  const outgoing = wasInChatBeforeSettings ? thread : hub;
-  transition(outgoing, settingsPage, {
-    ...TRANSITIONS.OPEN_OVERLAY,
-    overlay: transitionOverlay,
-  });
-});
-
-document.addEventListener('navigate-back', (e) => {
-  const returnTo = wasInChatBeforeSettings ? thread : hub;
-  // Settings page back navigation
-  if (e.target === settingsPage || e.composedPath().includes(settingsPage)) {
-    transition(settingsPage, returnTo, TRANSITIONS.CLOSE_OVERLAY);
-  }
-  // About page back navigation
-  if (e.target === aboutPage || e.composedPath().includes(aboutPage)) {
-    transition(aboutPage, returnTo, TRANSITIONS.CLOSE_OVERLAY);
-  }
-  // Glossary page back navigation
-  if (e.target === glossaryPage || e.composedPath().includes(glossaryPage)) {
-    transition(glossaryPage, returnTo, TRANSITIONS.CLOSE_OVERLAY);
-  }
-});
-
-// About page navigation
-document.addEventListener('about-requested', () => {
-  wasInChatBeforeSettings = !thread.hidden;
-  const outgoing = wasInChatBeforeSettings ? thread : hub;
-  transition(outgoing, aboutPage, {
-    ...TRANSITIONS.OPEN_OVERLAY,
-    overlay: transitionOverlay,
-  });
-});
-
-// Glossary page navigation (from drawer tile)
-document.addEventListener('glossary-requested', () => {
-  wasInChatBeforeSettings = !thread.hidden;
-  const outgoing = wasInChatBeforeSettings ? thread : hub;
-  transition(outgoing, glossaryPage, {
-    ...TRANSITIONS.OPEN_OVERLAY,
-    overlay: transitionOverlay,
-    onReady: () => glossaryPage.show(),
-  });
-});
-
-// Glossary term clicked (from chat thread highlights)
-document.addEventListener('glossary-term-clicked', (e) => {
-  wasInChatBeforeSettings = !thread.hidden;
-  const outgoing = wasInChatBeforeSettings ? thread : hub;
-  transition(outgoing, glossaryPage, {
-    ...TRANSITIONS.OPEN_OVERLAY,
-    overlay: transitionOverlay,
-    onReady: () => glossaryPage.show(e.detail.termId),
-    onComplete: () => glossaryPage.scrollToTerm(e.detail.termId),
-  });
-});
-
-// Player profile page navigation (hub avatar click)
-document.addEventListener('player-profile-requested', () => {
-  transition(hub, playerProfile, TRANSITIONS.ENTER_DEEPER);
-});
-
-document.addEventListener('navigate-back', (e) => {
-  if (e.target === playerProfile || e.composedPath().includes(playerProfile)) {
-    transition(playerProfile, hub, TRANSITIONS.GO_BACK);
-  }
-});
-
-// Conversation settings page navigation (per-chat settings via avatar click)
-document.addEventListener('profile-clicked', (e) => {
-  const { chatId } = e.detail;
-  conversationSettings.chatId = chatId;
-  transition(thread, conversationSettings, TRANSITIONS.ENTER_DEEPER);
-});
-
-document.addEventListener('settings-closed', (e) => {
-  if (
-    e.target === conversationSettings ||
-    e.composedPath().includes(conversationSettings)
-  ) {
-    transition(conversationSettings, thread, TRANSITIONS.GO_BACK);
-  }
-});
-
-// Wire up events from EventBus (migrated from controller events)
 eventBus.on(EVENTS.READY, () => {
   console.log('Game ready');
   const snapshot = controller.actor.getSnapshot();
   const { messageHistory } = snapshot.context;
+
   // Initialize hub previews and unread states from message history
   for (const [chatId] of Object.entries(CHATS)) {
     const messages = messageHistory[chatId] || [];
     const lastMsg = messages[messages.length - 1];
 
-    // Set hub preview from last message (seeds or saved history)
-    // CSS handles text truncation via -webkit-line-clamp
     if (lastMsg?.text) {
       hub.setPreview(
         chatId,
@@ -539,13 +440,9 @@ eventBus.on(EVENTS.READY, () => {
         lastMsg.type || 'received',
       );
     }
-
-    // Unread badges are restored via NOTIFICATION_SHOW re-emit below
-    // (hub subscribes to NOTIFICATION_SHOW directly)
   }
 
-  // Re-emit notifications for unread chats if drawer is empty (restore case).
-  // On fresh start, ink already fires NOTIFICATION_SHOW so drawer is populated.
+  // Re-emit notifications for unread chats if drawer is empty (restore case)
   if (notificationDrawer.count === 0) {
     for (const [chatId] of Object.entries(CHATS)) {
       if (!snapshot.context.unreadChatIds?.has(chatId)) continue;
@@ -559,15 +456,11 @@ eventBus.on(EVENTS.READY, () => {
     }
   }
 
-  // Seed lock screen from drawer (now repopulated above)
+  // Seed lock screen from drawer
   if (!lockScreen.hidden && notificationDrawer.count > 0) {
     lockScreen.seedNotifications(notificationDrawer.notifications);
   }
 });
-
-// open() returns a finalize function (deferred scroll) that must run
-// after the view transition completes — see chat-selected/notification-clicked.
-let _threadFinalize = null;
 
 eventBus.on(EVENTS.CHAT_OPENED, (e) => {
   const { chatId, messages, deferredCount } = e.detail;
@@ -583,29 +476,22 @@ eventBus.on(EVENTS.CHAT_OPENED, (e) => {
   );
 });
 
-// Handle status bar updates from ink tags (battery, signal, internet)
-// Why: Battery goes through BatteryContext (SSOT); signal/internet update statusBar directly
-// Connection overlay is emergent — derived from internet wifi0/mobile0
+// Handle status bar updates from ink tags
 controller.addEventListener('status-changed', (e) => {
   const { battery, signal, internet, weather, temperature } = e.detail;
 
-  // Battery override (for story events like "phone charging")
-  // Goes through BatteryContext to maintain single source of truth
   if (battery !== undefined) {
     batteryContext.setBattery(battery);
   }
 
-  // Signal updates (cellular bars only — no overlay trigger)
   if (signal !== undefined) {
     statusBar.update({ signal });
   }
 
-  // Weather/temperature updates (lock screen only — status bar doesn't show weather)
   if (weather !== undefined || temperature !== undefined) {
     lockScreen.updateWeather(weather, temperature);
   }
 
-  // Internet connectivity updates + emergent connection overlay
   if (internet !== undefined) {
     statusBar.update({ internet });
     if (internet === 'wifi0' || internet === 'mobile0') {
@@ -634,7 +520,6 @@ window.addEventListener('beforeunload', () => {
 dataService.init();
 
 // Load locale-specific story.json
-// Use saved locale preference from localStorage, or fall back to default
 const storyLocale = i18n.getSavedLocale() || I18N.locale;
 controller.init(`./src/dist/${storyLocale}/story.json`);
 
