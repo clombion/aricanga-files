@@ -526,9 +526,69 @@ None. Configuration loaded from `getApp()`.
 
 ```javascript
 document.addEventListener('player-profile-requested', () => {
-  transition(hub, playerProfile, TRANSITIONS.ENTER_DEEPER);
+  navigation.push(playerProfile);
 });
 ```
+
+---
+
+## NavigationManager
+
+Stack-based view navigation with animated transitions.
+
+**File:** `packages/framework/src/systems/conversation/navigation.js`
+
+### Factory
+
+```javascript
+import { createNavigationManager } from '@narratives/framework';
+
+const navigation = createNavigationManager({
+  getMotionLevel: () => motionPrefs.getEffectiveLevel(),
+  overlayElement: transitionOverlay,
+});
+
+navigation.init(hub);  // Set root view
+```
+
+### Methods
+
+| Method | Parameters | Description |
+|--------|------------|-------------|
+| `init(root)` | `HTMLElement` | Initialize stack with root view |
+| `push(view, opts?)` | `HTMLElement`, `NavigationOptions` | Add view to stack, animate in |
+| `pop(opts?)` | `NavigationOptions` | Remove current view, animate back |
+| `replace(view, opts?)` | `HTMLElement`, `NavigationOptions` | Swap current view without growing stack |
+| `canGoBack()` | none | Returns `true` if stack depth > 1 |
+| `current` | (getter) | Current view element |
+| `previous` | (getter) | Previous view element (or null) |
+
+### NavigationOptions
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `type` | `'page'` \| `'overlay'` | Page uses slide, overlay uses fade with scrim |
+| `direction` | string | Explicit direction override |
+| `onReady` | `Function` | Called after positioning, before animation |
+| `onComplete` | `Function` | Called after animation completes |
+| `data` | any | Arbitrary data to associate with view |
+
+### Lock Screen Exception
+
+**IMPORTANT:** Lock screen is OUTSIDE the navigation stack. Lock screen ↔ hub transitions must use `transitionViews()` directly, not NavigationManager.
+
+```javascript
+// ❌ WRONG: Don't use NavigationManager for lock screen
+navigation.replace(hub, { direction: 'slide-up' });
+
+// ✅ CORRECT: Use transitionViews directly
+transitionViews(lockScreen, hub, {
+  direction: 'slide-up',
+  motionLevel: motionPrefs.getEffectiveLevel(),
+});
+```
+
+**Why:** NavigationManager tracks a stack. After `init(hub)`, calling `replace(hub, ...)` means outgoing===incoming and animation is skipped. Lock screen is a separate overlay layer conceptually outside the hub→thread→overlay flow.
 
 ---
 

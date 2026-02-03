@@ -29,6 +29,8 @@ export {
   createBuildExternalFunctions,
   createExternalFunctions,
 } from './ink/external-functions.js';
+// Navigation
+export { createNavigationManager } from './navigation.js';
 // Services
 export { BatteryContext, batteryContext } from './services/battery-context.js';
 // State machine factory and default instance
