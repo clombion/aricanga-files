@@ -20,14 +20,6 @@ import {
   getStartState,
   t,
 } from '../services/conversation-context.js';
-import {
-  DECELERATE_EASING,
-  DURATION_ELABORATE,
-  DURATION_FAST,
-  DURATION_QUICK,
-  EXIT_EASING,
-  STAGGER_TIGHT,
-} from '../utils/animation-constants.js';
 import { renderAvatar } from '../utils/avatar.js';
 import {
   getBatteryIcon,
@@ -35,7 +27,12 @@ import {
   renderInternetIcon,
 } from '../utils/status-icons.js';
 import { escapeHtml } from '../utils/text.js';
+import {
+  LockScreenNotifications,
+  SCRIM_TRANSITION_MS,
+} from './lock-screen-notifications.js';
 import { ParticleSystem } from './lock-screen-particles.js';
+import { LockScreenWake } from './lock-screen-wake.js';
 
 /**
  * LockScreen - Phone lock screen overlay
@@ -53,22 +50,7 @@ const WEATHER_ICONS = {
   foggy: '🌫️',
 };
 
-// Wake animation choreography — staggered entrance sequence
-const WAKE = {
-  BG: { delay: 0, duration: 900 },
-  STATUSBAR: { delay: 200, duration: 500 },
-  DATE_WEATHER: { delay: 350, duration: 600 },
-  CLOCK: { delay: 500, duration: 800 },
-  BOTTOM: { delay: 750, duration: 550 },
-};
-const NOTIFICATION_GATE_MS = 1200;
-const CARD_SETTLE_TIMEOUT = 850;
-const INTER_CARD_DELAY = 150;
 const FINGERPRINT_BOUNCE_MS = 600;
-const STACK_EXPAND_STAGGER = 40;
-const STACK_SHADOW_TRANSITION_MS = 350;
-const CARD_ENTRANCE_MS = 800;
-const SCRIM_TRANSITION_MS = 300;
 
 export class LockScreen extends HTMLElement {
   constructor() {
@@ -82,10 +64,6 @@ export class LockScreen extends HTMLElement {
     this._weather = 'sunny';
     this._temperature = '';
     this._date = '';
-    this._notifications = []; // Array of { title, preview, chatId, avatarLetter, avatarColor }
-    this._maxVisible = 3;
-    this._maxExpandedVisible = 5;
-    this._expanded = false;
     this._battery = 100;
     this._signal = 4;
     this._internet = 'mobile4';
@@ -95,25 +73,22 @@ export class LockScreen extends HTMLElement {
     this._touchStartY = null;
     this._swipeThreshold = 50;
 
-    // Wake animation gate — notifications queue behind this
-    this._wakeReady = Promise.resolve();
-
-    // Active expand/collapse animations (for cancellation on rapid toggle)
-    this._activeAnims = [];
-
-    // Tracks whether initial wake notification flush has completed
-    this._wakeFlushed = false;
-    this._pendingNotifs = [];
-
-    // Animation queue — serializes concurrent notification arrivals
-    this._animationLock = Promise.resolve();
-
     // Particle animation (delegated to ParticleSystem)
     this._particleSystem = null;
   }
 
   connectedCallback() {
     this.render();
+
+    // Initialize extracted modules
+    this._wake = new LockScreenWake(this.shadowRoot);
+    this._notifs = new LockScreenNotifications(this.shadowRoot, {
+      escapeHtml,
+      renderAvatar,
+      getLocale,
+      t,
+    });
+
     const canvas = this.shadowRoot.querySelector('.particle-canvas');
     if (canvas) {
       this._particleSystem = new ParticleSystem(canvas);
@@ -121,7 +96,7 @@ export class LockScreen extends HTMLElement {
     }
     this._subscribeToEvents();
     this._setupTouchHandlers();
-    this._playWakeAnimation();
+    this._wake.play();
 
     // Config is guaranteed ready via deferred component registration (BUG-002 fix)
     this._initFromConfig();
@@ -157,238 +132,10 @@ export class LockScreen extends HTMLElement {
     avatarColor = '#6b8afd', // lint-ignore: fallback avatar color
     timestamp = Date.now(),
   }) {
-    const notif = {
-      title,
-      preview,
-      chatId,
-      avatarLetter,
-      avatarColor,
-      timestamp,
-    };
-    this._notifications.push(notif);
-
-    // After initial wake flush, show notifications immediately with
-    // per-card entrance animation
-    if (this._wakeFlushed) {
-      this._wakeReady.then(() => this._showNotification(notif));
-      return;
-    }
-
-    // During wake: queue notifications and flush them together so
-    // multiple arrivals render as one smooth stack entrance.
-    if (!this._pendingNotifs) this._pendingNotifs = [];
-    this._pendingNotifs.push(notif);
-
-    // Only schedule one flush per gate
-    if (this._pendingNotifs.length === 1) {
-      this._wakeReady.then(() => this._flushPendingNotifications());
-    }
-  }
-
-  /**
-   * Flush all notifications that queued during the wake gate.
-   * Renders them as a complete stack and animates the stack in
-   * with the same fade+translateY as other lock screen elements.
-   */
-  async _flushPendingNotifications() {
-    this._wakeFlushed = true;
-    const pending = this._pendingNotifs || [];
-    this._pendingNotifs = [];
-    if (pending.length === 0) return;
-
-    // Render all pending notifications into the stack.
-    // _showNotification chains on _animationLock (microtask), so we must
-    // await the lock to ensure DOM is ready before animating.
-    for (const notif of pending) {
-      this._showNotification(notif, true /* skipAnimation */);
-    }
-    await this._animationLock;
-
-    // Animate the whole stack in with wake-style entrance
-    // Matches the gentle feel of clock/date/fingerprint stagger animations
-    const stack = this.shadowRoot.querySelector('.notification-stack');
-    if (!stack || window.matchMedia('(prefers-reduced-motion: reduce)').matches)
-      return;
-
-    stack.style.opacity = '0';
-    const DECELERATE = DECELERATE_EASING;
-    const anim = stack.animate(
-      [
-        { opacity: 0, transform: 'scale(0.92)' },
-        { opacity: 1, transform: 'scale(1)' },
-      ],
-      { duration: DURATION_ELABORATE, easing: DECELERATE, fill: 'forwards' },
+    this._notifs.add(
+      { title, preview, chatId, avatarLetter, avatarColor, timestamp },
+      this._wake.ready,
     );
-    anim.finished
-      .then(() => {
-        anim.commitStyles();
-        anim.cancel();
-        stack.style.opacity = '';
-      })
-      .catch(() => {
-        /* cancelled */
-      });
-  }
-
-  /** Queue and render a notification card with choreographed entrance */
-  _showNotification(notif, skipAnimation = false) {
-    this._animationLock = this._animationLock.then(() =>
-      this._showNotificationInner(notif, skipAnimation),
-    );
-    return this._animationLock;
-  }
-
-  async _showNotificationInner(notif, skipAnimation) {
-    const stack = this.shadowRoot.querySelector('.notification-stack');
-    if (!stack) {
-      this._renderNotificationStack(notif, skipAnimation);
-      return;
-    }
-
-    const cardsContainer = stack.querySelector('.notification-cards');
-    const reducedMotion = window.matchMedia(
-      '(prefers-reduced-motion: reduce)',
-    ).matches;
-
-    if (skipAnimation || reducedMotion) {
-      this._reindexCards(cardsContainer);
-      this._pruneOverflow(cardsContainer);
-      const wrapper = this._createCardElement(notif, 0);
-      wrapper.classList.remove('entering');
-      cardsContainer.prepend(wrapper);
-      this._updateStackDepthClass(cardsContainer);
-      this._updateOverflowBadge(stack);
-      return;
-    }
-
-    // --- Choreographed entrance ---
-
-    // 1. Reindex + prune (BEFORE prepend — preserves original call order)
-    this._reindexCards(cardsContainer);
-    this._pruneOverflow(cardsContainer);
-
-    // 2. Prepend new card (has 'entering' class from _createCardElement)
-    const wrapper = this._createCardElement(notif, 0);
-    cardsContainer.prepend(wrapper);
-
-    // 3. Update stack depth — box-shadow shown immediately (transition: none on entering card)
-    this._updateStackDepthClass(cardsContainer);
-    this._updateOverflowBadge(stack);
-
-    // 4. Wait for card settle animation, then cleanup
-    const card = wrapper.querySelector('.notification-card');
-    await new Promise((resolve) => {
-      (card || wrapper).addEventListener('animationend', resolve, {
-        once: true,
-      });
-      setTimeout(resolve, CARD_SETTLE_TIMEOUT); // Safety timeout (BUG-003 pattern)
-    });
-
-    wrapper.classList.remove('entering');
-
-    // 5. Stagger delay before next queued notification
-    await new Promise((r) => setTimeout(r, INTER_CARD_DELAY));
-  }
-
-  /** Create the notification stack container for the first notification */
-  _renderNotificationStack(notif, skipAnimation = false) {
-    const content = this.shadowRoot.querySelector('.content');
-    const bottomSection = this.shadowRoot.querySelector('.bottom-section');
-    if (!content) return;
-
-    const stack = document.createElement('div');
-    stack.className = 'notification-stack';
-
-    const cardsContainer = document.createElement('div');
-    cardsContainer.className = 'notification-cards';
-    stack.appendChild(cardsContainer);
-
-    const wrapper = this._createCardElement(notif, 0);
-    if (skipAnimation) wrapper.classList.remove('entering');
-    cardsContainer.appendChild(wrapper);
-
-    // Insert before the bottom section (fingerprint area)
-    content.insertBefore(stack, bottomSection);
-
-    // Attach delegated click handler (stack created dynamically)
-    this._wireStackClickHandler(stack);
-
-    if (!skipAnimation) {
-      wrapper.addEventListener(
-        'animationend',
-        () => wrapper.classList.remove('entering'),
-        { once: true },
-      );
-    }
-  }
-
-  /** Bump data-stacked index on existing cards (0→1, 1→2, etc.) */
-  _reindexCards(stack) {
-    const wrappers = stack.querySelectorAll('.notification-card-wrapper');
-    for (const w of wrappers) {
-      const card = w.querySelector('.notification-card');
-      if (!card) continue;
-      const current = parseInt(card.dataset.stacked, 10);
-      card.dataset.stacked = String(current + 1);
-    }
-  }
-
-  /** Remove card wrappers that exceed _maxVisible */
-  _pruneOverflow(stack) {
-    const wrappers = stack.querySelectorAll('.notification-card-wrapper');
-    for (let i = this._maxVisible; i < wrappers.length; i++) {
-      wrappers[i].remove();
-    }
-  }
-
-  /** Update stack-depth class on .notification-cards for box-shadow styling */
-  _updateStackDepthClass(cardsContainer) {
-    cardsContainer.classList.remove('stack-2', 'stack-3');
-    const count = this._notifications.length;
-    if (count === 2) cardsContainer.classList.add('stack-2');
-    else if (count >= 3) cardsContainer.classList.add('stack-3');
-  }
-
-  /** Update or create/remove the "+N more" overflow badge */
-  _updateOverflowBadge(stack) {
-    const overflow = this._notifications.length - this._maxVisible;
-    let badge = stack.querySelector('.notification-overflow');
-
-    if (overflow > 0) {
-      if (!badge) {
-        badge = document.createElement('div');
-        badge.className = 'notification-overflow';
-        stack.appendChild(badge);
-      }
-      badge.textContent = `+${overflow} more`;
-    } else if (badge) {
-      badge.remove();
-    }
-  }
-
-  /** Create a wrapper div containing an animated notification card */
-  _createCardElement(notif, stackIndex) {
-    const wrapper = document.createElement('div');
-    wrapper.className = 'notification-card-wrapper entering';
-    wrapper.innerHTML = `
-      <button type="button" class="notification-card" data-stacked="${stackIndex}"
-           aria-label="Notification from ${escapeHtml(notif.title)}">
-        ${renderAvatar({ title: notif.title, avatarColor: notif.avatarColor, avatarLetter: notif.avatarLetter }, { cssClass: 'notification-avatar' })}
-        <div class="notification-content">
-          <div class="notification-header">
-            <span class="notification-title">${escapeHtml(notif.title)}</span>
-            <span class="notification-time">${this._formatNotificationTime(notif.timestamp)}</span>
-          </div>
-          <div class="notification-body">${escapeHtml(notif.preview)}</div>
-        </div>
-        <div class="notification-expand">
-          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-            <path d="M5 7.5L10 12.5L15 7.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        </div>
-      </button>
-    `;
-    return wrapper;
   }
 
   /**
@@ -396,15 +143,22 @@ export class LockScreen extends HTMLElement {
    * @param {Array} notifications - Array of notification objects
    */
   show(notifications = []) {
-    this._notifications = notifications;
-    this._cancelActiveAnims();
-    this._expanded = false;
-    this._wakeFlushed = true; // Stack already rendered, no wake gate
-    this._pendingNotifs = [];
-    this._animationLock = Promise.resolve(); // Reset stale queue
     this.hidden = false; // lint-ignore: direct visibility (not a transition target)
     this.style.opacity = ''; // Clear opacity left by animateOut()
+
+    // Re-initialize modules before render so renderHTML() includes notifications
+    this._wake = new LockScreenWake(this.shadowRoot);
+    this._notifs = new LockScreenNotifications(this.shadowRoot, {
+      escapeHtml,
+      renderAvatar,
+      getLocale,
+      t,
+    });
+    this._notifs.reset();
+    this._notifs.setNotifications(notifications);
+
     this.render();
+
     const canvas = this.shadowRoot.querySelector('.particle-canvas');
     if (canvas) {
       this._particleSystem = new ParticleSystem(canvas);
@@ -415,23 +169,30 @@ export class LockScreen extends HTMLElement {
   }
 
   /**
-   * Format notification timestamp for display
-   * Shows "now" if within last minute, otherwise shows time
+   * Seed lock screen with existing notifications (e.g. from drawer on refresh).
+   * Called by the orchestrator (main.js) after game init.
+   * @param {Array<Object>} notifications - Array of notification objects
    */
-  _formatNotificationTime(timestamp) {
-    const now = Date.now();
-    const diff = now - timestamp;
+  seedNotifications(notifications) {
+    this._notifs.seed(notifications);
+  }
 
-    // Within last minute = "now"
-    if (diff < 60000) {
-      return 'now';
-    }
+  /**
+   * Update weather and temperature from ink status tags at runtime.
+   * @param {string} [weather] - Weather key (e.g. 'cloudy', 'sunny')
+   * @param {string} [temperature] - Temperature string (e.g. '24°C')
+   */
+  updateWeather(weather, temperature) {
+    if (weather !== undefined) this._weather = weather;
+    if (temperature !== undefined) this._temperature = temperature;
+    this._updateDateWeather();
+  }
 
-    // Otherwise show time like "5:06 PM"
-    return new Date(timestamp).toLocaleTimeString(getLocale(), {
-      hour: 'numeric',
-      minute: '2-digit',
-    });
+  /**
+   * Stop canvas particles (called before unlock transition).
+   */
+  stopAnimation() {
+    this._particleSystem?.stop();
   }
 
   _subscribeToEvents() {
@@ -592,42 +353,25 @@ export class LockScreen extends HTMLElement {
 
     // Attach delegated click handler if stack already exists in initial render
     const stack = this.shadowRoot.querySelector('.notification-stack');
-    if (stack) this._wireStackClickHandler(stack);
+    if (stack) {
+      this._notifs.wireClickHandler(stack, () => this._bounceFingerprint());
+    }
 
     // Click outside expanded stack (or on scrim) to collapse
     const lockScreenEl = this.shadowRoot.querySelector('.lock-screen');
     if (lockScreenEl) {
       lockScreenEl.addEventListener('click', (e) => {
         if (
-          this._expanded &&
+          this._notifs.expanded &&
           !e.target.closest('.notification-stack') &&
           !e.target.closest('.fingerprint-btn')
         ) {
-          this._collapseStack(
+          this._notifs.collapseStack(
             this.shadowRoot.querySelector('.notification-stack'),
           );
         }
       });
     }
-  }
-
-  /**
-   * Attach delegated click handler to notification stack.
-   * - Collapsed: card click → expand
-   * - Expanded: card click → bounce fingerprint
-   */
-  _wireStackClickHandler(stack) {
-    stack.addEventListener('click', (e) => {
-      if (!e.target.closest('.notification-card')) return;
-      e.stopPropagation();
-      if (this._expanded) {
-        this._bounceFingerprint();
-      } else if (this._notifications.length > 1) {
-        this._expandStack(stack);
-      } else {
-        this._bounceFingerprint();
-      }
-    });
   }
 
   _bounceFingerprint() {
@@ -641,288 +385,6 @@ export class LockScreen extends HTMLElement {
     setTimeout(() => {
       fingerprintBtn.classList.remove('bounce');
     }, FINGERPRINT_BOUNCE_MS);
-  }
-
-  /** Feature 1: Wake-up stagger animation on page load */
-  _playWakeAnimation() {
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      // Reduced motion: single short fade
-      const root = this.shadowRoot.querySelector('.lock-screen');
-      if (root) {
-        root.animate([{ opacity: 0 }, { opacity: 1 }], {
-          duration: DURATION_QUICK,
-          easing: 'ease',
-        });
-      }
-      return;
-    }
-
-    const DECELERATE = DECELERATE_EASING;
-    // Hide child content before stagger — keep .lock-screen background visible
-    const childSels = [
-      '.status-bar',
-      '.date-weather',
-      '.time-stacked',
-      '.bottom-section',
-    ];
-    for (const sel of childSels) {
-      const el = this.shadowRoot.querySelector(sel);
-      if (el) el.style.opacity = '0';
-    }
-
-    const elements = [
-      {
-        sel: '.lock-screen',
-        delay: WAKE.BG.delay,
-        dur: WAKE.BG.duration,
-        kf: [
-          { opacity: 0.7, transform: 'scale(1.04)' },
-          { opacity: 1, transform: 'scale(1)' },
-        ],
-      },
-      {
-        sel: '.status-bar',
-        delay: WAKE.STATUSBAR.delay,
-        dur: WAKE.STATUSBAR.duration,
-        kf: [{ opacity: 0 }, { opacity: 1 }],
-      },
-      {
-        sel: '.date-weather',
-        delay: WAKE.DATE_WEATHER.delay,
-        dur: WAKE.DATE_WEATHER.duration,
-        kf: [
-          { opacity: 0, transform: 'translateY(12px)' },
-          { opacity: 1, transform: 'translateY(0)' },
-        ],
-      },
-      {
-        sel: '.time-stacked',
-        delay: WAKE.CLOCK.delay,
-        dur: WAKE.CLOCK.duration,
-        kf: [
-          { opacity: 0, transform: 'scale(0.92)' },
-          { opacity: 1, transform: 'scale(1)' },
-        ],
-      },
-      {
-        sel: '.bottom-section',
-        delay: WAKE.BOTTOM.delay,
-        dur: WAKE.BOTTOM.duration,
-        kf: [{ opacity: 0 }, { opacity: 1 }],
-      },
-    ];
-
-    const anims = [];
-    for (const { sel, delay, dur, kf } of elements) {
-      const el = this.shadowRoot.querySelector(sel);
-      if (el) {
-        const anim = el.animate(kf, {
-          duration: dur,
-          delay,
-          easing: DECELERATE,
-          fill: 'forwards',
-        });
-        // Commit final values as inline styles before cancelling so
-        // identity transforms (scale(1), translateY(0)) persist and
-        // the compositor layer isn't torn down (prevents snap-back).
-        anims.push(
-          anim.finished.then(() => {
-            anim.commitStyles();
-            anim.cancel();
-            el.style.opacity = '';
-          }),
-        );
-      }
-    }
-    // Notifications gate: appear after fingerprint is mostly faded in.
-    // Bottom-section starts at 750ms + ~450ms to reach full opacity = ~1200ms.
-    this._wakeReady = new Promise((r) => setTimeout(r, NOTIFICATION_GATE_MS));
-  }
-
-  /**
-   * Feature 2: Animate lock screen exit, returns Promise that resolves when done.
-   * Caller should set lockScreen.hidden = true after awaiting.
-   * @returns {Promise<void>}
-   */
-  /**
-   * Stop canvas particles (called before unlock transition).
-   */
-  stopAnimation() {
-    this._particleSystem?.stop();
-  }
-
-  _expandStack(stack) {
-    // Cancel any in-flight collapse animations
-    this._cancelActiveAnims();
-
-    this._expanded = true;
-    this.classList.add('stack-expanded');
-    stack.classList.add('expanded');
-    this._showScrim();
-
-    // Show up to _maxExpandedVisible cards
-    const visible = this._notifications.slice(0, this._maxExpandedVisible);
-    const overflow = this._notifications.length - this._maxExpandedVisible;
-
-    // Rebuild cards in expanded layout
-    stack.innerHTML = '';
-    const SPRING = 'cubic-bezier(0.175, 0.885, 0.32, 1.1)';
-    const reducedMotion = window.matchMedia(
-      '(prefers-reduced-motion: reduce)',
-    ).matches;
-
-    this._activeAnims = [];
-    for (let i = 0; i < visible.length; i++) {
-      const wrapper = this._createCardElement(visible[i], i);
-      wrapper.classList.remove('entering');
-      const card = wrapper.querySelector('.notification-card');
-      card.dataset.stacked = String(i);
-      stack.appendChild(wrapper);
-
-      if (!reducedMotion) {
-        // Pre-hide staggered cards (WAAPI delay doesn't hide elements)
-        if (i > 0) card.style.opacity = '0';
-        const anim = card.animate(
-          [
-            { opacity: 0, transform: 'translateY(20px) scale(0.95)' },
-            { opacity: 1, transform: 'translateY(0) scale(1)' },
-          ],
-          {
-            duration: DURATION_FAST,
-            delay: i * STACK_EXPAND_STAGGER,
-            easing: SPRING,
-            fill: 'forwards',
-          },
-        );
-        this._activeAnims.push(anim);
-        anim.finished
-          .then(() => {
-            anim.commitStyles();
-            anim.cancel();
-            card.style.opacity = '';
-          })
-          .catch(() => {
-            /* cancelled */
-          });
-      }
-    }
-
-    // Overflow badge
-    if (overflow > 0) {
-      const badge = document.createElement('div');
-      badge.className = 'notification-overflow';
-      badge.textContent = t('lock_screen.more_notifications', { n: overflow });
-      stack.appendChild(badge);
-    }
-  }
-
-  _collapseStack(stack) {
-    // Cancel any in-flight expand animations
-    this._cancelActiveAnims();
-
-    this._expanded = false;
-    this.classList.remove('stack-expanded');
-    this._hideScrim();
-
-    const reducedMotion = window.matchMedia(
-      '(prefers-reduced-motion: reduce)',
-    ).matches;
-
-    if (reducedMotion) {
-      this._rebuildCollapsedStack(stack);
-      return;
-    }
-
-    const EXIT = EXIT_EASING;
-    const wrappers = [...stack.querySelectorAll('.notification-card-wrapper')];
-    const anims = wrappers
-      .reverse()
-      .map((w, i) => {
-        const card = w.querySelector('.notification-card');
-        if (!card) return null;
-        const anim = card.animate(
-          [
-            { opacity: 1, transform: 'translateY(0) scale(1)' },
-            { opacity: 0, transform: 'translateY(-10px) scale(0.95)' },
-          ],
-          {
-            duration: DURATION_QUICK,
-            delay: i * STAGGER_TIGHT,
-            easing: EXIT,
-            fill: 'forwards',
-          },
-        );
-        this._activeAnims = this._activeAnims || [];
-        this._activeAnims.push(anim);
-        return anim;
-      })
-      .filter(Boolean);
-
-    if (anims.length === 0) {
-      this._rebuildCollapsedStack(stack);
-      return;
-    }
-
-    Promise.all(anims.map((a) => a.finished))
-      .then(() => {
-        for (const a of anims) {
-          a.commitStyles();
-          a.cancel();
-        }
-        this._activeAnims = [];
-        this._rebuildCollapsedStack(stack);
-      })
-      .catch(() => {
-        /* cancelled — expand took over */
-      });
-  }
-
-  _rebuildCollapsedStack(stack) {
-    stack.classList.remove('expanded');
-    stack.innerHTML = '';
-
-    const cardsContainer = document.createElement('div');
-    cardsContainer.className = 'notification-cards';
-    stack.appendChild(cardsContainer);
-
-    this._updateStackDepthClass(cardsContainer);
-
-    const visible = this._notifications.slice(0, this._maxVisible);
-    const overflow = this._notifications.length - this._maxVisible;
-
-    for (let i = 0; i < visible.length; i++) {
-      const wrapper = this._createCardElement(visible[i], i);
-      wrapper.classList.remove('entering');
-      cardsContainer.appendChild(wrapper);
-    }
-
-    if (overflow > 0) {
-      const badge = document.createElement('div');
-      badge.className = 'notification-overflow';
-      badge.textContent = t('lock_screen.more_notifications', { n: overflow });
-      stack.appendChild(badge);
-    }
-  }
-
-  /** Cancel any in-flight expand/collapse WAAPI animations */
-  _cancelActiveAnims() {
-    if (this._activeAnims) {
-      for (const a of this._activeAnims) a.cancel();
-      this._activeAnims = [];
-    }
-  }
-
-  /** Show backdrop blur scrim (expanded state, only for stacked notifications) */
-  _showScrim() {
-    if (this._notifications.length < 2) return;
-    const scrim = this.shadowRoot.querySelector('.expanded-scrim');
-    if (scrim) scrim.classList.add('visible');
-  }
-
-  /** Hide backdrop blur scrim (collapsed state) */
-  _hideScrim() {
-    const scrim = this.shadowRoot.querySelector('.expanded-scrim');
-    if (scrim) scrim.classList.remove('visible');
   }
 
   _captureFocus() {
@@ -964,57 +426,6 @@ export class LockScreen extends HTMLElement {
     `;
   }
 
-  _renderNotifications() {
-    if (this._notifications.length === 0) return '';
-
-    const visible = this._notifications.slice(0, this._maxVisible);
-    const overflow = this._notifications.length - this._maxVisible;
-
-    // Render visible cards — wrapped in .notification-card-wrapper to match _createCardElement
-    const cards = visible
-      .map((notif, idx) => {
-        const stackIndex = idx; // 0 = front, 1 = behind
-        return `
-          <div class="notification-card-wrapper">
-            <button type="button" class="notification-card" data-stacked="${stackIndex}"
-                 aria-label="Notification from ${escapeHtml(notif.title)}">
-              ${renderAvatar({ title: notif.title, avatarColor: notif.avatarColor, avatarLetter: notif.avatarLetter }, { cssClass: 'notification-avatar' })}
-              <div class="notification-content">
-                <div class="notification-header">
-                  <span class="notification-title">${escapeHtml(notif.title)}</span>
-                  <span class="notification-time">${this._formatNotificationTime(notif.timestamp)}</span>
-                </div>
-                <div class="notification-body">${escapeHtml(notif.preview)}</div>
-              </div>
-              <div class="notification-expand">
-                <svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-                  <path d="M5 7.5L10 12.5L15 7.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-              </div>
-            </button>
-          </div>
-        `;
-      })
-      .join('');
-
-    const overflowBadge =
-      overflow > 0
-        ? `<div class="notification-overflow">+${overflow} more</div>`
-        : '';
-
-    const count = this._notifications.length;
-    const stackClass = count >= 3 ? 'stack-3' : count === 2 ? 'stack-2' : '';
-
-    return `
-      <div class="notification-stack">
-        <div class="notification-cards ${stackClass}">
-          ${cards}
-        </div>
-        ${overflowBadge}
-      </div>
-    `;
-  }
-
   _initFromConfig() {
     if (this._isoDate) return;
     const startState = getStartState();
@@ -1029,30 +440,6 @@ export class LockScreen extends HTMLElement {
     this._signal = startState.signal ?? this._signal;
     this._battery = startState.battery ?? this._battery;
     this._date = this._formatDate(this._isoDate, this._dateFormat);
-  }
-
-  /**
-   * Seed lock screen with existing notifications (e.g. from drawer on refresh).
-   * Called by the orchestrator (main.js) after game init.
-   * @param {Array<Object>} notifications - Array of notification objects
-   */
-  seedNotifications(notifications) {
-    if (this._notifications.length > 0 || notifications.length === 0) return;
-    for (const notif of notifications) {
-      this._notifications.push(notif);
-      this._showNotification(notif);
-    }
-  }
-
-  /**
-   * Update weather and temperature from ink status tags at runtime.
-   * @param {string} [weather] - Weather key (e.g. 'cloudy', 'sunny')
-   * @param {string} [temperature] - Temperature string (e.g. '24°C')
-   */
-  updateWeather(weather, temperature) {
-    if (weather !== undefined) this._weather = weather;
-    if (temperature !== undefined) this._temperature = temperature;
-    this._updateDateWeather();
   }
 
   /** Patch date-weather DOM once config becomes available after initial render */
@@ -1240,199 +627,7 @@ export class LockScreen extends HTMLElement {
           color: rgba(255, 255, 255, 0.95); /* lint-ignore: lock screen theme */
         }
 
-        /* Notification entrance — card slides up from below and settles */
-        .notification-card-wrapper.entering .notification-card {
-          animation: notification-enter-card ${CARD_ENTRANCE_MS}ms cubic-bezier(0.25, 0.1, 0.25, 1.0) both;
-        }
-
-        @keyframes notification-enter-card {
-          from { transform: translateY(40px) scale(0.96); }
-          to   { transform: translateY(0) scale(1); }
-        }
-
-        /* Notification card */
-        .notification-card {
-          appearance: none;
-          border: none;
-          font: inherit;
-          text-align: left;
-          width: 100%;
-          background: rgba(255, 255, 255, 0.95); /* lint-ignore: light card */
-          border-radius: 20px;
-          padding: 14px;
-          display: flex;
-          align-items: flex-start;
-          gap: 12px;
-          cursor: pointer;
-          transition: transform 0.15s ease, box-shadow 0.15s ease;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2); /* lint-ignore: shadow */
-        }
-
-        @media (hover: hover) {
-          .notification-card:hover {
-            transform: scale(1.01);
-          }
-        }
-
-        .notification-card:active {
-          transform: scale(0.99);
-        }
-
-        .notification-avatar {
-          width: 40px;
-          height: 40px;
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-weight: 300;
-          font-size: 16px;
-          flex-shrink: 0;
-        }
-
-        .notification-content {
-          flex: 1;
-          min-width: 0;
-        }
-
-        .notification-header {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          margin-bottom: 2px;
-        }
-
-        .notification-title {
-          font-weight: 600;
-          font-size: 14px;
-          color: #1a1a1a; /* lint-ignore: light card text */
-        }
-
-        .notification-time {
-          font-size: 12px;
-          color: #666; /* lint-ignore: light card text */
-        }
-
-        .notification-body {
-          font-size: 13px;
-          color: #333; /* lint-ignore: light card text */
-          line-height: 1.35;
-          display: -webkit-box;
-          -webkit-line-clamp: 2;
-          -webkit-box-orient: vertical;
-          overflow: hidden;
-        }
-
-        .notification-expand {
-          align-self: center;
-          color: #999; /* lint-ignore: light card text */
-          padding: 4px;
-        }
-
-        /* Notification stack container */
-        .notification-stack {
-          margin-top: auto;
-          z-index: 3; /* Above scrim */
-        }
-
-        /* Cards sub-container — positioning context for absolute behind cards */
-        .notification-cards {
-          position: relative;
-        }
-
-        /* Smooth box-shadow transition when stack depth changes */
-        .notification-card[data-stacked="0"] {
-          transition: box-shadow ${STACK_SHADOW_TRANSITION_MS}ms cubic-bezier(0.05, 0.7, 0.1, 1.0);
-        }
-
-        /*
-         * Stacked card positioning — iOS-style box-shadow technique.
-         * Behind-card edges are faked via layered box-shadows on the
-         * front card. Actual behind cards are hidden (display:none).
-         * This avoids all clip-path / absolute-positioning issues.
-         */
-        .notification-card[data-stacked="0"] {
-          position: relative;
-        }
-
-        /* 2-card stack: one edge peeking */
-        .notification-cards.stack-2 .notification-card[data-stacked="0"] {
-          box-shadow:
-            0 2px 8px rgba(0, 0, 0, 0.12),                       /* lint-ignore: card shadow */
-            0 9px 0 -3px rgba(240, 240, 240, 1),                  /* lint-ignore: 2nd card edge */
-            0 10px 2px -2px rgba(0, 0, 0, 0.08);                  /* lint-ignore: 2nd card shadow */
-        }
-
-        /* 3+ card stack: two edges peeking */
-        .notification-cards.stack-3 .notification-card[data-stacked="0"] {
-          box-shadow:
-            0 2px 8px rgba(0, 0, 0, 0.12),                       /* lint-ignore: card shadow */
-            0 9px 0 -3px rgba(240, 240, 240, 1),                  /* lint-ignore: 2nd card edge */
-            0 10px 2px -2px rgba(0, 0, 0, 0.08),                  /* lint-ignore: 2nd card shadow */
-            0 16px 0 -5px rgba(225, 225, 225, 1),                 /* lint-ignore: 3rd card edge */
-            0 17px 2px -4px rgba(0, 0, 0, 0.06);                  /* lint-ignore: 3rd card shadow */
-        }
-
-        /* Hide actual behind cards — their edges are faked by box-shadow */
-        .notification-card[data-stacked="1"],
-        .notification-card[data-stacked="2"] {
-          display: none;
-        }
-
-        /* Show stacked box-shadow immediately during entrance (skip 350ms transition) */
-        .notification-card-wrapper.entering .notification-card[data-stacked="0"] {
-          transition: none;
-        }
-
-        /* Overflow badge */
-        .notification-overflow {
-          margin-top: 24px;
-          text-align: center;
-          font-size: 12px;
-          color: rgba(255, 255, 255, 0.6); /* lint-ignore: lock screen theme */
-          letter-spacing: 0.3px;
-        }
-
-        /* Expanded notification stack (Feature 3) */
-        .notification-stack.expanded {
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
-          max-height: 60vh;
-          overflow-y: auto;
-          -ms-overflow-style: none;
-          scrollbar-width: none;
-        }
-        .notification-stack.expanded::-webkit-scrollbar {
-          display: none;
-        }
-
-        .notification-stack.expanded .notification-card {
-          display: flex; /* Override display:none on behind cards */
-          position: relative;
-          transform: none;
-          opacity: 1;
-          pointer-events: auto;
-          z-index: auto;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12); /* lint-ignore: card shadow */
-        }
-
-        /* Blur scrim shown when notification stack is expanded */
-        .expanded-scrim {
-          position: absolute;
-          inset: 0;
-          backdrop-filter: blur(6px);
-          -webkit-backdrop-filter: blur(6px);
-          background: rgba(0, 0, 0, 0.15); /* lint-ignore: scrim overlay */
-          opacity: 0;
-          pointer-events: none;
-          transition: opacity ${SCRIM_TRANSITION_MS}ms ease;
-          z-index: 2;
-        }
-        .expanded-scrim.visible {
-          opacity: 1;
-          pointer-events: auto;
-        }
+        ${LockScreenNotifications.styles}
 
         /* Bottom section with fingerprint */
         .bottom-section {
@@ -1494,21 +689,11 @@ export class LockScreen extends HTMLElement {
         }
 
         @media (prefers-reduced-motion: reduce) {
-          .notification-card,
           .fingerprint-btn {
             transition: none;
           }
-          .notification-card[data-stacked] {
-            transition: none;
-          }
-          .notification-card-wrapper.entering .notification-card {
-            animation: none;
-          }
           .fingerprint-btn.bounce {
             animation: none;
-          }
-          .expanded-scrim {
-            transition: none;
           }
           .status-bar::after {
             transition: none;
@@ -1516,7 +701,6 @@ export class LockScreen extends HTMLElement {
         }
         /* Firefox: backdrop-filter causes blurry text with border-radius */
         @-moz-document url-prefix() {
-          .expanded-scrim,
           .status-bar::after {
             backdrop-filter: none;
           }
@@ -1549,7 +733,7 @@ export class LockScreen extends HTMLElement {
 
           <div class="expanded-scrim"></div>
 
-          ${this._renderNotifications()}
+          ${this._notifs ? this._notifs.renderHTML() : ''}
 
           <!-- Fingerprint unlock -->
           <div class="bottom-section">
