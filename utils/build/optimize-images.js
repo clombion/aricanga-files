@@ -14,7 +14,7 @@ import { existsSync, mkdirSync, statSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import { glob } from 'node:fs/promises';
 import sharp from 'sharp';
-import { getProjectRoot } from '../lib/locale-config.js';
+import { getPaths } from '../lib/locale-config.js';
 
 const IMPL = process.env.IMPL;
 if (!IMPL) {
@@ -22,9 +22,9 @@ if (!IMPL) {
   process.exit(1);
 }
 
-const PROJECT_ROOT = getProjectRoot();
-const SOURCE_DIR = join(PROJECT_ROOT, 'experiences', IMPL, 'assets', 'profile_images');
-const OUTPUT_DIR = join(SOURCE_DIR, 'optimized');
+const paths = getPaths(IMPL);
+const SOURCE_DIR = join(paths.implDir, 'assets', 'profile_images');
+const OUTPUT_DIR = join(paths.publicAssetsDir, 'profile_images/optimized');
 
 mkdirSync(OUTPUT_DIR, { recursive: true });
 

@@ -577,7 +577,7 @@ spectre = "Cryptic, paranoid. Short sentences."
 
 Base configuration for the in-game glossary (non-translatable fields only).
 
-**File:** `experiences/{impl}/data/glossary-terms.toml`
+**File:** `experiences/{impl}/public/data/glossary-terms.toml`
 
 Translatable content (term, definition) goes in `locales/{lang}.toml` under `[glossary.terms.*]`.
 
@@ -633,7 +633,7 @@ es = "Ministerio de Recursos Naturales"
 
 External data queries that inject values into ink variables at startup.
 
-**File:** `experiences/{impl}/data/data-queries.toml`
+**File:** `experiences/{impl}/public/data/data-queries.toml`
 
 ### Structure
 

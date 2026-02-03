@@ -191,7 +191,7 @@ input_placeholder = "Seul {name} peut envoyer des messages"
 
 The in-game glossary displays extractive industries terminology. Terms are defined in two places:
 
-1. **Base data** (`data/glossary-terms.toml`): IDs and categories (not translated)
+1. **Base data** (`public/data/glossary-terms.toml`): IDs and categories (not translated)
 2. **Translations** (`locales/{lang}.toml`): Term names and definitions
 
 Each term ID in `glossary-terms.toml` needs a matching section in the locale file:

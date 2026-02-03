@@ -463,13 +463,18 @@ experiences/
     │   ├── game-state.js            # Uses createConversationMachine()
     │   ├── game-controller.js       # Orchestrator
     │   └── config.js                # Config loader
-    ├── data/                        # Config files
+    ├── public/                      # Runtime assets (Vite copies to dist/)
+    │   ├── assets/                  # Images, audio, fonts
+    │   ├── css/                     # Theme stylesheets
+    │   ├── data/                    # Runtime-fetched TOML
+    │   └── src/dist/                # Generated story.json, locales (gitignored)
+    ├── assets/                      # Build inputs (source profile images)
+    ├── data/                        # Build-time config files
     │   ├── base-config.toml         # Characters, behavior
     │   └── locales/                 # Translations
     ├── ink/                         # Narrative content
     │   ├── variables.ink            # Shared state
     │   └── {locale}/                # Localized content
-    ├── assets/                      # Images, audio, fonts
     └── utils/                       # Implementation-specific tooling
         ├── ink/                     # Ink linters
         ├── implementation/          # JS linters

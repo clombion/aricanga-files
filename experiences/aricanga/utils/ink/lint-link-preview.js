@@ -158,8 +158,7 @@ function lintImplementation(implName) {
   const warnings = [];
   const paths = getPaths(implName);
 
-  const glossaryPath = join(paths.dataDir, 'glossary-terms.toml');
-  const assetsDir = join(PROJECT_ROOT, 'experiences', implName, 'assets');
+  const glossaryPath = join(paths.publicDataDir, 'glossary-terms.toml');
   const inkDir = paths.inkDir;
 
   // Load glossary terms if available
@@ -201,7 +200,7 @@ function lintImplementation(implName) {
 
       // LINK-2: Check linkImage paths exist
       if (tags.linkImage) {
-        const imagePath = join(PROJECT_ROOT, 'experiences', implName, tags.linkImage);
+        const imagePath = join(paths.publicDir, tags.linkImage);
         if (!existsSync(imagePath)) {
           errors.push(
             `LINK-2: ${relativePath}:${line} - image file not found: ${tags.linkImage}`

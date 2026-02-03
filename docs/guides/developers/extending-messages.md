@@ -124,7 +124,7 @@ customElements.define('video-bubble', VideoBubble);
 
 ### Step 6: Add CSS (if needed)
 
-In `experiences/{impl}/css/theme.css` or component shadow DOM.
+In `experiences/{impl}/public/css/theme.css` or component shadow DOM.
 
 ---
 
@@ -135,7 +135,7 @@ In `experiences/{impl}/css/theme.css` or component shadow DOM.
 | `packages/framework/src/systems/conversation/types.js` | Type definition, factory function, detection |
 | `packages/framework/src/systems/conversation/components/chat-thread/index.js` | Rendering logic |
 | `packages/framework/src/systems/conversation/components/{type}-bubble.js` | New component (if complex) |
-| `experiences/{impl}/css/theme.css` | Styling (if not in shadow DOM) |
+| `experiences/{impl}/public/css/theme.css` | Styling (if not in shadow DOM) |
 
 ---
 

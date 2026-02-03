@@ -8,8 +8,8 @@
 #   2. For absolute paths, the referenced file actually exists
 #   3. Attachments are logged for documentation (no existence check)
 #
-# Paths are relative to implementation root (e.g., /assets/foo.svg resolves to
-# experiences/{name}/assets/foo.svg). Vite serves from impl root with base: './'.
+# Paths are relative to the Vite public dir (e.g., /assets/foo.svg resolves to
+# experiences/{name}/public/assets/foo.svg). Vite serves public/ at root.
 #
 # Usage:
 #   bash utils/linting/ink/lint-image-paths.sh [options] [directory]
@@ -122,9 +122,9 @@ echo "Checking asset paths in ${INK_DIRS[*]}..."
 [[ "$VERBOSE" == true ]] && echo ""
 
 # Function to check asset path validity and existence
-# Args: $1=file, $2=lineno, $3=path, $4=asset_type, $5=impl_root, $6=check_exists
+# Args: $1=file, $2=lineno, $3=path, $4=asset_type, $5=public_dir, $6=check_exists
 check_asset_path() {
-    local file="$1" lineno="$2" path="$3" asset_type="$4" impl_root="$5" check_exists="$6"
+    local file="$1" lineno="$2" path="$3" asset_type="$4" public_dir="$5" check_exists="$6"
 
     # Skip empty paths
     [[ -z "$path" ]] && return
@@ -137,8 +137,8 @@ check_asset_path() {
     elif [[ "$path" == /* ]]; then
         # Absolute path
         if [[ "$check_exists" == "true" ]]; then
-            # Check file exists relative to impl root
-            local full_path="${impl_root}${path}"
+            # Check file exists relative to public/ (Vite serves public/ at root)
+            local full_path="${public_dir}${path}"
             if [[ -f "$full_path" ]]; then
                 [[ "$VERBOSE" == true ]] && echo "  [ok] $file:$lineno - $asset_type: $path"
                 ((VALID++)) || true
@@ -164,8 +164,9 @@ check_asset_path() {
 for INK_DIR in "${INK_DIRS[@]}"; do
     [[ ! -d "$INK_DIR" ]] && continue
 
-    # Derive implementation root from ink directory (experiences/{name}/ink -> experiences/{name})
+    # Derive public dir from ink directory (experiences/{name}/ink -> experiences/{name}/public)
     IMPL_ROOT=$(dirname "$INK_DIR")
+    PUBLIC_DIR="${IMPL_ROOT}/public"
 
     # Find all # image: tags in ink files
     while IFS= read -r line; do
@@ -173,7 +174,7 @@ for INK_DIR in "${INK_DIRS[@]}"; do
         file=$(echo "$line" | cut -d: -f1)
         lineno=$(echo "$line" | cut -d: -f2)
         path=$(echo "$line" | sed -n 's/.*# *image: *\(.*\)/\1/p' | xargs)
-        check_asset_path "$file" "$lineno" "$path" "image" "$IMPL_ROOT" "true"
+        check_asset_path "$file" "$lineno" "$path" "image" "$PUBLIC_DIR" "true"
     done < <(/usr/bin/grep -rn '#.*image:' "$INK_DIR" --include="*.ink" 2>/dev/null || true)
 
     # Find all # audio: tags in ink files
@@ -182,7 +183,7 @@ for INK_DIR in "${INK_DIRS[@]}"; do
         file=$(echo "$line" | cut -d: -f1)
         lineno=$(echo "$line" | cut -d: -f2)
         path=$(echo "$line" | sed -n 's/.*# *audio: *\(.*\)/\1/p' | xargs)
-        check_asset_path "$file" "$lineno" "$path" "audio" "$IMPL_ROOT" "true"
+        check_asset_path "$file" "$lineno" "$path" "audio" "$PUBLIC_DIR" "true"
     done < <(/usr/bin/grep -rn '#.*audio:' "$INK_DIR" --include="*.ink" 2>/dev/null || true)
 
     # Find all # attachment: tags in ink files (log only, no existence check)
@@ -191,7 +192,7 @@ for INK_DIR in "${INK_DIRS[@]}"; do
         file=$(echo "$line" | cut -d: -f1)
         lineno=$(echo "$line" | cut -d: -f2)
         path=$(echo "$line" | sed -n 's/.*# *attachment: *\(.*\)/\1/p' | xargs)
-        check_asset_path "$file" "$lineno" "$path" "attachment" "$IMPL_ROOT" "false"
+        check_asset_path "$file" "$lineno" "$path" "attachment" "$PUBLIC_DIR" "false"
     done < <(/usr/bin/grep -rn '#.*attachment:' "$INK_DIR" --include="*.ink" 2>/dev/null || true)
 done
 

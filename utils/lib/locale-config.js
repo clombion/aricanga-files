@@ -129,6 +129,7 @@ export function getLocalePaths(locale = getLocale(), impl = requireImpl()) {
  */
 export function getPaths(impl = requireImpl()) {
   const implDir = join(PROJECT_ROOT, 'experiences', impl);
+  const publicDir = join(implDir, 'public');
   const dataDir = join(implDir, 'data');
   const srcDir = join(implDir, 'src');
 
@@ -137,7 +138,12 @@ export function getPaths(impl = requireImpl()) {
     projectRoot: PROJECT_ROOT,
     implDir,
 
-    // Data paths
+    // Public dir (Vite copies to dist/ automatically)
+    publicDir,
+    publicAssetsDir: join(publicDir, 'assets'),
+    publicDataDir: join(publicDir, 'data'),
+
+    // Data paths (build inputs — NOT served at runtime)
     dataDir,
     localesDir: join(dataDir, 'locales'),
     baseConfigPath: join(dataDir, 'base-config.toml'),
@@ -147,16 +153,16 @@ export function getPaths(impl = requireImpl()) {
     generatedDir: join(srcDir, 'generated'),
     configOutput: join(srcDir, 'generated/config.js'),
 
-    // CSS paths
-    cssDir: join(implDir, 'css'),
-    themeVarsOutput: join(implDir, 'css/generated/theme-vars.css'),
+    // CSS paths (inside public/)
+    cssDir: join(publicDir, 'css'),
+    themeVarsOutput: join(publicDir, 'css/generated/theme-vars.css'),
 
     // Ink paths
     inkDir: join(implDir, 'ink'),
 
-    // Dist paths
-    distDir: join(srcDir, 'dist'),
-    localesOutputDir: join(srcDir, 'dist/locales'),
+    // Dist paths (inside public/ — generated story.json, locales)
+    distDir: join(publicDir, 'src/dist'),
+    localesOutputDir: join(publicDir, 'src/dist/locales'),
 
     // Test paths
     testsDir: join(implDir, 'tests'),

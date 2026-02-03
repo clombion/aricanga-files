@@ -24,15 +24,12 @@
  */
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { join } from 'node:path';
 import {
   createBuildExternalFunctions,
   bindExternalFunctions,
 } from '../../packages/framework/src/systems/conversation/ink/external-functions.js';
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const PROJECT_ROOT = join(__dirname, '../..');
+import { getPaths } from '../lib/locale-config.js';
 
 // CLI arguments
 const ARGS = {
@@ -72,12 +69,12 @@ if (!IMPL) {
   process.exit(1);
 }
 
-// Paths
-const IMPL_DIR = join(PROJECT_ROOT, 'experiences', IMPL);
-const STORY_PATH = join(IMPL_DIR, 'src/dist/en/story.json'); // Default to 'en'
-const CONFIG_PATH = join(IMPL_DIR, 'src/generated/config.js');
-const LOCALE_PATH = join(IMPL_DIR, 'src/dist/locales/en.json');
-const OUTPUT_PATH = join(IMPL_DIR, 'src/generated/seeds.js');
+// Paths (from centralized locale-config)
+const paths = getPaths(IMPL);
+const STORY_PATH = join(paths.distDir, 'en/story.json'); // Default to 'en'
+const CONFIG_PATH = paths.configOutput;
+const LOCALE_PATH = join(paths.localesOutputDir, 'en.json');
+const OUTPUT_PATH = join(paths.generatedDir, 'seeds.js');
 
 // ID counter for deterministic seed IDs
 let seedIdCounter = 0;

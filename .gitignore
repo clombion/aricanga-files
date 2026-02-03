@@ -3,7 +3,8 @@
 
 # Compiled output and Vite build output
 experiences/*/dist/
-experiences/*/src/dist/
+experiences/*/public/src/dist/
+experiences/*/public/css/generated/
 *.ink.json
 
 # Generated test fixtures

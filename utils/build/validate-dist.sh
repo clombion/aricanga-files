@@ -13,6 +13,7 @@ fi
 
 dist="experiences/$IMPL/dist"
 src="experiences/$IMPL"
+pub="experiences/$IMPL/public"
 errors=0
 
 check() {
@@ -32,7 +33,7 @@ ls "$dist/assets/"*.css >/dev/null 2>&1 || { echo "  MISSING: $dist/assets/*.css
 
 # 2. Story JSON per locale
 echo "  Checking story files..."
-for locale_dir in "$src/src/dist"/*/; do
+for locale_dir in "$pub/src/dist"/*/; do
   locale=$(basename "$locale_dir")
   [ "$locale" = "locales" ] && continue
   check "$dist/src/dist/$locale/story.json"
@@ -40,7 +41,7 @@ done
 
 # 4. i18n locale files
 echo "  Checking locale files..."
-for json in "$src/src/dist/locales/"*.json; do
+for json in "$pub/src/dist/locales/"*.json; do
   base=$(basename "$json")
   check "$dist/src/dist/locales/$base"
 done
@@ -51,7 +52,7 @@ check "$dist/data/data-queries.toml"
 
 # 6. Profile images referenced in config
 echo "  Checking profile images..."
-for img in "$src/assets/profile_images/optimized/"*; do
+for img in "$pub/assets/profile_images/optimized/"*; do
   [ -f "$img" ] || continue
   base=$(basename "$img")
   check "$dist/assets/profile_images/optimized/$base"
@@ -59,7 +60,7 @@ done
 
 # 7. Avatar images
 echo "  Checking avatars..."
-for svg in "$src/assets/avatars/"*; do
+for svg in "$pub/assets/avatars/"*; do
   [ -f "$svg" ] || continue
   base=$(basename "$svg")
   check "$dist/assets/avatars/$base"
