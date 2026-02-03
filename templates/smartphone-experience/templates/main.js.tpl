@@ -55,13 +55,20 @@ await i18nReady;
 
 const controller = new GameController();
 
+/** @returns {Element} the matched element, or throws if missing */
+function requireElement(selector) {
+  const el = document.querySelector(selector);
+  if (!el) throw new Error(`Required element missing: <${selector}>`);
+  return el;
+}
+
 // Component references
-const hub = document.querySelector('chat-hub');
-const thread = document.querySelector('chat-thread');
-const notificationDrawer = document.querySelector('notification-drawer');
-const statusBar = document.querySelector('phone-status-bar');
-const connectionOverlay = document.querySelector('connection-overlay');
-const settingsPage = document.querySelector('settings-page');
+const hub = requireElement('chat-hub');
+const thread = requireElement('chat-thread');
+const notificationDrawer = requireElement('notification-drawer');
+const statusBar = requireElement('phone-status-bar');
+const connectionOverlay = requireElement('connection-overlay');
+const settingsPage = requireElement('settings-page');
 
 // Configure BatteryContext with phone behavior settings
 batteryContext.configure({

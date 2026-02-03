@@ -99,19 +99,26 @@ function transition(outgoing, incoming, options = {}) {
 
 const controller = new GameController();
 
+/** @returns {Element} the matched element, or throws if missing */
+function requireElement(selector) {
+  const el = document.querySelector(selector);
+  if (!el) throw new Error(`Required element missing: <${selector}>`);
+  return el;
+}
+
 // Component references
 // Why: Components self-subscribe to EventBus in connectedCallback - no manual wiring needed here
-const lockScreen = document.querySelector('lock-screen');
-const hub = document.querySelector('chat-hub');
-const thread = document.querySelector('chat-thread');
-const conversationSettings = document.querySelector('conversation-settings');
-const notificationDrawer = document.querySelector('notification-drawer');
-const statusBar = document.querySelector('phone-status-bar');
-const connectionOverlay = document.querySelector('connection-overlay');
-const settingsPage = document.querySelector('settings-page');
-const aboutPage = document.querySelector('about-page');
-const glossaryPage = document.querySelector('glossary-page');
-const playerProfile = document.querySelector('player-profile');
+const lockScreen = requireElement('lock-screen');
+const hub = requireElement('chat-hub');
+const thread = requireElement('chat-thread');
+const conversationSettings = requireElement('conversation-settings');
+const notificationDrawer = requireElement('notification-drawer');
+const statusBar = requireElement('phone-status-bar');
+const connectionOverlay = requireElement('connection-overlay');
+const settingsPage = requireElement('settings-page');
+const aboutPage = requireElement('about-page');
+const glossaryPage = requireElement('glossary-page');
+const playerProfile = requireElement('player-profile');
 
 // Hide main UI until lock screen is dismissed
 hub.hidden = true;
@@ -121,7 +128,7 @@ statusBar.hidden = true;
 const transitionOverlay = document.createElement('div');
 transitionOverlay.className = 'ink-transition-overlay';
 transitionOverlay.hidden = true;
-document.querySelector('#content-area').appendChild(transitionOverlay);
+requireElement('#content-area').appendChild(transitionOverlay);
 
 // Configure BatteryContext with TOML phone behavior settings
 // Battery is now separate from TimeContext (phone-specific, not foundation)
@@ -264,8 +271,8 @@ document.addEventListener('keydown', (e) => {
 
 // Touch gestures: swipe-down (open drawer), swipe-up (close drawer), swipe-right (back)
 {
-  const appEl = document.querySelector('#app');
-  const contentArea = document.querySelector('#content-area');
+  const appEl = requireElement('#app');
+  const contentArea = requireElement('#content-area');
   let touchStartX = null;
   let touchStartY = null;
 
