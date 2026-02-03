@@ -31,6 +31,7 @@ import {
   renderInternetIcon,
 } from '../utils/status-icons.js';
 import { escapeHtml } from '../utils/text.js';
+import { ParticleSystem } from './lock-screen-particles.js';
 
 /**
  * LockScreen - Phone lock screen overlay
@@ -86,18 +87,17 @@ export class LockScreen extends HTMLElement {
     // Animation queue — serializes concurrent notification arrivals
     this._animationLock = Promise.resolve();
 
-    // Particle animation
-    this._canvas = null;
-    this._ctx = null;
-    this._particles = [];
-    this._animationId = null;
+    // Particle animation (delegated to ParticleSystem)
+    this._particleSystem = null;
   }
 
   connectedCallback() {
     this.render();
-    this._initCanvas();
-    this._initParticles();
-    this._startAnimation();
+    const canvas = this.shadowRoot.querySelector('.particle-canvas');
+    if (canvas) {
+      this._particleSystem = new ParticleSystem(canvas);
+      this._particleSystem.start();
+    }
     this._subscribeToEvents();
     this._setupTouchHandlers();
     this._playWakeAnimation();
@@ -114,10 +114,8 @@ export class LockScreen extends HTMLElement {
     }
     this._unsubscribers = [];
 
-    if (this._animationId) {
-      cancelAnimationFrame(this._animationId);
-      this._animationId = null;
-    }
+    this._particleSystem?.destroy();
+    this._particleSystem = null;
   }
 
   /**
@@ -386,9 +384,11 @@ export class LockScreen extends HTMLElement {
     this.hidden = false; // lint-ignore: direct visibility (not a transition target)
     this.style.opacity = ''; // Clear opacity left by animateOut()
     this.render();
-    this._initCanvas();
-    this._initParticles();
-    this._startAnimation();
+    const canvas = this.shadowRoot.querySelector('.particle-canvas');
+    if (canvas) {
+      this._particleSystem = new ParticleSystem(canvas);
+      this._particleSystem.start();
+    }
     this._setupTouchHandlers();
     this._captureFocus();
   }
@@ -534,71 +534,6 @@ export class LockScreen extends HTMLElement {
     const statusBar = this.shadowRoot.querySelector('.status-bar');
     if (statusBar) {
       statusBar.innerHTML = this._renderStatusBarContent();
-    }
-  }
-
-  _initCanvas() {
-    this._canvas = this.shadowRoot.querySelector('.particle-canvas');
-    if (!this._canvas) return;
-
-    this._ctx = this._canvas.getContext('2d');
-    this._resizeCanvas();
-
-    // Handle resize
-    this._resizeObserver = new ResizeObserver(() => this._resizeCanvas());
-    this._resizeObserver.observe(this._canvas.parentElement);
-  }
-
-  _resizeCanvas() {
-    if (!this._canvas) return;
-    const rect = this._canvas.parentElement.getBoundingClientRect();
-    this._canvas.width = rect.width;
-    this._canvas.height = rect.height;
-  }
-
-  _initParticles() {
-    this._particles = [];
-    const count = 20;
-
-    for (let i = 0; i < count; i++) {
-      this._particles.push({
-        x: Math.random() * 400,
-        y: Math.random() * 800,
-        radius: Math.random() * 20 + 10,
-        alpha: Math.random() * 0.15 + 0.05,
-        vx: (Math.random() - 0.5) * 0.3,
-        vy: (Math.random() - 0.5) * 0.3 - 0.2,
-      });
-    }
-  }
-
-  _startAnimation() {
-    const animate = () => {
-      this._animationId = requestAnimationFrame(animate);
-      this._drawParticles();
-    };
-    animate();
-  }
-
-  _drawParticles() {
-    if (!this._ctx || !this._canvas) return;
-
-    const { width, height } = this._canvas;
-    this._ctx.clearRect(0, 0, width, height);
-
-    for (const p of this._particles) {
-      p.x += p.vx;
-      p.y += p.vy;
-
-      if (p.x < -p.radius) p.x = width + p.radius;
-      if (p.x > width + p.radius) p.x = -p.radius;
-      if (p.y < -p.radius) p.y = height + p.radius;
-      if (p.y > height + p.radius) p.y = -p.radius;
-
-      this._ctx.beginPath();
-      this._ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-      this._ctx.fillStyle = `rgba(100, 180, 220, ${p.alpha})`; // lint-ignore: lock screen particles
-      this._ctx.fill();
     }
   }
 
@@ -792,10 +727,7 @@ export class LockScreen extends HTMLElement {
    * Stop canvas particles (called before unlock transition).
    */
   stopAnimation() {
-    if (this._animationId) {
-      cancelAnimationFrame(this._animationId);
-      this._animationId = null;
-    }
+    this._particleSystem?.stop();
   }
 
   _expandStack(stack) {
