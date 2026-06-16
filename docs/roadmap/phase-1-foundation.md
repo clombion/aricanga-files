@@ -11,7 +11,7 @@ The foundation is secretly chat-shaped.
 
 Define the seams only:
 
-- `Snapshot<TSystemState>` — generic over a system-owned state slice.
+- `Snapshot<TSystems>` — keyed map of opaque per-system state slices (one or more).
 - An open/extensible `Effect` channel (not a fixed enum).
 - The pure kernel signature `reduce(state, chunk) → {state, effects}`.
 - The single event bus.

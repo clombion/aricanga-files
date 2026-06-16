@@ -15,7 +15,7 @@ parent_task_id:
 
 Define the vocabulary-agnostic core: `StoryChunk`/`Tag`/`Choice` (what ink
 emits), the `reduce(state, chunk, ctx) → { state, effects }` signature,
-`ReduceContext` (injected clock + deterministic id), and `Snapshot<TSystemState>`.
+`ReduceContext` (injected clock + deterministic id), and `Snapshot<TSystems>`.
 See [`../phase-1-foundation-design.md`](../phase-1-foundation-design.md).
 
 ## Acceptance Criteria

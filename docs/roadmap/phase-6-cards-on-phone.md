@@ -22,7 +22,7 @@ axes, not just a separable pair.
 ### What this forces into the open
 
 - **Snapshot shape** — cards has no `messageHistory`/`deferredMessages`, forcing
-  `Snapshot<TSystemState>` to be truly generic.
+  `Snapshot<TSystems>` to be truly generic.
 - **Effect channel** — `STAT_CHANGED`/`CARD_SHOWN` vs chat's `NOTIFICATION_SHOW`,
   forcing the effect type to be system-extensible.
 - **Tag registry** — a different tag set forces per-system tag plug-ins.
