@@ -71,3 +71,25 @@ P0 → P1 → { P2 → P3, P4 } → { P5 ∥ P6 } → P7
 - **P5 and P6 parallelize** once foundation + systems are stable. They are the
   two seam-proofs: P5 by *subtraction* (chat without phone), P6 by
   *recombination* (phone without chat).
+
+## Task format
+
+Task documentation follows the [Backlog.md](https://github.com/MrLesk/Backlog.md)
+markdown convention (format only — no CLI or tooling). See
+[`TASK-TEMPLATE.md`](TASK-TEMPLATE.md).
+
+- **Location:** task files live in `docs/roadmap/tasks/` as
+  `task-<id> - <Title>.md`. Phase files (`phase-N-*.md`) are the epic/milestone
+  definitions (risk · goal · proof); tasks are the work items beneath them.
+- **IDs:** globally sequential (`task-001`, `task-002`, …); subtasks use decimal
+  IDs (`task-001.01`) with `parent_task_id` set. The phase is carried by the
+  `milestone` field, not the ID.
+- **Acceptance Criteria:** indexed checkboxes — `- [ ] #1 <criterion>`.
+  Outcome-focused, testable, measurable, observable. Describe *what must be true*
+  when done, never the implementation steps.
+- **Status:** `To Do` · `In Progress` · `Blocked` · `Done`.
+- **Body sections, in order:** Description · Acceptance Criteria ·
+  Implementation Plan · Implementation Notes.
+- **Decisions:** architectural calls (greenfield rebuild, risk-ordering,
+  TypeScript + Lit, design-for-two, the two seam experiences) are recorded as
+  short ADR-style files in `docs/roadmap/decisions/`.
