@@ -21,7 +21,15 @@ are green.
 
 ## Subtasks
 
-- [ ] (added when we break down this phase)
+See [`tasks/`](tasks/README.md) for the full task files with acceptance criteria.
+
+- [ ] task-001 — Monorepo and TypeScript project-reference scaffolding
+- [ ] task-002 — Vite build and dev pipeline
+- [ ] task-003 — Lit component baseline
+- [ ] task-004 — Vitest unit-test harness
+- [ ] task-005 — Module boundary lint
+- [ ] task-006 — CI workflow (typecheck, lint, test, build)
+- [ ] task-007 — Walking skeleton — ink → kernel stub → Lit render
 
 ## Non-goals
 
