@@ -27,9 +27,24 @@ honest now, before any physics exists.
 Foundation types compile; two stub systems wire through one composition root;
 switching between them touches zero foundation code.
 
+## Design
+
+See [`phase-1-foundation-design.md`](phase-1-foundation-design.md) for the
+concrete contract shapes, and [`decisions/`](decisions/) for the architectural
+decision records (ADR-0001…0004).
+
 ## Subtasks
 
-- [ ] (added when we break down this phase)
+See [`tasks/`](tasks/README.md) for the full task files with acceptance criteria.
+
+- [ ] task-008 — Kernel and snapshot contracts
+- [ ] task-009 — Open effect channel
+- [ ] task-010 — Single event bus and DomainEvent envelope
+- [ ] task-011 — System interface
+- [ ] task-012 — Composition root
+- [ ] task-013 — Chat system stub
+- [ ] task-014 — Cards system stub
+- [ ] task-015 — Two-vocabulary proof
 
 ## Non-goals
 
