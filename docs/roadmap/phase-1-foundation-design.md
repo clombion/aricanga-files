@@ -19,7 +19,7 @@ Three mechanisms, deliberately non-overlapping (the POC had four tangled ones):
   `foundation/emit` effect.
 
 ```
-ink → StoryChunk → System.reduce(state, chunk, ctx) → { state, effects }
+ink → StoryChunk → Router → System.reduce(slice, chunk, ctx) → { slice, effects }
                               │                              │
                      deriveViewModel(state)                  ├─ host executes effects
                               │                              └─ foundation/emit → EventBus → { analytics, other systems }
@@ -49,12 +49,15 @@ type FoundationEffect =
   | Effect<'foundation/requestData', { source: string; query: string; params?: string }>
   | Effect<'foundation/emit', DomainEvent>;
 
-// Generic snapshot — the system slice is opaque to foundation.
-interface Snapshot<TSystemState> {
+type SystemId = string;
+
+// Generic snapshot — each slice is opaque to foundation; the systems map keys
+// slices by system id, so one or more systems can coexist (ADR-0005).
+interface Snapshot<TSystems extends Record<SystemId, unknown>> {
   version: number;          // for migrations
   ink: string;              // ink state JSON (opaque)
   seed: number;             // determinism seed for id generation
-  system: TSystemState;     // chat: ChatState · cards: CardsState
+  systems: TSystems;        // { chat: ChatState } or { adventure: ..., chat: ... }
 }
 
 // Injected, deterministic context — no Date.now()/Math.random() in reduce.
@@ -79,11 +82,22 @@ interface EventBus {
   on<E extends DomainEvent>(type: E['type'], fn: (e: E) => void): () => void;
 }
 
+// Routing — which system handles a chunk. Default: the first system claiming one
+// of the chunk's tags, else the foreground system. The explicit `# system:` tag
+// is an optional override, deferred until a hybrid needs it (ADR-0005).
+interface Router { route(chunk: StoryChunk, ctx: RouteContext): SystemId; }
+interface RouteContext {
+  foreground: SystemId;
+  systems: ReadonlyMap<SystemId, System<unknown, unknown>>;
+}
+
 // Composition root — instance-scoped services, no singletons.
 interface Services { clock: Clock; storage: Storage; analytics: AnalyticsSink; bus: EventBus; }
 function createExperience(config: {
   storyUrl: string;
-  system: System<unknown, unknown>;   // one active system per experience
+  systems: System<unknown, unknown>[];  // one or more; single-system is the degenerate case
+  foreground?: SystemId;                // defaults to systems[0].id
+  router?: Router;                      // defaults to the tag-ownership strategy
   services: Services;
 }): Experience;
 ```
@@ -108,11 +122,15 @@ pulled forward to **compile time** here via the two stubs.
 - **IDs** derive from `Snapshot.seed` threaded through the reducer — no `Math.random()`.
 - Result: `reduce` is pure → headless property tests (Phase 2) and reproducible saves.
 
-## Open questions (resolve while implementing task-008…015)
+## Open questions
 
-- Exact `StoryChunk` shape distinguishing message points from choice points.
-- Whether `ReduceContext` carries i18n, or localization is purely a view concern.
-- The migration-hook signature keyed off `Snapshot.version`.
-- Whether an experience may compose **more than one** active system (deferred —
-  YAGNI until a multi-system experience exists; the `# system:` routing tag stays
-  unbuilt).
+Each is tagged by how it resolves — **decide** (a human call), **discover**
+(needs evidence), **derive** (follows from a principle), or **wait** (premature to
+specify). Only *decide* questions need a call from us now.
+
+| Question | Mechanism | Status |
+|---|---|---|
+| Exact `StoryChunk` shape: message vs choice points | **discover** | Open — pin against real inkjs output in the walking skeleton (task-007) |
+| `ReduceContext` carries i18n, or localization is a view concern | **derive** | Open — kernel stays locale-agnostic unless ink logic branches on localized values; confirm in Phase 2 |
+| Migration-hook signature keyed off `Snapshot.version` | **wait** | Open — cannot be designed until a v1→v2 schema change exists |
+| May an experience compose more than one active system? | **decide** | **Resolved — yes; seam now, feature deferred (ADR-0005)** |

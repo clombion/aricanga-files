@@ -41,6 +41,7 @@ See [`tasks/`](tasks/README.md) for the full task files with acceptance criteria
 - [ ] task-009 — Open effect channel
 - [ ] task-010 — Single event bus and DomainEvent envelope
 - [ ] task-011 — System interface
+- [ ] task-016 — Multi-system router contract
 - [ ] task-012 — Composition root
 - [ ] task-013 — Chat system stub
 - [ ] task-014 — Cards system stub

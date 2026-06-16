@@ -20,7 +20,7 @@ See [`../phase-1-foundation-design.md`](../phase-1-foundation-design.md).
 
 ## Acceptance Criteria
 
-- [ ] #1 `Snapshot<TSystemState>` is generic with `version`, `ink`, `seed`, and an opaque `system` slice; foundation references no chat- or card-specific field
+- [ ] #1 `Snapshot<TSystems>` keys opaque system slices by id (`systems`), supports one or more systems, and references no chat- or card-specific field (ADR-0005)
 - [ ] #2 `StoryChunk`, `Tag`, and `Choice` represent ink output without naming any chat or card concept
 - [ ] #3 The `reduce` signature is `(state, chunk, ctx) => { state, effects }` and the type forbids returning the input state mutated (readonly inputs)
 - [ ] #4 `ReduceContext` exposes `now` and `nextId` only; nothing in the core imports `Date`/`Math.random`/IO

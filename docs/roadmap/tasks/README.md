@@ -4,7 +4,7 @@ Backlog.md-format task files (format convention only — no CLI). See
 [`../TASK-TEMPLATE.md`](../TASK-TEMPLATE.md) and the Task format section in
 [`../README.md`](../README.md).
 
-IDs are globally sequential. **Next ID: `task-016`.**
+IDs are globally sequential. **Next ID: `task-017`.**
 
 ## Phase 0 — Walking skeleton & toolchain
 
@@ -32,10 +32,11 @@ Decisions: [`../decisions/`](../decisions/)
 | task-009 | Open effect channel | To Do | 008 |
 | task-010 | Single event bus and DomainEvent envelope | To Do | 008 |
 | task-011 | System interface | To Do | 008, 009, 010 |
-| task-012 | Composition root | To Do | 011 |
+| task-016 | Multi-system router contract | To Do | 008, 011 |
+| task-012 | Composition root | To Do | 011, 016 |
 | task-013 | Chat system stub | To Do | 011 |
 | task-014 | Cards system stub | To Do | 011 |
-| task-015 | Two-vocabulary proof | To Do | 012, 013, 014 |
+| task-015 | Two-vocabulary proof | To Do | 012, 013, 014, 016 |
 
-Suggested order: **008 → (009, 010) → 011 → (012, 013, 014) → 015**.
+Suggested order: **008 → (009, 010) → 011 → 016 → (012, 013, 014) → 015**.
 task-015 is the integrating proof for the phase.
