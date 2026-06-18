@@ -27,6 +27,17 @@ kernel stub is deliberately trivial; real contracts arrive in Phase 1.
 - [ ] #4 The whole thread runs under `vite dev` and is covered by one end-to-end smoke test
 - [ ] #5 Typecheck, boundary lint, and CI are all green with the skeleton in place
 
+## Tests
+
+- **Classes:** guard (+ light behaviour)
+- guard/smoke (CI gate): #1, #3, #4 — shallow e2e: the story compiles, the app boots under `vite dev`, the message text appears
+- behaviour/example (CI): #2 — the stub `reduce` maps a chunk to the expected view-model
+- constraint/architecture (pre-commit): #5 — boundary lint + typecheck are green
+
+> Carve-out: this is a spike — explore the real inkjs `StoryChunk` shape first
+> (the "discover" open question), then harden the smoke test once the shape is
+> known. Test-first applies to the hardened skeleton, not the exploration.
+
 ## Implementation Plan
 
 Minimal InkRuntime wrapper over inkjs; passthrough `reduce`; one Lit component;

@@ -1,0 +1,68 @@
+# Testing strategy
+
+> Adopts the multi-axis test taxonomy and a test-first (TDD) workflow for the
+> rebuild. See [ADR-0006](decisions/0006-tdd-and-test-taxonomy.md).
+
+## Why it fits
+
+The architecture is test-friendly by construction: a pure `reduce` kernel,
+effects-as-data, a pure `deriveViewModel`, instance-scoped services (injectable
+fakes), boundary lint, and contract-first design. Acceptance criteria are already
+outcome-focused. The POC's failure modes — vacuous `expect(true)` tests and
+Playwright poking shadow DOM — are designed out by pushing behaviour down to
+unit/property tests on the pure kernel.
+
+## The five axes
+
+- **Scope** — how much is wired: unit → integration → e2e.
+- **Property** — functional vs non-functional (performance, security, a11y, compat).
+- **Constraint** — a structural rule rather than behaviour (architecture, contract).
+- **Purpose** — what it guards: regression, smoke, sanity, acceptance, tripwire.
+- **Technique** — how cases are produced: example, property, snapshot, mutation, fuzz.
+
+Scope and Technique are independent — a test is one point on *each* axis. Every
+test collapses to one of four **intent classes**: behaviour, non-functional
+property, structural constraint, or guard/meta.
+
+## Test-first workflow
+
+Per task: **Red** (turn each behaviour/constraint AC into a failing test) →
+**Green** (implement) → **Refactor** → **Done** (every AC has a passing, tagged
+test). The phase's integrating-proof task is the phase's acceptance test.
+
+**Carve-outs** — where strict red-green is the wrong tool:
+- *Contract / type tasks* (Phase 1): the test is `tsc --build` + stub conformance
+  + boundary lint (compile-first), not example assertions.
+- *Spikes / discovery* (walking skeleton; the `StoryChunk`-shape open question):
+  *spike then harden* — explore to learn the shape, then lock it with tests.
+
+## Default mapping by layer
+
+| Layer / phase | Intent classes | Scope | Techniques | Notes |
+|---|---|---|---|---|
+| Foundation contracts (P1) | constraint (+ light behaviour) | static / unit | compile, example | type-checker + two stubs are the test |
+| Kernel physics (P2) | behaviour | unit | property, example, golden | invariants from `simulation-physics`; BUG-HISTORY → regression |
+| View (P3) | behaviour, non-functional | component, e2e | example, snapshot, a11y | happy-dom + axe-core |
+| Build / config (P4) | constraint | boundary | contract, smoke | the Zod schema is the contract |
+| Experiences (P5–P6) | behaviour | e2e | acceptance, example | + "zero foundation edits" architecture test |
+| Cross-cutting (P0+) | guard, non-functional, meta | varies | smoke, tripwire, mutation, fuzz | mutation on kernel; fuzz on tag/ink parsing |
+
+## Enforcement ladder (shift-left)
+
+Placement = f(cost, determinism), **not** the label — a 20-example property test
+is fine pre-commit; the same at 10,000 belongs nightly.
+
+- **pre-commit** (see task-005): unit/example, architecture/boundary, snapshot, tripwire, capped property, compile.
+- **CI** (see task-006): integration, contract, a11y, e2e, full property, acceptance.
+- **nightly:** mutation, fuzz, performance, deep property / deep e2e.
+
+## How tasks tag tests
+
+Each task's `## Tests` section lists, under an intent-**Classes** summary, one
+bullet per test in the form:
+
+```
+scope/technique (gate): #ACs — what it checks
+```
+
+See [`TASK-TEMPLATE.md`](TASK-TEMPLATE.md).

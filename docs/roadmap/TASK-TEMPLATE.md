@@ -21,6 +21,14 @@ must be true, not *how* to build it.
 - [ ] #1 <outcome-focused, testable, observable condition>
 - [ ] #2 <clear pass/fail; describes what is true when done, not the steps>
 
+## Tests
+
+Per the [test taxonomy](testing-strategy.md). One bullet per test:
+`scope/technique (gate): #ACs — what it checks`. Work test-first.
+
+- **Classes:** <behaviour | non-functional | constraint | guard>
+- <scope>/<technique> (<gate>): #n — <what it checks>
+
 ## Implementation Plan
 
 Proposed approach and steps. Filled in when the task is picked up.

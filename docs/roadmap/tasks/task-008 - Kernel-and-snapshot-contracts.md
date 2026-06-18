@@ -27,6 +27,16 @@ See [`../phase-1-foundation-design.md`](../phase-1-foundation-design.md).
 - [ ] #5 A sample `Snapshot` round-trips through serialize → deserialize preserving deep equality
 - [ ] #6 Everything compiles under strict TypeScript with no `any` in the public surface
 
+## Tests
+
+- **Classes:** constraint (+ light behaviour)
+- constraint/compile (pre-commit): #1, #2, #3, #6 — `tsc --build` accepts the contracts; no chat/card leakage; readonly inputs; no `any` in the public surface
+- constraint/architecture (pre-commit): #4 — a static check asserts `Date`/`Math.random`/IO are absent from the sim core
+- behaviour/example (pre-commit): #5 — a sample `Snapshot` round-trips serialize → deserialize to deep-equal
+
+> Carve-out: this is a contract task — the type-checker plus the chat/cards stubs
+> (task-013/014) conforming to it *are* the test. No red-green example suite.
+
 ## Implementation Plan
 
 `packages/foundation/src/sim/contracts.ts`; type-only, no runtime yet.

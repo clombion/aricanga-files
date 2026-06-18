@@ -88,8 +88,11 @@ markdown convention (format only — no CLI or tooling). See
   Outcome-focused, testable, measurable, observable. Describe *what must be true*
   when done, never the implementation steps.
 - **Status:** `To Do` · `In Progress` · `Blocked` · `Done`.
-- **Body sections, in order:** Description · Acceptance Criteria ·
+- **Body sections, in order:** Description · Acceptance Criteria · Tests ·
   Implementation Plan · Implementation Notes.
+- **Tests:** each task tags the tests that verify its acceptance criteria using
+  the multi-axis taxonomy in [`testing-strategy.md`](testing-strategy.md). We work
+  **test-first** (TDD): an AC is Done when its tagged test is green (ADR-0006).
 - **Decisions:** architectural calls (greenfield rebuild, risk-ordering,
   TypeScript + Lit, design-for-two, the two seam experiences) are recorded as
   short ADR-style files in `docs/roadmap/decisions/`.
