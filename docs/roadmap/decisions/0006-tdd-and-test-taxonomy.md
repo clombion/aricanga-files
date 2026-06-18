@@ -29,13 +29,15 @@ reaching into shadow roots for logic that belongs in a unit test).
     are *spike-then-harden* — test-first applies to the hardened deliverable.
 - **Enforcement ladder (shift-left):** a test's gate is a function of its cost and
   determinism, not its label. Cheap/deterministic checks run pre-commit; slow or
-  environment-hungry ones run in CI, then nightly.
+  environment-hungry ones run on the PR; the most expensive meta checks run
+  on demand (pre-release), not on a schedule — this is solo, low-churn dev.
 
 ## Consequences
 
 - Designs out the POC's vacuous-test and DOM-poking modes by pushing behaviour to
   unit/property tests on the pure kernel.
 - `docs/agents/BUG-HISTORY.md` becomes a regression/tripwire suite.
-- Enables mutation testing (kernel) and fuzz (tag/ink parsing) as nightly checks.
+- Enables mutation testing (kernel) and fuzz (tag/ink parsing) as on-demand
+  (pre-release) checks.
 - See [`../testing-strategy.md`](../testing-strategy.md) for the per-layer mapping
   and the enforcement ladder.

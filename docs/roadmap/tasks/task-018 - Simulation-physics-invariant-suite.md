@@ -24,14 +24,14 @@ to green.
 - [ ] #2 Tests generate randomized sequences, not just fixed examples
 - [ ] #3 The suite starts RED against an empty/stub kernel and is the acceptance target for 020–026
 - [ ] #4 A failing case shrinks to a minimal reproducing sequence
-- [ ] #5 Example count is capped pre-commit; a deep run goes nightly
+- [ ] #5 Example count is capped on the PR gate; a deep run is on-demand (pre-release)
 
 ## Tests
 
 This task **is** test code; its deliverable is the property suite.
 
 - **Classes:** behaviour
-- behaviour/property (CI; deep nightly): #1, #2, #4 — invariants hold over generated input; shrinking yields minimal counterexamples
+- behaviour/property (PR; deep run on-demand): #1, #2, #4 — invariants hold over generated input; shrinking yields minimal counterexamples
 - guard/tripwire (pre-commit): #3 — the suite is wired and fails against the stub kernel
 
 ## Implementation Plan

@@ -50,11 +50,15 @@ test). The phase's integrating-proof task is the phase's acceptance test.
 ## Enforcement ladder (shift-left)
 
 Placement = f(cost, determinism), **not** the label — a 20-example property test
-is fine pre-commit; the same at 10,000 belongs nightly.
+is fine locally; the same at 10,000 is an on-demand run.
 
-- **pre-commit** (see task-005): unit/example, architecture/boundary, snapshot, tripwire, capped property, compile.
-- **CI** (see task-006): integration, contract, a11y, e2e, full property, acceptance.
-- **nightly:** mutation, fuzz, performance, deep property / deep e2e.
+Solo dev, low churn → **no nightly cadence.** The pull request is the merge gate;
+the most expensive meta checks run on demand (before a release, or when reworking
+the kernel), not on a schedule.
+
+- **local** (pre-commit / pre-push; see task-005): unit/example, architecture/boundary, snapshot, tripwire, capped property, compile.
+- **PR** (CI on every pull request — the merge gate; see task-006): integration, contract, a11y, e2e, full property, acceptance, golden replay.
+- **on-demand** (pre-release / manual `workflow_dispatch`): mutation, fuzz, performance, deep property / deep e2e.
 
 ## How tasks tag tests
 
@@ -65,4 +69,5 @@ bullet per test in the form:
 scope/technique (gate): #ACs — what it checks
 ```
 
+Gates: `pre-commit`/local, `CI` (the PR merge gate), `on-demand` (pre-release).
 See [`TASK-TEMPLATE.md`](TASK-TEMPLATE.md).

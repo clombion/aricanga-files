@@ -30,11 +30,11 @@ This task **is** the Phase 2 acceptance test.
 
 - **Classes:** behaviour
 - behaviour/golden (CI): #1, #3 — Aricanga replay matches the pinned effect stream
-- behaviour/property (CI; deep nightly): #2 — the invariant + regression suites pass
+- behaviour/property (PR; deep run on-demand): #2 — the invariant + regression suites pass
 - behaviour/example (CI): #4 — guided-path assertions on ownership and notification counts
 
-> Mutation testing on the kernel runs nightly to validate this suite's strength
-> (see testing-strategy.md).
+> Mutation testing on the kernel runs on-demand (pre-release) to validate this
+> suite's strength (see testing-strategy.md).
 
 ## Implementation Plan
 
