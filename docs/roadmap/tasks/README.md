@@ -4,7 +4,7 @@ Backlog.md-format task files (format convention only — no CLI). See
 [`../TASK-TEMPLATE.md`](../TASK-TEMPLATE.md) and the Task format section in
 [`../README.md`](../README.md).
 
-IDs are globally sequential. **Next ID: `task-028`.**
+IDs are globally sequential. **Next ID: `task-040`.**
 
 Every task carries a `## Tests` section tagging its tests by the
 [test taxonomy](../testing-strategy.md); we work test-first (ADR-0006).
@@ -66,3 +66,27 @@ invariant/regression suites come first (red), then the physics slices to green.
 
 Suggested order: **017 → 018 → 019 → 020 → 021 → 022 → (023, 024, 025, 026) → 027**.
 task-027 is the integrating proof for the phase.
+
+## Phase 3 — Chat + phone view layer (Lit)
+
+Epic: [`../phase-3-view-layer.md`](../phase-3-view-layer.md). TDD-led: backbone +
+a11y harness first, then components (axe baked into each), then the a11y sweep and
+the Aricanga parity proof.
+
+| ID | Title | Status | Depends on |
+|----|-------|--------|------------|
+| task-028 | View-model contracts and UI host render loop | To Do | 003, 011, 012 |
+| task-029 | Component and a11y test harness | To Do | 004, 028 |
+| task-030 | chat-thread and message rendering | To Do | 028, 029 |
+| task-031 | Rich message bubbles | To Do | 030 |
+| task-032 | Receipts, typing, and choice buttons | To Do | 030 |
+| task-033 | chat-hub | To Do | 028, 029 |
+| task-034 | Notifications view (drawer + popup) | To Do | 028, 029 |
+| task-035 | systems/phone — status bar, home indicator, overlay | To Do | 028, 029 |
+| task-036 | Lock screen and battery context | To Do | 035 |
+| task-037 | Navigation and view transitions | To Do | 030, 033 |
+| task-038 | Accessibility acceptance sweep | To Do | 030–037 |
+| task-039 | Aricanga view parity (phase proof) | To Do | 030–038 |
+
+Suggested order: **028 → 029 → 030 → (031, 032, 033, 034, 035) → 036 → 037 → 038 → 039**.
+task-039 is the integrating proof for the phase.
