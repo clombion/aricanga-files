@@ -26,6 +26,13 @@ coherence, no HWM, no notifications.
 - [ ] #4 `reduce` applies a `stat` tag as a `cards/statChanged` effect and advances the deck — expressed entirely through foundation generics
 - [ ] #5 Building this required ZERO edits to `foundation/`; if an edit was needed, it was a generalization recorded in Implementation Notes
 
+## Tests
+
+- **Classes:** behaviour (+ constraint)
+- behaviour/example (pre-commit): #1, #4 — the stub implements `System`; `reduce` applies a `stat` tag as `cards/statChanged` and advances the deck
+- constraint/compile (pre-commit): #2 — `CardsState` has no message/read/deferral concepts and is expressed through foundation generics
+- constraint/architecture (pre-commit): #3, #5 — claims card tags; building it required zero foundation edits
+
 ## Implementation Plan
 
 `packages/systems/cards/src/index.ts`; minimal deck of inline cards.

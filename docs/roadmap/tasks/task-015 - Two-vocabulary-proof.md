@@ -26,6 +26,15 @@ risk at compile time.
 - [ ] #4 A test feeds a chunk through each system and asserts the expected effect kind (`chat/showNotification` vs `cards/statChanged`)
 - [ ] #5 Boundary lint passes: neither stub imports the other, and foundation imports neither
 
+## Tests
+
+This task **is** the Phase 1 acceptance test (the integrating proof).
+
+- **Classes:** behaviour + constraint
+- behaviour/example (CI): #1, #4 — both systems registered; a chat-tagged chunk routes to chat (`chat/showNotification`), a card-tagged chunk routes to cards (`cards/statChanged`)
+- constraint/compile (pre-commit): #3 — the workspace type-checks with both stubs wired
+- constraint/architecture (pre-commit): #2, #5 — adding/removing either system touches no foundation file; neither stub imports the other
+
 ## Implementation Plan
 
 A tiny harness experience or test that constructs both and asserts the above.

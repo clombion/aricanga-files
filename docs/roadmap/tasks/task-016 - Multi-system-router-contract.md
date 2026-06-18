@@ -28,6 +28,13 @@ explicit `# system:` override tag stays deferred.
 - [ ] #5 The router is swappable via `createExperience({ router })`; foundation ships the default
 - [ ] #6 Routing references only `System.tags` and ids — never a chat- or card-specific type
 
+## Tests
+
+- **Classes:** behaviour (+ constraint)
+- behaviour/example (pre-commit): #2, #3, #4 — a tagged chunk routes to the claiming system; an untagged chunk routes to `foreground`; a single system is always returned
+- behaviour/example (pre-commit): #5 — a custom router passed via `createExperience` overrides the default
+- constraint/architecture (pre-commit): #1, #6 — `Router`/`RouteContext` defined; routing references only `System.tags` and ids
+
 ## Implementation Plan
 
 `packages/foundation/src/sim/router.ts`; default tag-ownership + foreground strategy.

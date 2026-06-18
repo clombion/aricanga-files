@@ -26,6 +26,14 @@ linters collapse.
 - [ ] #3 An import from an experience into foundation/systems is allowed; any foundation/system import of an experience fails lint
 - [ ] #4 The boundary lint runs in CI and fails the build on violation
 
+## Tests
+
+- **Classes:** constraint
+- constraint/architecture (pre-commit): #1, #2, #3 — fixture imports exercise each rule: allowed directions pass; forbidden (system→system, framework→experience, reverse-layer) fail lint
+- guard/tripwire (CI): #4 — a planted violation fails the build
+
+> The lint *is* the test; the fixtures prove each rule.
+
 ## Implementation Plan
 
 ESLint flat config with `eslint-plugin-boundaries` (element types per layer), or

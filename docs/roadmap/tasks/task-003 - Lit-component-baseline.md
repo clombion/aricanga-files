@@ -25,6 +25,12 @@ proven baseline.
 - [ ] #3 TypeScript compiles the Lit component under strict mode with zero errors
 - [ ] #4 The component registers as a custom element and appears on the page
 
+## Tests
+
+- **Classes:** behaviour
+- behaviour/example (pre-commit): #1, #2, #4 — renders into shadow DOM, reactive property re-renders, registers as a custom element (happy-dom)
+- constraint/compile (pre-commit): #3 — strict `tsc` accepts the Lit component
+
 ## Implementation Plan
 
 Add `lit`; set tsconfig decorator options; one example `LitElement` rendered by

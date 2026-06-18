@@ -4,7 +4,10 @@ Backlog.md-format task files (format convention only — no CLI). See
 [`../TASK-TEMPLATE.md`](../TASK-TEMPLATE.md) and the Task format section in
 [`../README.md`](../README.md).
 
-IDs are globally sequential. **Next ID: `task-017`.**
+IDs are globally sequential. **Next ID: `task-028`.**
+
+Every task carries a `## Tests` section tagging its tests by the
+[test taxonomy](../testing-strategy.md); we work test-first (ADR-0006).
 
 ## Phase 0 — Walking skeleton & toolchain
 
@@ -40,3 +43,26 @@ Decisions: [`../decisions/`](../decisions/)
 
 Suggested order: **008 → (009, 010) → 011 → 016 → (012, 013, 014) → 015**.
 task-015 is the integrating proof for the phase.
+
+## Phase 2 — Chat simulation kernel (headless)
+
+Epic: [`../phase-2-kernel.md`](../phase-2-kernel.md) · Strategy:
+[`../testing-strategy.md`](../testing-strategy.md). TDD-led: the harness and the
+invariant/regression suites come first (red), then the physics slices to green.
+
+| ID | Title | Status | Depends on |
+|----|-------|--------|------------|
+| task-017 | Kernel test harness and fixtures | To Do | 004, 008, 011 |
+| task-018 | Simulation-physics invariant suite (property-based) | To Do | 017 |
+| task-019 | BUG-HISTORY regression suite | To Do | 017 |
+| task-020 | Message routing and targetChat | To Do | 017, 018 |
+| task-021 | Deferred queue and emergent notifications | To Do | 020 |
+| task-022 | HWM read cursors and unread separator | To Do | 021 |
+| task-023 | Forward-only time coherence | To Do | 017, 018 |
+| task-024 | Read receipts | To Do | 020 |
+| task-025 | Seeds | To Do | 020 |
+| task-026 | Message grouping derivation | To Do | 020 |
+| task-027 | Golden replay of Aricanga (phase proof) | To Do | 020–026 |
+
+Suggested order: **017 → 018 → 019 → 020 → 021 → 022 → (023, 024, 025, 026) → 027**.
+task-027 is the integrating proof for the phase.

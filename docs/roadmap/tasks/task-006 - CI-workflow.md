@@ -23,6 +23,14 @@ on the new stack for every push and PR, so the skeleton stays green from day one
 - [ ] #3 The workflow uses pnpm with dependency caching
 - [ ] #4 CI is green on the scaffolded skeleton
 
+## Tests
+
+- **Classes:** guard
+- guard/smoke (CI gate): #1, #4 — the workflow runs every step and is green on the skeleton
+- guard/tripwire (CI): #2 — each failure mode (type error, lint, test, build) fails the workflow, verified once with planted failures
+
+> Carve-out: CI config — verified by the pipeline itself running.
+
 ## Implementation Plan
 
 `.github/workflows/ci.yml`; pnpm/action-setup + cache; one job, sequential steps.

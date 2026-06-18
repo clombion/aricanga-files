@@ -28,6 +28,13 @@ singletons.
 - [ ] #5 Services are injectable, so a test can pass a fake clock/storage/bus
 - [ ] #6 A single-system experience works as the degenerate case — `systems` of length one, router returns it, no special-casing
 
+## Tests
+
+- **Classes:** behaviour (+ constraint)
+- behaviour/example (CI): #1, #3, #6 — `createExperience` returns a running handle; two experiences run with isolated state; a single-system experience works as the degenerate case
+- behaviour/example (pre-commit): #5 — injecting fake clock/storage/bus works
+- constraint/architecture (pre-commit): #2, #4 — static check: no exported singletons; adding/swapping a system touches no foundation file
+
 ## Implementation Plan
 
 `packages/foundation/src/core/create-experience.ts`; constructor-injected services.

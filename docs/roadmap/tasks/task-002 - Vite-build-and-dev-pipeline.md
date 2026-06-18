@@ -24,6 +24,12 @@ or systems are picked up live.
 - [ ] #3 Workspace/TS path resolution works with aliases declared in one place (or none needed)
 - [ ] #4 The production bundle contains no references to the old POC packages
 
+## Tests
+
+- **Classes:** guard
+- guard/smoke (CI gate): #1, #2 — `vite dev` serves and `vite build` produces a bundle with no unresolved imports
+- constraint/architecture (pre-commit): #4 — static check: no reference to any old POC package
+
 ## Implementation Plan
 
 `vite.config.ts` per experience; rely on pnpm workspace resolution; ESM only.

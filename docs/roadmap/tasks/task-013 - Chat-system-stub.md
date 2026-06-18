@@ -25,6 +25,13 @@ slice and claims the chat tag vocabulary.
 - [ ] #4 `reduce` turns a simple text chunk into one appended message and a `chat/showNotification` effect for a background target — no full physics
 - [ ] #5 It imports only from foundation, never from another system
 
+## Tests
+
+- **Classes:** behaviour (+ constraint)
+- behaviour/example (pre-commit): #1, #4 — the stub implements `System`; `reduce` turns a text chunk into a message + a `chat/showNotification` effect for a background target
+- constraint/compile (pre-commit): #2 — `ChatState` compiles without leaking into foundation types
+- constraint/architecture (pre-commit): #3, #5 — claims its tags; imports only from foundation (boundary lint)
+
 ## Implementation Plan
 
 `packages/systems/chat/src/index.ts`; throwaway reduce body, real types.

@@ -32,7 +32,21 @@ tests).
 
 ## Subtasks
 
-- [ ] (added when we break down this phase)
+See [`tasks/`](tasks/README.md) for the full task files; testing approach in
+[`testing-strategy.md`](testing-strategy.md). TDD-led — suites first (red), then
+physics to green.
+
+- [ ] task-017 — Kernel test harness and fixtures
+- [ ] task-018 — Simulation-physics invariant suite (property-based)
+- [ ] task-019 — BUG-HISTORY regression suite
+- [ ] task-020 — Message routing and targetChat
+- [ ] task-021 — Deferred queue and emergent notifications
+- [ ] task-022 — HWM read cursors and unread separator
+- [ ] task-023 — Forward-only time coherence
+- [ ] task-024 — Read receipts
+- [ ] task-025 — Seeds
+- [ ] task-026 — Message grouping derivation
+- [ ] task-027 — Golden replay of Aricanga (phase proof)
 
 ## Non-goals
 

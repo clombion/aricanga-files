@@ -26,6 +26,14 @@ compile across package boundaries.
 - [ ] #4 `tsc --build` type-checks the whole workspace with zero errors
 - [ ] #5 An experience can import a foundation export and the types resolve across the package boundary
 
+## Tests
+
+- **Classes:** constraint
+- constraint/compile (pre-commit): #3, #4, #5 — `tsc --build` passes; a cross-package import type-resolves
+- constraint/architecture (pre-commit): #1, #2 — a static check asserts the workspace globs and package skeletons exist
+
+> Carve-out: scaffolding — verified by the build succeeding, not example tests.
+
 ## Implementation Plan
 
 `pnpm-workspace.yaml`; root `tsconfig.base.json`; per-package `tsconfig.json`

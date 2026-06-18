@@ -26,6 +26,12 @@ mechanisms.
 - [ ] #4 Rendering does NOT depend on the bus — a view-model derives purely from state (documented and demonstrated by a test)
 - [ ] #5 Two subscribers (e.g. analytics + a second system) both receive an emitted event
 
+## Tests
+
+- **Classes:** behaviour (+ constraint)
+- behaviour/example (pre-commit): #1, #3, #5 — emit reaches a subscriber; unsubscribe stops delivery; two subscribers both receive
+- constraint/architecture (pre-commit): #2, #4 — bus is created in the composition root (no module singleton); a view-model derives from state with the bus absent
+
 ## Implementation Plan
 
 `packages/foundation/src/services/event-bus.ts`; map of type → handler set.

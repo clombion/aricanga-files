@@ -24,6 +24,14 @@ package resolution.
 - [ ] #3 Tests resolve workspace package imports without manual path hacks
 - [ ] #4 `vitest run` is non-interactive and exits non-zero on failure (CI-ready)
 
+## Tests
+
+- **Classes:** guard (meta — this task builds the harness)
+- guard/smoke (pre-commit): #1, #2 — an example unit test and a happy-dom component test run green
+- guard/tripwire (CI): #4 — a deliberately failing test makes `vitest run` exit non-zero
+
+> Carve-out: the harness proves itself by running and by failing correctly.
+
 ## Implementation Plan
 
 `vitest.config.ts` with happy-dom environment for component tests; workspace
