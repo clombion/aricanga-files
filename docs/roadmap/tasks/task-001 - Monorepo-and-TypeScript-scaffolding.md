@@ -1,10 +1,10 @@
 ---
 id: task-001
 title: Monorepo and TypeScript project-reference scaffolding
-status: To Do
+status: Done
 assignee: []
 created_date: 2026-06-16
-updated_date: 2026-06-16
+updated_date: 2026-06-19
 labels: [tooling, foundation, phase-0]
 milestone: "Phase 0 — Walking skeleton & toolchain"
 dependencies: []
@@ -41,4 +41,16 @@ with `composite: true` and `references`.
 
 ## Implementation Notes
 
-_None yet._
+Scaffolded **additively** alongside the POC (no POC files removed; it stays as the
+read-only reference oracle, removed in Phase 7).
+
+- `tsconfig.base.json` — strict (`noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`,
+  `verbatimModuleSyntax`, `composite`); solution-style root `tsconfig.json` with
+  project references.
+- New packages: `@narratives/foundation`, `@narratives/system-chat` (deps foundation),
+  and `experiences/sandbox` (deps both) — each with a composite tsconfig extending base.
+- Workspace glob `packages/systems/*` added; `typescript ^5.7` + a `typecheck` script
+  added to the root; `dist/` and `*.tsbuildinfo` gitignored.
+- `pnpm install` links the workspace; `pnpm exec tsc -b` builds all three projects in
+  dependency order with **zero errors**. `sandbox/main.ts` imports from both packages,
+  proving cross-package type resolution (AC #5).

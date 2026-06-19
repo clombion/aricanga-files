@@ -23,7 +23,7 @@ are green.
 
 See [`tasks/`](tasks/README.md) for the full task files with acceptance criteria.
 
-- [ ] task-001 — Monorepo and TypeScript project-reference scaffolding
+- [x] task-001 — Monorepo and TypeScript project-reference scaffolding
 - [ ] task-002 — Vite build and dev pipeline
 - [ ] task-003 — Lit component baseline
 - [ ] task-004 — Vitest unit-test harness

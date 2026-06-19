@@ -1,0 +1,8 @@
+{
+  "files": [],
+  "references": [
+    { "path": "packages/foundation" },
+    { "path": "packages/systems/chat" },
+    { "path": "experiences/sandbox" }
+  ]
+}

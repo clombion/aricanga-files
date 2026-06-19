@@ -13,7 +13,7 @@ Every task carries a `## Tests` section tagging its tests by the
 
 | ID | Title | Status | Depends on |
 |----|-------|--------|------------|
-| task-001 | Monorepo and TypeScript project-reference scaffolding | To Do | — |
+| task-001 | Monorepo and TypeScript project-reference scaffolding | Done | — |
 | task-002 | Vite build and dev pipeline | To Do | 001 |
 | task-003 | Lit component baseline | To Do | 001, 002 |
 | task-004 | Vitest unit-test harness | To Do | 001 |
