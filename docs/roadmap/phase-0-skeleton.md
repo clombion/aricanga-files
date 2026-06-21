@@ -27,7 +27,7 @@ See [`tasks/`](tasks/README.md) for the full task files with acceptance criteria
 - [x] task-002 — Vite build and dev pipeline
 - [ ] task-003 — Lit component baseline
 - [ ] task-004 — Vitest unit-test harness
-- [ ] task-005 — Module boundary lint
+- [x] task-005 — Module boundary lint
 - [ ] task-006 — CI workflow (typecheck, lint, test, build)
 - [ ] task-007 — Walking skeleton — ink → kernel stub → Lit render
 

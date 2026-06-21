@@ -1,10 +1,10 @@
 ---
 id: task-005
 title: Module boundary lint
-status: To Do
+status: Done
 assignee: []
 created_date: 2026-06-16
-updated_date: 2026-06-16
+updated_date: 2026-06-19
 labels: [tooling, foundation, phase-0]
 milestone: "Phase 0 — Walking skeleton & toolchain"
 dependencies: [task-001]
@@ -41,4 +41,14 @@ the Biome equivalent if preferred. One rule set, no per-file scripts.
 
 ## Implementation Notes
 
-_None yet._
+ESLint 10 flat config (`eslint.config.js`) with `eslint-plugin-boundaries` v6
+(`boundaries/dependencies`) + `eslint-import-resolver-typescript`. Element types:
+`foundation` (`packages/foundation`), `system` (`packages/systems/*`, captured
+name), `experience` (`experiences/*`). Rules: foundation → nothing; system →
+foundation only; experience → foundation + system; `default: disallow`. POC paths
+are ignored; script `lint:boundaries` (`eslint .`).
+
+Verified empirically: clean pass (no warnings); a planted `foundation → system`
+import errors (rule index 0), and a planted `system → system` import errors
+("no rule allowing… system 'chat'") — both exit 1; allowed directions pass.
+CI wiring (AC #4) lands in task-006.
