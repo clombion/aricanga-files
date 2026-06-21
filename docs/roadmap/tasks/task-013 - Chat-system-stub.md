@@ -1,10 +1,10 @@
 ---
 id: task-013
 title: Chat system stub
-status: To Do
+status: Done
 assignee: []
 created_date: 2026-06-16
-updated_date: 2026-06-16
+updated_date: 2026-06-19
 labels: [chat, phase-1]
 milestone: "Phase 1 — Foundation contracts"
 dependencies: [task-011]

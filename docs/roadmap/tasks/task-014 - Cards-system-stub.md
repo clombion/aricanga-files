@@ -1,10 +1,10 @@
 ---
 id: task-014
 title: Cards system stub
-status: To Do
+status: Done
 assignee: []
 created_date: 2026-06-16
-updated_date: 2026-06-16
+updated_date: 2026-06-19
 labels: [cards, phase-1]
 milestone: "Phase 1 — Foundation contracts"
 dependencies: [task-011]
@@ -39,4 +39,4 @@ coherence, no HWM, no notifications.
 
 ## Implementation Notes
 
-_None yet._
+Implemented in the Phase 1 contract set; verified by tsc, boundary lint, 11 tests, and build. The two-vocabulary proof routes by tag-ownership and the cards addition touched zero foundation source.

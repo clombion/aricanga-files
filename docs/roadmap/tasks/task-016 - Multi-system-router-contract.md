@@ -1,10 +1,10 @@
 ---
 id: task-016
 title: Multi-system router contract
-status: To Do
+status: Done
 assignee: []
 created_date: 2026-06-16
-updated_date: 2026-06-16
+updated_date: 2026-06-19
 labels: [foundation, phase-1]
 milestone: "Phase 1 — Foundation contracts"
 dependencies: [task-008, task-011]

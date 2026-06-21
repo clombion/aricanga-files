@@ -38,14 +38,14 @@ decision records (ADR-0001…0004).
 See [`tasks/`](tasks/README.md) for the full task files with acceptance criteria.
 
 - [x] task-008 — Kernel and snapshot contracts
-- [ ] task-009 — Open effect channel
-- [ ] task-010 — Single event bus and DomainEvent envelope
-- [ ] task-011 — System interface
-- [ ] task-016 — Multi-system router contract
-- [ ] task-012 — Composition root
-- [ ] task-013 — Chat system stub
-- [ ] task-014 — Cards system stub
-- [ ] task-015 — Two-vocabulary proof
+- [x] task-009 — Open effect channel
+- [x] task-010 — Single event bus and DomainEvent envelope
+- [x] task-011 — System interface
+- [x] task-016 — Multi-system router contract
+- [x] task-012 — Composition root
+- [x] task-013 — Chat system stub
+- [x] task-014 — Cards system stub
+- [x] task-015 — Two-vocabulary proof
 
 ## Non-goals
 
