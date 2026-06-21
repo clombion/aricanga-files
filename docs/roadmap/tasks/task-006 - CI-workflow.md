@@ -1,10 +1,10 @@
 ---
 id: task-006
 title: CI workflow (typecheck, lint, test, build)
-status: To Do
+status: Done
 assignee: []
 created_date: 2026-06-16
-updated_date: 2026-06-16
+updated_date: 2026-06-19
 labels: [tooling, ci, phase-0]
 milestone: "Phase 0 — Walking skeleton & toolchain"
 dependencies: [task-001, task-002, task-004, task-005]
@@ -37,4 +37,9 @@ on the new stack for every push and PR, so the skeleton stays green from day one
 
 ## Implementation Notes
 
-_None yet._
+`.github/workflows/rebuild-ci.yml` (separate from the POC's `deploy.yml`):
+`pnpm/action-setup` + `setup-node@22` with pnpm cache; steps install (frozen) →
+typecheck (`tsc -b`) → boundary lint → `test:rebuild` → `vite build`, on push to
+`main`/`feat/**` and all PRs. Sequential steps, so any non-zero exit fails the job
+(AC #2). All steps **dress-rehearsed locally and pass**, including
+`--frozen-lockfile`; green-on-CI is confirmed when the PR runs (AC #4).
