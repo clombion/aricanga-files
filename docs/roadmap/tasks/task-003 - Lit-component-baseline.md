@@ -1,10 +1,10 @@
 ---
 id: task-003
 title: Lit component baseline
-status: To Do
+status: Done
 assignee: []
 created_date: 2026-06-16
-updated_date: 2026-06-16
+updated_date: 2026-06-19
 labels: [ui, phase-0]
 milestone: "Phase 0 — Walking skeleton & toolchain"
 dependencies: [task-001, task-002]
@@ -38,4 +38,11 @@ the Vite app.
 
 ## Implementation Notes
 
-_None yet._
+Added a **no-decorator** `SkMessage` `LitElement` (static `properties`, `declare
+text`, constructor init) — compiles clean under strict TS + `useDefineForClassFields`
+with no decorator config. Wired into the sandbox app (`main.ts` renders an
+`<sk-message>`). `lit ^3.3` added to the sandbox.
+
+Verified by the happy-dom component test (`sk-message.test.ts`, from task-004):
+registered as a custom element (#4), renders text into shadow DOM (#1), and
+re-renders on property change (#2). `tsc -b` compiles it under strict mode (#3).

@@ -5,6 +5,7 @@
   "type": "module",
   "dependencies": {
     "@narratives/foundation": "workspace:*",
-    "@narratives/system-chat": "workspace:*"
+    "@narratives/system-chat": "workspace:*",
+    "lit": "^3.3.3"
   }
 }

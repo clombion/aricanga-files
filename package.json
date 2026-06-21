@@ -6,6 +6,7 @@
   "scripts": {
     "typecheck": "tsc -b",
     "lint:boundaries": "eslint .",
+    "test:rebuild": "vitest run --config vitest.rebuild.config.ts",
     "vite": "vite",
     "vite:build": "vite build",
     "vite:preview": "vite preview",
