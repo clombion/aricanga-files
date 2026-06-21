@@ -24,7 +24,7 @@ are green.
 See [`tasks/`](tasks/README.md) for the full task files with acceptance criteria.
 
 - [x] task-001 — Monorepo and TypeScript project-reference scaffolding
-- [ ] task-002 — Vite build and dev pipeline
+- [x] task-002 — Vite build and dev pipeline
 - [ ] task-003 — Lit component baseline
 - [ ] task-004 — Vitest unit-test harness
 - [ ] task-005 — Module boundary lint

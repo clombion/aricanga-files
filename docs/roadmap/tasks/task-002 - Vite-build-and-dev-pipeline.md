@@ -1,10 +1,10 @@
 ---
 id: task-002
 title: Vite build and dev pipeline
-status: To Do
+status: Done
 assignee: []
 created_date: 2026-06-16
-updated_date: 2026-06-16
+updated_date: 2026-06-19
 labels: [tooling, build, phase-0]
 milestone: "Phase 0 — Walking skeleton & toolchain"
 dependencies: [task-001]
@@ -36,4 +36,11 @@ or systems are picked up live.
 
 ## Implementation Notes
 
-_None yet._
+Sandbox is now a Vite app: `index.html` → `src/main.ts`. Workspace packages are
+aliased to their TS **source** in `vite.config.ts` (one place — AC #3), so dev and
+build compile from source with no dependence on `dist/`. Vite `outDir` is `build/`
+(separate from tsc's `dist/`, gitignored).
+
+Verified: `vite build` transforms 5 modules, the bundle contains the bootstrap
+text and **no POC package references** (AC #2, #4); `vite dev` serves `HTTP 200`
+and transforms the TS entry on request (AC #1).

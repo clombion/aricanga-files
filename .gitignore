@@ -27,6 +27,7 @@ package-lock.json
 # Rebuild: TypeScript build output
 packages/**/dist/
 experiences/**/dist/
+experiences/**/build/
 *.tsbuildinfo
 
 # Playwright
