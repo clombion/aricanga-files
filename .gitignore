@@ -28,6 +28,7 @@ package-lock.json
 packages/**/dist/
 experiences/**/dist/
 experiences/**/build/
+experiences/sandbox/public/story.json
 *.tsbuildinfo
 
 # Playwright

@@ -29,7 +29,7 @@ See [`tasks/`](tasks/README.md) for the full task files with acceptance criteria
 - [x] task-004 — Vitest unit-test harness
 - [x] task-005 — Module boundary lint
 - [x] task-006 — CI workflow (typecheck, lint, test, build)
-- [ ] task-007 — Walking skeleton — ink → kernel stub → Lit render
+- [x] task-007 — Walking skeleton — ink → kernel stub → Lit render
 
 ## Non-goals
 

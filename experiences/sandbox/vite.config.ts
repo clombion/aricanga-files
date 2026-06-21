@@ -1,17 +1,34 @@
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { defineConfig } from 'vite';
+import { Compiler } from 'inkjs/full';
+import { type Plugin, defineConfig } from 'vite';
 
-// Resolve workspace packages to their TypeScript source so dev and build compile
-// from source (no prebuilt dist needed). Aliases live in this one place (task-002 AC #3).
-const fromSrc = (p: string) => fileURLToPath(new URL(p, import.meta.url));
+const fromHere = (p: string) => fileURLToPath(new URL(p, import.meta.url));
+
+// Compile story.ink → public/story.json as part of the build (task-007 AC #1).
+// Runs on both `vite dev` and `vite build` via buildStart.
+function compileInk(): Plugin {
+  return {
+    name: 'compile-ink',
+    buildStart() {
+      const out = fromHere('public/story.json');
+      const json = new Compiler(readFileSync(fromHere('story.ink'), 'utf8'))
+        .Compile()
+        .ToJson();
+      mkdirSync(dirname(out), { recursive: true });
+      writeFileSync(out, json ?? '');
+    },
+  };
+}
 
 export default defineConfig({
+  plugins: [compileInk()],
   resolve: {
     alias: {
-      '@narratives/foundation': fromSrc('../../packages/foundation/src/index.ts'),
-      '@narratives/system-chat': fromSrc('../../packages/systems/chat/src/index.ts'),
+      '@narratives/foundation': fromHere('../../packages/foundation/src/index.ts'),
+      '@narratives/system-chat': fromHere('../../packages/systems/chat/src/index.ts'),
     },
   },
-  // Vite output kept separate from tsc's dist/ to avoid clobbering it.
   build: { outDir: 'build', emptyOutDir: true },
 });

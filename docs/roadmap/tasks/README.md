@@ -19,7 +19,7 @@ Every task carries a `## Tests` section tagging its tests by the
 | task-004 | Vitest unit-test harness | Done | 001 |
 | task-005 | Module boundary lint | Done | 001 |
 | task-006 | CI workflow (typecheck, lint, test, build) | Done | 001, 002, 004, 005 |
-| task-007 | Walking skeleton — ink → kernel stub → Lit render | To Do | 001–006 |
+| task-007 | Walking skeleton — ink → kernel stub → Lit render | Done | 001–006 |
 
 Suggested order: **001 → (002, 004, 005 in parallel) → 003 → 006 → 007**.
 task-007 is the integrating proof for the phase.
