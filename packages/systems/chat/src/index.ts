@@ -1,13 +1,12 @@
 // @narratives/system-chat — the chat vocabulary (messages, typing, receipts,
-// notifications). Phase 0 carries a stub reduce for the walking skeleton;
-// implements the System interface in Phase 1 and the physics kernel in Phase 2.
-
-import { FOUNDATION_VERSION } from '@narratives/foundation';
+// notifications). Phase 1: a stub System implementation + the Phase-0 reduceChunk
+// helper (still used by the sandbox). Physics kernel lands in Phase 2.
 
 export const CHAT_SYSTEM_ID = 'chat';
 
-// Proves the system builds against the foundation package boundary.
-export const builtAgainstFoundation = FOUNDATION_VERSION;
-
+export { chatSystem, CHAT_TAGS } from './system';
+export type { ChatViewModel, ChatEffect } from './system';
+export { initChatState } from './state';
+export type { ChatState, ChatView } from './state';
 export { reduceChunk } from './reduce';
 export type { ChatMessageVM } from './reduce';

@@ -1,10 +1,10 @@
 ---
 id: task-015
 title: Two-vocabulary proof
-status: To Do
+status: Done
 assignee: []
 created_date: 2026-06-16
-updated_date: 2026-06-16
+updated_date: 2026-06-19
 labels: [foundation, phase-1]
 milestone: "Phase 1 — Foundation contracts"
 dependencies: [task-012, task-013, task-014, task-016]

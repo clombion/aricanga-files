@@ -31,15 +31,15 @@ Decisions: [`../decisions/`](../decisions/)
 
 | ID | Title | Status | Depends on |
 |----|-------|--------|------------|
-| task-008 | Kernel and snapshot contracts | To Do | 001 |
-| task-009 | Open effect channel | To Do | 008 |
-| task-010 | Single event bus and DomainEvent envelope | To Do | 008 |
-| task-011 | System interface | To Do | 008, 009, 010 |
-| task-016 | Multi-system router contract | To Do | 008, 011 |
-| task-012 | Composition root | To Do | 011, 016 |
-| task-013 | Chat system stub | To Do | 011 |
-| task-014 | Cards system stub | To Do | 011 |
-| task-015 | Two-vocabulary proof | To Do | 012, 013, 014, 016 |
+| task-008 | Kernel and snapshot contracts | Done | 001 |
+| task-009 | Open effect channel | Done | 008 |
+| task-010 | Single event bus and DomainEvent envelope | Done | 008 |
+| task-011 | System interface | Done | 008, 009, 010 |
+| task-016 | Multi-system router contract | Done | 008, 011 |
+| task-012 | Composition root | Done | 011, 016 |
+| task-013 | Chat system stub | Done | 011 |
+| task-014 | Cards system stub | Done | 011 |
+| task-015 | Two-vocabulary proof | Done | 012, 013, 014, 016 |
 
 Suggested order: **008 → (009, 010) → 011 → 016 → (012, 013, 014) → 015**.
 task-015 is the integrating proof for the phase.

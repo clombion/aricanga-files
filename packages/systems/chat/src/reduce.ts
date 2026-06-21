@@ -9,7 +9,6 @@ export interface ChatMessageVM {
 // tag. The real physics kernel (routing, deferral, notifications, time,
 // receipts) replaces this in Phase 2 — see docs/roadmap/phase-2-kernel.md.
 export function reduceChunk(chunk: StoryChunk): ChatMessageVM {
-  const speakerTag = chunk.tags.find((t) => t.trim().startsWith('speaker:'));
-  const speaker = speakerTag?.slice(speakerTag.indexOf(':') + 1).trim() ?? '';
+  const speaker = chunk.tags.find((t) => t.key === 'speaker')?.value ?? '';
   return { speaker, text: chunk.text };
 }

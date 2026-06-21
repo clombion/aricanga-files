@@ -1,10 +1,10 @@
 ---
 id: task-008
 title: Kernel and snapshot contracts
-status: To Do
+status: Done
 assignee: []
 created_date: 2026-06-16
-updated_date: 2026-06-16
+updated_date: 2026-06-19
 labels: [foundation, phase-1]
 milestone: "Phase 1 — Foundation contracts"
 dependencies: [task-001]
@@ -43,4 +43,14 @@ See [`../phase-1-foundation-design.md`](../phase-1-foundation-design.md).
 
 ## Implementation Notes
 
-_None yet._
+Contracts in `packages/foundation/src/sim/`: `story.ts` (`Tag`/`Choice`/`StoryChunk`
++ `parseTag`), `effect.ts` (`Effect<K,P>` base), `snapshot.ts` (`SystemId`,
+keyed `Snapshot<TSystems>`), `context.ts` (`ReduceContext`, `ReduceResult`, the
+`Reduce` signature, and `createIdSequence` — xorshift32 seeded from the snapshot
+seed, no `Math.random`). `InkRuntime` evolved to emit the rich `StoryChunk`
+(parsed tags + choices); the Phase 0 stub `story-chunk.ts` removed; chat
+`reduceChunk` updated to `Tag[]`.
+
+Verified: `tsc -b`, eslint, 8 tests (incl. snapshot JSON round-trip and id
+determinism), and `vite build` green; the sim core contains no
+`Date.now`/`Math.random` (AC #4).
