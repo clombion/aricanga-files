@@ -3,6 +3,7 @@
   "references": [
     { "path": "packages/foundation" },
     { "path": "packages/systems/chat" },
+    { "path": "packages/systems/cards" },
     { "path": "experiences/sandbox" }
   ]
 }
