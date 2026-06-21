@@ -24,6 +24,13 @@ experiences/*/generated/
 node_modules/
 package-lock.json
 
+# Rebuild: TypeScript build output
+packages/**/dist/
+experiences/**/dist/
+experiences/**/build/
+experiences/sandbox/public/story.json
+*.tsbuildinfo
+
 # Playwright
 packages/tests/.output/
 playwright/.cache/

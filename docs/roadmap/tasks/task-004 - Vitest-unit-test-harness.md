@@ -1,10 +1,10 @@
 ---
 id: task-004
 title: Vitest unit-test harness
-status: To Do
+status: Done
 assignee: []
 created_date: 2026-06-16
-updated_date: 2026-06-16
+updated_date: 2026-06-19
 labels: [tooling, testing, phase-0]
 milestone: "Phase 0 — Walking skeleton & toolchain"
 dependencies: [task-001]
@@ -39,4 +39,9 @@ alias inheritance from Vite.
 
 ## Implementation Notes
 
-_None yet._
+Separate `vitest.rebuild.config.ts` (happy-dom env, workspace src aliases) kept
+apart from the POC's `vitest.config.ts`; script `test:rebuild`. An example unit
+test (foundation, imported via the `@narratives/foundation` specifier — AC #3) and
+a happy-dom component test (`sk-message`) both pass. Test files are excluded from
+the tsc lib build (`exclude: **/*.test.ts`). `vitest run` is non-interactive and
+its exit code reflects pass/fail (AC #4).

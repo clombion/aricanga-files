@@ -1,10 +1,10 @@
 ---
 id: task-007
 title: Walking skeleton — ink to kernel stub to Lit render
-status: To Do
+status: Done
 assignee: []
 created_date: 2026-06-16
-updated_date: 2026-06-16
+updated_date: 2026-06-19
 labels: [foundation, ui, phase-0]
 milestone: "Phase 0 — Walking skeleton & toolchain"
 dependencies: [task-001, task-002, task-003, task-004, task-005, task-006]
@@ -45,5 +45,20 @@ a Playwright or Vitest smoke test asserting the rendered text.
 
 ## Implementation Notes
 
-The kernel stub here is throwaway scaffolding — Phase 1 replaces it with the real
-`reduce`/`Effect`/`Snapshot` contracts. Do not build physics into it.
+Thread: `story.ink` → a Vite ink plugin compiles it to `public/story.json` on both
+dev and build (AC #1) → foundation `InkRuntime` (the single inkjs touchpoint;
+`StoryChunk = { text, tags }`) → system-chat stub `reduceChunk` → Lit
+`<sk-message>` render.
+
+Spike discovery (the "discover" open question): real inkjs shape — `Compiler` from
+`inkjs/full`, `Story` from `inkjs`, `Continue()` + `currentTags` (tags like
+`"speaker: Skeleton"`, no `#`).
+
+Verified: `reduceChunk` unit tests (AC #2); a happy-dom e2e smoke
+(`skeleton.test.ts`: ink → reduce → shadow-DOM render, asserts `"Skeleton:"` —
+AC #2/#3); `vite dev` serves the app + compiled `story.json` (AC #4); and
+tsc + boundary lint + tests + build all green (AC #5).
+
+The kernel stub is throwaway — Phase 1 replaces it with the real
+`reduce`/`Effect`/`Snapshot` contracts. Browser-level Playwright e2e is deferred to
+the Phase 3 harness (task-029) per the spike carve-out.

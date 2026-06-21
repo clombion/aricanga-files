@@ -1,0 +1,40 @@
+name: rebuild-ci
+
+# CI for the greenfield rebuild stack. The POC has its own deploy.yml.
+# Solo dev: the pull request is the gate — no nightly schedule (ADR-0006).
+on:
+  push:
+    branches:
+      - main
+      - 'feat/**'
+  pull_request:
+
+jobs:
+  rebuild:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck (tsc -b)
+        run: pnpm run typecheck
+
+      - name: Boundary lint
+        run: pnpm run lint:boundaries
+
+      - name: Unit + component tests
+        run: pnpm run test:rebuild
+
+      - name: Build sandbox
+        run: pnpm exec vite build experiences/sandbox
