@@ -31,7 +31,7 @@ Decisions: [`../decisions/`](../decisions/)
 
 | ID | Title | Status | Depends on |
 |----|-------|--------|------------|
-| task-008 | Kernel and snapshot contracts | To Do | 001 |
+| task-008 | Kernel and snapshot contracts | Done | 001 |
 | task-009 | Open effect channel | To Do | 008 |
 | task-010 | Single event bus and DomainEvent envelope | To Do | 008 |
 | task-011 | System interface | To Do | 008, 009, 010 |

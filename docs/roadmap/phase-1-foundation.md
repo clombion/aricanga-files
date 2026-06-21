@@ -37,7 +37,7 @@ decision records (ADR-0001…0004).
 
 See [`tasks/`](tasks/README.md) for the full task files with acceptance criteria.
 
-- [ ] task-008 — Kernel and snapshot contracts
+- [x] task-008 — Kernel and snapshot contracts
 - [ ] task-009 — Open effect channel
 - [ ] task-010 — Single event bus and DomainEvent envelope
 - [ ] task-011 — System interface
