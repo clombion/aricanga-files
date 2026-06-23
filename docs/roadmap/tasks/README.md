@@ -4,7 +4,7 @@ Backlog.md-format task files (format convention only — no CLI). See
 [`../TASK-TEMPLATE.md`](../TASK-TEMPLATE.md) and the Task format section in
 [`../README.md`](../README.md).
 
-IDs are globally sequential. **Next ID: `task-062`.**
+IDs are globally sequential. **Next ID: `task-063`.**
 
 Every task carries a `## Tests` section tagging its tests by the
 [test taxonomy](../testing-strategy.md); we work test-first (ADR-0006).
@@ -54,7 +54,8 @@ invariant/regression suites come first (red), then the physics slices to green.
 |----|-------|--------|------------|
 | task-040 | Foundation algebra contract | To Do | — |
 | task-041 | Generic Sans-IO host runtime | To Do | 040 |
-| task-017 | Kernel test harness and fixtures | To Do | 040, 041 |
+| task-062 | Reshape the merged Phase 1 foundation to the algebra | To Do | 040, 041 |
+| task-017 | Kernel test harness and fixtures | To Do | 040, 041, 062 |
 | task-018 | Simulation-physics invariant suite (property-based) | To Do | 017 |
 | task-019 | BUG-HISTORY regression suite | To Do | 017 |
 | task-020 | Message routing and targetChat | To Do | 017, 018 |
@@ -66,8 +67,9 @@ invariant/regression suites come first (red), then the physics slices to green.
 | task-026 | Message grouping derivation | To Do | 020 |
 | task-027 | Golden replay of Aricanga (phase proof) | To Do | 020–026 |
 
-Suggested order: **040 → 041 → 017 → 018 → 019 → 020 → 021 → 022 → (023, 024, 025, 026) → 027**.
-task-040/041 establish the generic algebra + runtime; task-027 is the phase proof.
+Suggested order: **040 → 041 → 062 → 017 → 018 → 019 → 020 → 021 → 022 → (023, 024, 025, 026) → 027**.
+task-040/041 establish the generic algebra + runtime, task-062 migrates the
+merged Phase 1 foundation onto them, and task-027 is the phase proof.
 
 ## Phase 3 — Chat + phone view layer (Lit)
 
