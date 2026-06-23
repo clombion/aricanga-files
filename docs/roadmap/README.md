@@ -33,7 +33,7 @@ layer** (Lit), **one event/effect backbone**, **real TypeScript types**, and a
 packages/
   foundation/          # zero DOM, zero chat-vocabulary
     ink/               # InkRuntime — the only inkjs touchpoint
-    sim/               # headless kernel: reduce(state, chunk) -> {state, effects}
+    sim/               # closed Input/Effect algebra: reduce(state, input) -> {state, effects} (ADR-0007)
     services/          # Clock, Storage, Analytics sink, EventBus (instance-scoped)
     types/             # shared discriminated unions
   systems/
