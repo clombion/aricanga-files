@@ -20,7 +20,7 @@ capture. This is the substrate every kernel test stands on, so it comes first.
 ## Acceptance Criteria
 
 - [ ] #1 A driver advances a compiled ink story and feeds each `StoryChunk` through `reduce`, collecting the effect stream and final snapshot
-- [ ] #2 A fake clock and fixed seed are injected via `ReduceContext`, so runs are deterministic
+- [ ] #2 A fixed seed (via `ReduceContext.nextId`) makes runs deterministic; no clock is injected (story time is simulation-derived state)
 - [ ] #3 Small ink fixtures exist for the core scenarios (single chat, cross-chat, choices)
 - [ ] #4 The harness can capture an effect stream to a golden file and diff against it
 - [ ] #5 Runs headless in Node (no DOM) under `vitest run`
