@@ -1,7 +1,7 @@
 ---
 id: task-040
 title: Foundation algebra contract
-status: To Do
+status: Done
 assignee: []
 created_date: 2026-06-19
 updated_date: 2026-06-28
@@ -39,4 +39,12 @@ Define the foundation's closed `Input`/`Effect` algebra and the pure-reducer `Sy
 
 ## Implementation Notes
 
-_None yet._
+Landed in `packages/foundation/src/sim/{story,effect,input,context,system,exhaustive}.ts`.
+
+- `System<State, Command, Effect, ViewModel>`: `Input` is *derived* as
+  `Input<State, Command>` rather than a free type param, so the generic runtime
+  can construct every inbound value and the algebra shape can't be bypassed.
+- `Effect` carries a closed `family` discriminant with an open `kind`; `fx`
+  builds the host-generic families (`present` is system-specific).
+- Exhaustiveness proven by `sim/exhaustive.test.ts` via `@ts-expect-error` on a
+  deliberately non-exhaustive switch.

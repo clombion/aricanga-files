@@ -28,9 +28,9 @@ The chat kernel reproduces a reviewed, deterministic golden of Aricanga's `Input
 
 See [`tasks/`](tasks/README.md). TDD-led: contract + runtime + suites first (red), then the physics body.
 
-- [ ] task-040 — Foundation algebra contract (`Input`/`Effect`/`InkStep` types, `reduce(input)`, `status`, drop `ctx.now`, `RenderContext`)
-- [ ] task-041 — Generic Sans-IO host runtime (pump-gate, effect executor, resume handshakes, validation, commit epoch)
-- [ ] task-062 — Reshape the merged Phase 1 foundation to the algebra (migrate `System`/`Snapshot`/router/composition root + retire the standalone executor)
+- [x] task-040 — Foundation algebra contract (`Input`/`Effect`/`InkStep` types, `reduce(input)`, `status`, drop `ctx.now`, `RenderContext`)
+- [x] task-041 — Generic Sans-IO host runtime (pump-gate, effect executor, resume handshakes, validation, commit epoch)
+- [x] task-062 — Reshape the merged Phase 1 foundation to the algebra (migrate `System`/`Snapshot`/router/composition root + retire the standalone executor)
 - [ ] task-017 — Kernel test harness and fixtures (host-loop driver, fixed seed, canonical golden capture)
 - [ ] task-018 — Simulation-physics invariant suite (property-based) + purity/determinism/exhaustiveness invariants
 - [ ] task-019 — BUG-HISTORY regression suite

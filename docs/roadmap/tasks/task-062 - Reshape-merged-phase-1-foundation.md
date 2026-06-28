@@ -1,7 +1,7 @@
 ---
 id: task-062
 title: Reshape the merged Phase 1 foundation to the algebra
-status: To Do
+status: Done
 assignee: []
 created_date: 2026-06-19
 updated_date: 2026-06-28
@@ -53,4 +53,15 @@ retarget `main.ts` + `skeleton.test.ts`, update `contracts.test.ts` + `index.tes
 
 ## Implementation Notes
 
-_None yet._
+- `core/create-experience.ts` is a thin composition over `Runtime`
+  (`send`/`step`/`view`/`snapshot`/`restore`); `host/effect-executor.ts` is
+  deleted (one executor path).
+- `Snapshot` is the host envelope `{ version, ink, idSeq, state }`.
+- chat/cards stubs reduce over `Input` (story branch only), `status() => 'free'`,
+  `view(state, render)`, `init(seed)`; notifications/stat changes emit `Present`
+  effects; `reduceChunk` → `reduceStep(step: InkStep)`.
+- The two-vocabulary proof drives the runtime through real ink + tag-ownership
+  routing (a recording `present` host); the walking skeleton uses
+  `canContinue`/`continue`.
+- Verified green: `tsc -b`, `lint:boundaries`, `test:rebuild` (21), and the
+  sandbox `vite build`. Grep-clean confirmed over the reshaped surface.

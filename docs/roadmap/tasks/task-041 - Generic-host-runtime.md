@@ -1,7 +1,7 @@
 ---
 id: task-041
 title: Generic Sans-IO host runtime
-status: To Do
+status: Done
 assignee: []
 created_date: 2026-06-19
 updated_date: 2026-06-28
@@ -40,4 +40,16 @@ The system-agnostic runtime that drives any `System`: it owns all impure resourc
 
 ## Implementation Notes
 
-_None yet._
+`packages/foundation/src/host/runtime.ts` (the `Runtime` class) + the host-owned
+`ink/ink-runtime.ts`.
+
+- Effects dispatch by `family`; `Schedule`/`Fetch` round-trip to `Resume`
+  (`CommitFired`/`DataArrived`) via the injected `Scheduler`/`fetchData`. The
+  commit-token gate suspends the pump while a system reports `busy-commit`; a
+  stale token is a no-op in the system's reduce.
+- The monotonic id allocator seeds `ctx.nextId` per reduce and persists its
+  position as `idSeq`; restore continues without collision.
+- `host/runtime.test.ts` drives a synthetic harness system covering pump/gate,
+  each resume, present (known + unknown-kind throw), and snapshot/restore ids.
+- Ink state uses `story.state.ToJson()`/`LoadJson()` (not `story.ToJson`, which
+  is the definition).
