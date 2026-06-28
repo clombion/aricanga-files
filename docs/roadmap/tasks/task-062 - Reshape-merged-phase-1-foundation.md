@@ -41,7 +41,7 @@ existing suites.
 - **Classes:** constraint (+ behaviour)
 - constraint/compile (pre-commit): #1, #2 — the migrated contract types total; the snapshot envelope is `{ version, ink, state, idSeq }`; per-system state has no `ink`
 - behaviour/example (pre-commit): #3, #4, #5 — a fixture run drives the migrated router + runtime via `send(input)`; one executor path; tag-ownership routing in the rewritten proof is intact
-- constraint/architecture (pre-commit): #5, #6 — boundary lint passes; no old-contract symbols remain (`StoryChunk`, `deriveViewModel`, `registerComponents`, `createIdSequence`, `dispatch`, `Snapshot.ink` in per-system state)
+- constraint/architecture (pre-commit): #5, #6 — boundary lint passes; no old-contract symbols remain across `packages/foundation/src`, `packages/systems`, `experiences/sandbox/src`: `deriveViewModel`, `registerComponents`, `dispatch`, `ReduceContext.now`/clock-in-reduce, and `Snapshot.ink` in per-system state. The `StoryChunk` type and the `createIdSequence` function (with their `index.ts` barrel exports) are deleted by task-040; this task removes their *consumers*, so the `StoryChunk`/`createIdSequence` grep-clean is satisfied jointly with 040. The `Snapshot` `seed`→`idSeq` and `systems`→`state` renames are covered by the compile-total criterion above.
 
 ## Implementation Plan
 
