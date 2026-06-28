@@ -14,26 +14,31 @@ parent_task_id:
 ## Description
 
 The property-based acceptance contract for the chat physics, over the task-017
-harness. It authors the full invariant library now — each documented rule from
+harness. It authors the property invariants now — each rule from
 `docs/concepts/simulation-physics.md` as a pure predicate over the kernel-observable
 `Input→Effect`+`state` stream — plus the standing algebra guards (ADR-0007) that
-hold for any system today. Tasks 020–026 **consume** these predicates: each physics
-task imports its predicate and drives the reducer until its green property test
-passes. Authorship is here; consumption distributes — so the dependency graph the
-physics tasks encode ("the X invariant from task-018") is real.
+hold for any system today. Each physics task's acceptance test references its
+invariant "from task-018" (routing → 020; notify-once → 021; HWM/read-cursor → 022;
+forward-only time → 023; receipts → 024; seed exclusion → 021 and 025): authorship
+is here, consumption distributes. (Grouping is a deterministic view derivation, not
+a property invariant — task-026 covers it by golden, so it is not authored here.)
 
-Most invariants are properties of the **observable stream**, not internal state
-(routing → `present.chatId`; notify-once → notification effects per chat between
+Predicates target the **observable stream** rather than internal state where the
+observable carries the signal: notify-once → notification effects per chat between
 opens; forward-only time → monotonic `TimeChanged` effects; receipts → upgrade
-effects), so predicates target the observable and the chat state shape is not
-expanded ahead of the physics that needs it.
+effects. Those time/receipt effect kinds do not exist yet — the predicates
+forward-declare the effects that tasks 023/024 will emit to satisfy them. Routing
+ownership reads the input `targetChat` against the resulting routing (the stub emits
+a notification effect only for background chats, so routing is read from the
+input/state, not from effects alone). The chat state shape is already full (ADR-0004,
+`state.ts`), so no expansion is pulled ahead of the physics.
 
 ## Acceptance Criteria
 
 - [ ] #1 fast-check is added; `foundation/testing` provides coherent `InkStep`-stream generators (status ⇔ choices/externalCalls) and valid `Player` open/close interleavings — no shapes the real pump can't produce
 - [ ] #2 A run-twice determinism property (`canonical(traceA) === canonical(traceB)` over generated streams, excluding data-request steps) is the standing determinism guard; it is green over the stub and a planted nondeterminism fails it with a shrunk counterexample
-- [ ] #3 A purity lint bans `Date.now`/`Math.random`/`new Date` over the reducer/model surface (not locale — `view` reads `RenderContext.locale`); green over the stubs, red on a planted clock read
-- [ ] #4 Every `simulation-physics.md` invariant exists as a pure predicate `(stream) → Violation | null`: the generic runner + determinism live in `foundation/testing`; the chat-specific predicates live in `@narratives/system-chat/testing` (foundation cannot import chat)
+- [ ] #3 A new (net-new, not yet present) `no-restricted-syntax` lint block bans `Date.now`/`Math.random`/`new Date` over the chat reducer surface — `system.ts` (where `reduce` lives today) and a future `model/**` — but not `view`/locale; green over the stubs, red on a planted clock read
+- [ ] #4 Every property invariant in `simulation-physics.md` exists as a pure predicate `(stream) → Violation | null` (routing, notify-once, HWM, forward-only time, receipts, seed exclusion; grouping excluded — it is a view golden in 026): the generic runner + determinism live in `foundation/testing`; the chat-specific predicates live in a built `@narratives/system-chat/testing` subpath (foundation cannot import chat), wired with a `./testing` package `exports` entry + a vitest alias, mirroring `foundation/testing`
 - [ ] #5 The predicates the stub already satisfies (routing ownership, determinism) have green property tests now; the rest are the executable acceptance contract consumed by 020–026 — no `.skip`, no excluded "expected-red" run
 - [ ] #6 The property runner drives generated streams through the real runtime over a guaranteed-ended ink story (`-> END`) with `chatSystem` pinned sole + foreground, so generated steps route deterministically and never interleave with authored ink
 
@@ -54,10 +59,14 @@ and the predicate library.
 - `foundation/testing`: coherent `InkStep`/`Player` generators, the property runner
   (generated `Story(InkStep)` over an ended ink story, `chatSystem` pinned
   sole/foreground), the run-twice determinism property.
-- `@narratives/system-chat/testing` (new built subpath, mirroring `foundation/testing`):
-  the chat invariant predicates over the observable stream (routing, notify-once,
-  HWM, forward-only time, receipts, seed exclusion, grouping). 020–026 import these.
-- `eslint.config.js`: a `no-restricted-syntax` block over the reducer/model surface.
+- `@narratives/system-chat/testing` (new built subpath): the chat invariant predicates
+  over the observable stream (routing, notify-once, HWM, forward-only time, receipts,
+  seed exclusion — not grouping). Requires `system-chat/package.json` to gain a
+  `"./testing"` `exports` entry and `vitest.rebuild.config.ts` a
+  `@narratives/system-chat/testing` alias (mirroring `foundation/testing`). 020–025 import these.
+- `eslint.config.js`: a net-new `no-restricted-syntax` config block scoped to
+  `packages/systems/chat/src/system.ts` + `packages/systems/chat/src/model/**`
+  (where the reducer lives now and lands later), banning only `Date.now`/`Math.random`/`new Date`.
 
 ## Implementation Notes
 
