@@ -4,7 +4,7 @@ title: Reshape the merged Phase 1 foundation to the algebra
 status: To Do
 assignee: []
 created_date: 2026-06-19
-updated_date: 2026-06-19
+updated_date: 2026-06-28
 labels: [foundation, phase-2]
 milestone: "Phase 2 — Chat system kernel"
 dependencies: [task-040, task-041]
@@ -15,11 +15,12 @@ parent_task_id:
 
 The Phase 1 foundation (tasks 008–016) was built and merged against the
 pre-algebra contract — `reduce(state, chunk, ctx)` over `StoryChunk`, a snapshot
-that serializes ink, a standalone effect executor, and a `System` interface that
-mixes in view registration. ADR-0007 supersedes that contract. task-040 defines
-the new types and task-041 builds the generic runtime; this task migrates the
-**existing merged artifacts** onto them so the foundation matches the algebra
-rather than a stub conforming at the type level only.
+that serializes ink, a standalone effect executor, a push-based
+`Experience.dispatch(chunk)`, and a `System` interface that mixes in view
+registration. ADR-0007 supersedes that contract. task-040 defines the new types
+and task-041 builds the generic runtime; this task migrates the **existing merged
+artifacts** onto them so the foundation matches the algebra rather than a stub
+conforming at the type level only.
 
 This is the substantive reshape, not the type definition (040) or the new
 runtime (041). It is its own task because it edits already-merged, already-tested
@@ -28,25 +29,27 @@ existing suites.
 
 ## Acceptance Criteria
 
-- [ ] #1 `System` is migrated to the task-040 shape: `reduce(state, input, ctx)`, `init(seed)`, `view(state, render)`, `status(state)`; `registerComponents`/view-registration is removed from the kernel contract (it moves to the view layer)
-- [ ] #2 `Snapshot` carries no ink serialization and no wall-clock — `ink: string` is removed; ink lives host-side (task-041); `version` + `seed` remain
+- [ ] #1 `System` is migrated to the task-040 shape: `reduce(state, input, ctx)`, `init(seed)` (the current zero-arg `init` gains and, for the stubs, ignores the seed), `view(state, render)`, `status(state)` (stubs report `free`); `registerComponents`/view-registration is removed from the kernel contract
+- [ ] #2 `Snapshot` is the host-owned envelope `{ version, ink, state, idSeq }`: the per-system map is `state` (renamed from `systems`); `ink` is the host's ink serialization; `idSeq` is the runtime's persisted id position; the per-system `state` holds no ink and no wall-clock
 - [ ] #3 The standalone `host/effect-executor.ts` is retired or folded into the task-041 runtime executor; no two executors coexist
-- [ ] #4 `sim/router.ts` routes the `Input` union (not `StoryChunk`) and `core/create-experience.ts` wires the task-041 runtime; `ink/ink-runtime.ts` is the host-owned ink wrapper
-- [ ] #5 The chat and cards stubs and the two-vocabulary proof pass against the migrated foundation; no `foundation` module imports a system type
-- [ ] #6 The existing foundation test suites (`contracts.test.ts`, `index.test.ts`) are updated and green; no dead code from the old contract remains
+- [ ] #4 `sim/router.ts` routes the `Input` union (not `StoryChunk`); `core/create-experience.ts` wires the task-041 runtime and exposes `send(input)` with an internal ink pump and a single-step test seam (`dispatch(chunk)` is retired); `ink/ink-runtime.ts` is the host-owned ink wrapper returning `InkStep`
+- [ ] #5 The chat and cards stubs and the two-vocabulary proof pass against the migrated foundation; the proof drives the runtime via `Story(InkStep)`/`Player` inputs (not `dispatch`); `chat/reduce.ts` (`reduceChunk`) is retyped to `InkStep` and called from the migrated `reduce`; no `foundation` module imports a system type
+- [ ] #6 The existing foundation + sandbox suites are updated and green (`contracts.test.ts`, `index.test.ts`, chat `reduce.test.ts`, sandbox `skeleton.test.ts` retargeted, `two-vocabulary.test.ts` rewritten); no old-contract symbols remain
 
 ## Tests
 
 - **Classes:** constraint (+ behaviour)
-- constraint/compile (pre-commit): #1, #2, #5 — the migrated contract types total; snapshot has no `ink`; stubs + proof conform
-- behaviour/example (pre-commit): #3, #4 — a fixture run drives the migrated router + runtime; one executor path
-- constraint/architecture (pre-commit): #5, #6 — boundary lint passes; no old-contract symbols (`StoryChunk` reduce, `deriveViewModel`, `registerComponents`, snapshot `ink`) remain
+- constraint/compile (pre-commit): #1, #2 — the migrated contract types total; the snapshot envelope is `{ version, ink, state, idSeq }`; per-system state has no `ink`
+- behaviour/example (pre-commit): #3, #4, #5 — a fixture run drives the migrated router + runtime via `send(input)`; one executor path; tag-ownership routing in the rewritten proof is intact
+- constraint/architecture (pre-commit): #5, #6 — boundary lint passes; no old-contract symbols remain (`StoryChunk`, `deriveViewModel`, `registerComponents`, `createIdSequence`, `dispatch`, `Snapshot.ink` in per-system state)
 
 ## Implementation Plan
 
 Edit `packages/foundation/src/sim/{system,snapshot,router}.ts`,
 `core/create-experience.ts`, `host/effect-executor.ts`, `ink/ink-runtime.ts`;
-update `systems/chat` + `systems/cards` stubs and the foundation tests.
+migrate `systems/chat/src/{system,reduce,state}.ts` (+ `reduce.test.ts`) and
+`systems/cards/src/system.ts`; rewrite `experiences/sandbox/src/two-vocabulary.test.ts`,
+retarget `main.ts` + `skeleton.test.ts`, update `contracts.test.ts` + `index.test.ts`.
 
 ## Implementation Notes
 
