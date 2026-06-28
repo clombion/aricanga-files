@@ -1,33 +1,66 @@
-import type { DomainEvent } from '../services/event-bus';
+// The Effect algebra — closed by host capability (ADR-0007). Each family is the
+// foundation envelope `{ family, kind, payload }`: the FAMILY set is closed (a
+// reducer handles it exhaustively), while the `kind` within a family stays open
+// and is dispatched by the executor (`kind -> handler`). A system specialises the
+// families it uses; it never adds a family.
 
-// Open, extensible effect channel. Foundation defines the envelope and its own
-// kinds; each system contributes its own kinds without foundation referencing them.
-export interface Effect<K extends string = string, P = unknown> {
+export type EffectFamily = 'drive-ink' | 'schedule' | 'fetch' | 'present' | 'persist';
+
+export interface Effect<F extends EffectFamily = EffectFamily, K extends string = string, P = unknown> {
+  readonly family: F;
   readonly kind: K;
   readonly payload: P;
 }
 
-// Foundation-owned effect kinds (available to every system).
-export type FoundationEffect =
-  | Effect<'foundation/save', undefined>
-  | Effect<'foundation/advanceTime', { readonly minutes: number }>
-  | Effect<
-      'foundation/requestData',
-      { readonly source: string; readonly query: string; readonly params?: string }
-    >
-  | Effect<'foundation/emit', DomainEvent>;
+// A commit token is a kernel-state epoch: a scheduled commit fires a matching
+// `Resume(CommitFired token)`; a token the state has moved past is stale.
+export type CommitToken = number;
 
-// Constructors that build optional-field payloads by OMISSION — required under
-// exactOptionalPropertyTypes (params?: string does not accept params: undefined).
+export interface ScheduleCommit {
+  readonly delayMs: number;
+  readonly token: CommitToken;
+}
+
+// An async external-data request; correlated back by `Resume(DataArrived request)`.
+export interface DataRequest {
+  readonly source: string;
+  readonly query: string;
+  readonly params?: string;
+}
+
+// The instruction the host carries out against its own ink Story.
+export type DriveInkOp =
+  | { readonly op: 'choose'; readonly index: number }
+  | { readonly op: 'goto'; readonly knot: string }
+  | { readonly op: 'save-snap'; readonly id: string }
+  | { readonly op: 'load-snap'; readonly id: string };
+
+// Foundation constructors for the host-generic families. `present` is
+// system-specific (a system supplies its own kind + payload).
 export const fx = {
-  save: (): FoundationEffect => ({ kind: 'foundation/save', payload: undefined }),
-  advanceTime: (minutes: number): FoundationEffect => ({
-    kind: 'foundation/advanceTime',
-    payload: { minutes },
+  driveInk: (op: DriveInkOp): Effect<'drive-ink', DriveInkOp['op'], DriveInkOp> => ({
+    family: 'drive-ink',
+    kind: op.op,
+    payload: op,
   }),
-  requestData: (source: string, query: string, params?: string): FoundationEffect => ({
-    kind: 'foundation/requestData',
-    payload: params === undefined ? { source, query } : { source, query, params },
+  schedule: (commit: ScheduleCommit): Effect<'schedule', 'commit', ScheduleCommit> => ({
+    family: 'schedule',
+    kind: 'commit',
+    payload: commit,
   }),
-  emit: (event: DomainEvent): FoundationEffect => ({ kind: 'foundation/emit', payload: event }),
+  fetch: (request: DataRequest): Effect<'fetch', 'request-data', DataRequest> => ({
+    family: 'fetch',
+    kind: 'request-data',
+    payload: request,
+  }),
+  persist: (): Effect<'persist', 'save', undefined> => ({
+    family: 'persist',
+    kind: 'save',
+    payload: undefined,
+  }),
+  present: <K extends string, P>(kind: K, payload: P): Effect<'present', K, P> => ({
+    family: 'present',
+    kind,
+    payload,
+  }),
 } as const;
