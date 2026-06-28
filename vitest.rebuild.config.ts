@@ -20,6 +20,7 @@ export default defineConfig({
       // The `/testing` subpath must precede the bare specifier — first match wins.
       '@narratives/foundation/testing': src('packages/foundation/src/testing/index.ts'),
       '@narratives/foundation': src('packages/foundation/src/index.ts'),
+      '@narratives/system-chat/testing': src('packages/systems/chat/src/testing/index.ts'),
       '@narratives/system-chat': src('packages/systems/chat/src/index.ts'),
       '@narratives/system-cards': src('packages/systems/cards/src/index.ts'),
     },

@@ -1,7 +1,7 @@
 ---
 id: task-018
 title: Simulation-physics invariant suite (property-based)
-status: To Do
+status: Done
 assignee: []
 created_date: 2026-06-16
 updated_date: 2026-06-28
@@ -70,4 +70,18 @@ and the predicate library.
 
 ## Implementation Notes
 
-_None yet._
+- `fast-check` added (root devDep). `foundation/testing`: `generators.ts` (coherent
+  `InkStep`/story-stream arbitraries), `property.ts` (`runStream` over an ended
+  `-> END` story, `assertDeterministic`, `assertInvariant`, `Predicate`/`Violation`).
+- Determinism property is green over the pure stub and **rejects a planted flaky
+  reducer** (`property.test.ts`).
+- Purity lint: a net-new `no-restricted-syntax` block in `eslint.config.js` scoped to
+  `chat/src/system.ts` + `chat/src/model/**`, banning `Date.now`/`Math.random`/`new
+  Date`. Verified it fires on a planted `Date.now` and is clean otherwise.
+- `@narratives/system-chat/testing` subpath (package `exports` + vitest alias):
+  `predicates.ts` — `routingOwnership` (green now), `notifyOnce`, `seedExclusion`,
+  `hwmMonotonic`, `forwardOnlyTime`, `receiptMonotonic` (authored; 020–025 consume).
+  Time/receipt predicates forward-declare `chat/timeChanged` / `chat/receiptChanged`
+  effects that 023/024 will emit.
+- `routing.property.test.ts` proves the predicate green and the subpath import.
+- Verified green: `tsc -b`, `lint:boundaries`, `test:rebuild` (31), `vite build`.
