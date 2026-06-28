@@ -1,4 +1,10 @@
-import type { Effect, System } from '@narratives/foundation';
+import {
+  type Command,
+  type Effect,
+  type ReduceResult,
+  type System,
+  fx,
+} from '@narratives/foundation';
 
 export const CARD_TAGS = ['card', 'stat'] as const;
 
@@ -15,26 +21,21 @@ export interface CardsViewModel {
   readonly stats: Readonly<Record<string, number>>;
 }
 
-export type CardsEffect =
-  | Effect<'cards/statChanged', { readonly stat: string; readonly delta: number; readonly value: number }>
-  | Effect<'cards/cardShown', { readonly cardId: string }>;
-
 // Phase 1 STUB system — applies a `# stat:` tag and advances the deck.
-export const cardsSystem: System<CardsState, CardsViewModel> = {
+export const cardsSystem: System<CardsState, Command, Effect, CardsViewModel> = {
   id: 'cards',
-  tags: CARD_TAGS,
-  init: () => ({ deckCursor: 0, stats: {}, history: [] }),
-  reduce(state, chunk, _ctx) {
-    const statTag = chunk.tags.find((t) => t.key === 'stat');
+  tags: [...CARD_TAGS],
+  init: (_seed) => ({ deckCursor: 0, stats: {}, history: [] }),
+  reduce(state, input, _ctx): ReduceResult<CardsState, Effect> {
+    if (input.source !== 'story') return { state, effects: [] };
+    const statTag = input.step.tags.find((t) => t.key === 'stat');
     if (statTag?.value === undefined) return { state, effects: [] };
     // value like "courage:+2"
     const [rawStat, rawDelta] = statTag.value.split(':');
     const stat = rawStat?.trim() ?? 'unknown';
     const delta = Number(rawDelta ?? 0) || 0;
     const value = (state.stats[stat] ?? 0) + delta;
-    const effects: CardsEffect[] = [
-      { kind: 'cards/statChanged', payload: { stat, delta, value } },
-    ];
+    const effects: Effect[] = [fx.present('cards/statChanged', { stat, delta, value })];
     return {
       state: {
         deckCursor: state.deckCursor + 1,
@@ -44,8 +45,6 @@ export const cardsSystem: System<CardsState, CardsViewModel> = {
       effects,
     };
   },
-  deriveViewModel: (state) => ({ cursor: state.deckCursor, stats: state.stats }),
-  registerComponents() {
-    // no-op in Phase 1.
-  },
+  status: () => 'free',
+  view: (state) => ({ cursor: state.deckCursor, stats: state.stats }),
 };
