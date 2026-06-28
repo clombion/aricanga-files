@@ -7,6 +7,7 @@ import type { Router } from '../sim/router';
 import { createTagOwnershipRouter } from '../sim/router';
 import type { Snapshot, SystemId } from '../sim/snapshot';
 import type { AnySystem } from '../sim/system';
+import type { ReduceObserver } from '../sim/trace';
 import type { SaveStore, Scheduler } from '../services/services';
 
 // The host shell the runtime drives its impure effects through. The runtime owns
@@ -26,6 +27,9 @@ export interface RuntimeConfig {
   readonly foreground?: SystemId;
   readonly seed?: number;
   readonly version?: number;
+  // Reduce-trace observability seam (ADR-0007 event-sourcing): notified of every
+  // reduction's `{input, effects, state}`. Adds no Input/Effect.
+  readonly observer?: ReduceObserver;
 }
 
 const SNAPSHOT_VERSION = 1;
@@ -41,6 +45,7 @@ export class Runtime {
   private readonly host: Host;
   private readonly router: Router;
   private readonly foreground: SystemId;
+  private readonly observer: ReduceObserver | undefined;
   private version: number;
   // The id allocator position — persisted in the snapshot so ids never collide
   // across restore and `reduce` stays referentially transparent.
@@ -53,6 +58,7 @@ export class Runtime {
     this.ink = config.ink;
     this.host = config.host;
     this.router = config.router ?? createTagOwnershipRouter();
+    this.observer = config.observer;
     this.version = config.version ?? SNAPSHOT_VERSION;
     this.idSeq = config.seed ?? 0;
 
@@ -130,6 +136,7 @@ export class Runtime {
     const result = system.reduce(this.states.get(id), input, ctx);
     this.idSeq = n;
     this.states.set(id, result.state);
+    this.observer?.observe({ systemId: id, input, effects: result.effects, state: result.state });
     for (const effect of result.effects) this.execute(id, effect);
   }
 

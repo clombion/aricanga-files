@@ -25,6 +25,7 @@ export type { KernelStatus, ReduceContext, ReduceResult, RenderContext } from '.
 export type { SystemId, Snapshot } from './sim/snapshot';
 export type { System, AnySystem } from './sim/system';
 export { erase } from './sim/system';
+export type { ReduceRecord, ReduceObserver } from './sim/trace';
 export { assertNever } from './sim/exhaustive';
 export type { Router, RouteContext } from './sim/router';
 export { createTagOwnershipRouter } from './sim/router';

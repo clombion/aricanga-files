@@ -55,7 +55,7 @@ invariant/regression suites come first (red), then the physics slices to green.
 | task-040 | Foundation algebra contract | Done | — |
 | task-041 | Generic Sans-IO host runtime | Done | 040 |
 | task-062 | Reshape the merged Phase 1 foundation to the algebra | Done | 040, 041 |
-| task-017 | Kernel test harness and fixtures | To Do | 040, 041, 062 |
+| task-017 | Kernel test harness and fixtures | Done | 040, 041, 062 |
 | task-018 | Simulation-physics invariant suite (property-based) | To Do | 017 |
 | task-019 | BUG-HISTORY regression suite | To Do | 017 |
 | task-020 | Message routing and targetChat | To Do | 017, 018 |

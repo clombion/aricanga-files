@@ -1,0 +1,114 @@
+[
+  {
+    "effects": [
+      {
+        "family": "present",
+        "kind": "fixture/line",
+        "payload": {
+          "text": "Start"
+        }
+      }
+    ],
+    "input": {
+      "source": "story",
+      "step": {
+        "choices": [],
+        "externalCalls": [],
+        "status": "end",
+        "tags": [
+          {
+            "key": "fx",
+            "raw": "fx: 1",
+            "value": "1"
+          }
+        ],
+        "text": "Start"
+      }
+    },
+    "state": {
+      "busy": false,
+      "fetched": null,
+      "lines": [
+        "Start"
+      ],
+      "saved": false,
+      "token": 1
+    },
+    "systemId": "fixture"
+  },
+  {
+    "effects": [
+      {
+        "family": "present",
+        "kind": "fixture/ping",
+        "payload": {}
+      }
+    ],
+    "input": {
+      "command": {
+        "kind": "present",
+        "payload": null
+      },
+      "source": "player"
+    },
+    "state": {
+      "busy": false,
+      "fetched": null,
+      "lines": [
+        "Start"
+      ],
+      "saved": false,
+      "token": 1
+    },
+    "systemId": "fixture"
+  },
+  {
+    "effects": [
+      {
+        "family": "schedule",
+        "kind": "commit",
+        "payload": {
+          "delayMs": 1,
+          "token": 1
+        }
+      }
+    ],
+    "input": {
+      "command": {
+        "kind": "schedule",
+        "payload": null
+      },
+      "source": "player"
+    },
+    "state": {
+      "busy": true,
+      "fetched": null,
+      "lines": [
+        "Start"
+      ],
+      "saved": false,
+      "token": 1
+    },
+    "systemId": "fixture"
+  },
+  {
+    "effects": [],
+    "input": {
+      "resume": {
+        "kind": "commit-fired",
+        "token": 1
+      },
+      "source": "resume"
+    },
+    "state": {
+      "busy": false,
+      "fetched": null,
+      "lines": [
+        "Start"
+      ],
+      "saved": false,
+      "token": 1
+    },
+    "systemId": "fixture"
+  }
+]
