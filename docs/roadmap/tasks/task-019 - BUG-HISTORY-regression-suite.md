@@ -31,9 +31,9 @@ absent — not "different now" and not "deferred"; those are separate dispositio
 
 - [ ] #1 A typed manifest dispositions every BUG-HISTORY entry (each `BUG-NNN` + each of the 19 legacy date-based entries, assigned a stable id) as one of: `kernel-physics` | `structurally-eliminated` | `deferred → <task>` | `view → Phase 3` | `build → Phase 4`, with a one-line rationale
 - [ ] #2 A meta-test enforces coverage: every `BUG-NNN:` header in the ledger appears in the manifest, the legacy-id set is frozen (count 19), and an untriaged future `BUG-NNN` fails CI
-- [ ] #3 Each `kernel-physics` bug has a named positive fixture (a recorded `Input` stream) plus the predicate it asserts and its consuming physics task; the routing historical scenario is green now via `routingOwnership`
-- [ ] #4 BUG-008 (typing effect with a null chatId) is covered by a new `effectsCarryChatId` guard predicate added to the chat predicate library (`@narratives/system-chat/testing`), consumed by task-021
-- [ ] #5 No red / `.skip` / expected-red test is committed: the green assertion for the notify/receipt/typing fixtures lands with its physics task (021/024); task-019 ships the fixture data, the ledger, and the routing green test
+- [ ] #3 Each `kernel-physics` bug has a named positive fixture (a recorded `Input` stream) plus the predicate it asserts and its consuming physics task; the routing historical scenario is green now and asserts only `routingOwnership` (not `notifyOnce`, which the stub does not yet satisfy)
+- [ ] #4 BUG-008 (typing effect with a null chatId) is covered by a new `effectsCarryChatId` guard predicate added to the chat predicate library (`@narratives/system-chat/testing`); it is consumed by **task-032** (which emits the typing effect) and is vacuous within Phase 2 — parity with the forward-declared `timeChanged`/`receiptChanged` predicates
+- [ ] #5 No red / `.skip` / expected-red test is committed: the green assertion for each fixture lands with its consuming task (notify → 021, receipt → 024, typing → 032); task-019 ships the fixture data, the ledger, and the routing green test
 - [ ] #6 BUG-005 (stale save missing a seed property) is classified `deferred → task-059` (save versioning/migrations), not eliminated
 
 ## Tests
@@ -54,7 +54,8 @@ This task **is** test code; coverage is measured against the BUG-HISTORY manifes
 - Kernel-physics fixtures as `Input`-stream data (dup-notif, receipt-upgrade, typing,
   routing); the routing one asserted green now; notify/receipt/typing assertions land
   with tasks 021/024.
-- `@narratives/system-chat/testing`: add the `effectsCarryChatId` predicate.
+- `@narratives/system-chat/testing`: add the `effectsCarryChatId` predicate (a 7th
+  in the task-018-owned barrel) and update that module's header comment accordingly.
 
 ## Implementation Notes
 
