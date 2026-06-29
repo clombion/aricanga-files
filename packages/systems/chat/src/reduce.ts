@@ -1,14 +1,18 @@
 import type { InkStep } from '@narratives/foundation';
 
 export interface ChatMessageVM {
+  readonly id: string;
+  readonly chatId: string;
   readonly speaker: string;
   readonly text: string;
 }
 
-// Phase 1 STUB: one ink step → one message view-model, parsing a `speaker` tag.
-// The real physics kernel (routing, deferral, notifications, time, receipts)
-// replaces this in Phase 2 — see docs/roadmap/phase-2-kernel.md.
-export function reduceStep(step: InkStep): ChatMessageVM {
+/** The presentation fields of a message, parsed from an ink step. */
+export type MessageFields = Pick<ChatMessageVM, 'speaker' | 'text'>;
+
+// Parse the presentation fields (speaker + text) from an ink step. Identity
+// (id + owning chatId) is assembled by `model/route.ts`, which knows the routing.
+export function reduceStep(step: InkStep): MessageFields {
   const speaker = step.tags.find((t) => t.key === 'speaker')?.value ?? '';
   return { speaker, text: step.text };
 }

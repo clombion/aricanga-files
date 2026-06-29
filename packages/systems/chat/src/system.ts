@@ -5,10 +5,11 @@ import {
   type System,
   fx,
 } from '@narratives/foundation';
-import { reduceStep } from './reduce';
+import { appendMessage, buildMessage, readChatSwitch, resolveChatId } from './model/route';
 import { type ChatState, initChatState } from './state';
 
 export const CHAT_TAGS = [
+  'chat',
   'speaker',
   'type',
   'time',
@@ -23,28 +24,33 @@ export interface ChatViewModel {
   readonly messages: ChatState['messageHistory'];
 }
 
-// Phase 1 STUB system — proves the System contract and tag-routing, not the
-// physics. The real kernel (routing/deferral/notifications/time/receipts) lands
-// in Phase 2; this just appends a message and notifies on a background chat.
-// Commands are the open envelope for now; physics narrows them.
+// Chat kernel (Phase 2). task-020: routing — a `# chat:` tag sets the conversation
+// context; a message routes to `# targetChat` (override) or `activeChat`, lands in
+// its owning chat's history with a stable id, and a background message notifies.
+// Deferral, notify-once, and replay are task-021. Commands narrow in later slices.
 export const chatSystem: System<ChatState, Command, Effect, ChatViewModel> = {
   id: 'chat',
   tags: [...CHAT_TAGS],
   init: (_seed) => initChatState(),
-  reduce(state, input, _ctx): ReduceResult<ChatState, Effect> {
+  reduce(state, input, ctx): ReduceResult<ChatState, Effect> {
     if (input.source !== 'story') return { state, effects: [] };
     const { step } = input;
-    if (step.text === '') return { state, effects: [] };
-    const vm = reduceStep(step);
-    const chatId = step.tags.find((t) => t.key === 'targetChat')?.value ?? 'main';
-    const prev = state.messageHistory[chatId] ?? [];
-    const messageHistory = { ...state.messageHistory, [chatId]: [...prev, vm] };
+
+    // A `# chat:` tag switches the conversation context for subsequent messages.
+    const switched = readChatSwitch(step);
+    const base = switched !== null ? { ...state, activeChat: switched } : state;
+    if (step.text === '') return { state: base, effects: [] };
+
+    const chatId = resolveChatId(step, base.activeChat);
+    const message = buildMessage(step, chatId, ctx);
+    const next = appendMessage(base, message);
+
     const isBackground =
-      state.currentView.type !== 'chat' || state.currentView.chatId !== chatId;
+      next.currentView.type !== 'chat' || next.currentView.chatId !== chatId;
     const effects: Effect[] = isBackground
-      ? [fx.present('chat/showNotification', { chatId, preview: vm.text })]
+      ? [fx.present('chat/showNotification', { chatId, preview: message.text })]
       : [];
-    return { state: { ...state, messageHistory }, effects };
+    return { state: next, effects };
   },
   status: () => 'free',
   view: (state) => ({ view: state.currentView, messages: state.messageHistory }),

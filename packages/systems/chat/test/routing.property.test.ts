@@ -10,7 +10,7 @@ import { chatSystem } from '../src/system';
 test('routing ownership holds over generated targetChat streams', async () => {
   await assertInvariant(
     { systems: [erase(chatSystem)], foreground: 'chat' },
-    storyStreamArb({ tagKeys: ['speaker', 'targetChat'] }),
+    storyStreamArb({ tagKeys: ['speaker', 'chat', 'targetChat'] }),
     routingOwnership,
   );
 });
