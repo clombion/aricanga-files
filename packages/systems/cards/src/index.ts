@@ -4,4 +4,4 @@
 export const CARDS_SYSTEM_ID = 'cards';
 
 export { cardsSystem, CARD_TAGS } from './system';
-export type { CardsState, CardsViewModel, CardsEffect } from './system';
+export type { CardsState, CardsViewModel } from './system';

@@ -1,34 +1,24 @@
 import type { Effect } from './effect';
-import type { StoryChunk } from './story';
 
-// Deterministic context injected into reduce — no Date.now()/Math.random() in
-// the kernel. `now` is an injected clock reading; `nextId` is seeded.
+// What a system is waiting for — a pure predicate over state (ADR-0007). The
+// runtime combines this with host-owned ink readiness to decide the next step.
+export type KernelStatus = 'free' | 'busy-commit' | 'busy-data';
+
+// Deterministic context for `reduce` — a seeded id source only. No clock, no
+// randomness. The id allocator is host/runtime-owned (it persists its position
+// as `idSeq`); this is its per-reduce handle, so `reduce` stays referentially
+// transparent given `(state, input, ctx)`.
 export interface ReduceContext {
-  readonly now: number;
   nextId(): string;
 }
 
-export interface ReduceResult<TState> {
-  readonly state: TState;
-  readonly effects: readonly Effect[];
+// Render-time context for `view` — host-injected, never frozen into state.
+export interface RenderContext {
+  readonly now: number;
+  readonly locale: string;
 }
 
-// The pure kernel signature: (state, chunk, ctx) -> { state, effects }.
-export type Reduce<TState> = (
-  state: TState,
-  chunk: StoryChunk,
-  ctx: ReduceContext,
-) => ReduceResult<TState>;
-
-/** Deterministic id generator seeded from a snapshot seed (no Math.random). */
-export function createIdSequence(seed: number): () => string {
-  let n = seed >>> 0;
-  return () => {
-    // xorshift32 — deterministic, dependency-free.
-    n ^= n << 13;
-    n ^= n >>> 17;
-    n ^= n << 5;
-    n >>>= 0;
-    return n.toString(36);
-  };
+export interface ReduceResult<TState, TEffect extends Effect = Effect> {
+  readonly state: TState;
+  readonly effects: readonly TEffect[];
 }

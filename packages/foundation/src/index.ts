@@ -1,31 +1,42 @@
 // @narratives/foundation — vocabulary-agnostic interactive-fiction engine.
-// Phase 1 surface: the full kernel/snapshot/effect/system/router contracts, the
-// event bus + services, the effect executor, and the composition root.
+// The closed Input/Effect algebra (ADR-0007): the System contract, the generic
+// Sans-IO runtime, the host-owned ink wrapper, and the composition root.
 
 export const FOUNDATION_VERSION = '0.0.0';
 
 // Ink runtime (the single inkjs touchpoint).
 export { InkRuntime } from './ink/ink-runtime';
+export type { InkFixtures, NameResolver, DataResolver } from './ink/ink-runtime';
 
 // Simulation contracts.
-export type { Tag, Choice, StoryChunk } from './sim/story';
+export type { Tag, Choice, ExternalCall, InkStatus, InkStep } from './sim/story';
 export { parseTag } from './sim/story';
-export type { Effect, FoundationEffect } from './sim/effect';
+export type {
+  Effect,
+  EffectFamily,
+  CommitToken,
+  ScheduleCommit,
+  DataRequest,
+  DriveInkOp,
+} from './sim/effect';
 export { fx } from './sim/effect';
+export type { Command, Resume, Lifecycle, Input } from './sim/input';
+export type { KernelStatus, ReduceContext, ReduceResult, RenderContext } from './sim/context';
 export type { SystemId, Snapshot } from './sim/snapshot';
-export type { ReduceContext, ReduceResult, Reduce } from './sim/context';
-export { createIdSequence } from './sim/context';
-export type { System } from './sim/system';
+export type { System, AnySystem } from './sim/system';
+export { erase } from './sim/system';
+export type { ReduceRecord, ReduceObserver } from './sim/trace';
+export { assertNever } from './sim/exhaustive';
 export type { Router, RouteContext } from './sim/router';
 export { createTagOwnershipRouter } from './sim/router';
 
-// Services + host.
+// Services.
 export type { DomainEvent, EventBus, Unsubscribe } from './services/event-bus';
 export { createEventBus } from './services/event-bus';
-export type { Clock, SaveStore, AnalyticsSink } from './services/services';
-export type { EffectExecutor, EffectHandler } from './host/effect-executor';
-export { createEffectExecutor } from './host/effect-executor';
+export type { Clock, SaveStore, AnalyticsSink, Scheduler } from './services/services';
 
-// Composition root.
-export type { Services, ExperienceConfig, Experience } from './core/create-experience';
+// Host runtime + composition root.
+export type { Host, RuntimeConfig } from './host/runtime';
+export { Runtime } from './host/runtime';
+export type { ExperienceConfig, Experience } from './core/create-experience';
 export { createExperience } from './core/create-experience';

@@ -59,4 +59,28 @@ export default [
       ],
     },
   },
+  {
+    // Reducer-purity guard (ADR-0007, testing-strategy.md): the kernel reads time
+    // and ids only from `ReduceContext`/the input — never the wall clock or random.
+    // Scoped to the chat reducer surface (`system.ts` today, `model/**` later); does
+    // NOT touch `view`, which legitimately reads `RenderContext.locale`.
+    files: ['packages/systems/chat/src/system.ts', 'packages/systems/chat/src/model/**/*.ts'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: "MemberExpression[object.name='Date'][property.name='now']",
+          message: 'No Date.now in a reducer — time is simulation-derived (ADR-0007).',
+        },
+        {
+          selector: "MemberExpression[object.name='Math'][property.name='random']",
+          message: 'No Math.random in a reducer — ids come from ctx.nextId (ADR-0007).',
+        },
+        {
+          selector: "NewExpression[callee.name='Date']",
+          message: 'No new Date in a reducer — time is simulation-derived (ADR-0007).',
+        },
+      ],
+    },
+  },
 ];

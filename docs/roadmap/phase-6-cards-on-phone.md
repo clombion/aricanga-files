@@ -1,45 +1,34 @@
-# Phase 6 — Experience: cards-on-phone (seam by recombination)
+# Phase 6 — Cards-on-phone experience
 
 **Labels:** `type:epic`, `area:experience`, `area:cards`, `type:proof`
-**Blocked by:** Phases 3, 4 · **Parallel with:** Phase 5
-
-## Risk retired
-
-The foundation isn't genuinely vocabulary-agnostic — the real seam.
+**Depends on:** Phases 3, 4 · **Contract:** ADR-0007
 
 ## Goal
 
-Build `systems/cards` — a genuinely different vocabulary from chat:
+Run a second, genuinely different system — cards — on the phone shell, proving the foundation is vocabulary-agnostic and that systems compose orthogonally.
 
-- Tags: `# card:`, `# stat:`
-- A simple machine slice (no time coherence, no HWM, no notifications)
-- A card + stat-bar Lit view
+## Context
 
-Compose it with `systems/phone`. This stresses foundation generality **and**
-recombines phone with a non-chat vocabulary, proving phone ⊥ chat are orthogonal
-axes, not just a separable pair.
+cards is its own closed algebra, derived from first principles, not chat with fields removed:
 
-### What this forces into the open
+- **Input:** `Story(InkStep)`, `Player(Swipe dir)`, `Lifecycle(Init|Reset)` — no open/close/choose chat affordances.
+- **Effect:** `Present(StatChanged | CardShown | GameOver)`, `Persist(Save)` — no notify/typing/receipt.
+- **State:** deck cursor, stats, decision history — no message/read/deferral/time concepts.
 
-- **Snapshot shape** — cards has no `messageHistory`/`deferredMessages`, forcing
-  `Snapshot<TSystems>` to be truly generic.
-- **Effect channel** — `STAT_CHANGED`/`CARD_SHOWN` vs chat's `NOTIFICATION_SHOW`,
-  forcing the effect type to be system-extensible.
-- **Tag registry** — a different tag set forces per-system tag plug-ins.
-- **Layer placement** — cards needs neither forward-only time nor read cursors,
-  proving those belong in the chat system, not the foundation.
-- **Analytics** — swipe decisions vs choice-in-chat, forcing a generic sink.
+It runs on the same generic runtime and composes with the phone system, sharing the phone shell's `Present` chrome. This turns the two-vocabulary proof into its strongest form: two genuinely different closed `Input`/`Effect` algebras driven by one runtime, recombined with phone — proving system and phone are orthogonal axes.
 
 ## Proof / Definition of Done
 
-Cards-on-phone runs; phone reused unchanged; building cards required **zero edits
-to `foundation/`** (or the edits it forced are the final generalizations, after
-which it's zero).
+cards-on-phone runs; phone reused unchanged; building cards touches zero `foundation/` source; the cards boundary passes the same exhaustiveness/purity/determinism guards as chat.
 
 ## Subtasks
 
-- [ ] (added when we break down this phase)
+- [ ] task-052 — Cards `Input`/`Effect` algebra + completeness check (swipe/stat vocabulary)
+- [ ] task-053 — Cards `reduce` + `view` (deck, stats, game-over) — pure
+- [ ] task-054 — Cards content (a thin deck, two stats, ink-driven)
+- [ ] task-055 — Cards view components + phone composition
+- [ ] task-056 — Vocabulary-agnostic proof (cards on the same runtime + phone, zero foundation edits)
 
 ## Non-goals
 
-Thin probe — a handful of cards, two stats, swipe L/R, ink-driven, no art.
+A thin probe, not a game. Derive the algebra and apply the same falsification method used for chat (ADR-0007).

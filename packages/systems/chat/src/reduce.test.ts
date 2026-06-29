@@ -1,24 +1,25 @@
-import { parseTag } from '@narratives/foundation';
+import { type InkStep, parseTag } from '@narratives/foundation';
 import { expect, test } from 'vitest';
-import { reduceChunk } from './reduce';
+import { reduceStep } from './reduce';
 
-const chunk = (text: string, rawTags: string[] = []) => ({
+const step = (text: string, rawTags: string[] = []): InkStep => ({
   text,
   tags: rawTags.map(parseTag),
   choices: [],
-  isChoicePoint: false,
+  externalCalls: [],
+  status: 'continue',
 });
 
-// Stub reduce maps a chunk to a message view-model (task-007 AC #2).
-test('reduceChunk parses the speaker tag into the view-model', () => {
-  expect(reduceChunk(chunk('Hello', ['speaker: Pat']))).toEqual({
+// Stub reduce maps an ink step to a message view-model (task-007 AC #2).
+test('reduceStep parses the speaker tag into the view-model', () => {
+  expect(reduceStep(step('Hello', ['speaker: Pat']))).toEqual({
     speaker: 'Pat',
     text: 'Hello',
   });
 });
 
-test('reduceChunk leaves speaker empty when there is no speaker tag', () => {
-  expect(reduceChunk(chunk('System line'))).toEqual({
+test('reduceStep leaves speaker empty when there is no speaker tag', () => {
+  expect(reduceStep(step('System line'))).toEqual({
     speaker: '',
     text: 'System line',
   });

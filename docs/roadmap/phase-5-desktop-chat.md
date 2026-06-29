@@ -1,27 +1,27 @@
-# Phase 5 — Experience: desktop chat (seam by subtraction)
+# Phase 5 — Desktop chat experience
 
 **Labels:** `type:epic`, `area:experience`, `type:proof`
-**Blocked by:** Phases 3, 4 · **Parallel with:** Phase 6
-
-## Risk retired
-
-Chat isn't truly separable from phone.
+**Depends on:** Phases 3, 4 · **Contract:** ADR-0007
 
 ## Goal
 
-Reuse `systems/chat` with a minimal desktop host and no phone chrome. This
-proves chat works *without* phone (the phone/chat split, by subtraction).
+Run the chat system unchanged under a non-phone shell, proving the kernel is shell-independent.
+
+## Context
+
+An experience is `compose(systems) + host shell + injected resources`. Desktop chat reuses the chat system's `Input`/`Effect` algebra and `reduce` verbatim; only the imperative shell differs: a desktop effect-executor (no phone `Present` chrome), a desktop `RenderContext`, and desktop view components rendering the same view-models. This is the seam proven by subtraction — chat without phone — and it must require no change to the chat system or the foundation.
 
 ## Proof / Definition of Done
 
-Desktop chat runs reusing the chat system unchanged; the only new code is a host
-+ experience composition. Any edit forced into `foundation/` or `systems/chat`
-is a leak — fix it here.
+Desktop chat runs reusing `systems/chat` unchanged; the only new code is a desktop shell + experience composition; any forced edit to `foundation/` or `systems/chat` is a leak to fix here.
 
 ## Subtasks
 
-- [ ] (added when we break down this phase)
+- [ ] task-048 — Desktop host shell + effect executor (no phone `Present` effects)
+- [ ] task-049 — Desktop view components (consume chat view-models, emit intents)
+- [ ] task-050 — Desktop experience composition + a minimal story
+- [ ] task-051 — Shell-independence proof (chat system byte-identical to its phone use)
 
 ## Non-goals
 
-Not a full game — a thin seam-proving experience.
+Not a full product — a thin seam-proving experience.

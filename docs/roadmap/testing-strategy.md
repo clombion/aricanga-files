@@ -71,3 +71,12 @@ scope/technique (gate): #ACs — what it checks
 
 Gates: `pre-commit`/local, `CI` (the PR merge gate), `on-demand` (pre-release).
 See [`TASK-TEMPLATE.md`](TASK-TEMPLATE.md).
+
+## Algebra guards (ADR-0007)
+
+A system's correctness rests on four properties the toolchain enforces directly, so completeness and purity are checked rather than reviewed:
+
+- **Boundary exhaustiveness (compile):** handling of `Input` and `Effect` is total — a `never` check makes a new boundary crossing fail to compile until it is a constructor. Closure of the boundary is a type property.
+- **Reducer purity (lint, pre-commit):** a `no-Date.now/Math.random/locale` rule over every system's reducer (`model`) package; the kernel reads time/ids only from `ReduceContext`/the input, locale only in `view` via `RenderContext`.
+- **Determinism (property, CI):** a run-twice deep-equality invariant over `reduce` for generated input streams.
+- **Golden (golden, CI):** the recorded `Input→Effect`+`state` stream (kernel-observable, never opaque ink JSON), serialized canonically (sorted keys). A regression lock, not the correctness oracle — each behaviour is independently asserted by the invariant/regression/example suites.

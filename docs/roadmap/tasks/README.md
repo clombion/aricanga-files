@@ -4,7 +4,7 @@ Backlog.md-format task files (format convention only — no CLI). See
 [`../TASK-TEMPLATE.md`](../TASK-TEMPLATE.md) and the Task format section in
 [`../README.md`](../README.md).
 
-IDs are globally sequential. **Next ID: `task-040`.**
+IDs are globally sequential. **Next ID: `task-063`.**
 
 Every task carries a `## Tests` section tagging its tests by the
 [test taxonomy](../testing-strategy.md); we work test-first (ADR-0006).
@@ -52,9 +52,12 @@ invariant/regression suites come first (red), then the physics slices to green.
 
 | ID | Title | Status | Depends on |
 |----|-------|--------|------------|
-| task-017 | Kernel test harness and fixtures | To Do | 004, 008, 011 |
-| task-018 | Simulation-physics invariant suite (property-based) | To Do | 017 |
-| task-019 | BUG-HISTORY regression suite | To Do | 017 |
+| task-040 | Foundation algebra contract | Done | — |
+| task-041 | Generic Sans-IO host runtime | Done | 040 |
+| task-062 | Reshape the merged Phase 1 foundation to the algebra | Done | 040, 041 |
+| task-017 | Kernel test harness and fixtures | Done | 040, 041, 062 |
+| task-018 | Simulation-physics invariant suite (property-based) | Done | 017 |
+| task-019 | BUG-HISTORY regression suite | Done | 017, 018 |
 | task-020 | Message routing and targetChat | To Do | 017, 018 |
 | task-021 | Deferred queue and emergent notifications | To Do | 020 |
 | task-022 | HWM read cursors and unread separator | To Do | 021 |
@@ -64,8 +67,9 @@ invariant/regression suites come first (red), then the physics slices to green.
 | task-026 | Message grouping derivation | To Do | 020 |
 | task-027 | Golden replay of Aricanga (phase proof) | To Do | 020–026 |
 
-Suggested order: **017 → 018 → 019 → 020 → 021 → 022 → (023, 024, 025, 026) → 027**.
-task-027 is the integrating proof for the phase.
+Suggested order: **040 → 041 → 062 → 017 → 018 → 019 → 020 → 021 → 022 → (023, 024, 025, 026) → 027**.
+task-040/041 establish the generic algebra + runtime, task-062 migrates the
+merged Phase 1 foundation onto them, and task-027 is the phase proof.
 
 ## Phase 3 — Chat + phone view layer (Lit)
 
@@ -90,3 +94,51 @@ the Aricanga parity proof.
 
 Suggested order: **028 → 029 → 030 → (031, 032, 033, 034, 035) → 036 → 037 → 038 → 039**.
 task-039 is the integrating proof for the phase.
+
+## Phase 4 — Build pipeline & config
+
+Epic: [`../phase-4-build-pipeline.md`](../phase-4-build-pipeline.md). The build emits the host-injected world (story, seeds, i18n/data fixtures, validated config).
+
+| ID | Title | Status | Depends on |
+|----|-------|--------|------------|
+| task-042 | Config schema (Zod) — single source of truth | To Do | — |
+| task-043 | Per-locale ink compile to JSON | To Do | 042 |
+| task-044 | Seed extraction → `Lifecycle(Init)` payload | To Do | 043 |
+| task-045 | i18n/data fixtures (host-injected `name`/`data`, locale-pinned) | To Do | 042 |
+| task-046 | Image optimization + content-hashed artifacts | To Do | — |
+| task-047 | Retire parity linters in favour of the schema; wire CI | To Do | 042–046 |
+
+## Phase 5 — Desktop chat experience
+
+Epic: [`../phase-5-desktop-chat.md`](../phase-5-desktop-chat.md). Same chat algebra, different shell (seam by subtraction).
+
+| ID | Title | Status | Depends on |
+|----|-------|--------|------------|
+| task-048 | Desktop host shell + effect executor | To Do | Phase 3, 4 |
+| task-049 | Desktop view components | To Do | 048 |
+| task-050 | Desktop experience composition + minimal story | To Do | 048, 049 |
+| task-051 | Shell-independence proof | To Do | 050 |
+
+## Phase 6 — Cards-on-phone experience
+
+Epic: [`../phase-6-cards-on-phone.md`](../phase-6-cards-on-phone.md). A second closed algebra on one runtime (seam by recombination).
+
+| ID | Title | Status | Depends on |
+|----|-------|--------|------------|
+| task-052 | Cards `Input`/`Effect` algebra + completeness check | To Do | Phase 3, 4 |
+| task-053 | Cards `reduce` + `view` (pure) | To Do | 052 |
+| task-054 | Cards content (thin deck, two stats) | To Do | 052 |
+| task-055 | Cards view components + phone composition | To Do | 053, 054 |
+| task-056 | Vocabulary-agnostic proof (zero foundation edits) | To Do | 055 |
+
+## Phase 7 — Hardening & standing guards
+
+Epic: [`../phase-7-hardening.md`](../phase-7-hardening.md). Make the algebra's guarantees standing CI gates; retire the reference.
+
+| ID | Title | Status | Depends on |
+|----|-------|--------|------------|
+| task-057 | Standing CI guards (exhaustiveness, purity, determinism, boundary, a11y) | To Do | Phases 5, 6 |
+| task-058 | Event-sourced analytics over the `Effect` stream | To Do | — |
+| task-059 | Save snapshot versioning + migrations | To Do | — |
+| task-060 | Docs consolidation to the algebra contract | To Do | — |
+| task-061 | Delete the POC reference branch | To Do | all |

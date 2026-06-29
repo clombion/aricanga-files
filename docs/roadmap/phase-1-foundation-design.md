@@ -1,136 +1,88 @@
-# Phase 1 — Foundation contracts (design)
+# Foundation contract
 
-> Draft target design for [Phase 1](phase-1-foundation.md). The shapes below are
-> what tasks `task-008`…`task-015` implement and prove. This is the gate the rest
-> of the rebuild hangs off, so it is designed against **two** vocabularies (chat
-> *and* cards) up front.
+The canonical contract for the `@narratives/foundation` runtime and the `System` interface. Realises ADR-0007 (the closed Input/Effect algebra) and ADR-0005 (multi-system composition). This is the target every system and experience builds against.
 
-## Roles and data flow — one bus, unidirectional
+## The System contract
 
-Three mechanisms, deliberately non-overlapping (the POC had four tangled ones):
-
-- **Rendering** — `snapshot → deriveViewModel(state) → Lit`. The view is a pure
-  function of state; it holds no domain state and needs no events to render.
-- **Effects** — `reduce` returns `effects[]`, a to-do list the host executes
-  (save, schedule a timer, show a notification, request data, emit). Effects are
-  **data**, never imperative calls inside the kernel.
-- **Event bus (single)** — a stream of `DomainEvent`s for cross-cutting sinks
-  only: analytics and cross-system coordination. Populated by the
-  `foundation/emit` effect.
-
-```
-ink → StoryChunk → Router → System.reduce(slice, chunk, ctx) → { slice, effects }
-                              │                              │
-                     deriveViewModel(state)                  ├─ host executes effects
-                              │                              └─ foundation/emit → EventBus → { analytics, other systems }
-                              ▼
-                             Lit
-```
-
-## Core types (foundation — vocabulary-agnostic)
+A system is a pure pair of functions plus identity:
 
 ```ts
-// What ink emits, with no chat/card vocabulary in sight.
-interface Tag { key: string; value?: string; raw: string; }   // parsed "# key:value"
-interface Choice { index: number; text: string; tags: Tag[]; }
-interface StoryChunk {
-  text: string;
-  tags: Tag[];
-  choices: Choice[];        // present at a choice point, else empty
-  isChoicePoint: boolean;
+interface System<State, Input, Effect, ViewModel> {
+  readonly id: SystemId;
+  readonly tags: readonly string[];          // ink tag keys this system claims (chunk routing)
+  init(seed: number): State;                  // deterministic initial state
+  reduce(state: State, input: Input, ctx: ReduceContext): { state: State; effects: readonly Effect[] };
+  status(state: State): KernelStatus;         // pure: what the system is waiting for
+  view(state: State, render: RenderContext): ViewModel;
 }
 
-// Open/extensible effect channel. Foundation never enumerates system effects.
-type Effect<K extends string = string, P = unknown> = { kind: K; payload: P };
-
-type FoundationEffect =
-  | Effect<'foundation/save', void>
-  | Effect<'foundation/advanceTime', { minutes: number }>
-  | Effect<'foundation/requestData', { source: string; query: string; params?: string }>
-  | Effect<'foundation/emit', DomainEvent>;
-
-type SystemId = string;
-
-// Generic snapshot — each slice is opaque to foundation; the systems map keys
-// slices by system id, so one or more systems can coexist (ADR-0005).
-interface Snapshot<TSystems extends Record<SystemId, unknown>> {
-  version: number;          // for migrations
-  ink: string;              // ink state JSON (opaque)
-  seed: number;             // determinism seed for id generation
-  systems: TSystems;        // { chat: ChatState } or { adventure: ..., chat: ... }
-}
-
-// Injected, deterministic context — no Date.now()/Math.random() in reduce.
-interface ReduceContext { now: number; nextId: () => string; }
-
-interface ReduceResult<TState> { state: TState; effects: Effect[]; }
-
-// The contract every system implements.
-interface System<TSystemState, TViewModel> {
-  readonly id: string;
-  readonly tags: readonly string[];                 // tag vocabulary this system claims
-  init(): TSystemState;
-  reduce(state: TSystemState, chunk: StoryChunk, ctx: ReduceContext): ReduceResult<TSystemState>;
-  deriveViewModel(state: TSystemState): TViewModel; // pure
-  registerComponents(): Promise<void> | void;       // host calls once
-}
-
-// Single event bus for cross-cutting sinks only.
-interface DomainEvent { type: string; [k: string]: unknown; }
-interface EventBus {
-  emit(event: DomainEvent): void;
-  on<E extends DomainEvent>(type: E['type'], fn: (e: E) => void): () => void;
-}
-
-// Routing — which system handles a chunk. Default: the first system claiming one
-// of the chunk's tags, else the foreground system. The explicit `# system:` tag
-// is an optional override, deferred until a hybrid needs it (ADR-0005).
-interface Router { route(chunk: StoryChunk, ctx: RouteContext): SystemId; }
-interface RouteContext {
-  foreground: SystemId;
-  systems: ReadonlyMap<SystemId, System<unknown, unknown>>;
-}
-
-// Composition root — instance-scoped services, no singletons.
-interface Services { clock: Clock; storage: Storage; analytics: AnalyticsSink; bus: EventBus; }
-function createExperience(config: {
-  storyUrl: string;
-  systems: System<unknown, unknown>[];  // one or more; single-system is the degenerate case
-  foreground?: SystemId;                // defaults to systems[0].id
-  router?: Router;                      // defaults to the tag-ownership strategy
-  services: Services;
-}): Experience;
+type KernelStatus = 'free' | 'busy-commit' | 'busy-data';
+interface ReduceContext { nextId(): string }  // seeded id source; no clock, no randomness
+interface RenderContext { now: number; locale: string }  // host-injected, render-time only
 ```
 
-## Validation against two vocabularies (design for two)
+`reduce` and `view` perform no I/O, read no clock, and use no randomness. `State` is JSON-serializable, holds no engine serialization and no wall-clock. `Effect` is the foundation's open envelope `{ kind: string; payload }` specialised by each system into a closed union; `Input` is each system's closed union (below).
 
-| Concept | Chat | Cards | What foundation sees |
-|---|---|---|---|
-| State slice | `ChatState` { messageHistory, deferredMessages, lastReadMessageId, notifiedChatIds, currentView } | `CardsState` { deckCursor, stats, history } | `TSystemState` (opaque) |
-| Tags claimed | speaker, type, time, duration, targetChat, receipt, immediate | card, stat | `readonly string[]` |
-| Effects produced | `chat/showNotification`, `chat/startTyping`, `chat/playSound` | `cards/statChanged`, `cards/cardShown`, `cards/gameOver` | `Effect<string, unknown>` + `FoundationEffect` |
-| View-model | hub list + thread bubbles | current card + stat bars | `TViewModel` (opaque) |
-| Physics in slice | time coherence, HWM/read cursors, deferral | none | nothing — proves time/HWM belong to **chat**, not foundation |
+## The Input algebra (closed by source)
 
-If cards cannot express its state, tags, effects, and view through these generics
-without a foundation change, the contract is wrong. That is the Phase 6 proof —
-pulled forward to **compile time** here via the two stubs.
+Every value that can drive `reduce`:
 
-## Determinism
+```
+Input = Story(InkStep)                                  -- the host stepped the ink interpreter
+      | Player(Command)                                 -- a player intent
+      | Resume(CommitFired tok | DataArrived req value  -- completion of a suspending effect
+              | StoryLoaded | Restored snapshot)
+      | Lifecycle(Init seed | Reset)                    -- start / restart
 
-- **Time** is injected via `ReduceContext.now` — no `Date.now()` in `reduce`.
-- **IDs** derive from `Snapshot.seed` threaded through the reducer — no `Math.random()`.
-- Result: `reduce` is pure → headless property tests (Phase 2) and reproducible saves.
+InkStep  = { text: string; tags: Tag[]; choices: Choice[]; externalCalls: ExternalCall[]; status: InkStatus }
+InkStatus = 'continue' | 'await-choice' | 'await-data' | 'end' | 'error'
+```
 
-## Open questions
+`Command` is an open, system-addressed channel `{ kind: string; payload }`, mirroring `Effect` but flowing inward. Player commands carry their target inside the payload (e.g. a chat id), never in the routing key.
 
-Each is tagged by how it resolves — **decide** (a human call), **discover**
-(needs evidence), **derive** (follows from a principle), or **wait** (premature to
-specify). Only *decide* questions need a call from us now.
+## The Effect algebra (closed by host capability)
 
-| Question | Mechanism | Status |
-|---|---|---|
-| Exact `StoryChunk` shape: message vs choice points | **discover** | Open — pin against real inkjs output in the walking skeleton (task-007) |
-| `ReduceContext` carries i18n, or localization is a view concern | **derive** | Open — kernel stays locale-agnostic unless ink logic branches on localized values; confirm in Phase 2 |
-| Migration-hook signature keyed off `Snapshot.version` | **wait** | Open — cannot be designed until a v1→v2 schema change exists |
-| May an experience compose more than one active system? | **decide** | **Resolved — yes; seam now, feature deferred (ADR-0005)** |
+Every value `reduce` returns for the host to perform:
+
+```
+Effect = DriveInk(Choose idx | Goto knot | SaveSnap id | LoadSnap id)  -- the host owns the ink Story
+       | Schedule(Commit delay tok)                                    -- typing/replay timer
+       | Fetch(RequestData req)                                        -- async external data
+       | Present(...)                                                  -- imperative UI: notify, typing, sound, receipt, time-change
+       | Persist(Save snapshot)                                        -- storage (kernel-initiated)
+```
+
+`Present` and `DriveInk` constructors are system-specific; the families are fixed. Effects carry no wall-clock; the host stamps emission time if an analytics sink needs it.
+
+## The generic runtime (Sans-IO host loop)
+
+The foundation runtime drives any system and owns all impure resources. Per step it:
+
+1. Computes readiness from `status(state)` (kernel-owned blocks) combined with host-owned ink readiness (`canContinue` / `choices` / `error`):
+   - `busy-commit`/`busy-data` → suspend until the matching `Resume`.
+   - else ink `canContinue` → step ink → feed `Story(InkStep)`.
+   - else ink has choices → suspend for `Player(Choose)` (host-validated).
+   - else idle → suspend for a `Player` or `Lifecycle` input.
+2. Calls `reduce`, applies the returned state, executes each `Effect` through a `kind → handler` executor (unknown kind is a typed error, never a silent no-op).
+3. Feeds the resulting `Resume` inputs back. Every suspending effect (`Schedule`, `Fetch`, `Lifecycle` load/restore) has exactly one resume; no handshake is implicit.
+
+Player `Open`/`Close` are accepted at any time after host-side validation against config. While a `Schedule(Commit)` is in flight the runtime does not pump new chunks. `bufferGeneration` (a kernel-state epoch) is bumped only by view-change commands; a chaining commit reuses the epoch; a stale `commit` is a no-op.
+
+## Host-owned resources
+
+The host owns and the kernel never touches: the ink `Story` and per-conversation snapshots; the clock; storage; the i18n/data lookups (`name`/`data` resolve into `InkStep.text` via injected deterministic fixtures); timers. Ink mutable side-channels (captured delay, awaiting-data) are drained by the host into `InkStep`/state fields, never persisted on the Story. Persistence is one host-owned snapshot `{ version, ink, state }`; the host autosaves on its own timer (no Input/Effect) and honours `Persist(Save)` for kernel-initiated saves; restore is a `Restored(snapshot)` input that rehydrates both halves.
+
+## Composition root + routing
+
+`createExperience({ systems, services, foreground?, router? })` instantiates instance-scoped services (no module singletons), builds a system registry, and runs the runtime. Routing: `Story(InkStep)` dispatches to the system claiming one of the chunk's tags (else foreground); `Player`/`Resume` commands dispatch to their named system (fail-loud on unknown). One chunk claimed by two systems is a fail-loud ambiguity (the `# system:` override is deferred until a multi-system hybrid needs it). Cross-system coordination is the single event bus; systems never import each other.
+
+## Determinism and purity (enforced)
+
+- Ids are seeded (`ctx.nextId`), not `Date.now`/`Math.random`. Displayed time is simulation-derived (`{ day, minute }`), formatted in `view` via `RenderContext.locale`, never frozen into state.
+- A `no-Date.now/Math.random/locale` lint runs over every system's `model` (reducer) package.
+- A run-twice deep-equality invariant proves `reduce` determinism. A golden is the recorded `Input→Effect`+`state` stream (kernel-observable, never opaque ink JSON), canonical (sorted keys).
+- `Input` and `Effect` handling is exhaustive (TypeScript `never` check); a new boundary crossing fails to compile until it is a constructor.
+
+## Two-vocabulary requirement
+
+The contract is validated against two genuinely different systems — chat (messages, time, read state) and cards (deck, stats; no time/read concepts) — each a closed `Input`/`Effect` algebra driven by the one runtime. Adding or removing a system touches no foundation source.
