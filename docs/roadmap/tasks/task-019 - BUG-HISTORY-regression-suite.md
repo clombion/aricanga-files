@@ -1,7 +1,7 @@
 ---
 id: task-019
 title: BUG-HISTORY regression suite
-status: To Do
+status: Done
 assignee: []
 created_date: 2026-06-16
 updated_date: 2026-06-28
@@ -59,4 +59,17 @@ This task **is** test code; coverage is measured against the BUG-HISTORY manifes
 
 ## Implementation Notes
 
-_None yet._
+- `chat/test/regression-ledger.ts` — the typed manifest (all 32 entries: 13 `BUG-NNN`
+  + 19 legacy with stable slug ids) + the 4 kernel-physics `Input`-stream fixtures.
+- `chat/test/regression-ledger.test.ts` — the meta-test: parses `## BUG-NNN:` headers
+  from BUG-HISTORY.md and asserts each is dispositioned; freezes the legacy count at
+  19; asserts each kernel-physics entry keeps a non-empty fixture + predicate + task.
+  Verified it fails when a disposition is removed (teeth).
+- Green now: the cross-chat routing regression via `routingOwnership`; `effectsCarryChatId`
+  exercised over the notification fixture.
+- Distributed green assertions: dup-notif → `notifyOnce`/021, receipt → `receiptMonotonic`/024,
+  typing → `effectsCarryChatId`/032. No red/`.skip`/expected-red test committed.
+- `effectsCarryChatId` added to `@narratives/system-chat/testing` (7th predicate);
+  BUG-005 recorded `deferred → task-059`.
+- Dispositions: 4 kernel-physics, 1 deferred, 6 structurally-eliminated, 17 view→Phase 3,
+  4 build→Phase 4. Verified: `tsc -b`, `lint`, `test:rebuild` (37), `vite build`.

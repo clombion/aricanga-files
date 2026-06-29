@@ -57,7 +57,7 @@ invariant/regression suites come first (red), then the physics slices to green.
 | task-062 | Reshape the merged Phase 1 foundation to the algebra | Done | 040, 041 |
 | task-017 | Kernel test harness and fixtures | Done | 040, 041, 062 |
 | task-018 | Simulation-physics invariant suite (property-based) | Done | 017 |
-| task-019 | BUG-HISTORY regression suite | To Do | 017 |
+| task-019 | BUG-HISTORY regression suite | Done | 017, 018 |
 | task-020 | Message routing and targetChat | To Do | 017, 018 |
 | task-021 | Deferred queue and emergent notifications | To Do | 020 |
 | task-022 | HWM read cursors and unread separator | To Do | 021 |

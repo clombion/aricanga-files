@@ -98,6 +98,21 @@ export function forwardOnlyTime(run: FixtureRun): Violation | null {
   return null;
 }
 
+// task-019/BUG-008, consumed by task-032: no chat effect that declares a chatId
+// carries a null/absent one (the typing-emission guard). Vacuous until task-032
+// emits the typing effect; green over today's `chat/showNotification`.
+export function effectsCarryChatId(run: FixtureRun): Violation | null {
+  for (const eff of run.effects) {
+    if (eff.kind.startsWith('chat/')) {
+      const payload = eff.payload as { chatId?: unknown };
+      if ('chatId' in payload && (payload.chatId === null || payload.chatId === undefined || payload.chatId === '')) {
+        return { rule: 'effects-carry-chatid', detail: `effect "${eff.kind}" has an absent chatId` };
+      }
+    }
+  }
+  return null;
+}
+
 // task-024: a message receipt only advances sent → delivered → read.
 const RECEIPT_RANK: Readonly<Record<string, number>> = { sent: 0, delivered: 1, read: 2 };
 export function receiptMonotonic(run: FixtureRun): Violation | null {
