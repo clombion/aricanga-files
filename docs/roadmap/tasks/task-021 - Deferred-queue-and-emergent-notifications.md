@@ -38,19 +38,25 @@ arriving in a chat you've been notified about but haven't opened.
 
 - **Classes:** behaviour (+ constraint)
 - behaviour/example (pre-commit): #1–#5 — driven by `Player(open/close)`: in-chat defer + single-shot replay, notify-once, viewed-chat no-notify, `# immediate` flush
-- behaviour/property (CI): #6 — the notify-once + seed-exclusion invariants from task-018 (now green)
-- constraint/architecture (pre-commit): #6 — reducer purity; `routingOwnership` broadened but ownership-only
+- behaviour/property (CI): #6 — wire an explicit `notifyOnce` assertion (it is defined but run by no test today) over the `duplicate-notifications` regression fixture *and* a new in-chat defer fixture; `seedExclusion` stays green
+- constraint/architecture (pre-commit): #6 — reducer purity; `routingOwnership` broadened but ownership-only. `chat-fixtures.test.ts` is verified-unaffected (its single-chat assertions key on family/kind + `every`, not a notification count, so 2→1 survives)
 
 ## Implementation Plan
 
 - `ChatCommand = Command<'open',{chatId}> | Command<'close',undefined>`; narrow the
   system; `system.ts` handles `Player`.
-- `model/defer.ts` (pure): the four-way notify/defer branch
-  (`inAnotherChat && alreadyNotified → defer`, else history + maybe notify+mark),
-  `appendDeferred`, `openChat` (clear-notified + single-shot replay), the
-  `# immediate` flush. `notifiedChatIds` is a `string[]` — array ops, not Set.
+- `model/defer.ts` (pure): branch order is **immediate-flush first**, then defer, then
+  history+maybe-notify — `# immediate` (detected via `step.tags.some(t => t.key ===
+  'immediate')`) is checked *ahead* of the defer gate, else an in-another-chat
+  already-notified immediate would wrongly defer; `inAnotherChat && alreadyNotified →
+  defer`, else append to history + (`!isViewed && !alreadyNotified` → notify + mark).
+  `appendDeferred`, `openChat` (clear-notified + single-shot replay that **moves the
+  stored VMs** — they keep their defer-time ids, no `ctx.nextId()` on replay).
+  `notifiedChatIds` is a `string[]` — array ops, not Set.
 - `chat/src/testing/predicates.ts`: broaden `routingOwnership` to accept
-  `deferredMessages[target]` (ownership-only; defer-correctness via examples).
+  `deferredMessages[target]` (ownership-only; defer-correctness via examples). Required
+  for the new in-chat defer assertions (existing hub-only tests don't defer, so they
+  stay green either way).
 - `defer.test.ts` — `Player`-open-driven examples (no existing fixture is in a chat).
 - Forward note for task-022: the unread separator is derived in the view from
   `notifiedChatIds.has(chatId)` *before* `open` clears it — 022's separator must read
