@@ -23,9 +23,9 @@ no 021 seam. Turns task-018's `hwmMonotonic` green.
 
 - [ ] #1 `lastReadMessageId[C]` advances to C's last message id when you **leave** C — on close, and on chat-to-chat navigation away from C — but not on initial open and not on receiving while viewing
 - [ ] #2 The cursor doubles as the separator anchor: on the **first notification** of a chat, if the cursor is unset, it is set to the chat's last message id *before* the arriving message (or `null` = before-all if the chat was empty); an existing cursor is preserved
-- [ ] #3 Edge encoding holds: absent entry → no separator; `null` → separator at top (before-all); an id → separator after that id; a `# immediate` flush into an already-notified chat sets no new anchor
+- [ ] #3 Edge encoding holds: absent entry → no separator; `null` → separator at top (before-all); an id → separator after that id; a `# immediate` flush into an already-notified chat sets no new anchor. This encoding is the binding contract — it deliberately replaces the POC's `'__BEFORE_ALL__'` string sentinel with `null`, so the Phase-3 renderer keys off *this* mapping (`null`⇒top), not the POC's (`null`⇒no-separator)
 - [ ] #4 The separator is computed purely as derived data — the view exposes the cursor and placement is derived from `lastReadMessageId` + `messageHistory`; no stored separator field, no imperative insertion
-- [ ] #5 `hwmMonotonic` is green and **meaningfully exercised** by a `notify → open → leave` fixture (the weak form: the cursor never un-reads; forward-advance strengthening is deferred)
+- [ ] #5 `hwmMonotonic` is green and **meaningfully exercised** — the leave-advance is covered by an explicit `notify → open → leave` *example* (the story-only property generator drives the anchor-set but not the leave-rule), the weak form (the cursor never un-reads; forward-advance strengthening is deferred)
 
 ## Tests
 
@@ -37,10 +37,15 @@ no 021 seam. Turns task-018's `hwmMonotonic` green.
 ## Implementation Plan
 
 - `model/defer.ts` — in `placeMessage`'s notify branch (`!isViewed && !alreadyNotified`),
-  set `lastReadMessageId[chatId]` if absent to the last id of `messageHistory[chatId]`
-  *before* the append, or `null` if empty. (The anchor-set lives here — it's part of
-  the notify physics — which avoids a `defer ↔ read-state` import cycle.)
-- `model/read-state.ts` (new, pure): `markRead(state, chatId)` (cursor → C's last id);
+  set `lastReadMessageId[chatId]` **if absent** to the **pre-append** last id —
+  `const prior = state.messageHistory[chatId] ?? []` (read from `state`, NOT `next`,
+  which already holds the new message — an off-by-one that would put the separator
+  *after* the new message), `prior.length ? prior.at(-1).id : null`. (The anchor-set
+  lives here — it's part of the notify physics — which avoids a `defer ↔ read-state`
+  import cycle.)
+- `model/read-state.ts` (new, pure): `markRead(state, chatId)` (cursor → C's last id;
+  **no-op when C is empty** — never write `null` on leave, else an empty-chat-leave
+  would read as before-all/top under this encoding);
   the open/close orchestration over 021's `openChat`/`closeChat` — `open Y`:
   `markRead(prev)` when in a different chat, then `openChat`; `close`: `markRead(current)`,
   then `closeChat`.
