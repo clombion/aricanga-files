@@ -1,7 +1,7 @@
 ---
 id: task-022
 title: HWM read cursors and unread separator
-status: To Do
+status: Done
 assignee: []
 created_date: 2026-06-16
 updated_date: 2026-06-30
@@ -60,4 +60,18 @@ stays green and meaningful (an `id → null` regression still trips it).
 
 ## Implementation Notes
 
-_None yet._
+- Cursor-as-anchor, no new state field. `model/defer.ts` `placeMessage` notify branch
+  sets `lastReadMessageId[chatId]` if absent to the **pre-append** last id (read from
+  `state`, not `next`) or `null` (before-all) for an empty chat; an existing cursor is
+  preserved.
+- `model/read-state.ts`: `markRead` (cursor → C's last id; **no-op on empty** — never
+  writes `null` on leave); `openWithReadState` (markRead prev on chat-to-chat nav, then
+  021's `openChat`) / `closeWithReadState` (markRead current, then `closeChat`). The
+  system's open/close handlers call these. No `defer ↔ read-state` cycle.
+- `ChatViewModel` exposes `lastRead`; the `<unread-separator>` placement is Phase 3,
+  keyed off this encoding (absent=none, null=top, id=after) — replacing the POC's
+  `'__BEFORE_ALL__'` sentinel.
+- `read-state.test.ts` (6): close/nav cursor advance, no-write-on-open/receive,
+  before-all anchor, set-cursor preservation, and `hwmMonotonic` green over a real
+  notify→open→leave stream (non-vacuous; the weak no-un-reading form).
+- Zero foundation changes. Verified: `tsc -b`, `lint`, `test:rebuild` (53), `vite build`.

@@ -4,7 +4,8 @@ import {
   type ReduceResult,
   type System,
 } from '@narratives/foundation';
-import { closeChat, isImmediate, openChat, placeMessage } from './model/defer';
+import { isImmediate, placeMessage } from './model/defer';
+import { closeWithReadState, openWithReadState } from './model/read-state';
 import { buildMessage, readChatSwitch, resolveChatId } from './model/route';
 import { type ChatState, initChatState } from './state';
 
@@ -28,6 +29,9 @@ export const CHAT_TAGS = [
 export interface ChatViewModel {
   readonly view: ChatState['currentView'];
   readonly messages: ChatState['messageHistory'];
+  // The read cursor per chat — the unread-separator anchor (absent = none,
+  // null = before-all/top, id = after that id). Placement is derived in Phase 3.
+  readonly lastRead: ChatState['lastReadMessageId'];
 }
 
 // Chat kernel (Phase 2). task-020: routing (`# chat:` context, `# targetChat`
@@ -40,8 +44,8 @@ export const chatSystem: System<ChatState, ChatCommand, Effect, ChatViewModel> =
   reduce(state, input, ctx): ReduceResult<ChatState, Effect> {
     if (input.source === 'player') {
       const { command } = input;
-      if (command.kind === 'open') return { state: openChat(state, command.payload.chatId), effects: [] };
-      if (command.kind === 'close') return { state: closeChat(state), effects: [] };
+      if (command.kind === 'open') return { state: openWithReadState(state, command.payload.chatId), effects: [] };
+      if (command.kind === 'close') return { state: closeWithReadState(state), effects: [] };
       return { state, effects: [] };
     }
     if (input.source !== 'story') return { state, effects: [] };
@@ -57,5 +61,9 @@ export const chatSystem: System<ChatState, ChatCommand, Effect, ChatViewModel> =
     return placeMessage(base, message, isImmediate(step));
   },
   status: () => 'free',
-  view: (state) => ({ view: state.currentView, messages: state.messageHistory }),
+  view: (state) => ({
+    view: state.currentView,
+    messages: state.messageHistory,
+    lastRead: state.lastReadMessageId,
+  }),
 };

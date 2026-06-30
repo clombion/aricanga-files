@@ -53,8 +53,15 @@ export function placeMessage(state: ChatState, message: ChatMessageVM, immediate
 
   const next = appendMessage(state, message);
   if (!isViewed && !alreadyNotified) {
+    // Anchor the unread separator at the pre-append last id (or null = before-all
+    // for an empty chat), only if the cursor is unset — a set cursor preserves the
+    // read position. Read from `state`, not `next` (which already holds `message`).
+    const lastReadMessageId =
+      chatId in state.lastReadMessageId
+        ? next.lastReadMessageId
+        : { ...next.lastReadMessageId, [chatId]: state.messageHistory[chatId]?.at(-1)?.id ?? null };
     return {
-      state: { ...next, notifiedChatIds: [...next.notifiedChatIds, chatId] },
+      state: { ...next, notifiedChatIds: [...next.notifiedChatIds, chatId], lastReadMessageId },
       effects: [fx.present('chat/showNotification', { chatId, preview: message.text })],
     };
   }
