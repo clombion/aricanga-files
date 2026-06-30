@@ -3,10 +3,16 @@ import {
   type Effect,
   type ReduceResult,
   type System,
-  fx,
 } from '@narratives/foundation';
-import { appendMessage, buildMessage, readChatSwitch, resolveChatId } from './model/route';
+import { closeChat, isImmediate, openChat, placeMessage } from './model/defer';
+import { buildMessage, readChatSwitch, resolveChatId } from './model/route';
 import { type ChatState, initChatState } from './state';
+
+// The chat player commands: open a chat (focus + clear-notified + replay) or
+// close back to the hub.
+export type ChatCommand =
+  | Command<'open', { readonly chatId: string }>
+  | Command<'close', undefined>;
 
 export const CHAT_TAGS = [
   'chat',
@@ -24,15 +30,20 @@ export interface ChatViewModel {
   readonly messages: ChatState['messageHistory'];
 }
 
-// Chat kernel (Phase 2). task-020: routing — a `# chat:` tag sets the conversation
-// context; a message routes to `# targetChat` (override) or `activeChat`, lands in
-// its owning chat's history with a stable id, and a background message notifies.
-// Deferral, notify-once, and replay are task-021. Commands narrow in later slices.
-export const chatSystem: System<ChatState, Command, Effect, ChatViewModel> = {
+// Chat kernel (Phase 2). task-020: routing (`# chat:` context, `# targetChat`
+// override, owning-chat identity). task-021: emergent notifications (notify-once),
+// the deferred queue, `# immediate`, and the open/close lifecycle.
+export const chatSystem: System<ChatState, ChatCommand, Effect, ChatViewModel> = {
   id: 'chat',
   tags: [...CHAT_TAGS],
   init: (_seed) => initChatState(),
   reduce(state, input, ctx): ReduceResult<ChatState, Effect> {
+    if (input.source === 'player') {
+      const { command } = input;
+      if (command.kind === 'open') return { state: openChat(state, command.payload.chatId), effects: [] };
+      if (command.kind === 'close') return { state: closeChat(state), effects: [] };
+      return { state, effects: [] };
+    }
     if (input.source !== 'story') return { state, effects: [] };
     const { step } = input;
 
@@ -43,14 +54,7 @@ export const chatSystem: System<ChatState, Command, Effect, ChatViewModel> = {
 
     const chatId = resolveChatId(step, base.activeChat);
     const message = buildMessage(step, chatId, ctx);
-    const next = appendMessage(base, message);
-
-    const isBackground =
-      next.currentView.type !== 'chat' || next.currentView.chatId !== chatId;
-    const effects: Effect[] = isBackground
-      ? [fx.present('chat/showNotification', { chatId, preview: message.text })]
-      : [];
-    return { state: next, effects };
+    return placeMessage(base, message, isImmediate(step));
   },
   status: () => 'free',
   view: (state) => ({ view: state.currentView, messages: state.messageHistory }),

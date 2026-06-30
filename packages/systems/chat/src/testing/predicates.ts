@@ -9,7 +9,9 @@ import type { ChatState } from '../state';
 
 const asChat = (state: unknown): ChatState => state as ChatState;
 
-// task-020: a message tagged `targetChat:X` lands in chat X's history.
+// task-020: a message tagged `targetChat:X` reaches chat X. Ownership-only — it
+// lands in X's history OR its deferred queue (task-021 may defer it); defer-
+// correctness (when to defer) is covered by the chat example tests, not here.
 export function routingOwnership(run: FixtureRun): Violation | null {
   let at = 0;
   for (const rec of run.trace) {
@@ -17,9 +19,11 @@ export function routingOwnership(run: FixtureRun): Violation | null {
     if (input.source === 'story') {
       const target = input.step.tags.find((t) => t.key === 'targetChat')?.value;
       if (target !== undefined && input.step.text !== '') {
-        const history = asChat(rec.state).messageHistory[target] ?? [];
-        if (!history.some((m) => m.text === input.step.text)) {
-          return { rule: 'routing-ownership', detail: `message for "${target}" missing from its history`, at };
+        const state = asChat(rec.state);
+        const inHistory = (state.messageHistory[target] ?? []).some((m) => m.text === input.step.text);
+        const inDeferred = (state.deferredMessages[target] ?? []).some((m) => m.text === input.step.text);
+        if (!inHistory && !inDeferred) {
+          return { rule: 'routing-ownership', detail: `message for "${target}" reached neither history nor deferred`, at };
         }
       }
     }

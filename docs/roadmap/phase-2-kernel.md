@@ -35,7 +35,7 @@ See [`tasks/`](tasks/README.md). TDD-led: contract + runtime + suites first (red
 - [x] task-018 — Simulation-physics invariant suite (property-based) + purity/determinism/exhaustiveness invariants
 - [x] task-019 — BUG-HISTORY regression suite
 - [x] task-020 — Message routing and targetChat + buffer/command loop
-- [ ] task-021 — Deferred queue and emergent (atomic) notifications
+- [x] task-021 — Deferred queue and emergent (atomic) notifications
 - [ ] task-022 — HWM read cursors and unread boundary
 - [ ] task-023 — Forward-only simulation time
 - [ ] task-024 — Read receipts (unified backward-walk)

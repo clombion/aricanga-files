@@ -1,7 +1,7 @@
 ---
 id: task-021
 title: Deferred queue and emergent notifications
-status: To Do
+status: Done
 assignee: []
 created_date: 2026-06-16
 updated_date: 2026-06-28
@@ -64,4 +64,16 @@ arriving in a chat you've been notified about but haven't opened.
 
 ## Implementation Notes
 
-_None yet._
+- `model/defer.ts` (pure): `placeMessage` — immediate-flush first, then
+  `inAnotherChat && alreadyNotified → defer`, else history + (`!isViewed &&
+  !alreadyNotified` → notify+mark). `openChat` (focus + clear-notified + single-shot
+  replay that moves the stored VMs, ids preserved) / `closeChat` (→ hub). `# immediate`
+  detected via the tag array; `notifiedChatIds` as `string[]` ops.
+- `ChatCommand = open{chatId} | close`; the system narrows to it and handles `Player`.
+- `routingOwnership` broadened to `messageHistory ∪ deferredMessages` (ownership-only).
+- `defer.test.ts` (5 `Player(open)`-driven examples: notify-once, in-chat defer,
+  open-replay-in-order, viewed-chat no-notify, `# immediate` flush). `notifyOnce`
+  wired green here and over the `duplicate-notifications` regression (it ran in no
+  test before). `chat-fixtures` survived the 2→1 notification change unchanged.
+- Zero foundation changes. Verified: `tsc -b`, `lint`, `test:rebuild` (47), `vite build`.
+  notify-once + seed-exclusion green; routing/determinism/purity green.
