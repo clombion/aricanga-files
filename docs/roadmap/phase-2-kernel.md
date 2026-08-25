@@ -37,7 +37,7 @@ See [`tasks/`](tasks/README.md). TDD-led: contract + runtime + suites first (red
 - [x] task-020 — Message routing and targetChat + buffer/command loop
 - [x] task-021 — Deferred queue and emergent (atomic) notifications
 - [x] task-022 — HWM read cursors and unread boundary
-- [ ] task-023 — Forward-only simulation time
+- [x] task-023 — Forward-only simulation time
 - [ ] task-024 — Read receipts (unified backward-walk)
 - [ ] task-025 — Seeds
 - [ ] task-026 — Message grouping derivation (view-side, simulation-time keyed)

@@ -5,6 +5,9 @@ export interface ChatMessageVM {
   readonly chatId: string;
   readonly speaker: string;
   readonly text: string;
+  // Simulation time when the message arrived (absolute minutes = day*1440 + minuteOfDay);
+  // null = arrived before any time was anchored (view renders a date separator).
+  readonly time: number | null;
 }
 
 /** The presentation fields of a message, parsed from an ink step. */

@@ -7,6 +7,7 @@ import {
 import { isImmediate, placeMessage } from './model/defer';
 import { closeWithReadState, openWithReadState } from './model/read-state';
 import { buildMessage, readChatSwitch, resolveChatId } from './model/route';
+import { advanceTime } from './model/time';
 import { type ChatState, initChatState } from './state';
 
 // The chat player commands: open a chat (focus + clear-notified + replay) or
@@ -54,11 +55,15 @@ export const chatSystem: System<ChatState, ChatCommand, Effect, ChatViewModel> =
     // A `# chat:` tag switches the conversation context for subsequent messages.
     const switched = readChatSwitch(step);
     const base = switched !== null ? { ...state, activeChat: switched } : state;
-    if (step.text === '') return { state: base, effects: [] };
 
-    const chatId = resolveChatId(step, base.activeChat);
-    const message = buildMessage(step, chatId, ctx);
-    return placeMessage(base, message, isImmediate(step));
+    // Advance the clock: `advance_day` fires even on a text-empty line, so run it
+    // before the early return; message time-tags/drift apply only to a message.
+    const timed = advanceTime(base, step);
+    if (step.text === '') return { state: timed, effects: [] };
+
+    const chatId = resolveChatId(step, timed.activeChat);
+    const message = buildMessage(step, chatId, ctx, timed.clock);
+    return placeMessage(timed, message, isImmediate(step));
   },
   status: () => 'free',
   view: (state) => ({

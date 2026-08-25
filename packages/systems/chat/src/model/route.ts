@@ -18,9 +18,14 @@ export function resolveChatId(step: InkStep, activeChat: string | null): string 
   return target ?? activeChat ?? DEFAULT_CHAT;
 }
 
-/** Build a message view-model, stamping identity (id + owning chatId). */
-export function buildMessage(step: InkStep, chatId: string, ctx: ReduceContext): ChatMessageVM {
-  return { id: ctx.nextId(), chatId, ...reduceStep(step) };
+/** Build a message view-model, stamping identity (id + owning chatId) and time. */
+export function buildMessage(
+  step: InkStep,
+  chatId: string,
+  ctx: ReduceContext,
+  time: number | null,
+): ChatMessageVM {
+  return { id: ctx.nextId(), chatId, time, ...reduceStep(step) };
 }
 
 // Append a message to its owning chat's history (immutably).

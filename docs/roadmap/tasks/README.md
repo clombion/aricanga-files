@@ -61,7 +61,7 @@ invariant/regression suites come first (red), then the physics slices to green.
 | task-020 | Message routing and targetChat | Done | 017, 018 |
 | task-021 | Deferred queue and emergent notifications | Done | 020 |
 | task-022 | HWM read cursors and unread separator | Done | 021 |
-| task-023 | Forward-only time coherence | To Do | 017, 018 |
+| task-023 | Forward-only time coherence | Done | 017, 018 |
 | task-024 | Read receipts | To Do | 020 |
 | task-025 | Seeds | To Do | 020 |
 | task-026 | Message grouping derivation | To Do | 020 |

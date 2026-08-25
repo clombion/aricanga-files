@@ -3,9 +3,10 @@ import type { ChatState } from '../state';
 
 // The chat physics invariants from docs/concepts/simulation-physics.md, as pure
 // predicates over a completed run's observable Input→Effect+state stream. Authored
-// here (task-018); tasks 020–025 drive the reducer until each holds green. Some
-// reference effects the physics will emit (forward-declared: chat/timeChanged,
-// chat/receiptChanged) — vacuously satisfied until then.
+// here (task-018); tasks 020–025 drive the reducer until each holds green. Each
+// reads its natural observable: persistent values (routing, HWM cursor, the clock)
+// over state; transient events (notifications) over effects. `receiptMonotonic`
+// forward-declares the `chat/receiptChanged` effect task-024 will emit.
 
 const asChat = (state: unknown): ChatState => state as ChatState;
 
@@ -90,14 +91,16 @@ export function hwmMonotonic(run: FixtureRun): Violation | null {
 // task-023: simulation time never goes backward (forward-only rule).
 export function forwardOnlyTime(run: FixtureRun): Violation | null {
   let last = Number.NEGATIVE_INFINITY;
-  for (const eff of run.effects) {
-    if (eff.kind === 'chat/timeChanged') {
-      const absolute = (eff.payload as { absolute: number }).absolute;
-      if (absolute < last) {
-        return { rule: 'forward-only-time', detail: `time went backward to ${absolute} (was ${last})` };
+  let at = 0;
+  for (const rec of run.trace) {
+    const { clock } = asChat(rec.state);
+    if (clock !== null) {
+      if (clock < last) {
+        return { rule: 'forward-only-time', detail: `clock went backward to ${clock} (was ${last})`, at };
       }
-      last = absolute;
+      last = clock;
     }
+    at += 1;
   }
   return null;
 }
