@@ -23,11 +23,11 @@ forward-only time → 023; receipts → 024; seed exclusion → 021 and 025): au
 is here, consumption distributes. (Grouping is a deterministic view derivation, not
 a property invariant — task-026 covers it by golden, so it is not authored here.)
 
-Predicates target the **observable stream** rather than internal state where the
-observable carries the signal: notify-once → notification effects per chat between
-opens; forward-only time → monotonic `TimeChanged` effects; receipts → upgrade
-effects. Those time/receipt effect kinds do not exist yet — the predicates
-forward-declare the effects that tasks 023/024 will emit to satisfy them. Routing
+Each predicate targets its natural observable: transient events over the effect
+stream (notify-once → notification effects per chat between opens; receipts →
+`chat/receiptChanged` upgrade effects, which task-024 will emit), persistent values
+over state (routing, the HWM cursor, and — resolved in task-023 — the forward-only
+clock read from `state.clock`, not an effect). Routing
 ownership reads the input `targetChat` against the resulting routing (the stub emits
 a notification effect only for background chats, so routing is read from the
 input/state, not from effects alone). The chat state shape is already full (ADR-0004,

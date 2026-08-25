@@ -3,13 +3,16 @@ import type { ChatState } from '../state';
 
 // The chat physics invariants from docs/concepts/simulation-physics.md, as pure
 // predicates over a completed run's observable Input→Effect+state stream. Authored
-// here (task-018); tasks 020–025 drive the reducer until each holds green. Some
-// reference effects the physics will emit (forward-declared: chat/timeChanged,
-// chat/receiptChanged) — vacuously satisfied until then.
+// here (task-018); tasks 020–025 drive the reducer until each holds green. Each
+// reads its natural observable: persistent values (routing, HWM cursor, the clock)
+// over state; transient events (notifications) over effects. `receiptMonotonic`
+// forward-declares the `chat/receiptChanged` effect task-024 will emit.
 
 const asChat = (state: unknown): ChatState => state as ChatState;
 
-// task-020: a message tagged `targetChat:X` lands in chat X's history.
+// task-020: a message tagged `targetChat:X` reaches chat X. Ownership-only — it
+// lands in X's history OR its deferred queue (task-021 may defer it); defer-
+// correctness (when to defer) is covered by the chat example tests, not here.
 export function routingOwnership(run: FixtureRun): Violation | null {
   let at = 0;
   for (const rec of run.trace) {
@@ -17,9 +20,11 @@ export function routingOwnership(run: FixtureRun): Violation | null {
     if (input.source === 'story') {
       const target = input.step.tags.find((t) => t.key === 'targetChat')?.value;
       if (target !== undefined && input.step.text !== '') {
-        const history = asChat(rec.state).messageHistory[target] ?? [];
-        if (!history.some((m) => m.text === input.step.text)) {
-          return { rule: 'routing-ownership', detail: `message for "${target}" missing from its history`, at };
+        const state = asChat(rec.state);
+        const inHistory = (state.messageHistory[target] ?? []).some((m) => m.text === input.step.text);
+        const inDeferred = (state.deferredMessages[target] ?? []).some((m) => m.text === input.step.text);
+        if (!inHistory && !inDeferred) {
+          return { rule: 'routing-ownership', detail: `message for "${target}" reached neither history nor deferred`, at };
         }
       }
     }
@@ -86,14 +91,16 @@ export function hwmMonotonic(run: FixtureRun): Violation | null {
 // task-023: simulation time never goes backward (forward-only rule).
 export function forwardOnlyTime(run: FixtureRun): Violation | null {
   let last = Number.NEGATIVE_INFINITY;
-  for (const eff of run.effects) {
-    if (eff.kind === 'chat/timeChanged') {
-      const absolute = (eff.payload as { absolute: number }).absolute;
-      if (absolute < last) {
-        return { rule: 'forward-only-time', detail: `time went backward to ${absolute} (was ${last})` };
+  let at = 0;
+  for (const rec of run.trace) {
+    const { clock } = asChat(rec.state);
+    if (clock !== null) {
+      if (clock < last) {
+        return { rule: 'forward-only-time', detail: `clock went backward to ${clock} (was ${last})`, at };
       }
-      last = absolute;
+      last = clock;
     }
+    at += 1;
   }
   return null;
 }

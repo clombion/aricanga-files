@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { erase } from '@narratives/foundation';
 import { runStream } from '@narratives/foundation/testing';
-import { effectsCarryChatId, routingOwnership } from '@narratives/system-chat/testing';
+import { effectsCarryChatId, notifyOnce, routingOwnership } from '@narratives/system-chat/testing';
 import { expect, test } from 'vitest';
 import { chatSystem } from '../src/system';
 import { FIXTURES, LEDGER } from './regression-ledger';
@@ -51,4 +51,11 @@ test('routing regression (cross-chat) is green via routingOwnership', async () =
 test('effectsCarryChatId holds over the notification fixture', async () => {
   const run = await runStream({ systems: [erase(chatSystem)], foreground: 'chat' }, [...FIXTURES['duplicate-notifications']]);
   expect(effectsCarryChatId(run)).toBeNull();
+});
+
+// task-021 — the dup-notifications regression is now dead: notify-once holds over
+// its historical scenario (two messages to one chat → exactly one notification).
+test('the duplicate-notifications regression stays dead (notifyOnce green)', async () => {
+  const run = await runStream({ systems: [erase(chatSystem)], foreground: 'chat' }, [...FIXTURES['duplicate-notifications']]);
+  expect(notifyOnce(run)).toBeNull();
 });
