@@ -243,7 +243,17 @@
       }
     ],
     "vitest/prefer-to-be-falsy": "off",
-    "vitest/prefer-to-be-truthy": "off"
+    "vitest/prefer-to-be-truthy": "off",
+    "node/no-top-level-await": "off",
+    "eslint/new-cap": [
+      "error",
+      {
+        "capIsNewExceptions": [
+          "Compile",
+          "ToJson"
+        ]
+      }
+    ]
   },
   "overrides": [
     {
@@ -422,7 +432,10 @@
     },
     {
       "files": [
-        "harness/lint-rules/plugin.ts"
+        "harness/lint-rules/plugin.ts",
+        "**/vite.config.ts",
+        "**/playwright.*.config.ts",
+        "vitest.gate.config.ts"
       ],
       "rules": {
         "import/no-default-export": "off"
