@@ -8,7 +8,8 @@ TypeScript checked by the harness's own project. Every rule is on as an error, a
 The modules import each other as `#lint-rules/…`. This folder's own `package.json` maps that
 prefix, so the plugin also loads where a check copies the folder into a planted project, outside
 the repository's root manifest. `ast.ts` holds the node and context helpers and `jsx.ts` the JSX
-ones; `rules/jsx-rules.ts` and `rules/module-rules.ts` collect the rules for `plugin.ts`.
+ones, and `closed.ts` the readers the closed-set rules share; `rules/jsx-rules.ts`,
+`rules/module-rules.ts` and `rules/closed-rules.ts` collect the rules for `plugin.ts`.
 
 | Rule | Holds |
 |---|---|
@@ -21,11 +22,12 @@ ones; `rules/jsx-rules.ts` and `rules/module-rules.ts` collect the rules for `pl
 | `aricanga/legacy` | No replaceChildren or document.createElement in a component module. |
 | `aricanga/mechanics` | No solid-js or @solidjs/* import under packages/foundation or a system model. |
 | `aricanga/mirrors` | No effect whose only work is calling a setter; derive the value. |
-| `aricanga/promises` | No two-argument .then; chain .catch, or await in a try. |
+| `aricanga/own-keys` | A record keyed by story words is read through its own entries: Object.hasOwn, never in or a defaulted read. |
 | `aricanga/statics` | No this inside a static method, static field or static block; name the class. |
 | `aricanga/store-owner` | createStore and reconcile only in the snapshot adapter (the `owners` globs). |
 | `aricanga/style-prop` | No style prop in JSX; set dynamic values with a class or a ref. |
 | `aricanga/sync-parts` | No async, await, promise, .then or <Loading> in a component module. |
+| `aricanga/total-reads` | A closed set is read through a total table or an exhaustive switch, not a chain or an inline list. |
 | `aricanga/view-imports` | A view module imports no reduce, no effect type and no model module. |
 | `aricanga/vm-prop` | A component takes a single undestructured props with exactly one prop, vm. |
 
@@ -53,9 +55,20 @@ the repository's own tools never lint or compile a must-fire case.
 - jsx-a11y's `label-has-associated-control` knows only `htmlFor` and has no option for Solid's
   `for`, and its `no-autofocus` sees only `autoFocus`; `labels` and `autofocus` take their place.
 - kiz-radar's `thens` (no `.then` in components) is part of `sync-parts`.
+- A two-argument `.then`, whose rejection handler misses errors thrown in the first, is
+  `promise/prefer-catch`'s, proven by a `lint-settings` plant.
 - Some must-fire cases are also refused by a shipped rule, and their fixtures show both:
-  `node/no-process-env` (a `process.env` read), `promise/prefer-catch` (a two-argument `.then`),
+  `node/no-process-env` (a `process.env` read),
   `promise/prefer-await-to-then` and `solid/reactivity` (promise work in a part),
   `solid/no-react-specific-props` (`htmlFor`) and `solid/no-destructure` (destructured props).
+- closedworld's shape rules: `total-reads` and `own-keys` are here, and the `declared-sets` check
+  holds one declaration per closed set across modules, which no per-file rule can see. Shipped
+  rules hold the rest, each proven by a `lint-settings` plant: `typescript/switch-exhaustiveness-check`
+  refuses a switch whose `default` hides a member of its union, `typescript/no-unnecessary-condition`
+  a defaulted read of a total table, and `typescript/no-unsafe-type-assertion` a cast into a union
+  outside a parser; the compiler refuses a `Record<Union, …>` table missing a member. A table of
+  fixed keys typed `Record<string, …>` is not refused: the shape is as often the set's own
+  declaration (a rule registry, a plant table) as a restatement, and only a type-aware check can
+  tell them apart.
 - kiz-radar's `markup`, `classes`, `buttons` and `clicks` are not ported: its task 4.10 may retire
   them in favour of rules Solid or oxlint already ship.

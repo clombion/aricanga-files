@@ -40,7 +40,7 @@ function timing(value: unknown): Timing {
  */
 async function baseline(project: string): Promise<Timing> {
   const parsed: unknown = JSON.parse(await readFile(new URL('../performance-baseline.json', import.meta.url), 'utf8'));
-  if (typeof parsed !== 'object' || parsed === null || !(project in parsed)) {
+  if (typeof parsed !== 'object' || parsed === null || !Object.hasOwn(parsed, project)) {
     throw new Error(`performance-baseline.json has no entry for ${project}: run pnpm run characterise:baseline`);
   }
   return timing(Object.getOwnPropertyDescriptor(parsed, project)?.value);

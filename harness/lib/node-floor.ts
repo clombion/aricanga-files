@@ -20,6 +20,9 @@ const FLOOR = /^>=\s*(?<version>\d+\.\d+\.\d+)$/u;
 /** The value a missing part of a version stands for. */
 const MISSING_PART = 0;
 
+/** What `findIndex` returns when no part differs: `.at` would read it as the last part. */
+const NOT_FOUND = -1;
+
 /**
  * Parse an exact `x.y.z` (a leading `v` allowed).
  *
@@ -56,9 +59,9 @@ function floor(range: string): Version {
  * @returns {boolean} Whether it meets the floor.
  */
 function meets(found: Version, minimum: Version): boolean {
-  const differing = found.findIndex((part, index) => part !== (minimum[index] ?? MISSING_PART));
-  const part = found[differing];
-  return part === undefined || part > (minimum[differing] ?? MISSING_PART);
+  const differing = found.findIndex((part, index) => part !== (minimum.at(index) ?? MISSING_PART));
+  const part = found.at(differing);
+  return differing === NOT_FOUND || part === undefined || part > (minimum.at(differing) ?? MISSING_PART);
 }
 
 /**

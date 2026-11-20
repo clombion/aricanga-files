@@ -29,11 +29,12 @@ const DECLARED = new Accepted([
   'legacy',
   'mechanics',
   'mirrors',
-  'promises',
+  'own-keys',
   'statics',
   'store-owner',
   'style-prop',
   'sync-parts',
+  'total-reads',
   'view-imports',
   'vm-prop',
 ]);
