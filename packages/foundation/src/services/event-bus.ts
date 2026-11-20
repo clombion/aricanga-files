@@ -45,7 +45,7 @@ function createEventBus(): EventBus {
       subscribed.add(handler);
       handlers.set(type, subscribed);
       return () => {
-        handlers.get(type)?.delete(handler);
+        subscribed.delete(handler);
       };
     },
   };

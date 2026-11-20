@@ -40,9 +40,6 @@ const DEFAULT_SEED = 0;
  * @returns {Map} Each system under its id.
  */
 function registryOf(systems: readonly Readonly<AnySystem>[]): ReadonlyMap<SystemId, Readonly<AnySystem>> {
-  if (systems.length === DEFAULT_SEED) {
-    throw new Error('Runtime requires at least one system');
-  }
   return new Map(systems.map((system) => [system.id, system]));
 }
 
@@ -55,9 +52,12 @@ function registryOf(systems: readonly Readonly<AnySystem>[]): ReadonlyMap<System
  */
 function foregroundOf(named: SystemId | undefined, systems: Readonly<ReadonlyMap<SystemId, Readonly<AnySystem>>>): SystemId {
   const [first] = systems.keys();
+  if (first === undefined) {
+    throw new Error('Runtime requires at least one system');
+  }
   const foreground = named ?? first;
-  if (foreground === undefined || !systems.has(foreground)) {
-    throw new Error(`foreground system "${foreground ?? '<none>'}" is not registered`);
+  if (!systems.has(foreground)) {
+    throw new Error(`foreground system "${foreground}" is not registered`);
   }
   return foreground;
 }

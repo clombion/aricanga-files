@@ -58,4 +58,9 @@ describe('the exhaustiveness guard', () => {
     // (the @ts-expect-error above turns into a failure if exhaustiveness is added).
     expect(broken({ kind: 'init', seed: SEED })).toBe(`init:${SEED}`);
   });
+
+  test('throws, naming the value, when an unhandled case reaches it at run time', () => {
+    expect.hasAssertions();
+    expect(() => broken({ kind: 'reset' })).toThrow('Unreachable: unhandled case {"kind":"reset"}');
+  });
 });
