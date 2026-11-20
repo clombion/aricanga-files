@@ -69,11 +69,12 @@ packages:
 describe('the repository', () => {
   test('every pin has its upstream and every upstream a pin', () => {
     expect.hasAssertions();
-    expect(PENDING.unexempted(pinProblems(pins(), UPSTREAM))).toStrictEqual([]);
+    const problems = pinProblems(pins(), UPSTREAM);
+    expect(PENDING.unexempted(problems)).toStrictEqual([]);
   });
 });
 
-describe('the pin reader and the pin check', () => {
+describe('the pin reader', () => {
   test('read each importer of the lockfile, strip peer suffixes and skip workspace links', () => {
     expect.hasAssertions();
     const found = pinned(
@@ -109,6 +110,9 @@ describe('the pin reader and the pin check', () => {
     expect(() => pinned([{ importer: '.', manifest: { devDependencies: { oxlint: 1 } } }], LOCK)).toThrow(/is not a string/u);
   });
 
+});
+
+describe('the pin check', () => {
   test('see a new pin without a row, a pin without a version, and a row without a pin', () => {
     expect.hasAssertions();
     const found: readonly Pin[] = [

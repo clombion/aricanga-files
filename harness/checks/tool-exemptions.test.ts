@@ -98,15 +98,15 @@ function vitestEntries(config: unknown): Entry[] {
 function biomeEntries(config: unknown): Entry[] {
   const files = object(object(config, 'biome.json')['files'] ?? {}, 'files');
   return strings(files['includes'], 'files.includes').map((glob) =>
-    glob.startsWith('!') ? { glob: glob.slice(1), tool: 'biome files.includes (exclusion)' } : { glob, tool: 'biome files.includes' },
+    glob.startsWith('!') ? { glob: glob.slice('!'.length), tool: 'biome files.includes (exclusion)' } : { glob, tool: 'biome files.includes' },
   );
 }
 
 /**
- * oxfmt's ignore patterns.
+ * The ignore patterns of `oxfmt`.
  *
  * @param {unknown} config - The config.
- * @returns {Entry[]} oxfmt's ignore patterns.
+ * @returns {Entry[]} The ignore patterns of `oxfmt`.
  */
 function oxfmtEntries(config: unknown): Entry[] {
   return strings(object(config, '.oxfmtrc.json')['ignorePatterns'], 'ignorePatterns').map((glob) => ({
@@ -116,10 +116,10 @@ function oxfmtEntries(config: unknown): Entry[] {
 }
 
 /**
- * knip's `ignore`, at the top level and per workspace.
+ * The `ignore` of `knip`, at the top level and per workspace.
  *
  * @param {unknown} config - The config.
- * @returns {Entry[]} knip's `ignore`, at the top level and per workspace.
+ * @returns {Entry[]} The `ignore` of `knip`, at the top level and per workspace.
  */
 function knipEntries(config: unknown): Entry[] {
   const fields = object(config, 'knip.json');
@@ -136,11 +136,11 @@ function knipEntries(config: unknown): Entry[] {
 }
 
 /**
- * stylelint's `ignoreFiles` and the lines of `.stylelintignore`.
+ * The `ignoreFiles` of `stylelint` and the lines of `.stylelintignore`.
  *
  * @param {unknown} config - The config.
  * @param {string} ignoreFile - The ignore file.
- * @returns {Entry[]} stylelint's `ignoreFiles` and the lines of `.stylelintignore`.
+ * @returns {Entry[]} The `ignoreFiles` of `stylelint` and the lines of `.stylelintignore`.
  */
 function stylelintEntries(config: unknown, ignoreFile: string): Entry[] {
   return [
@@ -197,9 +197,7 @@ describe('the repository', () => {
   });
 });
 
-describe('the readers and the matcher', () => {
-  const LISTED = ['packages/plant/src/a.ts', 'packages/plant/src/a.test.ts', 'packages/plant/src/b.css', 'docs/x.md'];
-
+describe('the matcher', () => {
   test('a glob matches through directories and a trailing /** matches a directory', () => {
     expect.hasAssertions();
     expect(matches('packages/*/src/**', 'packages/plant/src/a.ts')).toBe(true);
@@ -208,6 +206,11 @@ describe('the readers and the matcher', () => {
     expect(matches('./docs/**', 'docs/x.md')).toBe(true);
     expect(matches('packages/*/src/*.css', 'packages/plant/src/a.ts')).toBe(false);
   });
+
+});
+
+describe('the readers', () => {
+  const LISTED = ['packages/plant/src/a.ts', 'packages/plant/src/a.test.ts', 'packages/plant/src/b.css', 'docs/x.md'];
 
   test('sees a dead oxlint ignore and a dead override, and lets live ones through', () => {
     expect.hasAssertions();
@@ -235,6 +238,11 @@ describe('the readers and the matcher', () => {
       'harness/checks/**/*.test.ts',
     ]);
   });
+
+});
+
+describe('the readers of the other tools', () => {
+  const LISTED = ['packages/plant/src/a.ts', 'packages/plant/src/a.test.ts', 'packages/plant/src/b.css', 'docs/x.md'];
 
   test('reads a biome exclusion as the glob it excludes', () => {
     expect.hasAssertions();
