@@ -4,16 +4,17 @@
  */
 
 import { hunt, huntOf } from '../lib/stress.ts';
+import { out } from '../lib/output.ts';
 
 const options = huntOf(process.argv.slice(2));
-process.stdout.write(`test:stress: base seed ${options.seed}, ${options.copies} copies, ${options.repeats} repeats\n`);
+out(`test:stress: base seed ${options.seed}, ${options.copies} copies, ${options.repeats} repeats\n`);
 const results = await hunt(options);
 const failed = results.filter((result) => result.status !== 0);
 for (const result of failed) {
-  process.stdout.write(`seed ${result.seed} failed:\n${result.output}\n`);
+  out(`seed ${result.seed} failed:\n${result.output}\n`);
 }
-process.stdout.write(`test:stress: ${results.length - failed.length} of ${results.length} copies passed\n`);
+out(`test:stress: ${results.length - failed.length} of ${results.length} copies passed\n`);
 if (failed.length > 0) {
-  process.stdout.write(`replay: pnpm run test:stress -- --seed ${options.seed} --copies ${options.copies} --repeats ${options.repeats}\n`);
+  out(`replay: pnpm run test:stress -- --seed ${options.seed} --copies ${options.copies} --repeats ${options.repeats}\n`);
 }
 process.exitCode = failed.length === 0 ? 0 : 1;

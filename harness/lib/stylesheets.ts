@@ -31,7 +31,7 @@ export interface Sheet {
 }
 
 /** A finding in a sheet, at a line of the file it came from. */
-export interface SheetFinding {
+interface SheetFinding {
   readonly path: string;
   readonly line: number;
   readonly rule: string;

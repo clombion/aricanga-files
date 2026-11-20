@@ -23,7 +23,7 @@ export interface Hunt {
 }
 
 /** One copy's result: its seed, its exit status (-1 if it did not finish) and its output. */
-export interface CopyResult {
+interface CopyResult {
   readonly seed: number;
   readonly status: number;
   readonly output: string;

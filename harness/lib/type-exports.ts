@@ -16,7 +16,7 @@ import { Prefixes } from './exemptions.ts';
 const CHECK_ROOTS = new Prefixes(['harness/checks/']);
 
 /** Whether `reader` counts as a reader of a type `declarer` exports. */
-export function reads(reader: string, declarer: string): boolean {
+function reads(reader: string, declarer: string): boolean {
   return reader !== declarer && (!isProduction(declarer) || isProduction(reader) || CHECK_ROOTS.starts(reader));
 }
 
@@ -44,7 +44,7 @@ function inImportOrExport(node: ast.Node): boolean {
 }
 
 /** The exported types of the covered production modules, by symbol id. */
-export function exportedTypes(scan: Scan): ReadonlyMap<number, ExportedType> {
+function exportedTypes(scan: Scan): ReadonlyMap<number, ExportedType> {
   const found = new Map<number, ExportedType>();
   for (const path of scan.paths) {
     for (const statement of sourceOf(scan, path).statements) {
@@ -61,7 +61,7 @@ export function exportedTypes(scan: Scan): ReadonlyMap<number, ExportedType> {
 }
 
 /** For each symbol id, the covered reader modules that name it. */
-export function readers(scan: Scan): ReadonlyMap<number, ReadonlySet<string>> {
+function readers(scan: Scan): ReadonlyMap<number, ReadonlySet<string>> {
   const { checker } = scan;
   const found = new Map<number, Set<string>>();
   const aliases = new Map<number, TsSymbol | undefined>();
