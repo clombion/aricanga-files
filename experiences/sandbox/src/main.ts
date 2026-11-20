@@ -7,6 +7,9 @@ import { SkMessage, defineSkMessage } from './sk-message';
 import { InkRuntime } from '@narratives/foundation';
 import { reduceStep } from '@narratives/system-chat';
 
+/** Where the dev server serves the story the Vite ink plugin compiled. */
+const STORY_URL = '/story.json';
+
 /** Where the experience renders: it replaces the host's children. */
 type Host = Readonly<Pick<HTMLElement, 'append' | 'replaceChildren'>>;
 
@@ -47,19 +50,26 @@ function run(host: Host, storyJson: string): void {
  */
 async function boot(host: Host): Promise<void> {
   try {
-    const response = await fetch('/story.json');
+    const response = await fetch(STORY_URL);
     run(host, await response.text());
   } catch (error) {
     // The failure is shown where the experience would have rendered.
-    host.replaceChildren(`walking skeleton failed: ${error instanceof Error ? error.message : 'unknown error'}`);
+    host.replaceChildren(`walking skeleton failed: ${String(error)}`);
   }
 }
 
-if (typeof document !== 'undefined') {
-  const app = document.querySelector<HTMLElement>('#app');
+/**
+ * Boot the experience into the page's `#app` element, if the page has one.
+ * @param {Pick<ParentNode, 'querySelector'>} page Where to look for `#app`.
+ * @returns {Promise<void>} Resolves once the experience booted, or at once without `#app`.
+ */
+async function start(page: Readonly<Pick<ParentNode, 'querySelector'>>): Promise<void> {
+  const app = page.querySelector<HTMLElement>('#app');
   if (app !== null) {
     await boot(app);
   }
 }
 
-export { run };
+await start(document);
+
+export { run, start };
