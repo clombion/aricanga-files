@@ -15,7 +15,7 @@ Whether this project implements each check of [harness.md](harness.md). A status
 | browser-leaks | No page is left open and no pointer is left down between browser tests | not implemented | | no-op/not relevant | surface probe `browser-tests`: the characterisation suite is the only browser suite, and each fixture runs in a page Playwright opens and closes per test |
 | build-check | The gate builds every held Vite app in check mode | implemented | `harness/checks/build-check.test.ts` | | |
 | clones | No copied code, and jscpd scans every listed file | implemented | `harness/checks/clones.test.ts` | | |
-| closed-domains | Every closed set is read totally and named through its owner (closedworld shape rules) | planned | | | the closedworld shape rules for TypeScript, as project lint rules |
+| closed-domains | Every closed set is read totally, read through its own entries and declared once (closedworld shape rules) | implemented | `harness/lint-rules/rules/total-reads.ts`, `harness/lint-rules/rules/own-keys.ts`, `harness/checks/declared-sets.test.ts` | | |
 | console-guard | An undeclared console warning or error fails the browser test | planned | | | Phase 3 Step 3: the first Part brings the Vitest browser suite it guards |
 | contract-widening | A contract union is never widened to `string` | implemented | `harness/checks/contract-widening.test.ts` | | |
 | coverage-floor | The coverage floor fails an untaken branch, an uncalled function and an unrun line | implemented | `harness/checks/coverage-floor.test.ts` | | |

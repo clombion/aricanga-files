@@ -60,5 +60,14 @@ the repository's own tools never lint or compile a must-fire case.
   `node/no-process-env` (a `process.env` read), `promise/prefer-catch` (a two-argument `.then`),
   `promise/prefer-await-to-then` and `solid/reactivity` (promise work in a part),
   `solid/no-react-specific-props` (`htmlFor`) and `solid/no-destructure` (destructured props).
+- closedworld's shape rules: `total-reads` and `own-keys` are here, and the `declared-sets` check
+  holds one declaration per closed set across modules, which no per-file rule can see. Shipped
+  rules hold the rest, each proven by a `lint-settings` plant: `typescript/switch-exhaustiveness-check`
+  refuses a switch whose `default` hides a member of its union, `typescript/no-unnecessary-condition`
+  a defaulted read of a total table, and `typescript/no-unsafe-type-assertion` a cast into a union
+  outside a parser; the compiler refuses a `Record<Union, …>` table missing a member. A table of
+  fixed keys typed `Record<string, …>` is not refused: the shape is as often the set's own
+  declaration (a rule registry, a plant table) as a restatement, and only a type-aware check can
+  tell them apart.
 - kiz-radar's `markup`, `classes`, `buttons` and `clicks` are not ported: its task 4.10 may retire
   them in favour of rules Solid or oxlint already ship.

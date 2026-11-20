@@ -41,6 +41,7 @@ list.
 - `contract-widening` (`harness/checks/contract-widening.test.ts`): A contract union is never widened to `string`, and its words are not respelled outside its owner.
 - `coverage-floor` (`harness/checks/coverage-floor.test.ts`): The coverage floor fails an untaken branch, an uncalled function and an unrun line, on all four metrics, and its debt fails both ways.
 - `deadcode` (`harness/checks/deadcode.test.ts`): `knip`, at its strictest, finds no unused file, dependency or export in production mode or default mode, and every ignore entry carries its reason.
+- `declared-sets` (`harness/checks/declared-sets.test.ts`): Every closed set of words has one owner: no two production type aliases declare the same union of
 - `doc-references` (`harness/checks/doc-references.test.ts`): Every reference in current text resolves: links and anchors, backticked paths, tasks, ADRs and commands.
 - `doubles` (`harness/checks/doubles.test.ts`): A scripted double fails its test on an unscripted call, even when the code under test catches it.
 - `exemption-lists` (`harness/checks/exemption-lists.test.ts`): Every literal list a check consults is an exemption declaration, and every declaration is consulted.
