@@ -1,0 +1,12 @@
+// path: own-keys-fire-in.ts
+/**
+ * Whether a deck holds a stat: a stat named constructor is in every object.
+ * @param {Readonly<Record<string, number>>} stats - The deck's stats.
+ * @param {string} stat - The stat a card names.
+ * @returns {boolean} Whether the deck holds it.
+ */
+function holdsStat(stats: Readonly<Record<string, number>>, stat: string): boolean {
+  return stat in stats;
+}
+
+export { holdsStat };

@@ -87,7 +87,7 @@ class EffectPayloadError extends Error {
  * @returns {boolean} Whether the payload is an object with that field.
  */
 function hasField(payload: unknown, name: string): boolean {
-  return typeof payload === 'object' && payload !== null && name in payload;
+  return typeof payload === 'object' && payload !== null && Object.hasOwn(payload, name);
 }
 
 /**

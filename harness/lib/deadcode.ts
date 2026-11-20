@@ -64,7 +64,9 @@ function strings(value: unknown, what: string): readonly string[] {
  */
 function ignoreEntries(config: unknown): readonly string[] {
   const fields = object(config, 'knip.json');
-  const listed = LISTED_IGNORES.flatMap((field) => strings(fields[field] ?? [], field).map((entry) => `${field}:${entry}`));
+  const listed = LISTED_IGNORES.flatMap((field) =>
+    strings(Object.hasOwn(fields, field) ? fields[field] : [], field).map((entry) => `${field}:${entry}`),
+  );
   const issues = Object.entries(object(fields['ignoreIssues'] ?? {}, 'ignoreIssues')).flatMap(([glob, types]: readonly [string, unknown]) =>
     strings(types, `ignoreIssues.${glob}`).map((type) => `ignoreIssues:${glob}:${type}`),
   );

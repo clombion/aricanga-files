@@ -1,0 +1,46 @@
+// path: total-reads-clean.ts
+/** Where a message's receipt stands. */
+type Receipt = 'delivered' | 'read' | 'sent';
+
+/** Each receipt's label: the compiler holds the table to every receipt. */
+const LABELS: Readonly<Record<Receipt, string>> = { delivered: 'arrived', read: 'seen', sent: 'on its way' };
+
+/** Whether each receipt has reached the reader. */
+const ARRIVED: Readonly<Record<Receipt, boolean>> = { delivered: true, read: true, sent: false };
+
+/**
+ * A receipt's label, read from the total table.
+ * @param {Receipt} receipt - The receipt.
+ * @returns {string} Its label.
+ */
+function labelOf(receipt: Receipt): string {
+  return LABELS[receipt];
+}
+
+/**
+ * Whether a receipt has reached the reader.
+ * @param {Receipt} receipt - The receipt.
+ * @returns {boolean} Whether the message arrived.
+ */
+function arrived(receipt: Receipt): boolean {
+  return ARRIVED[receipt];
+}
+
+/**
+ * A greeting by two different words: one comparison each is no chain over one subject.
+ * @param {string} first - The first word.
+ * @param {string} second - The second word.
+ * @returns {string} The greeting.
+ */
+function greeting(first: string, second: string): string {
+  let text = 'hello';
+  if (first === 'formal') {
+    text = 'good day';
+  } else if (second === 'brief') {
+    text = 'hi';
+  }
+  return text;
+}
+
+export { arrived, greeting, labelOf };
+export type { Receipt };

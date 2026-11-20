@@ -1,0 +1,15 @@
+// path: total-reads-fire-membership.ts
+/** Where a message's receipt stands. */
+type Receipt = 'delivered' | 'read' | 'sent';
+
+/**
+ * Whether a receipt has reached the reader, against a subset written inline.
+ * @param {Receipt} receipt - The receipt.
+ * @returns {boolean} Whether the message arrived.
+ */
+function arrived(receipt: Receipt): boolean {
+  return ['delivered', 'read'].includes(receipt);
+}
+
+export { arrived };
+export type { Receipt };

@@ -8,7 +8,8 @@ TypeScript checked by the harness's own project. Every rule is on as an error, a
 The modules import each other as `#lint-rules/…`. This folder's own `package.json` maps that
 prefix, so the plugin also loads where a check copies the folder into a planted project, outside
 the repository's root manifest. `ast.ts` holds the node and context helpers and `jsx.ts` the JSX
-ones; `rules/jsx-rules.ts` and `rules/module-rules.ts` collect the rules for `plugin.ts`.
+ones, and `closed.ts` the readers the closed-set rules share; `rules/jsx-rules.ts`,
+`rules/module-rules.ts` and `rules/closed-rules.ts` collect the rules for `plugin.ts`.
 
 | Rule | Holds |
 |---|---|
@@ -21,11 +22,13 @@ ones; `rules/jsx-rules.ts` and `rules/module-rules.ts` collect the rules for `pl
 | `aricanga/legacy` | No replaceChildren or document.createElement in a component module. |
 | `aricanga/mechanics` | No solid-js or @solidjs/* import under packages/foundation or a system model. |
 | `aricanga/mirrors` | No effect whose only work is calling a setter; derive the value. |
+| `aricanga/own-keys` | A record keyed by story words is read through its own entries: Object.hasOwn, never in or a defaulted read. |
 | `aricanga/promises` | No two-argument .then; chain .catch, or await in a try. |
 | `aricanga/statics` | No this inside a static method, static field or static block; name the class. |
 | `aricanga/store-owner` | createStore and reconcile only in the snapshot adapter (the `owners` globs). |
 | `aricanga/style-prop` | No style prop in JSX; set dynamic values with a class or a ref. |
 | `aricanga/sync-parts` | No async, await, promise, .then or <Loading> in a component module. |
+| `aricanga/total-reads` | A closed set is read through a total table or an exhaustive switch, not a chain or an inline list. |
 | `aricanga/view-imports` | A view module imports no reduce, no effect type and no model module. |
 | `aricanga/vm-prop` | A component takes a single undestructured props with exactly one prop, vm. |
 
