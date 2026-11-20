@@ -13,7 +13,7 @@
 import { ROOTS } from './scope.ts';
 
 /** A claim of a single owner, up to the end of its clause. */
-export const CLAIM =
+export const CLAIM: RegExp =
   /\b(?:the (?:one|only) (?:owner|module|place|reader|writer)|nowhere else|stated once)\b[^.;:]*/gi;
 
 /** A pattern that must match in `owner` and in no other held TypeScript file under `roots`. */

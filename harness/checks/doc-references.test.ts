@@ -9,11 +9,13 @@
  *   a bare file name names a listed file's name; a path under `node_modules/` names an installed
  *   file and a package span (`@solidjs/web`) an installed or workspace package;
  * - `pnpm run <task>` names a script of the root `package.json`;
+ * - a span with no file suffix that is no listed path resolves as a named value (a lint rule id, an
+ *   effect kind) when held code or config outside the checks quotes it as a string;
  * - `ADR-NNNN` names a decision record under `docs/roadmap/decisions/`;
  * - in a shell fence, a locked tool runs through `pnpm exec` or `pnpm run`, never bare and never
  *   through an unlocked runner.
  *
- * A span holding `<`, `{`, `*` or a space is a placeholder or a pattern and is not resolved.
+ * A span holding `<`, `{`, `*`, `...` or a space is a placeholder or a pattern and is not resolved.
  */
 
 import { existsSync } from 'node:fs';
@@ -23,7 +25,7 @@ import { describe, expect, test } from 'vitest';
 
 import { json, object, repoTasks } from '../lib/config.ts';
 import { currentSpans, currentText, Doc, type Link, markdown, markdownPaths, type Prose, type Span } from '../lib/docs.ts';
-import { Accepted, Exemptions, site } from '../lib/exemptions.ts';
+import { Accepted, Exemptions, Prefixes, site } from '../lib/exemptions.ts';
 import { fromRoot } from '../lib/paths.ts';
 import { heldFiles } from '../lib/scope.ts';
 import { textOf, tracked } from '../lib/source-files.ts';
@@ -237,7 +239,7 @@ function workspaces(): readonly (readonly [string, string])[] {
   return tracked()
     .filter((path) => path.endsWith('package.json') && !path.includes('node_modules/'))
     .flatMap((path) => {
-      const name = object(json(textOf(path)), path).name;
+      const name = object(json(textOf(path)), path)['name'];
       return typeof name === 'string' ? [[name, posix.dirname(path)] as const] : [];
     });
 }
@@ -261,12 +263,15 @@ function installedOnDisk(path: string): boolean {
 
 const QUOTED = /['"]([^'"\n]+)['"]/g;
 
-/** Every string value quoted in held TypeScript, JavaScript and JSON. */
+/** The checks' own modules: their planted strings must never resolve a reference. */
+const PLANTS = new Prefixes(['harness/checks/']);
+
+/** Every string value quoted in held TypeScript, JavaScript and JSON outside the checks. */
 function quotedValues(): ReadonlySet<string> {
   return new Set(
-    heldFiles('.ts', '.tsx', '.js', '.mjs', '.json').flatMap((path) =>
-      [...textOf(path).matchAll(QUOTED)].map((match) => match[1] ?? ''),
-    ),
+    heldFiles('.ts', '.tsx', '.js', '.mjs', '.json')
+      .filter((path) => !PLANTS.starts(path))
+      .flatMap((path) => [...textOf(path).matchAll(QUOTED)].map((match) => match[1] ?? '')),
   );
 }
 

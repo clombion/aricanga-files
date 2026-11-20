@@ -129,6 +129,7 @@ writes this table from `package.json` and `pnpm-lock.yaml`.
 | `@biomejs/biome` | [biomejs/biome](https://github.com/biomejs/biome) | `pnpm-lock.yaml` | 2.6.8 |
 | `@commitlint/cli` | [conventional-changelog/commitlint](https://github.com/conventional-changelog/commitlint) | `pnpm-lock.yaml` | 21.2.4 |
 | `@commitlint/config-conventional` | [conventional-changelog/commitlint](https://github.com/conventional-changelog/commitlint) | `pnpm-lock.yaml` | 21.2.4 |
+| `@double-great/stylelint-a11y` | no upstream named | `pnpm-lock.yaml` | 3.8.3 |
 | `@iarna/toml` | [iarna/iarna-toml](https://github.com/iarna/iarna-toml) | `pnpm-lock.yaml` | 2.2.5 |
 | `@narratives/framework` | no upstream named | `pnpm-lock.yaml` | link:packages/framework |
 | `@narratives/test-utils` | no upstream named | `pnpm-lock.yaml` | link:packages/test-utils |
@@ -153,6 +154,7 @@ writes this table from `package.json` and `pnpm-lock.yaml`.
 | `sharp` | [lovell/sharp](https://github.com/lovell/sharp) | `pnpm-lock.yaml` | 0.35.5 |
 | `stylelint` | [stylelint/stylelint](https://github.com/stylelint/stylelint) | `pnpm-lock.yaml` | 17.16.0 |
 | `stylelint-config-standard` | [stylelint/stylelint-config-standard](https://github.com/stylelint/stylelint-config-standard) | `pnpm-lock.yaml` | 40.0.0 |
+| `stylelint-declaration-strict-value` | no upstream named | `pnpm-lock.yaml` | 1.12.1 |
 | `stylelint-no-unsupported-browser-features` | [RJWadley/stylelint-no-unsupported-browser-features](https://github.com/RJWadley/stylelint-no-unsupported-browser-features) | `pnpm-lock.yaml` | 8.1.2 |
 | `stylelint-plugin-logical-css` | [yuschick/stylelint-plugin-logical-css](https://github.com/yuschick/stylelint-plugin-logical-css) | `pnpm-lock.yaml` | 2.1.0 |
 | `typescript` | [microsoft/TypeScript](https://github.com/microsoft/TypeScript) | `pnpm-lock.yaml` | 7.0.2 |

@@ -17,7 +17,7 @@ import { textOf, tracked } from './source-files.ts';
 import { comments, parse } from './ts-source.ts';
 
 /** The history files: they record what happened, so current-text checks leave them out. */
-export const HISTORY = new Prefixes(['docs/roadmap/tasks/', 'CHANGELOG.md']);
+export const HISTORY: Prefixes = new Prefixes(['docs/roadmap/tasks/', 'CHANGELOG.md']);
 
 /** The code files whose comments are current text, by suffix. */
 const SCRIPT = new Prefixes(['.ts', '.tsx', '.js', '.mjs', '.cjs']);

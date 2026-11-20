@@ -41,7 +41,7 @@ export function tasks(packageJson: unknown): ReadonlyMap<string, Task> {
 }
 
 /** A command that runs another task, capturing its name. */
-export const RUN = /^pnpm run ([\w:.-]+)$/;
+export const RUN: RegExp = /^pnpm run ([\w:.-]+)$/;
 
 /** The tasks `name` runs: itself and the tasks its commands `pnpm run`, transitively. */
 export function closure(name: string, every: ReadonlyMap<string, Task>): readonly Task[] {
