@@ -1,7 +1,7 @@
 /**
  * The one coverage floor, held on all four metrics: statements, branches, functions and lines.
  *
- * The gate's `test` task runs Vitest with coverage, which writes Istanbul's `coverage-final.json`
+ * The gate's `test` task runs Vitest with coverage, which writes Istanbul's JSON report (coverage-final.json)
  * under `COVERAGE_DIR` (outside the checkout); `harness/scripts/coverage-floor.ts` then reads it.
  * Every item the run did not reach is a shortfall keyed by `site(file, metric)`. `DEBT` is the
  * shortfall the project carries while it adopts the floor: a file whose shortfall differs from its
@@ -55,7 +55,7 @@ function reached(values: readonly number[]): number {
   return values.filter((count) => count > 0).length;
 }
 
-/** The coverage of every file of a parsed `coverage-final.json`, relative to `root`. */
+/** The coverage of every file of a parsed Istanbul JSON report, relative to `root`. */
 export function fileCoverage(report: unknown, root: string = REPO_ROOT): readonly FileCoverage[] {
   return Object.entries(object(report, 'coverage report'))
     .map(([file, entry]) => {

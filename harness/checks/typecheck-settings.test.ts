@@ -7,7 +7,7 @@
  * reset to tsc's default (`null`), which reports without failing (`exactOptionalPropertyTypes` goes
  * with `strictNullChecks`, which tsc refuses it without). `skipLibCheck: false` is held by a broken
  * declaration file, `isolatedDeclarations` by an exported constant whose type tsc must infer, and
- * `libReplacement: false` by a `@typescript/lib-dom` package the plant can only see when it is on. `isolatedModules` is implied by `verbatimModuleSyntax`: its plant
+ * `libReplacement: false` by a planted @typescript/lib-dom package the plant can only see when it is on. `isolatedModules` is implied by `verbatimModuleSyntax`: its plant
  * passes only when both are off, and the check holds that redundancy. Two plants hold the
  * exemption declarations' shapes: a membership test on `Prefixes` and a prefix match on `Accepted`
  * are type errors. The clean plant must pass.

@@ -29,7 +29,7 @@ const CATEGORIES = new Accepted(['correctness', 'suspicious', 'perf', 'pedantic'
 /**
  * The rules the config turns off, each with its reason: the enabled rule it contradicts, or the
  * mirrored config that turns it off. A rule turned off and not listed fails, and so does an entry
- * the config no longer turns off.
+ * the config does not turn off.
  */
 const TURNED_OFF = Exemptions.grouped({
   'off in eslint-plugin-solid v2-strict, which the config mirrors exactly (the v2-strict test below)': [
