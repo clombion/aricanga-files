@@ -32,7 +32,7 @@ async function lockCheckArguments(): Promise<readonly string[]> {
  *
  * @param {string} written - The version the lockfile is written for.
  * @param {string} current - The version the manifest then pins.
- * @returns {Promise<{ readonly status: number; readonly outdated: boolean >}} The run's exit status and whether pnpm called the lockfile outdated.
+ * @returns {Promise<{ readonly status: number; readonly outdated: boolean }>} The run's exit status and whether pnpm called the lockfile outdated.
  */
 async function lockCheckAfter(written: string, current: string): Promise<{ readonly status: number; readonly outdated: boolean }> {
   const project = await Project.create({ linkModules: false });

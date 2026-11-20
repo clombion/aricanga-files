@@ -41,20 +41,23 @@ test('all', () => {
  * The coverage of a planted project whose test is `tests`.
  *
  * @param {string} tests - The tests.
- * @returns {readonly FileCoverage[]} The coverage of a planted project whose test is `tests`.
+ * @returns {Promise<readonly FileCoverage[]>} The coverage of a planted project whose test is `tests`.
  */
-function planted(tests: string): readonly FileCoverage[] {
-  const project = new Project();
+async function planted(tests: string): Promise<readonly FileCoverage[]> {
+  const project = await Project.create();
   try {
-    project.write('vitest.config.ts', CONFIG);
-    project.write('src/branchy.ts', BRANCHY);
-    project.write('src/uncalled.ts', UNCALLED);
-    project.write('tests/plant.test.ts', tests);
-    const done = project.tool('vitest', 'run', '--coverage');
+    await Promise.all([
+      project.write('vitest.config.ts', CONFIG),
+      project.write('src/branchy.ts', BRANCHY),
+      project.write('src/uncalled.ts', UNCALLED),
+      project.write('tests/plant.test.ts', tests),
+    ]);
+    const done = await project.tool('vitest', 'run', '--coverage');
     expect(done.status, done.stdout + done.stderr).toBe(EXIT_CLEAN);
-    return fileCoverage(gateReport(join(project.root, 'coverage')), project.root);
+    const report = await gateReport(join(project.root, 'coverage'));
+    return fileCoverage(report, project.root);
   } finally {
-    project.remove();
+    await project.remove();
   }
 }
 
@@ -87,19 +90,19 @@ function fileOf(key: string): string {
  * The script's exit status and output on a report written into a fresh folder.
  *
  * @param {(root: string) => unknown} report - The report, from the folder's path.
- * @returns {readonly [number, readonly string[]]} The exit status and each problem written.
+ * @returns {Promise<readonly [number, readonly string[]]>} The exit status and each problem written.
  */
-function runScript(report: (root: string) => unknown): readonly [number, readonly string[]] {
-  const project = new Project({ linkModules: false });
+async function runScript(report: (root: string) => unknown): Promise<readonly [number, readonly string[]]> {
+  const project = await Project.create({ linkModules: false });
   try {
-    project.write('coverage-final.json', JSON.stringify(report(project.root)));
+    await project.write('coverage-final.json', JSON.stringify(report(project.root)));
     const errors: string[] = [];
-    const status = main((text) => {
+    const status = await main((text) => {
       errors.push(text);
     }, NONE, project.root);
     return [status, errors];
   } finally {
-    project.remove();
+    await project.remove();
   }
 }
 
@@ -123,24 +126,24 @@ function unrunStatement(root: string): unknown {
  * The files a debt names that the listing does not hold.
  *
  * @param {CountedExemptions} debt - The debt.
- * @returns {readonly string[]} The files a debt names that the listing does not hold.
+ * @returns {Promise<readonly string[]>} The files a debt names that the listing does not hold.
  */
-function unlisted(debt: CountedExemptions): readonly string[] {
-  const files = new Set(tracked());
+async function unlisted(debt: CountedExemptions): Promise<readonly string[]> {
+  const files = new Set(await tracked());
   return [...debt.entries.keys()].map((key) => fileOf(key)).filter((path) => !files.has(path));
 }
 
 describe('the floor', () => {
-  test('passes every line, branch and function taken', () => {
+  test('passes every line, branch and function taken', async () => {
     expect.hasAssertions();
-    const files = planted(FULL);
+    const files = await planted(FULL);
     expect(files.map((file) => file.path)).toStrictEqual(['src/branchy.ts', 'src/uncalled.ts']);
     expect(floorProblems(files, NONE)).toStrictEqual([]);
   });
 
-  test('fails an untaken branch on its statements, branches and lines', () => {
+  test('fails an untaken branch on its statements, branches and lines', async () => {
     expect.hasAssertions();
-    const files = planted(FULL.replace('sign(-1), ', '').replace("'negative', ", ''));
+    const files = await planted(FULL.replace('sign(-1), ', '').replace("'negative', ", ''));
     expect(floorProblems(files, NONE)).toStrictEqual([
       'src/branchy.ts :: branches: 1 items under the 100 % floor, 0 registered',
       'src/branchy.ts :: lines: 1 items under the 100 % floor, 0 registered',
@@ -148,9 +151,9 @@ describe('the floor', () => {
     ]);
   });
 
-  test('fails an uncalled function on its functions, statements and lines', () => {
+  test('fails an uncalled function on its functions, statements and lines', async () => {
     expect.hasAssertions();
-    const files = planted(FULL.replace(', unused()]', ']').replace(', 2]', ']'));
+    const files = await planted(FULL.replace(', unused()]', ']').replace(', 2]', ']'));
     expect(floorProblems(files, NONE)).toStrictEqual([
       'src/uncalled.ts :: functions: 1 items under the 100 % floor, 0 registered',
       'src/uncalled.ts :: lines: 1 items under the 100 % floor, 0 registered',
@@ -187,9 +190,9 @@ describe('the debt', () => {
     expect(shortfalls([file], THREE_QUARTER_FLOOR)).toStrictEqual([site('src/a.ts', 'statements')]);
   });
 
-  test('names only files the listing holds', () => {
+  test('names only files the listing holds', async () => {
     expect.hasAssertions();
-    expect(unlisted(DEBT)).toStrictEqual([]);
+    await expect(unlisted(DEBT)).resolves.toStrictEqual([]);
   });
 });
 
@@ -201,14 +204,14 @@ describe('the gate', () => {
     expect(coverage['reporter']).toContain('json');
   });
 
-  test('the script exits 0 on a report with no shortfall', () => {
+  test('the script exits 0 on a report with no shortfall', async () => {
     expect.hasAssertions();
-    expect(runScript(() => ({}))).toStrictEqual([EXIT_CLEAN, []]);
+    await expect(runScript(() => ({}))).resolves.toStrictEqual([EXIT_CLEAN, []]);
   });
 
-  test('the script exits 1 on a report with a shortfall and writes each problem', () => {
+  test('the script exits 1 on a report with a shortfall and writes each problem', async () => {
     expect.hasAssertions();
-    const [status, errors] = runScript(unrunStatement);
+    const [status, errors] = await runScript(unrunStatement);
     expect([status, errors.length]).toStrictEqual([EXIT_FINDINGS, PLANTED_PROBLEMS]);
   });
 });

@@ -14,7 +14,7 @@
  */
 
 import { describe, expect, test } from 'vitest';
-import { textOf, tracked } from '#lib/source-files.ts';
+import { textsOf, tracked } from '#lib/source-files.ts';
 import { Project } from '#lib/tools.ts';
 
 const HARNESS_ID = 'typecheck-settings';
@@ -219,40 +219,44 @@ function plantedConfig(overrides: Readonly<Record<string, Setting>>): string {
  *
  * @param {Project} project - The planted project.
  * @param {Readonly<Record<string, Setting>>} overrides - The settings to override.
+ * @returns {Promise<void>} Settles once every file is written.
  */
-function plantAll(project: Project, overrides: Readonly<Record<string, Setting>>): void {
-  project.write('node_modules/@typescript/lib-dom/package.json', JSON.stringify({ name: '@typescript/lib-dom', types: 'index.d.ts', version: '0.0.0' }));
-  project.write('node_modules/@typescript/lib-dom/index.d.ts', 'declare const replacedLib: number;\n');
-  for (const path of tracked().filter((candidate) => EXEMPTIONS_MODULE.test(candidate))) {
-    project.write(`src/${path.slice(LIB.length)}`, textOf(path));
-  }
-  for (const [path, text] of Object.entries(SUPPORT)) {
-    project.write(path, text);
-  }
-  for (const plant of [...PLANTS, ...SHAPES]) {
-    project.write(plant.path, plant.text);
-  }
-  project.write('tsconfig.json', plantedConfig(overrides));
+async function plantAll(project: Project, overrides: Readonly<Record<string, Setting>>): Promise<void> {
+  const listed = await tracked();
+  const libraries = await textsOf(listed.filter((candidate) => EXEMPTIONS_MODULE.test(candidate)));
+  const files: readonly (readonly [string, string])[] = [
+    ['node_modules/@typescript/lib-dom/package.json', JSON.stringify({ name: '@typescript/lib-dom', types: 'index.d.ts', version: '0.0.0' })],
+    ['node_modules/@typescript/lib-dom/index.d.ts', 'declare const replacedLib: number;\n'],
+    ...libraries.map(([path, text]: readonly [string, string]) => [`src/${path.slice(LIB.length)}`, text] as const),
+    ...Object.entries(SUPPORT),
+    ...[...PLANTS, ...SHAPES].map((plant) => [plant.path, plant.text] as const),
+    ['tsconfig.json', plantedConfig(overrides)],
+  ];
+  await Promise.all(
+    files.map(async ([path, text]: readonly [string, string]) => {
+      await project.write(path, text);
+    }),
+  );
 }
 
 /**
  * Run the locked tsc over every plant under the base config with `overrides` applied.
  *
  * @param {Readonly<Record<string, Setting>>} overrides - The settings to override.
- * @returns {ReadonlyMap<string, readonly string[]>} The diagnostic codes, by planted file.
+ * @returns {Promise<ReadonlyMap<string, readonly string[]>>} The diagnostic codes, by planted file.
  */
-function typecheck(overrides: Readonly<Record<string, Setting>>): ReadonlyMap<string, readonly string[]> {
-  const project = new Project({ copies: ['tsconfig.base.json'], linkModules: false });
+async function typecheck(overrides: Readonly<Record<string, Setting>>): Promise<ReadonlyMap<string, readonly string[]>> {
+  const project = await Project.create({ copies: ['tsconfig.base.json'], linkModules: false });
   try {
-    plantAll(project, overrides);
-    const done = project.tool('tsc', '--noEmit', '-p', 'tsconfig.json', '--pretty', 'false');
+    await plantAll(project, overrides);
+    const done = await project.tool('tsc', '--noEmit', '-p', 'tsconfig.json', '--pretty', 'false');
     const configErrors = done.stdout.split('\n').filter((line) => line.startsWith('tsconfig.json'));
     if (configErrors.some(Boolean)) {
       throw new Error(`the planted config is refused: ${configErrors.join('; ')}`);
     }
     return codesByFile(done.stdout);
   } finally {
-    project.remove();
+    await project.remove();
   }
 }
 
@@ -268,9 +272,9 @@ function codesOf(found: ReadonlyMap<string, readonly string[]>, path: string): r
 }
 
 describe('the base config', () => {
-  test('fails each planted hole with its own diagnostic and passes the clean plant', () => {
+  test('fails each planted hole with its own diagnostic and passes the clean plant', async () => {
     expect.hasAssertions();
-    const found = typecheck({});
+    const found = await typecheck({});
     const plants = [...PLANTS, ...SHAPES];
     expect(Object.fromEntries(plants.map((plant) => [plant.path, codesOf(found, plant.path)]))).toStrictEqual(
       Object.fromEntries(plants.map((plant) => [plant.path, plant.codes])),
@@ -280,14 +284,16 @@ describe('the base config', () => {
 });
 
 describe('each setting', () => {
-  test.for(PLANTS)('is what fails $path: removing it lets the plant through', (plant) => {
+  test.for(PLANTS)('is what fails $path: removing it lets the plant through', async (plant) => {
     expect.hasAssertions();
-    expect(codesOf(typecheck(plant.removal), plant.path)).toStrictEqual([]);
+    const removed = await typecheck(plant.removal);
+    expect(codesOf(removed, plant.path)).toStrictEqual([]);
   });
 
-  test('isolatedModules is implied by verbatimModuleSyntax: removing it alone keeps its plant failing', () => {
+  test('isolatedModules is implied by verbatimModuleSyntax: removing it alone keeps its plant failing', async () => {
     expect.hasAssertions();
-    expect(typecheck({ isolatedModules: false }).get('src/isolated.ts')).toStrictEqual(['TS1205']);
+    const relaxed = await typecheck({ isolatedModules: false });
+    expect(relaxed.get('src/isolated.ts')).toStrictEqual(['TS1205']);
   });
 });
 

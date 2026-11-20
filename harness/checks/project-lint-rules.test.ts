@@ -164,11 +164,11 @@ function holds(fixture: Fixture, codes: readonly string[]): boolean {
 /**
  * The fixtures whose lint does not hold, with the codes reported.
  *
- * @returns {readonly { readonly codes: readonly string[]; readonly file: string }[]} Each fixture that does not hold.
+ * @returns {Promise<readonly { readonly codes: readonly string[]; readonly file: string }[]>} Each fixture that does not hold.
  */
-function unheldFixtures(): readonly { readonly codes: readonly string[]; readonly file: string }[] {
-  const planted = fixtures();
-  const found = lintFixtures(planted);
+async function unheldFixtures(): Promise<readonly { readonly codes: readonly string[]; readonly file: string }[]> {
+  const planted = await fixtures();
+  const found = await lintFixtures(planted);
   return planted.flatMap((fixture) => {
     const codes = codesAt(found, fixture.path);
     return holds(fixture, codes) ? [] : [{ codes, file: fixture.file }];
@@ -181,22 +181,23 @@ describe('the repository', () => {
     expect(ruleNames()).toStrictEqual([...DECLARED]);
   });
 
-  test('every rule has must-fire and must-stay-clean fixtures, and every fixture folder a rule', () => {
+  test('every rule has must-fire and must-stay-clean fixtures, and every fixture folder a rule', async () => {
     expect.hasAssertions();
-    const problems = fixtureProblems(ruleNames(), fixtureFolders(), fixtures());
+    const [folders, planted] = await Promise.all([fixtureFolders(), fixtures()]);
+    const problems = fixtureProblems(ruleNames(), folders, planted);
     expect(problems).toStrictEqual([]);
   });
 
-  test('the config turns on exactly the plugin rules, and the README lists them', () => {
+  test('the config turns on exactly the plugin rules, and the README lists them', async () => {
     expect.hasAssertions();
-    const config = json(textOf('.oxlintrc.json'));
-    expect(configProblems(config, ruleNames())).toStrictEqual([]);
-    expect(readmeProblems(textOf(README), descriptions())).toStrictEqual([]);
+    const [config, readme] = await Promise.all([textOf('.oxlintrc.json'), textOf(README)]);
+    expect(configProblems(json(config), ruleNames())).toStrictEqual([]);
+    expect(readmeProblems(readme, descriptions())).toStrictEqual([]);
   });
 
-  test('each must-fire fixture fails on its rule and each must-stay-clean fixture passes', () => {
+  test('each must-fire fixture fails on its rule and each must-stay-clean fixture passes', async () => {
     expect.hasAssertions();
-    expect(unheldFixtures()).toStrictEqual([]);
+    await expect(unheldFixtures()).resolves.toStrictEqual([]);
   });
 });
 

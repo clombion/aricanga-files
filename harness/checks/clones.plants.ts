@@ -81,17 +81,18 @@ async function cleanRunner(argv: readonly string[]): Promise<Outcome> {
  * A runner whose jscpd exits 2.
  *
  * @param {readonly string[]} argv - The run's arguments.
- * @returns {Outcome} A broken finished run.
+ * @returns {Promise<Outcome>} A broken finished run.
  */
-function failingRunner(argv: readonly string[]): Outcome {
-  return { argv, kind: 'finished', status: EXIT_BROKEN, stderr: 'planted', stdout: '' };
+async function failingRunner(argv: readonly string[]): Promise<Outcome> {
+  const outcome: Outcome = await Promise.resolve({ argv, kind: 'finished', status: EXIT_BROKEN, stderr: 'planted', stdout: '' });
+  return outcome;
 }
 
 /**
  * Run the script's `main` and collect what it writes.
  *
  * @param {Runner} [runner] - The runner standing in for jscpd, or the real one.
- * @returns {Promise<{ readonly status: number; readonly out: readonly string[]; readonly errors: readonly string[] >}} Its exit status and output.
+ * @returns {Promise<{ readonly status: number; readonly out: readonly string[]; readonly errors: readonly string[] }>} Its exit status and output.
  */
 async function runMain(runner?: Runner): Promise<{ readonly status: number; readonly out: readonly string[]; readonly errors: readonly string[] }> {
   const out: string[] = [];
