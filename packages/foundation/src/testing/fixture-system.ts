@@ -9,6 +9,7 @@ import type { AnySystem } from '../sim/system';
 // choose-command — so the harness can prove full-stream capture and choice-driving
 // independent of chat/cards (which only emit Present today). Claims the `fx` tag.
 
+/** @public */
 export interface FixtureState {
   readonly lines: readonly string[];
   readonly busy: boolean;
@@ -17,6 +18,7 @@ export interface FixtureState {
   readonly saved: boolean;
 }
 
+/** @public */
 export type FixtureCommand =
   | Command<'schedule', undefined>
   | Command<'fetch', undefined>

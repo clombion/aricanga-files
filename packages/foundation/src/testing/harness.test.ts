@@ -1,10 +1,10 @@
 import { expect, test } from 'vitest';
 import type { Input } from '../sim/input';
-import { FIXTURE_TAG, fixtureSystem, fixtureSystemErased } from './fixture-system';
+import { FIXTURE_TAG, type FixtureCommand, fixtureSystem, fixtureSystemErased } from './fixture-system';
 import { runFixture } from './harness';
 import { canonical } from './serialize';
 
-const player = (kind: string, payload?: unknown): { input: Input<unknown>; target: string } => ({
+const player = (kind: FixtureCommand['kind'], payload?: unknown): { input: Input<unknown>; target: string } => ({
   input: { source: 'player', command: { kind, payload } },
   target: 'fixture',
 });

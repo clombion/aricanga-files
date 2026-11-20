@@ -7,12 +7,12 @@ export const CHAT_EFFECT = {
   receipt: 'chat/receiptChanged',
 } as const;
 
-export interface Notification {
+interface Notification {
   readonly chatId: string;
   readonly preview: string;
 }
 
-export interface ReceiptChange {
+interface ReceiptChange {
   readonly messageId: string;
   readonly receipt: string;
 }

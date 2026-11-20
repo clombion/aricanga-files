@@ -3,12 +3,12 @@ import { assertNever } from './exhaustive';
 import type { Lifecycle } from './input';
 
 // An exhaustive switch over a closed union compiles and is total.
-function describeLifecycle(l: Lifecycle): string {
+function describeLifecycle(l: Lifecycle): `init:${number}` | Lifecycle['kind'] {
   switch (l.kind) {
     case 'init':
       return `init:${l.seed}`;
     case 'reset':
-      return 'reset';
+      return l.kind;
     default:
       return assertNever(l);
   }

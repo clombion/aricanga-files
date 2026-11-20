@@ -1,4 +1,4 @@
-import { type Snapshot, fx, parseTag } from '@narratives/foundation';
+import { type Snapshot, decodeSnapshot, encodeSnapshot, fx, parseTag } from '@narratives/foundation';
 import { expect, test } from 'vitest';
 
 test('parseTag splits key/value and preserves raw', () => {
@@ -6,14 +6,14 @@ test('parseTag splits key/value and preserves raw', () => {
   expect(parseTag('immediate')).toEqual({ key: 'immediate', raw: 'immediate' });
 });
 
-test('Snapshot envelope round-trips through JSON to deep-equal', () => {
+test('a snapshot round-trips through the codec to deep-equal', () => {
   const snap: Snapshot<{ chat: { count: number } }> = {
     version: 1,
     ink: '{"x":1}',
     idSeq: 7,
     state: { chat: { count: 3 } },
   };
-  expect(JSON.parse(JSON.stringify(snap))).toEqual(snap);
+  expect(decodeSnapshot(encodeSnapshot(snap))).toEqual(snap);
 });
 
 test('effect constructors tag the family and keep an open kind', () => {

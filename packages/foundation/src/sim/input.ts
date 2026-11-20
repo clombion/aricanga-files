@@ -11,12 +11,14 @@ export interface Command<K extends string = string, P = unknown> {
 
 // Completion of a suspending effect — one constructor per suspending family
 // (ADR-0007): the handshake table is total.
+/** @public */
 export type Resume<TState> =
   | { readonly kind: 'commit-fired'; readonly token: CommitToken }
   | { readonly kind: 'data-arrived'; readonly request: DataRequest; readonly value: unknown }
   | { readonly kind: 'story-loaded' }
   | { readonly kind: 'restored'; readonly state: TState };
 
+/** @public */
 export type Lifecycle =
   | { readonly kind: 'init'; readonly seed: number }
   | { readonly kind: 'reset' };

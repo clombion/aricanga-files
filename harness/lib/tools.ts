@@ -4,12 +4,12 @@
  * violation meets the tools under the configuration the gate uses.
  */
 
-import { cpSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 
 import { fromRoot, REPO_ROOT } from './paths.ts';
-import { type Finished, run } from './process.ts';
+import { environment, type Finished, run } from './process.ts';
 
 /** The bound on one tool run from a check. */
 export const TIMEOUT_MS = 300_000;
@@ -20,12 +20,9 @@ export class ToolError extends Error {
 
 /** This process's environment without the variables that tie a child run to this one. */
 export function isolatedEnv(extra: Readonly<Record<string, string>> = {}): Record<string, string> {
-  const env: Record<string, string> = {};
-  for (const [name, value] of Object.entries(process.env)) {
-    if (value !== undefined && !name.startsWith('VITEST') && !name.startsWith('NODE_V8_COVERAGE')) {
-      env[name] = value;
-    }
-  }
+  const env = Object.fromEntries(
+    Object.entries(environment()).filter(([name]) => !name.startsWith('VITEST') && !name.startsWith('NODE_V8_COVERAGE')),
+  );
   return { ...env, ...extra };
 }
 
@@ -62,6 +59,11 @@ export class Project {
       mkdirSync(dirname(join(this.root, path)), { recursive: true });
       cpSync(join(REPO_ROOT, path), join(this.root, path), { recursive: true });
     }
+  }
+
+  /** Read a file of the planted project. */
+  read(path: string): string {
+    return readFileSync(join(this.root, path), 'utf8');
   }
 
   /** Write a file of the planted project. */

@@ -74,7 +74,7 @@ const EXEMPT = Exemptions.grouped({
 });
 
 /** The parsed terms file. */
-export interface Terms {
+interface Terms {
   readonly retired: ReadonlyMap<string, string>;
   readonly refused: ReadonlyMap<string, string>;
   readonly refusedInCode: ReadonlyMap<string, string>;
@@ -107,7 +107,7 @@ export function termsOf(text: string): Terms {
 }
 
 /** A use of current text the terms file refuses. */
-export interface Use {
+interface Use {
   readonly path: string;
   readonly line: number;
   /** The retired term or the text the refused pattern matched. */

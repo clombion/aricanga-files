@@ -4,6 +4,7 @@
 // and is dispatched by the executor (`kind -> handler`). A system specialises the
 // families it uses; it never adds a family.
 
+/** @public */
 export type EffectFamily = 'drive-ink' | 'schedule' | 'fetch' | 'present' | 'persist';
 
 export interface Effect<F extends EffectFamily = EffectFamily, K extends string = string, P = unknown> {
@@ -16,6 +17,7 @@ export interface Effect<F extends EffectFamily = EffectFamily, K extends string 
 // `Resume(CommitFired token)`; a token the state has moved past is stale.
 export type CommitToken = number;
 
+/** @public */
 export interface ScheduleCommit {
   readonly delayMs: number;
   readonly token: CommitToken;

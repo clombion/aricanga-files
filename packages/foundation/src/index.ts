@@ -38,5 +38,6 @@ export type { Clock, SaveStore, AnalyticsSink, Scheduler } from './services/serv
 // Host runtime + composition root.
 export type { Host, RuntimeConfig } from './host/runtime';
 export { Runtime } from './host/runtime';
+export { decodeSnapshot, encodeSnapshot } from './host/codec';
 export type { ExperienceConfig, Experience } from './core/create-experience';
 export { createExperience } from './core/create-experience';

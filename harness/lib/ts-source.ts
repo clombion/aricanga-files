@@ -105,7 +105,7 @@ export function nodes(root: Node): Node[] {
 }
 
 /** A comment of a module: its text (delimiters included), its 1-based line and the code before it. */
-export interface Comment {
+interface Comment {
   readonly text: string;
   readonly line: number;
   readonly code: string;

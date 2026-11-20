@@ -2,7 +2,7 @@
 
 import { textOf, tracked } from './source-files.ts';
 
-export interface CheckModule {
+interface CheckModule {
   readonly harnessId: string;
   readonly path: string;
   readonly summary: string;

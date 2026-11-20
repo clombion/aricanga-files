@@ -53,7 +53,7 @@ export const GENERATORS: Generators = new Map([
 ]);
 
 /** A generated block that differs from a fresh render, or that names no known generator. */
-export interface Problem {
+interface Problem {
   readonly path: string;
   readonly line: number;
   readonly message: string;

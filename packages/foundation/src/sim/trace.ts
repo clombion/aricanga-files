@@ -5,6 +5,7 @@ import type { SystemId } from './snapshot';
 // One reduction, as the kernel observes it — the unit of the `Input→Effect`+`state`
 // stream (testing-strategy.md). The whole correlated triple, visible only at the
 // reduce boundary. Treated as immutable; an observer that retains it should copy.
+/** @public */
 export interface ReduceRecord {
   readonly systemId: SystemId;
   readonly input: Input<unknown>;

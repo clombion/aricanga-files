@@ -1,8 +1,8 @@
-import { hasField, type ReduceRecord, stateOf, text } from '@narratives/foundation';
+import { type ReduceRecord, stateOf } from '@narratives/foundation';
 import type { FixtureRun, Violation } from '@narratives/foundation/testing';
 import { declaredChatId, notificationOf, receiptChangeOf } from '../effects';
 import type { ChatState } from '../state';
-import { chatSystem } from '../system';
+import { chatSystem, openedChat } from '../system';
 
 // The chat physics invariants from docs/concepts/simulation-physics.md, as pure
 // predicates over a completed run's observable Input→Effect+state stream. Authored
@@ -43,11 +43,8 @@ export function notifyOnce(run: FixtureRun): Violation | null {
   let at = 0;
   for (const rec of run.trace) {
     const { input } = rec;
-    if (input.source === 'player' && input.command.kind === 'open') {
-      const { payload } = input.command;
-      const chatId = hasField(payload, 'chatId') ? text(payload, 'chatId') : undefined;
-      if (chatId !== undefined) notified.delete(chatId);
-    }
+    const opened = input.source === 'player' ? openedChat(input.command) : undefined;
+    if (opened !== undefined) notified.delete(opened);
     for (const eff of rec.effects) {
       const notification = notificationOf(eff);
       if (notification !== undefined) {

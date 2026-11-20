@@ -1,4 +1,5 @@
 import type { InkRuntime } from '../ink/ink-runtime';
+import { encodeSnapshot } from './codec';
 import type { RenderContext, ReduceContext } from '../sim/context';
 import {
   type DataRequest,
@@ -23,6 +24,7 @@ export interface Host {
   present(effect: Effect): void;
 }
 
+/** @public */
 export interface RuntimeConfig {
   readonly ink: InkRuntime;
   readonly systems: ReadonlyArray<AnySystem>;
@@ -164,7 +166,7 @@ export class Runtime {
         this.host.present(effect);
         return;
       case 'persist':
-        this.host.store.save(JSON.stringify(this.snapshot()));
+        this.host.store.save(encodeSnapshot(this.snapshot()));
         return;
       default:
         assertNever(effect.family);

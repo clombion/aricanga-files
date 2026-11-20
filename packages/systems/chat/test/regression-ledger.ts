@@ -7,14 +7,14 @@ import type { FixtureInput } from '@narratives/foundation/testing';
 // The meta-test (regression-ledger.test.ts) enforces that every BUG-HISTORY entry
 // is dispositioned and that each kernel-physics bug keeps its fixture alive.
 
-export type Disposition =
+type Disposition =
   | { readonly kind: 'kernel-physics'; readonly predicate: string; readonly task: string; readonly fixture: string }
   | { readonly kind: 'structurally-eliminated' }
   | { readonly kind: 'deferred'; readonly task: string }
   | { readonly kind: 'view'; readonly phase: 'Phase 3' }
   | { readonly kind: 'build'; readonly phase: 'Phase 4' };
 
-export interface LedgerEntry {
+interface LedgerEntry {
   /** `BUG-NNN` for numbered entries; a stable slug for the 19 legacy date entries. */
   readonly id: string;
   readonly legacy: boolean;

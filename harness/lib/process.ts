@@ -13,25 +13,36 @@ export interface Finished {
   readonly stderr: string;
 }
 
-export interface TimedOut {
+interface TimedOut {
   readonly kind: 'timed-out';
   readonly argv: readonly string[];
   readonly timeoutMs: number;
 }
 
-export interface NotStarted {
+interface NotStarted {
   readonly kind: 'not-started';
   readonly argv: readonly string[];
   readonly reason: string;
 }
 
-export type Outcome = Finished | TimedOut | NotStarted;
+type Outcome = Finished | TimedOut | NotStarted;
 
-export interface RunOptions {
+interface RunOptions {
   readonly timeoutMs: number;
   readonly cwd: string;
   readonly env?: Readonly<Record<string, string>>;
   readonly input?: string;
+}
+
+/** This process's environment: the one read of `process.env` in the harness. */
+export function environment(): Record<string, string> {
+  const env: Record<string, string> = {};
+  for (const [name, value] of Object.entries(process.env)) {
+    if (value !== undefined) {
+      env[name] = value;
+    }
+  }
+  return env;
 }
 
 /** Run `argv` to its end or its bound, never through a shell. */
@@ -42,7 +53,7 @@ export function run(argv: readonly string[], options: RunOptions): Outcome {
   }
   const result = spawnSync(command, args, {
     cwd: options.cwd,
-    env: options.env ?? process.env,
+    env: options.env ?? environment(),
     input: options.input,
     timeout: options.timeoutMs,
     killSignal: 'SIGKILL',

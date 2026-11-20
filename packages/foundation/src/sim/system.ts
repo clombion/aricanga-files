@@ -53,7 +53,9 @@ export function erase<TState, TCommand extends Command, TEffect extends Effect, 
   return system;
 }
 
-/** A value the runtime registry holds for one system: its state or its view, with the owner's id. */
+/** A value the runtime registry holds for one system: its state or its view, with the owner's id. *
+ * @public
+ */
 export interface Owned {
   readonly systemId: SystemId;
   readonly value: unknown;

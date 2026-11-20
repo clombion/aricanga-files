@@ -53,7 +53,7 @@ export const UPSTREAM: ReadonlyMap<string, string> = new Map([
 ]);
 
 /** A pinned tool: its name, the file that pins it, and its version there. */
-export interface Pin {
+interface Pin {
   readonly tool: string;
   readonly where: string;
   readonly version: string;

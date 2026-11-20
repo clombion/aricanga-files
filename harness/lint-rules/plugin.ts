@@ -45,7 +45,7 @@ export const RULES: Readonly<Record<string, Rule>> = {
 };
 
 /** The plugin oxlint loads: its name and its rules. */
-export interface Plugin {
+interface Plugin {
   readonly meta: { readonly name: string };
   readonly rules: typeof RULES;
 }

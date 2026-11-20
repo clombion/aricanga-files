@@ -7,8 +7,10 @@ export interface DomainEvent {
   readonly [key: string]: unknown;
 }
 
+/** @public */
 export type Unsubscribe = () => void;
 
+/** @public */
 export interface EventBus {
   emit(event: DomainEvent): void;
   on(type: string, handler: (event: DomainEvent) => void): Unsubscribe;

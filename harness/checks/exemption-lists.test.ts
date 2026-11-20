@@ -76,7 +76,7 @@ const ADOPTING = new Exemptions({
 });
 
 /** A list the fence refuses: its module, its name and why. */
-export interface Finding {
+interface Finding {
   readonly path: string;
   readonly name: string;
   readonly problem: string;

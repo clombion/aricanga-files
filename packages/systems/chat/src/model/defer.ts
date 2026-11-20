@@ -4,7 +4,7 @@ import type { ChatMessageVM } from '../reduce';
 import type { ChatState } from '../state';
 import { appendMessage } from './route';
 
-export interface MessageOutcome {
+interface MessageOutcome {
   readonly state: ChatState;
   readonly effects: readonly Effect[];
 }
