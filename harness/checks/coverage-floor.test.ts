@@ -33,7 +33,6 @@ const FULL = `import { expect, test } from 'vitest';
 import { sign } from '../src/branchy';
 import { unused, used } from '../src/uncalled';
 test('all', () => {
-  expect.hasAssertions();
   expect([sign(-1), sign(1), used(), unused()]).toStrictEqual(['negative', 'positive', 1, 2]);
 });
 `;

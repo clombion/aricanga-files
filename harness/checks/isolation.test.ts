@@ -14,32 +14,27 @@ const HARNESS_ID = 'isolation';
 const PLANTED = `import { expect, test } from 'vitest';
 
 test('a pending timeout fails', () => {
-  expect.hasAssertions();
   setTimeout(() => undefined, 60_000);
   expect(1).toBe(1);
 });
 
 test('a pending interval fails', () => {
-  expect.hasAssertions();
   setInterval(() => undefined, 60_000);
   expect(1).toBe(1);
 });
 
 test('a timer that fires passes', async () => {
-  expect.hasAssertions();
   await new Promise((resolve) => setTimeout(resolve, 5));
   expect(1).toBe(1);
 });
 
 test('a cleared timer passes', () => {
-  expect.hasAssertions();
   clearTimeout(setTimeout(() => undefined, 60_000));
   clearInterval(setInterval(() => undefined, 60_000));
   expect(1).toBe(1);
 });
 
 test('the test after a leak starts clean', () => {
-  expect.hasAssertions();
   expect(1).toBe(1);
 });
 `;

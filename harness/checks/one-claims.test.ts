@@ -83,10 +83,10 @@ describe('the claims check', () => {
       ['docs/x.ts', 'export function read() {}\n'],
     ]);
     expect(probeProblems({ owner: 'src/owner.ts', pattern: /^export function read\b/mu, roots: ['src/'] }, texts)).toStrictEqual([
-      String.raw`/^export function read\b/m matches outside its owner, in src/other.ts`,
+      String.raw`/^export function read\b/mu matches outside its owner, in src/other.ts`,
     ]);
     expect(probeProblems({ owner: 'src/owner.ts', pattern: /^export function write\b/mu, roots: ['src/'] }, texts)).toStrictEqual([
-      String.raw`/^export function write\b/m does not match in its owner src/owner.ts`,
+      String.raw`/^export function write\b/mu does not match in its owner src/owner.ts`,
     ]);
   });
 

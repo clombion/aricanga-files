@@ -18,7 +18,6 @@ import net from 'node:net';
 import { expect, test } from 'vitest';
 
 test('a connection to another host trips', () => {
-  expect.hasAssertions();
   const socket = new net.Socket();
   try {
     socket.connect(9, '192.0.2.1');
@@ -30,7 +29,6 @@ test('a connection to another host trips', () => {
 });
 
 test('a lookup of another host trips', () => {
-  expect.hasAssertions();
   try {
     dns.lookup('example.com', () => undefined);
   } catch {
@@ -40,7 +38,6 @@ test('a lookup of another host trips', () => {
 });
 
 test('a fetch of another host trips', async () => {
-  expect.hasAssertions();
   try {
     await fetch('http://192.0.2.1/');
   } catch {
@@ -50,7 +47,6 @@ test('a fetch of another host trips', async () => {
 });
 
 test('a connection to this machine passes', async () => {
-  expect.hasAssertions();
   const server = net.createServer((connection) => connection.end());
   await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
   const address = server.address();
