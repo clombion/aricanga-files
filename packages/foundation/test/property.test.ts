@@ -1,17 +1,20 @@
 import { describe, expect, test } from 'vitest';
-import type { Command } from '#src/sim/input';
 import type { Effect } from '#src/sim/effect';
 import type { ReduceResult } from '#src/sim/context';
 import type { System } from '#src/sim/system';
 import { checkDeterministic } from '#src/testing/property';
 import { erase } from '#src/sim/system';
 import { fixtureSystemErased } from '#src/testing/fixture-system';
+import { readerOf } from '#src/sim/parse';
 import { storyStreamArb } from '#src/testing/generators';
 
 /** The state of a reducer that counts its calls. */
 interface Count {
   readonly calls: number;
 }
+
+/** The flaky system's readers. */
+const READ = readerOf('flaky');
 
 /** The count before any call. */
 const NO_CALLS = 0;
@@ -24,11 +27,13 @@ const ONE_CALL = 1;
  *
  * @returns {System} The system.
  */
-function flakySystem(): System<Count, Command, Effect, Count> {
+function flakySystem(): System<Count, never, Effect, Count> {
   const hidden = { calls: NO_CALLS };
   return {
     id: 'flaky',
     init: () => ({ calls: NO_CALLS }),
+    parseCommand: (value) => READ.refuse('a command', value),
+    parseState: (value) => ({ calls: READ.number(READ.object(value, 'a state')['calls'], 'calls') }),
     reduce: (): ReduceResult<Count> => {
       hidden.calls += ONE_CALL;
       return { effects: [], state: { calls: hidden.calls } };

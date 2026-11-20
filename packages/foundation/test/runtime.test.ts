@@ -1,39 +1,14 @@
-import type { AnySystem, System } from '#src/sim/system';
-import type { Command, Input } from '#src/sim/input';
-import type { ReduceContext, ReduceResult } from '#src/sim/context';
+import type { HCommand, HState } from '#test/h-system';
 import { describe, expect, test, vi } from 'vitest';
 import { erase, viewOf } from '#src/sim/system';
-import type { Effect } from '#src/sim/effect';
+import type { AnySystem } from '#src/sim/system';
 import type { Host } from '#src/host/runtime';
 import { InkRuntime } from '#src/ink/ink-runtime';
+import type { Input } from '#src/sim/input';
 import { Runtime } from '#src/host/runtime';
 import type { Snapshot } from '#src/sim/snapshot';
 import { compileInk } from '#src/testing/harness';
-import { fx } from '#src/sim/effect';
-import { gatedSystem } from '#src/testing/fixture-system';
-
-/** A synthetic system's state: the lines and ids it saw, its commit gate, and fetched data. */
-interface HState {
-  readonly lines: readonly string[];
-  readonly ids: readonly string[];
-  readonly busy: boolean;
-  readonly token: number;
-  readonly fetched: unknown;
-}
-
-/** The synthetic system's player commands. */
-type HCommand =
-  | Command<'fetch', undefined>
-  | Command<'present-ok', undefined>
-  | Command<'present-bad', undefined>
-  | Command<'mint', undefined>;
-
-/** The commit token the synthetic system starts at. */
-const COMMIT_TOKEN = 1;
-
-/** How long the synthetic system's commit waits, in milliseconds. */
-const COMMIT_DELAY_MS = 10;
-
+import { hSystem } from '#test/h-system';
 /** A commit token the state has long moved past. */
 const STALE_TOKEN = 999;
 
@@ -45,58 +20,6 @@ const THIRD_ID = 'id-2';
 
 /** The allocator's position after two ids. */
 const TWO_IDS = 2;
-
-/**
- * The synthetic system's reduction of a story line: it records the line and mints an id, and the
- * first line, `Hello`, schedules a commit so the pump gate is exercised.
- *
- * @param {HState} state - The state.
- * @param {string} text - The line.
- * @param {ReduceContext} ctx - The reduce context.
- * @returns {ReduceResult} The next state and effects.
- */
-function reduceLine(state: HState, text: string, ctx: ReduceContext): ReduceResult<HState> {
-  const next = { ...state, ids: [...state.ids, ctx.nextId()], lines: [...state.lines, text] };
-  if (text === 'Hello') {
-    return { effects: [fx.schedule({ delayMs: COMMIT_DELAY_MS, token: state.token })], state: { ...next, busy: true } };
-  }
-  return { effects: [], state: next };
-}
-
-/**
- * The synthetic system's reduction of a player command.
- *
- * @param {HState} state - The state.
- * @param {HCommand} command - The command.
- * @param {ReduceContext} ctx - The reduce context.
- * @returns {ReduceResult} The next state and effects.
- */
-function reduceCommand(state: HState, command: HCommand, ctx: ReduceContext): ReduceResult<HState> {
-  switch (command.kind) {
-    case 'fetch': {
-      return { effects: [fx.fetch({ query: 'q', source: 's' })], state };
-    }
-    case 'present-ok': {
-      return { effects: [fx.present('ping', {})], state };
-    }
-    case 'present-bad': {
-      return { effects: [fx.present('explode', {})], state };
-    }
-    case 'mint': {
-      return { effects: [], state: { ...state, ids: [...state.ids, ctx.nextId()] } };
-    }
-    default: {
-      return { effects: [], state };
-    }
-  }
-}
-
-/** A synthetic system that exercises every status, effect family, and resume. */
-const harness: System<HState, HCommand, Effect, HState> = gatedSystem<HState, HCommand>(
-  { id: 'h', init: () => ({ busy: false, fetched: undefined, ids: [], lines: [], token: COMMIT_TOKEN }), tags: ['h'] },
-  (state, input, ctx) =>
-    input.source === 'story' ? reduceLine(state, input.step.text, ctx) : reduceCommand(state, input.command, ctx),
-);
 
 /** A runtime over the synthetic system, and what its fake host was handed. */
 interface World {
@@ -154,7 +77,7 @@ function world(): World {
       },
     },
   };
-  const systems: readonly AnySystem[] = [erase(harness)];
+  const systems: readonly AnySystem[] = [erase(hSystem)];
   return { deliveries, fires, host, presented, runtime: new Runtime({ host, ink: new InkRuntime(story()), seed: 0, systems }) };
 }
 
@@ -165,7 +88,7 @@ function world(): World {
  * @returns {HState} The view.
  */
 function hView(runtime: Readonly<Runtime>): HState {
-  return viewOf(harness, { systemId: 'h', value: runtime.view('h', { locale: 'en', now: 0 }) });
+  return viewOf(hSystem, { systemId: 'h', value: runtime.view('h', { locale: 'en', now: 0 }) });
 }
 
 /**
@@ -269,7 +192,7 @@ describe('the runtime routing and ids', () => {
 
   test('the runtime drives a vocabulary-agnostic system with no system import in foundation', () => {
     expect.hasAssertions();
-    // The erase() call is the only cast; the runtime never names a concrete system type.
+    // erase() builds the registry's shape from closures; the runtime never names a concrete system type.
     const input: Input<HState, HCommand> = { lifecycle: { kind: 'reset' }, source: 'lifecycle' };
     expect(input.source).toBe('lifecycle');
     expect(erase).toBeTypeOf('function');

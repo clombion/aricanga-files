@@ -26,6 +26,8 @@ The framework runs ink-driven narrative systems (chat, cards, and future vocabul
 3. **`Input` is closed by source:** `Story(step)` · `Player(command)` · `Resume(completion)` — one per suspending effect · `Lifecycle(init | reset)`.
    **`Effect` is closed by host capability:** `DriveInk` · `Schedule` · `Fetch` · `Present` · `Persist`.
 
+   A system also parses what reaches it from outside: `parseCommand(value) → command` turns an inbound player command into one of its own commands, and `parseState(value) → state` turns a state read back from a save or a `Resume(restored)` into its own state. Each refuses any other value, naming the value and the system. They are the only ways a command or a state from outside reaches `reduce` or the runtime's registry, so the registry holds a system's state only as `init`, `reduce` or `parseState` made it.
+
 4. **All impure resources are host-owned.** The ink Story (and per-conversation snapshots), the clock, storage, and the i18n/data lookups live in the host. `state` holds no engine serialization and no wall-clock; ids are seeded, displayed time is simulation-derived. `view` reads the world only through a host-injected `renderContext` (`{ now, locale }`).
 
 5. **The foundation provides a generic, system-agnostic runtime** (a Sans-IO / functional-core–imperative-shell host loop) that drives any system: it pumps the system while a pure `status(state)` predicate (combined with host-owned ink readiness) reports ready, executes returned effects, and feeds the matching `Resume` inputs back. Routing, composition, and the view shell are shared across systems.

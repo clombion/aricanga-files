@@ -1,7 +1,13 @@
-import type { Command, Effect, ReduceResult, System } from '@narratives/foundation';
-import { fx } from '@narratives/foundation';
+import type { Effect, ReduceResult, System } from '@narratives/foundation';
+import { fx, readerOf } from '@narratives/foundation';
 
 const CARD_TAGS = ['card', 'stat'] as const;
+
+/** The cards system's id. */
+const CARDS_ID = 'cards';
+
+/** The cards system's readers. */
+const READ = readerOf(CARDS_ID);
 
 /** A stat starts at zero, and a delta that is missing or not a number moves nothing. */
 const NO_CHANGE = 0;
@@ -58,10 +64,31 @@ function applyStat(state: CardsState, tagValue: string): ReduceResult<CardsState
   };
 }
 
-// Phase 1 STUB system — applies a `# stat:` tag and advances the deck.
-const cardsSystem: System<CardsState, Command, Effect, CardsViewModel> = {
-  id: 'cards',
+/**
+ * Parse a restored deck.
+ *
+ * @param {unknown} value - The restored value.
+ * @returns {CardsState} The deck; any other value is refused.
+ */
+function parseCardsState(value: unknown): CardsState {
+  const state = READ.object(value, 'a state');
+  return {
+    deckCursor: READ.number(state['deckCursor'], 'deckCursor'),
+    history: READ.list(state['history'], 'history', (entry, at) => {
+      const played = READ.object(entry, at);
+      return { cardId: READ.string(played['cardId'], `${at}.cardId`), delta: READ.number(played['delta'], `${at}.delta`) };
+    }),
+    stats: READ.record(state['stats'], 'stats', READ.number),
+  };
+}
+
+// Phase 1 STUB system — applies a `# stat:` tag and advances the deck. It takes no player command:
+// its command union is empty, and every command is refused.
+const cardsSystem: System<CardsState, never, Effect, CardsViewModel> = {
+  id: CARDS_ID,
   init: () => ({ deckCursor: 0, history: [], stats: {} }),
+  parseCommand: (value) => READ.refuse('a command (the cards system takes none)', value),
+  parseState: parseCardsState,
   reduce(state, input): ReduceResult<CardsState> {
     if (input.source !== 'story') {
       return { effects: [], state };

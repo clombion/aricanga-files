@@ -5,7 +5,7 @@
  * concrete system; reusable by chat and cards tests.
  */
 
-export { FIXTURE_TAG, fixtureSystem, fixtureSystemErased, gatedSystem } from './fixture-system';
+export { FIXTURE_TAG, fixtureSystem, fixtureSystemErased, gatedFields, gatedSystem } from './fixture-system';
 export type { FixtureCommand, FixtureState } from './fixture-system';
 export { inkStepArb, storyInputArb, storyStreamArb, tagArb } from './generators';
 export type { StepGenOptions } from './generators';

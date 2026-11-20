@@ -1,12 +1,13 @@
 import type { Command, Effect, InkStep, ReduceResult, System } from '@narratives/foundation';
 import { buildMessage, readChatSwitch, resolveChatId } from '#src/model/route';
 import { closeWithReadState, openWithReadState } from '#src/model/read-state';
-import { hasField, text } from '@narratives/foundation';
+import { commandOf, readerOf } from '@narratives/foundation';
 import { isImmediate, placeMessage } from '#src/model/defer';
 import type { ChatState } from '#src/state';
 import type { IdSource } from '#src/model/route';
 import { advanceTime } from '#src/model/time';
 import { initChatState } from '#src/state';
+import { parseChatState } from '#src/parse-state';
 
 // The chat player commands: open a chat (focus + clear-notified + replay) or
 // close back to the hub.
@@ -26,15 +27,40 @@ interface ChatViewModel {
   readonly lastRead: ChatState['lastReadMessageId'];
 }
 
+/** The chat system's id. */
+const CHAT_ID = 'chat';
+
+/** The chat system's readers. */
+const READ = readerOf(CHAT_ID);
+
+/** The chat system's command kinds. */
+const CHAT_KINDS: readonly ChatCommand['kind'][] = ['open', 'close'];
+
+/**
+ * Parse a command for the chat system: open a chat by id, or close back to the hub.
+ *
+ * @param {unknown} value - The inbound value.
+ * @returns {ChatCommand} One of the chat commands; any other value is refused.
+ */
+function parseChatCommand(value: unknown): ChatCommand {
+  const command = commandOf(READ, value, CHAT_KINDS);
+  if (command.kind === 'open') {
+    return { kind: 'open', payload: { chatId: READ.string(READ.object(command.payload, 'the open payload')['chatId'], 'chatId') } };
+  }
+  READ.absent(command.payload, 'the close payload');
+  return { kind: 'close', payload: undefined };
+}
+
 /**
  * The chat a recorded command opens, if it is an open command: a trace holds commands erased to
- * `Command`, so the module that owns `ChatCommand` reads one back.
+ * `Command`, so the module that owns `ChatCommand` parses one back.
  *
- * @param {Command} command - A recorded command.
- * @returns {string | undefined} The chat it opens, or undefined for any other command.
+ * @param {Command} command - A recorded command for the chat system.
+ * @returns {string | undefined} The chat it opens, or undefined for a close.
  */
 function openedChat(command: Readonly<Command>): string | undefined {
-  return command.kind === 'open' && hasField(command.payload, 'chatId') ? text(command.payload, 'chatId') : undefined;
+  const parsed = parseChatCommand(command);
+  return parsed.kind === 'open' ? parsed.payload.chatId : undefined;
 }
 
 /**
@@ -72,8 +98,10 @@ function applyStep(state: ChatState, step: InkStep, ids: IdSource): ReduceResult
 // override, owning-chat identity). Emergent notifications (notify-once),
 // the deferred queue, `# immediate`, and the open/close lifecycle.
 const chatSystem: System<ChatState, ChatCommand, Effect, ChatViewModel> = {
-  id: 'chat',
+  id: CHAT_ID,
   init: () => initChatState(),
+  parseCommand: parseChatCommand,
+  parseState: parseChatState,
   reduce(state, input, ctx: IdSource): ReduceResult<ChatState> {
     if (input.source === 'player') {
       return { effects: [], state: applyCommand(state, input.command) };
@@ -92,5 +120,5 @@ const chatSystem: System<ChatState, ChatCommand, Effect, ChatViewModel> = {
   }),
 };
 
-export { CHAT_TAGS, chatSystem, openedChat };
+export { CHAT_TAGS, chatSystem, openedChat, parseChatCommand };
 export type { ChatCommand, ChatViewModel };
