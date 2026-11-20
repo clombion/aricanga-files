@@ -198,7 +198,7 @@ describe('a run that gives no report', () => {
   test('the report reader refuses a report of another shape', () => {
     expect.hasAssertions();
     expect(() => clones('exact', [], tmpdir())).toThrow(/is not an object/u);
-    expect(() => clones('exact', { duplicates: 1 }, tmpdir())).toThrow(/where the duplicates list belongs/u);
+    expect(() => clones('exact', { duplicates: 1 }, tmpdir())).toThrow("jscpd's report's duplicates is not a list: 1");
   });
 });
 

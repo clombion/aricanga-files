@@ -1,4 +1,4 @@
-/** A value the harness relies on where a library's types allow it to be absent: the one place such an absence is refused. */
+/** A value the harness relies on where a library's types allow it to be absent, and its refusal when absent. */
 
 /** A value a library's types allow to be absent turned out absent where the harness relies on it. */
 class AbsentError extends Error {
