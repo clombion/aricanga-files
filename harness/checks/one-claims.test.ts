@@ -60,6 +60,11 @@ function probeProblems(probe: Probe, texts: ReadonlyMap<string, string>): string
   ];
 }
 
+/**
+ * The held TypeScript sources, by path.
+ *
+ * @returns {ReadonlyMap<string, string>} Each held module's text, by path.
+ */
 function sources(): ReadonlyMap<string, string> {
   return new Map(typescriptFiles().map((path) => [path, textOf(path)] as const));
 }
@@ -67,7 +72,8 @@ function sources(): ReadonlyMap<string, string> {
 describe('the repository', () => {
   test('every claim is registered and every entry is live', () => {
     expect.hasAssertions();
-    expect(registry(CLAIMS).unexempted(foundClaims(currentText()))).toStrictEqual([]);
+    const found = foundClaims(currentText());
+    expect(registry(CLAIMS).unexempted(found)).toStrictEqual([]);
   });
 
   test.each(CLAIMS.map((claim) => [`${claim.path}: ${claim.clause}`, claim] as const))('the claim %s holds', (_label, claim) => {

@@ -12,6 +12,7 @@ import { describe, expect, test } from 'vitest';
 import { importsFrom, nodes, parse } from '#lib/ts-source.ts';
 import { isIdentifier, isMetaProperty, isPropertyAccessExpression, isPropertyAssignment } from 'typescript/unstable/ast/is';
 import type { Identifier } from 'typescript/unstable/ast';
+import type { SourceFile } from '#lib/ts-source.ts';
 import { SyntaxKind } from 'typescript/unstable/ast';
 import { heldFiles } from '#lib/scope.ts';
 import { textOf } from '#lib/source-files.ts';
@@ -39,6 +40,20 @@ function isPropertyName(node: Identifier): boolean {
 }
 
 /**
+ * The names a module imports from the URL modules.
+ *
+ * @param {SourceFile} file - The parsed module.
+ * @returns {readonly string[]} The imported names.
+ */
+function urlImports(file: SourceFile): readonly string[] {
+  const names: string[] = [];
+  for (const module of URL_MODULES) {
+    names.push(...importsFrom(file, module).values());
+  }
+  return names;
+}
+
+/**
  * The sites of one module that find its own location, as `site(path, what)`.
  *
  * @param {string} path - The path.
@@ -47,14 +62,9 @@ function isPropertyName(node: Identifier): boolean {
  */
 function locating(path: string, text: string): string[] {
   const file = parse(path, text);
-  const found: string[] = [];
-  for (const module of URL_MODULES) {
-    for (const [, imported] of importsFrom(file, module)) {
-      if (imported === 'fileURLToPath') {
-        found.push(site(path, 'fileURLToPath'));
-      }
-    }
-  }
+  const found: string[] = urlImports(file)
+    .filter((imported) => imported === 'fileURLToPath')
+    .map(() => site(path, 'fileURLToPath'));
   for (const node of nodes(file)) {
     if (
       isPropertyAccessExpression(node) &&
@@ -70,18 +80,24 @@ function locating(path: string, text: string): string[] {
   return found;
 }
 
+/**
+ * The held harness modules other than the owner.
+ *
+ * @returns {readonly string[]} Their paths.
+ */
+function otherHarnessModules(): readonly string[] {
+  return heldFiles('.ts').filter((path) => path.startsWith('harness/') && path !== OWNER);
+}
+
 describe('the repository', () => {
   test('only paths.ts computes where the repository is', () => {
     expect.hasAssertions();
-    const found = heldFiles('.ts')
-      .filter((path) => path.startsWith('harness/') && path !== OWNER)
-      .flatMap((path) => locating(path, textOf(path)));
-    expect(found).toStrictEqual([]);
+    expect(otherHarnessModules().flatMap((path) => locating(path, textOf(path)))).toStrictEqual([]);
   });
 
   test('paths.ts is where the root is computed', () => {
     expect.hasAssertions();
-    expect(locating(OWNER, textOf(OWNER)).length).toBeGreaterThan(0);
+    expect(locating(OWNER, textOf(OWNER))).not.toStrictEqual([]);
   });
 });
 
