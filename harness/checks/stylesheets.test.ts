@@ -12,7 +12,8 @@
 
 import { describe, expect, test } from 'vitest';
 
-import { customPropertyProblems, duplicateRules, lintSheet, readers, sheets, sheetsOf, unusedClasses, withoutSheets } from '../lib/stylesheets.ts';
+import { customPropertyProblems, duplicateRules, unusedClasses } from '../lib/sheet-scans.ts';
+import { lintSheet, readers, sheets, sheetsOf, withoutSheets } from '../lib/stylesheets.ts';
 import type { Sheet } from '../lib/stylesheets.ts';
 import { rawSizes, rawTokenValues } from '../lib/design-tokens.ts';
 import { json, object } from '../lib/config.ts';

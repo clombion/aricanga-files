@@ -197,4 +197,4 @@ function codesAt(found: readonly Diagnostic[], planted: string): readonly string
 
 export { FixtureError } from './fixture-error.ts';
 export { codesAt, fixtureFolders, fixtures, lintFixtures, OXLINT_CONFIG_FILES, parseFixture };
-export type { Diagnostic, Fixture };
+export type { Fixture };

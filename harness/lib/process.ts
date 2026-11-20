@@ -169,4 +169,4 @@ function run(argv: readonly string[], options: RunOptions): Outcome {
 }
 
 export { environment, run, runConcurrently };
-export type { Finished, Outcome, RunOptions };
+export type { Finished, Outcome };

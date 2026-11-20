@@ -9,7 +9,7 @@
  */
 
 import type { CommentRange, Expression, ImportDeclaration, Node, SourceFile } from 'typescript/unstable/ast';
-import { api, mount } from './ts-session.ts';
+import { api, mount, nextName } from './ts-session.ts';
 import { getLeadingCommentRanges, getTrailingCommentRanges } from 'typescript/unstable/ast/scanner';
 import {
   isIdentifier,
@@ -19,7 +19,6 @@ import {
   isPropertyAccessExpression,
   isStringLiteral,
 } from 'typescript/unstable/ast/is';
-import { randomUUID } from 'node:crypto';
 
 /** A module TypeScript could not parse. */
 class ParseError extends Error {
@@ -59,7 +58,7 @@ const BLOCK_LINE_STAR = /^\s*\*?\s?/u;
  * @returns {SourceFile} The parsed module.
  */
 function parse(path: string, text: string): SourceFile {
-  const fileName = `${VIRTUAL_ROOT}/${randomUUID()}/${path}`;
+  const fileName = `${VIRTUAL_ROOT}/${nextName()}/${path}`;
   const unmount = mount(new Map([[fileName, text]]));
   try {
     const snapshot = api().updateSnapshot({ openFiles: [fileName] });
@@ -208,4 +207,3 @@ function chain(node: Expression): string[] | undefined {
 export { closeSession } from './ts-session.ts';
 export type { Expression, Node, SourceFile } from 'typescript/unstable/ast';
 export { body, chain, comments, importsFrom, nodes, parse };
-export type { Comment };

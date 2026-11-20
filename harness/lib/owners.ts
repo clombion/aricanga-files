@@ -2,7 +2,7 @@
  * The owner registry: for each guarded API, which module of each root may use it.
  *
  * A `Rule` names the qualified names of the declarations that make up an API and, for each root it
- * covers, that root's owner (the module allowed to use it there), or null when no module may.
+ * covers, that root's owner (the module allowed to use it there), or none when no module may.
  * The scan asks TypeScript's checker what each name resolves to, so an aliased import, a destructured
  * binding, a `globalThis.` or `window.` chain and an element access all resolve to the declaration
  * they stand for. It matches uses, never imports or types: importing a type to annotate with it is
@@ -10,224 +10,210 @@
  * callable passed in from outside the covered roots.
  */
 
-import * as ast from 'typescript/unstable/ast';
-import type { Symbol as TsSymbol } from 'typescript/unstable/sync';
-
+import type { Identifier, Node, SourceFile } from 'typescript/unstable/ast';
+import {
+  isBindingElement,
+  isCallExpression,
+  isClassDeclaration,
+  isElementAccessExpression,
+  isExportDeclaration,
+  isFunctionDeclaration,
+  isHeritageClause,
+  isIdentifier,
+  isImportDeclaration,
+  isImportEqualsDeclaration,
+  isInterfaceDeclaration,
+  isMethodDeclaration,
+  isNewExpression,
+  isObjectBindingPattern,
+  isParameterDeclaration,
+  isPropertyAccessExpression,
+  isPropertyAssignment,
+  isPropertyDeclaration,
+  isSourceFile,
+  isStringLiteral,
+  isTypeAliasDeclaration,
+  isTypeNode,
+  isVariableDeclaration,
+} from 'typescript/unstable/ast';
 import { isPlatform, nameText, nodes, pathOf, qualifiedName } from './checker.ts';
+import { RULES } from './owner-rules.ts';
+import type { Rule } from './owner-rules.ts';
 import type { Scan } from './checker.ts';
-import { Accepted, site } from './exemptions.ts';
-
-/** A root a rule covers, and its owner there (null: no module of the root may use the API). */
-interface Scope {
-  readonly root: string;
-  readonly owner: string | null;
-}
-
-/** A guarded API: the declarations that make it up, the roots it covers, and why it has an owner. */
-interface Rule {
-  readonly name: string;
-  readonly names: Accepted<string>;
-  readonly scopes: readonly Scope[];
-  readonly why: string;
-}
-
-const KERNEL = ['packages/foundation/', 'packages/systems/'];
-
-function nobody(...roots: string[]): Scope[] {
-  return roots.map((root) => ({ owner: null, root }));
-}
-
-export const RULES: readonly Rule[] = [
-  {
-    name: 'process-start',
-    names: new Accepted(
-      ['spawn', 'spawnSync', 'exec', 'execSync', 'execFile', 'execFileSync', 'fork'].map((call) => `child_process.${call}`),
-    ),
-    scopes: [...nobody(...KERNEL, 'experiences/sandbox/'), { owner: 'harness/lib/process.ts', root: 'harness/' }],
-    why: 'every child process is bounded and its outcome is one of three',
-  },
-  {
-    name: 'clock',
-    names: new Accepted(['DateConstructor.now', 'new Date()', 'Date()', 'Performance.now', 'NodeJS.Process.hrtime']),
-    scopes: nobody(...KERNEL, 'experiences/sandbox/', 'harness/'),
-    why: 'time is simulation-derived: the kernel reads it from its input, a host from its injected clock',
-  },
-  {
-    name: 'random',
-    names: new Accepted([
-      'Math.random',
-      'Crypto.randomUUID',
-      'Crypto.getRandomValues',
-      'crypto.randomUUID',
-      'crypto.randomBytes',
-      'crypto.randomInt',
-      'crypto.getRandomValues',
-    ]),
-    scopes: [...nobody(...KERNEL, 'experiences/sandbox/'), { owner: 'harness/lib/stress.ts', root: 'harness/' }],
-    why: 'ids and draws come from the seed, so a run replays; the flake hunter draws the seed it prints and replays from',
-  },
-  {
-    name: 'standard-streams',
-    names: new Accepted(['console', 'NodeJS.Process.stdout', 'NodeJS.Process.stderr']),
-    scopes: [
-      ...nobody(...KERNEL, 'experiences/sandbox/'),
-      { owner: 'harness/lib/output.ts', root: 'harness/' },
-      { owner: 'packages/characterisation/src/harness.ts', root: 'packages/characterisation/' },
-    ],
-    why: 'the kernel reports through effects and the event bus; one module of a tool says what it says',
-  },
-  {
-    name: 'json-parse',
-    names: new Accepted(['JSON.parse']),
-    scopes: [
-      { owner: 'packages/foundation/src/host/codec.ts', root: 'packages/foundation/' },
-      ...nobody('packages/systems/', 'experiences/sandbox/'),
-      { owner: 'harness/lib/config.ts', root: 'harness/' },
-    ],
-    why: "one typed boundary narrows JSON's untyped values: the snapshot codec, the harness's config reader",
-  },
-  {
-    name: 'network',
-    names: new Accepted([
-      'fetch',
-      'XMLHttpRequest',
-      'WebSocket',
-      'EventSource',
-      'Navigator.sendBeacon',
-      'http.request',
-      'http.get',
-      'https.request',
-      'https.get',
-      'net.connect',
-      'net.createConnection',
-    ]),
-    scopes: [
-      ...nobody(...KERNEL, 'harness/'),
-      { owner: 'experiences/sandbox/src/main.ts', root: 'experiences/sandbox/' },
-    ],
-    why: "data reaches the kernel through the Fetch effect; one module of a host makes the request",
-  },
-  {
-    name: 'timers',
-    names: new Accepted([
-      'setTimeout',
-      'setInterval',
-      'setImmediate',
-      'requestAnimationFrame',
-      'requestIdleCallback',
-    ]),
-    scopes: nobody(...KERNEL, 'experiences/sandbox/', 'harness/'),
-    why: "time passes through the injected Scheduler, so a test drives it",
-  },
-  {
-    name: 'storage',
-    names: new Accepted(['localStorage', 'sessionStorage', 'indexedDB', 'Document.cookie', 'caches']),
-    scopes: nobody(...KERNEL, 'experiences/sandbox/', 'harness/', 'packages/characterisation/'),
-    why: 'saves go through the Persist effect and the injected Store',
-  },
-  {
-    name: 'settings',
-    names: new Accepted(['NodeJS.Process.env']),
-    scopes: [
-      ...nobody(...KERNEL, 'experiences/sandbox/', 'packages/characterisation/'),
-      { owner: 'harness/lib/process.ts', root: 'harness/' },
-    ],
-    why: 'every setting is read once, in one module',
-  },
-];
+import type { Symbol as TsSymbol } from 'typescript/unstable/sync';
+import { site } from './exemptions.ts';
 
 /** One use of a guarded API outside its owner: the file it is in and the rule it breaks. */
-export interface Site {
+interface Site {
   readonly path: string;
   readonly rule: string;
 }
 
-/** The key of a site in an exemption declaration. */
-export function keyOf(found: Site): string {
+/** The argument count of a `new Date()` that reads the clock. */
+const NO_ARGUMENTS = 0;
+
+/**
+ * The key of a site in an exemption declaration.
+ *
+ * @param {Site} found - The site.
+ * @returns {string} Its key.
+ */
+function keyOf(found: Site): string {
   return site(found.path, found.rule);
 }
 
-function inTypeOrImport(node: ast.Node): boolean {
-  for (let current: ast.Node | undefined = node; current !== undefined; current = current.parent) {
+/**
+ * Whether a node is a type, or sits in a type or an import or export declaration.
+ *
+ * @param {Node} node - The node.
+ * @returns {boolean} Whether no runtime use can be in it.
+ */
+function inTypeOrImport(node: Node): boolean {
+  for (let current = node; !isSourceFile(current); current = current.parent) {
     if (
-      ast.isTypeNode(current) ||
-      ast.isImportDeclaration(current) ||
-      ast.isExportDeclaration(current) ||
-      ast.isImportEqualsDeclaration(current) ||
-      ast.isTypeAliasDeclaration(current) ||
-      ast.isInterfaceDeclaration(current) ||
-      ast.isHeritageClause(current)
+      isTypeNode(current) ||
+      isImportDeclaration(current) ||
+      isExportDeclaration(current) ||
+      isImportEqualsDeclaration(current) ||
+      isTypeAliasDeclaration(current) ||
+      isInterfaceDeclaration(current) ||
+      isHeritageClause(current)
     ) {
       return true;
-    }
-    if (ast.isSourceFile(current)) {
-      return false;
     }
   }
   return false;
 }
 
-/** Whether an identifier is the name a declaration introduces, or a property name read elsewhere. */
-function declaresOrNames(node: ast.Identifier): boolean {
-  const {parent} = node;
+/**
+ * Whether an identifier is the name a declaration introduces, or a property name read elsewhere.
+ *
+ * @param {Identifier} node - The identifier.
+ * @returns {boolean} Whether it names rather than uses.
+ */
+function declaresOrNames(node: Identifier): boolean {
+  const { parent } = node;
   const named =
-    ast.isVariableDeclaration(parent) ||
-    ast.isFunctionDeclaration(parent) ||
-    ast.isClassDeclaration(parent) ||
-    ast.isParameterDeclaration(parent) ||
-    ast.isPropertyAssignment(parent) ||
-    ast.isPropertyDeclaration(parent) ||
-    ast.isMethodDeclaration(parent) ||
-    ast.isBindingElement(parent) ||
-    ast.isPropertyAccessExpression(parent);
+    isVariableDeclaration(parent) ||
+    isFunctionDeclaration(parent) ||
+    isClassDeclaration(parent) ||
+    isParameterDeclaration(parent) ||
+    isPropertyAssignment(parent) ||
+    isPropertyDeclaration(parent) ||
+    isMethodDeclaration(parent) ||
+    isBindingElement(parent) ||
+    isPropertyAccessExpression(parent);
   return named && 'name' in parent && parent.name === node;
 }
 
-/** The qualified names every runtime use of a platform API in a file resolves to. */
-function uses(scan: Scan, file: ast.SourceFile): readonly string[] {
+/**
+ * The qualified name a symbol resolves to, when the platform declares it.
+ *
+ * @param {Scan} scan - The open scan.
+ * @param {TsSymbol | undefined} symbol - The symbol.
+ * @returns {readonly string[]} Its qualified name, or nothing.
+ */
+function platformName(scan: Scan, symbol: TsSymbol | undefined): readonly string[] {
+  const name = isPlatform(scan.checker, symbol) ? qualifiedName(scan.checker, symbol) : undefined;
+  return name === undefined ? [] : [name];
+}
+
+/**
+ * Whether an expression is the platform's `Date`.
+ *
+ * @param {Scan} scan - The open scan.
+ * @param {Node} expression - The expression.
+ * @returns {boolean} Whether it resolves to `Date`.
+ */
+function isDate(scan: Scan, expression: Node): boolean {
+  const symbol = scan.checker.getSymbolAtLocation(expression);
+  return isPlatform(scan.checker, symbol) && qualifiedName(scan.checker, symbol) === 'Date';
+}
+
+/**
+ * The clock reads a node makes by calling or constructing `Date` with no argument.
+ *
+ * @param {Scan} scan - The open scan.
+ * @param {Node} node - The node.
+ * @returns {readonly string[]} `new Date()` or `Date()`, or nothing.
+ */
+function clockReads(scan: Scan, node: Node): readonly string[] {
+  if (isNewExpression(node) && (node.arguments?.length ?? NO_ARGUMENTS) === NO_ARGUMENTS && isDate(scan, node.expression)) {
+    return ['new Date()'];
+  }
+  return isCallExpression(node) && isDate(scan, node.expression) ? ['Date()'] : [];
+}
+
+/**
+ * The property `name` of the type of `holder`.
+ *
+ * @param {Scan} scan - The open scan.
+ * @param {Node} holder - The node whose type holds the property.
+ * @param {string | undefined} name - The property's name, or undefined when it is computed.
+ * @returns {TsSymbol | undefined} The property's symbol, or undefined.
+ */
+function propertyOf(scan: Scan, holder: Node, name: string | undefined): TsSymbol | undefined {
+  const type = scan.checker.getTypeAtLocation(holder);
+  return name === undefined || type === undefined ? undefined : scan.checker.getPropertyOfType(type, name);
+}
+
+/**
+ * The symbol a node uses: a property read, a string-keyed element read, a destructured property or a name.
+ *
+ * @param {Scan} scan - The open scan.
+ * @param {Node} node - The node.
+ * @returns {TsSymbol | undefined} The symbol, or undefined.
+ */
+function usedSymbol(scan: Scan, node: Node): TsSymbol | undefined {
   const { checker } = scan;
+  if (isPropertyAccessExpression(node)) {
+    return checker.getSymbolAtLocation(node.name);
+  }
+  if (isElementAccessExpression(node) && isStringLiteral(node.argumentExpression)) {
+    return propertyOf(scan, node.expression, node.argumentExpression.text);
+  }
+  if (isBindingElement(node) && isObjectBindingPattern(node.parent)) {
+    return propertyOf(scan, node.parent, nameText(node.propertyName ?? node.name));
+  }
+  return isIdentifier(node) && !declaresOrNames(node) ? checker.getSymbolAtLocation(node) : undefined;
+}
+
+/**
+ * The qualified names every runtime use of a platform API in a file resolves to.
+ *
+ * @param {Scan} scan - The open scan.
+ * @param {SourceFile} file - The file.
+ * @returns {readonly string[]} The names.
+ */
+function uses(scan: Scan, file: SourceFile): readonly string[] {
   const found: string[] = [];
-  const add = (symbol: TsSymbol | undefined): void => {
-    const name = isPlatform(checker, symbol) ? qualifiedName(checker, symbol) : undefined;
-    if (name !== undefined) {
-      found.push(name);
-    }
-  };
-  const isDate = (expression: ast.Node): boolean => {
-    const symbol = checker.getSymbolAtLocation(expression);
-    return isPlatform(checker, symbol) && qualifiedName(checker, symbol) === 'Date';
-  };
   for (const node of nodes(file)) {
-    if (inTypeOrImport(node)) {
-      continue;
-    }
-    if (ast.isNewExpression(node) && (node.arguments?.length ?? 0) === 0 && isDate(node.expression)) {
-      found.push('new Date()');
-    } else if (ast.isCallExpression(node) && isDate(node.expression)) {
-      found.push('Date()');
-    }
-    if (ast.isPropertyAccessExpression(node)) {
-      add(checker.getSymbolAtLocation(node.name));
-    } else if (ast.isElementAccessExpression(node) && ast.isStringLiteral(node.argumentExpression)) {
-      const type = checker.getTypeAtLocation(node.expression);
-      add(type === undefined ? undefined : checker.getPropertyOfType(type, node.argumentExpression.text));
-    } else if (ast.isBindingElement(node) && ast.isObjectBindingPattern(node.parent)) {
-      const name = nameText(node.propertyName ?? node.name);
-      const type = checker.getTypeAtLocation(node.parent);
-      add(name === undefined || type === undefined ? undefined : checker.getPropertyOfType(type, name));
-    } else if (ast.isIdentifier(node) && !declaresOrNames(node)) {
-      add(checker.getSymbolAtLocation(node));
+    if (!inTypeOrImport(node)) {
+      found.push(...clockReads(scan, node), ...platformName(scan, usedSymbol(scan, node)));
     }
   }
   return found;
 }
 
+/**
+ * Whether the names a file uses break a rule.
+ *
+ * @param {Rule} rule - The rule.
+ * @param {readonly string[]} found - The names the file uses.
+ * @returns {boolean} Whether any is the rule's API or a member of it.
+ */
 function breaks(rule: Rule, found: readonly string[]): boolean {
   return found.some((name) => rule.names.has(name) || [...rule.names].some((member) => name.startsWith(`${member}.`)));
 }
 
-/** The guarded uses in a covered file that its rules do not allow there. */
-export function sites(scan: Scan, file: ast.SourceFile): readonly Site[] {
+/**
+ * The guarded uses in a covered file that its rules do not allow there.
+ *
+ * @param {Scan} scan - The open scan.
+ * @param {SourceFile} file - The file.
+ * @returns {readonly Site[]} The sites.
+ */
+function sites(scan: Scan, file: SourceFile): readonly Site[] {
   const path = pathOf(file);
   const found = uses(scan, file);
   return RULES.filter((rule) => {
@@ -236,7 +222,18 @@ export function sites(scan: Scan, file: ast.SourceFile): readonly Site[] {
   }).map((rule) => ({ path, rule: rule.name }));
 }
 
-/** Whether a module uses the rule's API: an owner that does not is stale. */
-export function ownerUses(scan: Scan, file: ast.SourceFile, rule: Rule): boolean {
+/**
+ * Whether a module uses the rule's API: an owner that does not is stale.
+ *
+ * @param {Scan} scan - The open scan.
+ * @param {SourceFile} file - The module.
+ * @param {Rule} rule - The rule.
+ * @returns {boolean} Whether it uses the API.
+ */
+function ownerUses(scan: Scan, file: SourceFile, rule: Rule): boolean {
   return breaks(rule, uses(scan, file));
 }
+
+export { RULES } from './owner-rules.ts';
+export { keyOf, ownerUses, sites };
+export type { Site };

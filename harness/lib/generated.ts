@@ -168,4 +168,4 @@ function run(check: boolean, generators: Readonly<Generators> = GENERATORS, file
 }
 
 export { blocks, GENERATORS, problems, rendered, run };
-export type { Files, Generators, Problem };
+export type { Files, Generators };

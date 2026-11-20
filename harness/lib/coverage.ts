@@ -8,83 +8,134 @@
  * entry either way fails, so new gaps fail and a closed gap forces its entry down.
  */
 
-import { readFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-
-import { json, object } from './config.ts';
 import { CountedExemptions, site } from './exemptions.ts';
+import { EXIT_FAILURE, EXIT_SUCCESS } from './output.ts';
+import { json, object } from './config.ts';
 import type { Mismatch } from './exemptions.ts';
 import { REPO_ROOT } from './paths.ts';
+import { isEmpty } from './lists.ts';
+import path from 'node:path';
 import { relativeTo } from './relative.ts';
-
-/** The floor, in percent, of every metric. */
-const FLOOR = 100;
-
-/** Where the gate's coverage run writes its reports. */
-export const COVERAGE_DIR: string = join(tmpdir(), 'aricanga-coverage');
-
-const METRICS = ['statements', 'branches', 'functions', 'lines'] as const;
-type Metric = (typeof METRICS)[number];
+import { textAt } from './source-files.ts';
+import { tmpdir } from 'node:os';
 
 /** One file's coverage: how many items of each metric it has, and how many the run reached. */
-export interface FileCoverage {
+interface FileCoverage {
   readonly path: string;
   readonly total: Readonly<Record<Metric, number>>;
   readonly covered: Readonly<Record<Metric, number>>;
 }
 
+/** A count of items and how many of them the run reached. */
+interface Reach {
+  readonly total: number;
+  readonly covered: number;
+}
+
+/** The floor, in percent, of every metric. */
+const FLOOR = 100;
+
+/** The whole, in percent. */
+const WHOLE = 100;
+
+/** The hit count of an item no test reached. */
+const UNREACHED = 0;
+
+/** Where the gate's coverage run writes its reports. */
+const COVERAGE_DIR: string = path.join(tmpdir(), 'aricanga-coverage');
+
+const METRICS = ['statements', 'branches', 'functions', 'lines'] as const;
+
+/** A coverage metric. */
+type Metric = (typeof METRICS)[number];
+
+/**
+ * The hit counts of one metric of a file.
+ *
+ * @param {unknown} value - The report's map of hit counts (a branch's entry is a list).
+ * @param {string} what - The metric, for a refusal.
+ * @returns {readonly number[]} The hit counts.
+ */
 function counts(value: unknown, what: string): readonly number[] {
   return Object.values(object(value, what)).flatMap((entry) =>
     Array.isArray(entry) ? entry.map(Number) : [Number(entry)],
   );
 }
 
-/** The covered lines of a file: a line is covered when any statement starting on it ran. */
-function lines(statementMap: unknown, statements: unknown): { readonly total: number; readonly covered: number } {
+/**
+ * How many of a metric's items the run reached.
+ *
+ * @param {readonly number[]} values - The items' hit counts.
+ * @returns {number} The items hit at least once.
+ */
+function reached(values: readonly number[]): number {
+  return values.filter((count) => count > UNREACHED).length;
+}
+
+/**
+ * The covered lines of a file: a line is covered when any statement starting on it ran.
+ *
+ * @param {unknown} statementMap - The report's statement locations.
+ * @param {unknown} statements - The report's statement hit counts.
+ * @returns {Reach} The lines, and how many were covered.
+ */
+function lines(statementMap: unknown, statements: unknown): Reach {
   const locations = object(statementMap, 'statementMap');
   const byLine = new Map<number, number>();
   for (const [id, count] of Object.entries(object(statements, 'statements'))) {
     const line = Number(object(object(locations[id], `statement ${id}`)['start'], 'start')['line']);
-    byLine.set(line, Math.max(byLine.get(line) ?? 0, Number(count)));
+    byLine.set(line, Math.max(byLine.get(line) ?? UNREACHED, Number(count)));
   }
   const values = [...byLine.values()];
-  return { covered: values.filter((count) => count > 0).length, total: values.length };
+  return { covered: reached(values), total: values.length };
 }
 
-function reached(values: readonly number[]): number {
-  return values.filter((count) => count > 0).length;
+/**
+ * One file's coverage.
+ *
+ * @param {string} file - The file's path in the report.
+ * @param {unknown} entry - Its entry in the report.
+ * @param {string} root - The root paths are made relative to.
+ * @returns {FileCoverage} Its coverage.
+ */
+function coverageOf(file: string, entry: unknown, root: string): FileCoverage {
+  const fields = object(entry, file);
+  const statements = counts(fields['s'], 'statements');
+  const branches = counts(fields['b'], 'branches');
+  const functions = counts(fields['f'], 'functions');
+  const lineCounts = lines(fields['statementMap'], fields['s']);
+  return {
+    covered: { branches: reached(branches), functions: reached(functions), lines: lineCounts.covered, statements: reached(statements) },
+    path: relativeTo(root, file),
+    total: { branches: branches.length, functions: functions.length, lines: lineCounts.total, statements: statements.length },
+  };
 }
 
-/** The coverage of every file of a parsed Istanbul JSON report, relative to `root`. */
-export function fileCoverage(report: unknown, root: string = REPO_ROOT): readonly FileCoverage[] {
+/**
+ * The coverage of every file of a parsed Istanbul JSON report.
+ *
+ * @param {unknown} report - The parsed report.
+ * @param {string} root - The root paths are made relative to.
+ * @returns {readonly FileCoverage[]} Each file's coverage, sorted by path.
+ */
+function fileCoverage(report: unknown, root: string = REPO_ROOT): readonly FileCoverage[] {
   return Object.entries(object(report, 'coverage report'))
-    .map(([file, entry]) => {
-      const fields = object(entry, file);
-      const statements = counts(fields['s'], 'statements');
-      const branches = counts(fields['b'], 'branches');
-      const functions = counts(fields['f'], 'functions');
-      const lineCounts = lines(fields['statementMap'], fields['s']);
-      return {
-        covered: {
-          branches: reached(branches),
-          functions: reached(functions),
-          lines: lineCounts.covered,
-          statements: reached(statements),
-        },
-        path: relativeTo(root, file),
-        total: { branches: branches.length, functions: functions.length, lines: lineCounts.total, statements: statements.length },
-      };
-    })
-    .toSorted((a, b) => a.path.localeCompare(b.path));
+    .map(([file, entry]: readonly [string, unknown]) => coverageOf(file, entry, root))
+    .toSorted((first, second) => first.path.localeCompare(second.path));
 }
 
-/** The items under the floor, one key per item, as `site(file, metric)`. */
-export function shortfalls(files: readonly FileCoverage[], floor: number = FLOOR): readonly string[] {
+/**
+ * The items under the floor, one key per item, as `site(file, metric)`.
+ *
+ * @param {readonly FileCoverage[]} files - The files' coverage.
+ * @param {number} floor - The floor, in percent.
+ * @returns {readonly string[]} A key per missing item.
+ */
+function shortfalls(files: readonly FileCoverage[], floor: number = FLOOR): readonly string[] {
   return files.flatMap((file) =>
     METRICS.flatMap((metric) => {
-      const needed = Math.ceil((file.total[metric] * floor) / 100);
-      const short = Math.max(0, needed - file.covered[metric]);
+      const needed = Math.ceil((file.total[metric] * floor) / WHOLE);
+      const short = Math.max(UNREACHED, needed - file.covered[metric]);
       return Array.from({ length: short }, () => site(file.path, metric));
     }),
   );
@@ -94,115 +145,121 @@ export function shortfalls(files: readonly FileCoverage[], floor: number = FLOOR
 const ADOPTING =
   'adopting: the shortfall this file carried when the floor was adopted; close it with tests and lower the entry';
 
-export const DEBT: CountedExemptions = new CountedExemptions({
-  'experiences/sandbox/src/main.ts :: branches': [6, ADOPTING],
-  'experiences/sandbox/src/main.ts :: functions': [3, ADOPTING],
-  'experiences/sandbox/src/main.ts :: lines': [4, ADOPTING],
-  'experiences/sandbox/src/main.ts :: statements': [5, ADOPTING],
-  'harness/lib/checks.ts :: branches': [8, ADOPTING],
-  'harness/lib/checks.ts :: functions': [6, ADOPTING],
-  'harness/lib/checks.ts :: lines': [8, ADOPTING],
-  'harness/lib/checks.ts :: statements': [8, ADOPTING],
-  'harness/lib/config.ts :: branches': [4, ADOPTING],
-  'harness/lib/config.ts :: lines': [2, ADOPTING],
-  'harness/lib/config.ts :: statements': [2, ADOPTING],
-  'harness/lib/docs.ts :: branches': [16, ADOPTING],
-  'harness/lib/docs.ts :: functions': [4, ADOPTING],
-  'harness/lib/docs.ts :: lines': [14, ADOPTING],
-  'harness/lib/docs.ts :: statements': [15, ADOPTING],
-  'harness/lib/exemptions.ts :: branches': [4, ADOPTING],
-  'harness/lib/exemptions.ts :: functions': [2, ADOPTING],
-  'harness/lib/exemptions.ts :: lines': [4, ADOPTING],
-  'harness/lib/exemptions.ts :: statements': [6, ADOPTING],
-  'harness/lib/generated.ts :: branches': [2, ADOPTING],
-  'harness/lib/generated.ts :: functions': [6, ADOPTING],
-  'harness/lib/generated.ts :: lines': [8, ADOPTING],
-  'harness/lib/generated.ts :: statements': [9, ADOPTING],
-  'harness/lib/lint-rules.ts :: branches': [4, ADOPTING],
-  'harness/lib/lint-rules.ts :: lines': [3, ADOPTING],
-  'harness/lib/lint-rules.ts :: statements': [3, ADOPTING],
-  'harness/lib/process.ts :: branches': [7, ADOPTING],
-  'harness/lib/process.ts :: lines': [5, ADOPTING],
-  'harness/lib/process.ts :: statements': [5, ADOPTING],
-  'harness/lib/tools.ts :: branches': [1, ADOPTING],
-  'harness/lib/tools.ts :: lines': [2, ADOPTING],
-  'harness/lib/tools.ts :: statements': [2, ADOPTING],
-  'harness/lib/ts-source.ts :: branches': [4, ADOPTING],
-  'harness/lib/ts-source.ts :: lines': [2, ADOPTING],
-  'harness/lib/ts-source.ts :: statements': [2, ADOPTING],
-  'harness/scripts/check-pushed.ts :: branches': [4, ADOPTING],
-  'harness/scripts/check-pushed.ts :: functions': [2, ADOPTING],
-  'harness/scripts/check-pushed.ts :: lines': [6, ADOPTING],
-  'harness/scripts/check-pushed.ts :: statements': [7, ADOPTING],
-  'harness/scripts/coverage-floor.ts :: lines': [1, ADOPTING],
-  'harness/scripts/coverage-floor.ts :: statements': [1, ADOPTING],
-  'harness/scripts/dupes.ts :: lines': [1, ADOPTING],
-  'harness/scripts/dupes.ts :: statements': [1, ADOPTING],
-  'harness/scripts/gen-docs.ts :: branches': [2, ADOPTING],
-  'harness/scripts/gen-docs.ts :: lines': [4, ADOPTING],
-  'harness/scripts/gen-docs.ts :: statements': [4, ADOPTING],
-  'harness/scripts/typecheck.ts :: branches': [4, ADOPTING],
-  'harness/scripts/typecheck.ts :: lines': [8, ADOPTING],
-  'harness/scripts/typecheck.ts :: statements': [8, ADOPTING],
-  'packages/foundation/src/core/create-experience.ts :: functions': [4, ADOPTING],
-  'packages/foundation/src/core/create-experience.ts :: lines': [4, ADOPTING],
-  'packages/foundation/src/core/create-experience.ts :: statements': [4, ADOPTING],
-  'packages/foundation/src/host/runtime.ts :: branches': [12, ADOPTING],
-  'packages/foundation/src/host/runtime.ts :: lines': [11, ADOPTING],
-  'packages/foundation/src/host/runtime.ts :: statements': [14, ADOPTING],
-  'packages/foundation/src/ink/ink-runtime.ts :: branches': [18, ADOPTING],
-  'packages/foundation/src/ink/ink-runtime.ts :: functions': [10, ADOPTING],
-  'packages/foundation/src/ink/ink-runtime.ts :: lines': [11, ADOPTING],
-  'packages/foundation/src/ink/ink-runtime.ts :: statements': [18, ADOPTING],
-  'packages/foundation/src/services/event-bus.ts :: branches': [4, ADOPTING],
-  'packages/foundation/src/services/event-bus.ts :: functions': [4, ADOPTING],
-  'packages/foundation/src/services/event-bus.ts :: lines': [12, ADOPTING],
-  'packages/foundation/src/services/event-bus.ts :: statements': [14, ADOPTING],
-  'packages/foundation/src/sim/effect.ts :: branches': [8, ADOPTING],
-  'packages/foundation/src/sim/effect.ts :: lines': [5, ADOPTING],
-  'packages/foundation/src/sim/effect.ts :: statements': [7, ADOPTING],
-  'packages/foundation/src/sim/exhaustive.ts :: functions': [1, ADOPTING],
-  'packages/foundation/src/sim/exhaustive.ts :: lines': [1, ADOPTING],
-  'packages/foundation/src/sim/exhaustive.ts :: statements': [1, ADOPTING],
-  'packages/foundation/src/sim/router.ts :: branches': [1, ADOPTING],
-  'packages/foundation/src/sim/router.ts :: lines': [1, ADOPTING],
-  'packages/foundation/src/sim/router.ts :: statements': [1, ADOPTING],
-  'packages/foundation/src/sim/system.ts :: branches': [1, ADOPTING],
-  'packages/foundation/src/sim/system.ts :: lines': [1, ADOPTING],
-  'packages/foundation/src/sim/system.ts :: statements': [1, ADOPTING],
-  'packages/foundation/src/testing/fixture-system.ts :: branches': [6, ADOPTING],
-  'packages/foundation/src/testing/fixture-system.ts :: lines': [5, ADOPTING],
-  'packages/foundation/src/testing/fixture-system.ts :: statements': [5, ADOPTING],
-  'packages/foundation/src/testing/generators.ts :: branches': [2, ADOPTING],
-  'packages/foundation/src/testing/harness.ts :: branches': [3, ADOPTING],
-  'packages/foundation/src/testing/harness.ts :: functions': [2, ADOPTING],
-  'packages/foundation/src/testing/harness.ts :: lines': [1, ADOPTING],
-  'packages/foundation/src/testing/harness.ts :: statements': [2, ADOPTING],
-  'packages/foundation/src/testing/property.ts :: branches': [5, ADOPTING],
-  'packages/foundation/src/testing/property.ts :: lines': [2, ADOPTING],
-  'packages/foundation/src/testing/property.ts :: statements': [2, ADOPTING],
-  'packages/systems/cards/src/system.ts :: branches': [5, ADOPTING],
-  'packages/systems/cards/src/system.ts :: functions': [1, ADOPTING],
-  'packages/systems/cards/src/system.ts :: lines': [1, ADOPTING],
-  'packages/systems/cards/src/system.ts :: statements': [3, ADOPTING],
-  'packages/systems/chat/src/effects.ts :: branches': [4, ADOPTING],
-  'packages/systems/chat/src/effects.ts :: functions': [1, ADOPTING],
-  'packages/systems/chat/src/effects.ts :: lines': [1, ADOPTING],
-  'packages/systems/chat/src/effects.ts :: statements': [1, ADOPTING],
-  'packages/systems/chat/src/model/defer.ts :: branches': [2, ADOPTING],
-  'packages/systems/chat/src/model/read-state.ts :: branches': [1, ADOPTING],
-  'packages/systems/chat/src/model/time.ts :: branches': [1, ADOPTING],
-  'packages/systems/chat/src/system.ts :: branches': [2, ADOPTING],
-  'packages/systems/chat/src/system.ts :: lines': [1, ADOPTING],
-  'packages/systems/chat/src/system.ts :: statements': [2, ADOPTING],
-  'packages/systems/chat/src/testing/predicates.ts :: branches': [24, ADOPTING],
-  'packages/systems/chat/src/testing/predicates.ts :: functions': [4, ADOPTING],
-  'packages/systems/chat/src/testing/predicates.ts :: lines': [24, ADOPTING],
-  'packages/systems/chat/src/testing/predicates.ts :: statements': [26, ADOPTING],
+const DEBT: CountedExemptions = new CountedExemptions({
+  'experiences/sandbox/src/main.ts :: branches': { count: 6, reason: ADOPTING },
+  'experiences/sandbox/src/main.ts :: functions': { count: 3, reason: ADOPTING },
+  'experiences/sandbox/src/main.ts :: lines': { count: 4, reason: ADOPTING },
+  'experiences/sandbox/src/main.ts :: statements': { count: 5, reason: ADOPTING },
+  'harness/lib/checks.ts :: branches': { count: 8, reason: ADOPTING },
+  'harness/lib/checks.ts :: functions': { count: 6, reason: ADOPTING },
+  'harness/lib/checks.ts :: lines': { count: 8, reason: ADOPTING },
+  'harness/lib/checks.ts :: statements': { count: 8, reason: ADOPTING },
+  'harness/lib/config.ts :: branches': { count: 4, reason: ADOPTING },
+  'harness/lib/config.ts :: lines': { count: 2, reason: ADOPTING },
+  'harness/lib/config.ts :: statements': { count: 2, reason: ADOPTING },
+  'harness/lib/docs.ts :: branches': { count: 16, reason: ADOPTING },
+  'harness/lib/docs.ts :: functions': { count: 4, reason: ADOPTING },
+  'harness/lib/docs.ts :: lines': { count: 14, reason: ADOPTING },
+  'harness/lib/docs.ts :: statements': { count: 15, reason: ADOPTING },
+  'harness/lib/exemptions.ts :: branches': { count: 4, reason: ADOPTING },
+  'harness/lib/exemptions.ts :: functions': { count: 2, reason: ADOPTING },
+  'harness/lib/exemptions.ts :: lines': { count: 4, reason: ADOPTING },
+  'harness/lib/exemptions.ts :: statements': { count: 6, reason: ADOPTING },
+  'harness/lib/generated.ts :: branches': { count: 2, reason: ADOPTING },
+  'harness/lib/generated.ts :: functions': { count: 6, reason: ADOPTING },
+  'harness/lib/generated.ts :: lines': { count: 8, reason: ADOPTING },
+  'harness/lib/generated.ts :: statements': { count: 9, reason: ADOPTING },
+  'harness/lib/lint-rules.ts :: branches': { count: 4, reason: ADOPTING },
+  'harness/lib/lint-rules.ts :: lines': { count: 3, reason: ADOPTING },
+  'harness/lib/lint-rules.ts :: statements': { count: 3, reason: ADOPTING },
+  'harness/lib/process.ts :: branches': { count: 7, reason: ADOPTING },
+  'harness/lib/process.ts :: lines': { count: 5, reason: ADOPTING },
+  'harness/lib/process.ts :: statements': { count: 5, reason: ADOPTING },
+  'harness/lib/tools.ts :: branches': { count: 1, reason: ADOPTING },
+  'harness/lib/tools.ts :: lines': { count: 2, reason: ADOPTING },
+  'harness/lib/tools.ts :: statements': { count: 2, reason: ADOPTING },
+  'harness/lib/ts-source.ts :: branches': { count: 4, reason: ADOPTING },
+  'harness/lib/ts-source.ts :: lines': { count: 2, reason: ADOPTING },
+  'harness/lib/ts-source.ts :: statements': { count: 2, reason: ADOPTING },
+  'harness/scripts/check-pushed.ts :: branches': { count: 4, reason: ADOPTING },
+  'harness/scripts/check-pushed.ts :: functions': { count: 2, reason: ADOPTING },
+  'harness/scripts/check-pushed.ts :: lines': { count: 6, reason: ADOPTING },
+  'harness/scripts/check-pushed.ts :: statements': { count: 7, reason: ADOPTING },
+  'harness/scripts/coverage-floor.ts :: lines': { count: 1, reason: ADOPTING },
+  'harness/scripts/coverage-floor.ts :: statements': { count: 1, reason: ADOPTING },
+  'harness/scripts/dupes.ts :: lines': { count: 1, reason: ADOPTING },
+  'harness/scripts/dupes.ts :: statements': { count: 1, reason: ADOPTING },
+  'harness/scripts/gen-docs.ts :: branches': { count: 2, reason: ADOPTING },
+  'harness/scripts/gen-docs.ts :: lines': { count: 4, reason: ADOPTING },
+  'harness/scripts/gen-docs.ts :: statements': { count: 4, reason: ADOPTING },
+  'harness/scripts/typecheck.ts :: branches': { count: 4, reason: ADOPTING },
+  'harness/scripts/typecheck.ts :: lines': { count: 8, reason: ADOPTING },
+  'harness/scripts/typecheck.ts :: statements': { count: 8, reason: ADOPTING },
+  'packages/foundation/src/core/create-experience.ts :: functions': { count: 4, reason: ADOPTING },
+  'packages/foundation/src/core/create-experience.ts :: lines': { count: 4, reason: ADOPTING },
+  'packages/foundation/src/core/create-experience.ts :: statements': { count: 4, reason: ADOPTING },
+  'packages/foundation/src/host/runtime.ts :: branches': { count: 12, reason: ADOPTING },
+  'packages/foundation/src/host/runtime.ts :: lines': { count: 11, reason: ADOPTING },
+  'packages/foundation/src/host/runtime.ts :: statements': { count: 14, reason: ADOPTING },
+  'packages/foundation/src/ink/ink-runtime.ts :: branches': { count: 18, reason: ADOPTING },
+  'packages/foundation/src/ink/ink-runtime.ts :: functions': { count: 10, reason: ADOPTING },
+  'packages/foundation/src/ink/ink-runtime.ts :: lines': { count: 11, reason: ADOPTING },
+  'packages/foundation/src/ink/ink-runtime.ts :: statements': { count: 18, reason: ADOPTING },
+  'packages/foundation/src/services/event-bus.ts :: branches': { count: 4, reason: ADOPTING },
+  'packages/foundation/src/services/event-bus.ts :: functions': { count: 4, reason: ADOPTING },
+  'packages/foundation/src/services/event-bus.ts :: lines': { count: 12, reason: ADOPTING },
+  'packages/foundation/src/services/event-bus.ts :: statements': { count: 14, reason: ADOPTING },
+  'packages/foundation/src/sim/effect.ts :: branches': { count: 8, reason: ADOPTING },
+  'packages/foundation/src/sim/effect.ts :: lines': { count: 5, reason: ADOPTING },
+  'packages/foundation/src/sim/effect.ts :: statements': { count: 7, reason: ADOPTING },
+  'packages/foundation/src/sim/exhaustive.ts :: functions': { count: 1, reason: ADOPTING },
+  'packages/foundation/src/sim/exhaustive.ts :: lines': { count: 1, reason: ADOPTING },
+  'packages/foundation/src/sim/exhaustive.ts :: statements': { count: 1, reason: ADOPTING },
+  'packages/foundation/src/sim/router.ts :: branches': { count: 1, reason: ADOPTING },
+  'packages/foundation/src/sim/router.ts :: lines': { count: 1, reason: ADOPTING },
+  'packages/foundation/src/sim/router.ts :: statements': { count: 1, reason: ADOPTING },
+  'packages/foundation/src/sim/system.ts :: branches': { count: 1, reason: ADOPTING },
+  'packages/foundation/src/sim/system.ts :: lines': { count: 1, reason: ADOPTING },
+  'packages/foundation/src/sim/system.ts :: statements': { count: 1, reason: ADOPTING },
+  'packages/foundation/src/testing/fixture-system.ts :: branches': { count: 6, reason: ADOPTING },
+  'packages/foundation/src/testing/fixture-system.ts :: lines': { count: 5, reason: ADOPTING },
+  'packages/foundation/src/testing/fixture-system.ts :: statements': { count: 5, reason: ADOPTING },
+  'packages/foundation/src/testing/generators.ts :: branches': { count: 2, reason: ADOPTING },
+  'packages/foundation/src/testing/harness.ts :: branches': { count: 3, reason: ADOPTING },
+  'packages/foundation/src/testing/harness.ts :: functions': { count: 2, reason: ADOPTING },
+  'packages/foundation/src/testing/harness.ts :: lines': { count: 1, reason: ADOPTING },
+  'packages/foundation/src/testing/harness.ts :: statements': { count: 2, reason: ADOPTING },
+  'packages/foundation/src/testing/property.ts :: branches': { count: 5, reason: ADOPTING },
+  'packages/foundation/src/testing/property.ts :: lines': { count: 2, reason: ADOPTING },
+  'packages/foundation/src/testing/property.ts :: statements': { count: 2, reason: ADOPTING },
+  'packages/systems/cards/src/system.ts :: branches': { count: 5, reason: ADOPTING },
+  'packages/systems/cards/src/system.ts :: functions': { count: 1, reason: ADOPTING },
+  'packages/systems/cards/src/system.ts :: lines': { count: 1, reason: ADOPTING },
+  'packages/systems/cards/src/system.ts :: statements': { count: 3, reason: ADOPTING },
+  'packages/systems/chat/src/effects.ts :: branches': { count: 4, reason: ADOPTING },
+  'packages/systems/chat/src/effects.ts :: functions': { count: 1, reason: ADOPTING },
+  'packages/systems/chat/src/effects.ts :: lines': { count: 1, reason: ADOPTING },
+  'packages/systems/chat/src/effects.ts :: statements': { count: 1, reason: ADOPTING },
+  'packages/systems/chat/src/model/defer.ts :: branches': { count: 2, reason: ADOPTING },
+  'packages/systems/chat/src/model/read-state.ts :: branches': { count: 1, reason: ADOPTING },
+  'packages/systems/chat/src/model/time.ts :: branches': { count: 1, reason: ADOPTING },
+  'packages/systems/chat/src/system.ts :: branches': { count: 2, reason: ADOPTING },
+  'packages/systems/chat/src/system.ts :: lines': { count: 1, reason: ADOPTING },
+  'packages/systems/chat/src/system.ts :: statements': { count: 2, reason: ADOPTING },
+  'packages/systems/chat/src/testing/predicates.ts :: branches': { count: 24, reason: ADOPTING },
+  'packages/systems/chat/src/testing/predicates.ts :: functions': { count: 4, reason: ADOPTING },
+  'packages/systems/chat/src/testing/predicates.ts :: lines': { count: 24, reason: ADOPTING },
+  'packages/systems/chat/src/testing/predicates.ts :: statements': { count: 26, reason: ADOPTING },
 });
 
-/** The floor's problems: every file and metric whose shortfall differs from its debt. */
-export function floorProblems(files: readonly FileCoverage[], debt: CountedExemptions): readonly string[] {
+/**
+ * The floor's problems: every file and metric whose shortfall differs from its debt.
+ *
+ * @param {readonly FileCoverage[]} files - The files' coverage.
+ * @param {Readonly<CountedExemptions>} debt - The shortfall the project carries.
+ * @returns {readonly string[]} The problems.
+ */
+function floorProblems(files: readonly FileCoverage[], debt: Readonly<CountedExemptions>): readonly string[] {
   return debt.mismatches(shortfalls(files)).map((mismatch: Mismatch) =>
     mismatch.found > mismatch.registered
       ? `${mismatch.key}: ${mismatch.found} items under the ${FLOOR} % floor, ${mismatch.registered} registered`
@@ -210,16 +267,31 @@ export function floorProblems(files: readonly FileCoverage[], debt: CountedExemp
   );
 }
 
-/** The gate's coverage report, parsed. */
-export function gateReport(directory: string = COVERAGE_DIR): unknown {
-  return json(readFileSync(join(directory, 'coverage-final.json'), 'utf8'));
+/**
+ * The gate's coverage report, parsed.
+ *
+ * @param {string} directory - Where the run wrote its reports.
+ * @returns {unknown} The parsed report.
+ */
+function gateReport(directory: string = COVERAGE_DIR): unknown {
+  return json(textAt(path.join(directory, 'coverage-final.json')));
 }
 
-/** Hold the floor, with `debt`, on the coverage report in `directory`; write each problem and return the exit status. */
-export function main(err: (text: string) => void, debt: CountedExemptions, directory: string): number {
+/**
+ * Hold the floor, with `debt`, on the coverage report in `directory`, writing each problem.
+ *
+ * @param {(text: string) => void} err - Where problems are written.
+ * @param {Readonly<CountedExemptions>} debt - The shortfall the project carries.
+ * @param {string} directory - Where the run wrote its reports.
+ * @returns {number} The exit status.
+ */
+function main(err: (text: string) => void, debt: Readonly<CountedExemptions>, directory: string): number {
   const problems = floorProblems(fileCoverage(gateReport(directory)), debt);
   for (const problem of problems) {
     err(`${problem}\n`);
   }
-  return problems.length === 0 ? 0 : 1;
+  return isEmpty(problems) ? EXIT_SUCCESS : EXIT_FAILURE;
 }
+
+export { COVERAGE_DIR, DEBT, fileCoverage, floorProblems, gateReport, main, shortfalls };
+export type { FileCoverage };

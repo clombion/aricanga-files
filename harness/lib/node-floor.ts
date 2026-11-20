@@ -99,4 +99,3 @@ function pinned(): Version {
 }
 
 export { engineRange, floor, FloorError, meets, pinned, repoFloor, version };
-export type { Version };

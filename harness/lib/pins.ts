@@ -228,4 +228,4 @@ function pins(): readonly Pin[] {
 }
 
 export { pinned, pins, UPSTREAM };
-export type { Manifest, Pin };
+export type { Pin };

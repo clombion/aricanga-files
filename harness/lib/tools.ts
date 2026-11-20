@@ -160,4 +160,3 @@ class Project {
 }
 
 export { bin, finished, isolatedEnv, Project };
-export type { ProjectOptions, ToolOptions };

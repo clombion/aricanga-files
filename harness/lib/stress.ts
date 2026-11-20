@@ -142,4 +142,4 @@ function huntOf(args: readonly string[]): Hunt {
 }
 
 export { hunt, huntOf };
-export type { CopyResult, Hunt };
+export type { Hunt };

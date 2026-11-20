@@ -12,13 +12,12 @@
 import type { Checker, Program, Symbol as TsSymbol } from 'typescript/unstable/sync';
 import type { Node, SourceFile } from 'typescript/unstable/ast';
 import { REPO_ROOT, relative } from './paths.ts';
-import { api, mount } from './ts-session.ts';
+import { api, mount, nextName } from './ts-session.ts';
 import { isIdentifier, isPrivateIdentifier, isStringLiteral } from 'typescript/unstable/ast';
 import { Prefixes } from './exemptions.ts';
 import { SymbolFlags } from 'typescript/unstable/sync';
 import { isEmpty } from './lists.ts';
 import path from 'node:path';
-import { randomUUID } from 'node:crypto';
 import { typescriptFiles } from './scope.ts';
 
 /** The compiler options of a scan: the shared base's strictness, every lib a held module reads. */
@@ -110,7 +109,7 @@ function mounted(config: string, paths: readonly string[], sources: Readonly<Rec
  * @returns {Scan} The open scan.
  */
 function openScan(paths: readonly string[], sources: Readonly<Record<string, string>> = {}): Scan {
-  const config = path.join(REPO_ROOT, '.harness-scan', randomUUID(), 'tsconfig.json');
+  const config = path.join(REPO_ROOT, '.harness-scan', nextName(), 'tsconfig.json');
   const unmount = mount(mounted(config, paths, sources));
   const project = api().updateSnapshot({ openProjects: [config] }).getProject(config);
   const close = (): void => {

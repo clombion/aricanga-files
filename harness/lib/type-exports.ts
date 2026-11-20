@@ -1,15 +1,15 @@
 /**
- * Exported types and their readers: an exported type a module declares is read when another module
- * names it outside an import or export declaration (a re-export passes a name on; it is not a read).
+ * Exported types and their readers: an exported type a module declares (by its own `export` or in
+ * the module's export list) is read when another module names it outside an import or export
+ * declaration (a re-export passes a name on; it is not a read).
  * A production module's types are read by other production modules and by the harness's checks,
  * which ship the harness library's API: a type only a test names is exported for the test alone. A
  * test-support module's types are read by any other module.
  */
 
 import type { Checker, Symbol as TsSymbol } from 'typescript/unstable/sync';
-import type { Identifier, InterfaceDeclaration, Node, TypeAliasDeclaration } from 'typescript/unstable/ast';
+import type { Identifier, Node } from 'typescript/unstable/ast';
 import {
-  SyntaxKind,
   isExportAssignment,
   isExportDeclaration,
   isIdentifier,
@@ -18,6 +18,7 @@ import {
   isSourceFile,
   isTypeAliasDeclaration,
 } from 'typescript/unstable/ast';
+import { isExportedType, listedExports } from './exports-of.ts';
 import { isProduction, nodes, resolved, sourceOf } from './checker.ts';
 import { Prefixes } from './exemptions.ts';
 import type { Scan } from './checker.ts';
@@ -45,16 +46,6 @@ function reads(reader: string, declarer: string): boolean {
 }
 
 /**
- * Whether a type declaration is exported.
- *
- * @param {TypeAliasDeclaration | InterfaceDeclaration} declaration - The declaration.
- * @returns {boolean} Whether it carries `export`.
- */
-function exported(declaration: TypeAliasDeclaration | InterfaceDeclaration): boolean {
-  return (declaration.modifiers ?? []).some((modifier) => modifier.kind === SyntaxKind.ExportKeyword);
-}
-
-/**
  * Whether a node sits in an import or export declaration.
  *
  * @param {Node} node - The node.
@@ -78,9 +69,11 @@ function inImportOrExport(node: Node): boolean {
 function exportedTypes(scan: Scan): ReadonlyMap<number, ExportedType> {
   const found = new Map<number, ExportedType>();
   for (const path of scan.paths) {
-    for (const statement of sourceOf(scan, path).statements) {
+    const file = sourceOf(scan, path);
+    const listed = listedExports(file);
+    for (const statement of file.statements) {
       const symbol =
-        (isTypeAliasDeclaration(statement) || isInterfaceDeclaration(statement)) && exported(statement)
+        (isTypeAliasDeclaration(statement) || isInterfaceDeclaration(statement)) && isExportedType(statement, listed)
           ? scan.checker.getSymbolAtLocation(statement.name)
           : undefined;
       if (symbol !== undefined && (isTypeAliasDeclaration(statement) || isInterfaceDeclaration(statement))) {

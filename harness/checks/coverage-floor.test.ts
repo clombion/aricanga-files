@@ -98,8 +98,8 @@ describe('the debt', () => {
 
   test('passes its exact shortfall', () => {
     const debt = new CountedExemptions({
-      [site('src/a.ts', 'statements')]: [2, 'planted'],
-      [site('src/a.ts', 'lines')]: [1, 'planted'],
+      [site('src/a.ts', 'statements')]: { count: 2, reason: 'planted' },
+      [site('src/a.ts', 'lines')]: { count: 1, reason: 'planted' },
     });
     expect(floorProblems([file], debt)).toEqual([]);
   });
@@ -107,8 +107,8 @@ describe('the debt', () => {
   test('fails once the gap closes, and once it grows', () => {
     const closed = { ...file, covered: { ...file.covered, statements: 3 } };
     const debt = new CountedExemptions({
-      [site('src/a.ts', 'statements')]: [2, 'planted'],
-      [site('src/a.ts', 'lines')]: [1, 'planted'],
+      [site('src/a.ts', 'statements')]: { count: 2, reason: 'planted' },
+      [site('src/a.ts', 'lines')]: { count: 1, reason: 'planted' },
     });
     expect(floorProblems([closed], debt)).toEqual([
       'src/a.ts :: statements: 1 items under the floor, but 2 registered: lower the debt',

@@ -6,11 +6,29 @@
 import { API } from 'typescript/unstable/sync';
 import { REPO_ROOT } from './paths.ts';
 
+/** The step from one issued name to the next. */
+const NEXT = 1;
+
+/** The count before any name is issued. */
+const NONE_ISSUED = 0;
+
 /** The session, opened on first use and forgotten when closed. */
 class Session {
   private readonly virtual = new Map<string, string>();
 
   private open: readonly API[] = [];
+
+  private issued = NONE_ISSUED;
+
+  /**
+   * A name no earlier call of this process gave: the next of a count.
+   *
+   * @returns {string} The name.
+   */
+  public nextName(): string {
+    this.issued += NEXT;
+    return String(this.issued);
+  }
 
   /**
    * Serve `files` through the virtual file system until the returned function is called.
@@ -88,9 +106,18 @@ function api(): API {
   return SESSION.api();
 }
 
+/**
+ * A name for a virtual file or project no earlier one of this process has.
+ *
+ * @returns {string} The name.
+ */
+function nextName(): string {
+  return SESSION.nextName();
+}
+
 /** Close the open session, if there is one; idempotent. */
 function closeSession(): void {
   SESSION.close();
 }
 
-export { api, closeSession, mount };
+export { api, closeSession, mount, nextName };

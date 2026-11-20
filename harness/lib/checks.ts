@@ -60,4 +60,3 @@ function checkModules(): readonly CheckModule[] {
 }
 
 export { checkModules };
-export type { CheckModule };

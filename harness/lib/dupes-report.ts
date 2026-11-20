@@ -121,5 +121,5 @@ function noReport(outcome: Outcome, reported: boolean): string | undefined {
   return reported ? undefined : 'jscpd wrote no report';
 }
 
-export { cloneKey, clones, list, noReport, scanned };
+export { cloneKey, clones, noReport, scanned };
 export type { Clone };

@@ -4,6 +4,12 @@ import { ExemptionError } from './declaration-error.ts';
 import { StaleExemptionError } from './errors.ts';
 import { checkReasons } from './reasons.ts';
 
+/** How many times a key is tolerated, and why. */
+interface Allowance {
+  readonly count: number;
+  readonly reason: string;
+}
+
 /** A key whose found count differs from its registered count. */
 interface Mismatch {
   readonly key: string;
@@ -19,19 +25,19 @@ const ONE = 1;
 
 /** Keys a rule tolerates a fixed number of times; a count that differs either way fails. */
 class CountedExemptions {
-  public readonly entries: Readonly<ReadonlyMap<string, readonly [number, string]>>;
+  public readonly entries: Readonly<ReadonlyMap<string, Allowance>>;
 
   /**
    * A list of counted exemptions.
    *
-   * @param {Readonly<Record<string, readonly [number, string]>>} entries - Each key's count and reason, by key.
+   * @param {Readonly<Record<string, Allowance>>} entries - Each key's count and reason, by key.
    */
-  public constructor(entries: Readonly<Record<string, readonly [number, string]>>) {
+  public constructor(entries: Readonly<Record<string, Allowance>>) {
     this.entries = new Map(Object.entries(entries));
-    checkReasons([...this.entries].map(([key, [, reason]]: readonly [string, readonly [number, string]]) => [key, reason] as const));
+    checkReasons([...this.entries].map(([key, { reason }]: readonly [string, Allowance]) => [key, reason] as const));
     const low = [...this.entries]
-      .filter(([, [count]]: readonly [string, readonly [number, string]]) => count < ONE)
-      .map(([key]: readonly [string, readonly [number, string]]) => key);
+      .filter(([, { count }]: readonly [string, Allowance]) => count < ONE)
+      .map(([key]: readonly [string, Allowance]) => key);
     if (low.length > NONE) {
       throw new ExemptionError(`counted exemptions below one: ${JSON.stringify(low)}`);
     }
@@ -51,10 +57,7 @@ class CountedExemptions {
     const keys = new Set([...counts.keys(), ...this.entries.keys()]);
     return [...keys]
       .toSorted()
-      .map((key): Mismatch => {
-        const [registered = NONE] = this.entries.get(key) ?? [];
-        return { found: counts.get(key) ?? NONE, key, registered };
-      })
+      .map((key): Mismatch => ({ found: counts.get(key) ?? NONE, key, registered: this.entries.get(key)?.count ?? NONE }))
       .filter((mismatch) => mismatch.found !== mismatch.registered);
   }
 

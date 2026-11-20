@@ -119,7 +119,7 @@ describe('the repository', () => {
     expect(sitesIn(repoScan(), scannedFiles())).toEqual([]);
   });
 
-  test.each(RULES.flatMap((rule) => rule.scopes.flatMap((scope) => (scope.owner === null ? [] : [[rule.name, scope.owner] as const]))))(
+  test.each(RULES.flatMap((rule) => rule.scopes.flatMap((scope) => (scope.owner === undefined ? [] : [[rule.name, scope.owner] as const]))))(
     'the %s owner %s exists and uses its API',
     (name, owner) => {
       const rule = RULES.find((candidate) => candidate.name === name);

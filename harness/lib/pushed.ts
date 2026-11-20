@@ -52,4 +52,3 @@ function refused(subjects: readonly string[]): readonly string[] {
 }
 
 export { refused, revisions, updates };
-export type { Update };

@@ -86,6 +86,16 @@ function textOf(listed: string): string {
 }
 
 /**
+ * The text of a file outside the listing, such as a tool's report under the system's temporary directory.
+ *
+ * @param {string} absolute - The file's absolute path.
+ * @returns {string} Its text.
+ */
+function textAt(absolute: string): string {
+  return readFileSync(absolute, 'utf8');
+}
+
+/**
  * Write a file of the repository as UTF-8: the one writer of the repository's own files, for the fixers.
  *
  * @param {string} listed - The file's repository-relative path.
@@ -95,4 +105,4 @@ function writeText(listed: string, text: string): void {
   writeFileSync(path.join(REPO_ROOT, listed), text, 'utf8');
 }
 
-export { FLOOR, ListingError, listing, textOf, tracked, writeText };
+export { FLOOR, ListingError, listing, textAt, textOf, tracked, writeText };

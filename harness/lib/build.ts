@@ -145,4 +145,3 @@ function checkBuild(app: string, root: string = REPO_ROOT): BuildResult {
 }
 
 export { apps, checkBuild };
-export type { BuildResult };

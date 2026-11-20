@@ -66,7 +66,7 @@ const CLAIMS: readonly Claim[] = [
   {
     clause: "The one reader of the repository's prose",
     path: 'harness/lib/docs.ts',
-    probe: probe(/^const FENCE = /mu, 'harness/lib/docs.ts'),
+    probe: probe(/^const FENCE = /mu, 'harness/lib/markdown-text.ts'),
   },
   {
     clause: 'The one owner of exemption lists',

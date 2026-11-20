@@ -30,6 +30,9 @@ import { REPO_ROOT } from './paths.ts';
 import { isEmpty } from './lists.ts';
 import path from 'node:path';
 
+/** The order the runs report in: the exact run first. */
+const RUN_ORDER = ['exact', 'cross-file'] as const;
+
 /** The output streams `main` writes to; a check passes its own. */
 interface Streams {
   readonly out: (text: string) => void;
@@ -111,7 +114,7 @@ function cloneProblems(found: readonly Clone[], allowed: Readonly<Exemptions>): 
  * @returns {readonly string[]} The problems.
  */
 function scan(target: Target, allowed: Readonly<Exemptions>, runner?: Runner): readonly string[] {
-  const runs = Object.entries(RUNS).map((named: readonly [string, readonly string[]]) => runOnce(named, target, runner));
+  const runs = RUN_ORDER.map((name) => runOnce([name, RUNS[name]], target, runner));
   const problems = runs.flatMap(([runProblems]: readonly [readonly string[], readonly Clone[]]) => runProblems);
   return [...problems, ...cloneProblems(runs.flatMap(([, found]: readonly [readonly string[], readonly Clone[]]) => found), allowed)];
 }
@@ -141,6 +144,5 @@ function main(streams: Streams, runner?: Runner): number {
 export { cloneKey, clones, noReport } from './dupes-report.ts';
 export type { Clone } from './dupes-report.ts';
 export { COMMON, MAX_SIZE, reportOf, RUNS } from './dupes-run.ts';
-export type { Runner, Target } from './dupes-run.ts';
+export type { Runner } from './dupes-run.ts';
 export { main, scan };
-export type { Streams };
