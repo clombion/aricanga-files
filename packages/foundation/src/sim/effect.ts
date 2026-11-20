@@ -64,3 +64,63 @@ export const fx = {
     payload,
   }),
 } as const;
+
+/** A host-family payload that does not have its family's shape. */
+export class EffectPayloadError extends Error {
+  override readonly name = 'EffectPayloadError';
+}
+
+/** Whether a payload is an object carrying the named field. */
+export function hasField(payload: unknown, name: string): boolean {
+  return typeof payload === 'object' && payload !== null && name in payload;
+}
+
+/** A payload's named field; a payload without it is refused. */
+export function field(payload: unknown, name: string): unknown {
+  if (!hasField(payload, name)) {
+    throw new EffectPayloadError(`effect payload has no ${name}: ${JSON.stringify(payload)}`);
+  }
+  return Object.getOwnPropertyDescriptor(payload, name)?.value;
+}
+
+/** A payload's named string field. */
+export function text(payload: unknown, name: string): string {
+  const value = field(payload, name);
+  if (typeof value !== 'string') throw new EffectPayloadError(`effect payload ${name} is not a string`);
+  return value;
+}
+
+function count(payload: unknown, name: string): number {
+  const value = field(payload, name);
+  if (typeof value !== 'number') throw new EffectPayloadError(`effect payload ${name} is not a number`);
+  return value;
+}
+
+/** Parse a `drive-ink` payload. The host's families have fixed payloads; the executor parses, never casts. */
+export function parseDriveInkOp(payload: unknown): DriveInkOp {
+  const op = text(payload, 'op');
+  switch (op) {
+    case 'choose':
+      return { op, index: count(payload, 'index') };
+    case 'goto':
+      return { op, knot: text(payload, 'knot') };
+    case 'save-snap':
+    case 'load-snap':
+      return { op, id: text(payload, 'id') };
+    default:
+      throw new EffectPayloadError(`unknown drive-ink op ${op}`);
+  }
+}
+
+/** Parse a `schedule` payload. */
+export function parseScheduleCommit(payload: unknown): ScheduleCommit {
+  return { delayMs: count(payload, 'delayMs'), token: count(payload, 'token') };
+}
+
+/** Parse a `fetch` payload. */
+export function parseDataRequest(payload: unknown): DataRequest {
+  const request = { source: text(payload, 'source'), query: text(payload, 'query') };
+  return hasField(payload, 'params')
+    ? { ...request, params: text(payload, 'params') }
+    : request;
+}

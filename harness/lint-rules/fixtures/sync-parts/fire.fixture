@@ -1,0 +1,8 @@
+// path: packages/systems/chat/src/view/sync-parts-fire.tsx
+export function Bubble(props: { vm: { text: Promise<string> } }) {
+  let shown = '';
+  void props.vm.text.then((text) => {
+    shown = text;
+  });
+  return <p>{shown}</p>;
+}

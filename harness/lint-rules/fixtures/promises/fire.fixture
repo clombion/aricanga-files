@@ -1,0 +1,7 @@
+// path: harness/scripts/promises-fire.ts
+export function settle(pending: Promise<number>): Promise<number> {
+  return pending.then(
+    (value) => value,
+    () => 0,
+  );
+}

@@ -1,0 +1,11 @@
+// path: packages/systems/chat/src/view/flags-clean.tsx
+import { createSignal } from 'solid-js';
+
+export function Thread(props: { vm: { title: string } }) {
+  const [open, setOpen] = createSignal(false);
+  return (
+    <button type="button" onClick={() => setOpen(!open())}>
+      {open() ? props.vm.title : '…'}
+    </button>
+  );
+}

@@ -1,10 +1,9 @@
 import { erase, parseTag } from '@narratives/foundation';
 import { type FixtureInput, type FixtureRun, checkInvariant, runStream } from '@narratives/foundation/testing';
 import { forwardOnlyTime } from '@narratives/system-chat/testing';
-import fc from 'fast-check';
+import * as fc from 'fast-check';
 import { expect, test } from 'vitest';
 import { parseTimeOfDay } from '../src/model/time';
-import type { ChatMessageVM } from '../src/reduce';
 import { chatSystem } from '../src/system';
 
 interface StepOpts {
@@ -27,7 +26,7 @@ const story = (text: string, opts: StepOpts = {}): FixtureInput => ({
 const run = (inputs: FixtureInput[]): Promise<FixtureRun> =>
   runStream({ systems: [erase(chatSystem)], foreground: 'chat' }, inputs);
 const times = (r: FixtureRun): (number | null)[] =>
-  ((r.view('chat') as { messages: Record<string, readonly ChatMessageVM[]> }).messages.main ?? []).map((m) => m.time);
+  (r.viewOf(chatSystem).messages.main ?? []).map((m) => m.time);
 const H = (h: number, m = 0): number => h * 60 + m;
 const MINUTES_PER_DAY = 1440;
 

@@ -1,0 +1,52 @@
+# Project lint rules
+
+An oxlint JS plugin, `aricanga`, for the rules no shipped oxlint or `eslint-plugin-solid` rule
+holds. `.oxlintrc.json` loads `plugin.ts` directly: Node strips its types, so the rules are
+TypeScript checked by the harness's own project. Every rule is on as an error, and
+`harness/checks/project-lint-rules.test.ts` proves each one on its fixtures.
+
+| Rule | Holds |
+|---|---|
+| `aricanga/autofocus` | No autofocus or autoFocus attribute; move focus on navigation instead. |
+| `aricanga/controlled` | value/checked/selected only on an element that handles its change. |
+| `aricanga/env` | No process.env read outside the settings owners (the `owners` globs). |
+| `aricanga/flags` | No loading/error signal in a component; read the state from the view-model. |
+| `aricanga/json` | Import JSON with { type: 'json' }. |
+| `aricanga/labels` | A label has `for` or wraps its control; `htmlFor` is the React spelling. |
+| `aricanga/legacy` | No replaceChildren or document.createElement in a component module. |
+| `aricanga/mechanics` | No solid-js or @solidjs/* import under packages/foundation or a system model. |
+| `aricanga/mirrors` | No effect whose only work is calling a setter; derive the value. |
+| `aricanga/promises` | No two-argument .then; chain .catch, or await in a try. |
+| `aricanga/statics` | No this inside a static method, static field or static block; name the class. |
+| `aricanga/store-owner` | createStore and reconcile only in the snapshot adapter (the `owners` globs). |
+| `aricanga/style-prop` | No style prop in JSX; set dynamic values with a class or a ref. |
+| `aricanga/sync-parts` | No async, await, promise, .then or <Loading> in a component module. |
+| `aricanga/view-imports` | A view module imports no reduce, no effect type and no model module. |
+| `aricanga/vm-prop` | A component takes a single undestructured props with exactly one prop, vm. |
+
+## Fixtures
+
+`fixtures/<rule>/fire[-<case>].fixture` must make its rule fire; `fixtures/<rule>/clean[-<case>].fixture`
+must pass the whole configuration with no finding. The first line, `// path: <path>`, is where the
+check plants the source; a rule scoped by path is proven at a path it holds. A fixture is text, so
+the repository's own tools never lint or compile a must-fire case.
+
+## Options
+
+- `ignore`: globs of `.tsx` modules a component rule does not hold. The component rules ignore
+  `packages/characterisation/**`, whose fixtures do on purpose what a part must not, to record how
+  Solid answers.
+- `owners`: globs of the modules allowed what the rule refuses. `env` names the harness's process
+  and tool owners; `store-owner` names `**/snapshot-adapter.ts` and the characterisation suite.
+
+## Where other rules hold the rest
+
+- Module boundaries and reducer purity are `no-restricted-imports`, `no-restricted-globals` and
+  `no-restricted-properties` overrides in `.oxlintrc.json`, proven by `harness/checks/boundaries.test.ts`.
+- Destructured props, reactivity and the rest of Solid's own rules are `eslint-plugin-solid`'s
+  v2-strict set.
+- jsx-a11y's `label-has-associated-control` knows only `htmlFor` and has no option for Solid's
+  `for`, and its `no-autofocus` sees only `autoFocus`; `labels` and `autofocus` take their place.
+- kiz-radar's `thens` (no `.then` in components) is part of `sync-parts`.
+- kiz-radar's `markup`, `classes`, `buttons` and `clicks` are not ported: its task 4.10 may retire
+  them in favour of rules Solid or oxlint already ship.

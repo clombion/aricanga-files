@@ -3,6 +3,7 @@ import { type FixtureInput, type FixtureRun, runStream } from '@narratives/found
 import { notifyOnce } from '@narratives/system-chat/testing';
 import { expect, test } from 'vitest';
 import type { ChatMessageVM } from '../src/reduce';
+import { notificationOf } from '../src/effects';
 import { chatSystem } from '../src/system';
 
 const story = (text: string, rawTags: string[] = []): FixtureInput => ({
@@ -20,9 +21,9 @@ const run = (inputs: FixtureInput[]): Promise<FixtureRun> =>
   runStream({ systems: [erase(chatSystem)], foreground: 'chat' }, inputs);
 
 const history = (r: FixtureRun, chatId: string): readonly ChatMessageVM[] =>
-  (r.view('chat') as { messages: Readonly<Record<string, readonly ChatMessageVM[]>> }).messages[chatId] ?? [];
+  r.viewOf(chatSystem).messages[chatId] ?? [];
 const notifications = (r: FixtureRun, chatId: string): number =>
-  r.effects.filter((e) => e.kind === 'chat/showNotification' && (e.payload as { chatId: string }).chatId === chatId).length;
+  r.effects.filter((e) => notificationOf(e)?.chatId === chatId).length;
 
 test('notify-once: a background chat notifies once, not for subsequent messages (#2)', async () => {
   const r = await run([story('First', ['targetChat: maria']), story('Second', ['targetChat: maria'])]);

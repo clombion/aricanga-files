@@ -1,0 +1,85 @@
+/**
+ * Every generated block of the docs equals a fresh render, names a known generator, and every generator has a block.
+ *
+ * The blocks and generators are `harness/lib/generated.ts`'s; the gate's `docs:check` task runs
+ * `harness/scripts/gen-docs.ts --check`, which this check runs as the gate does.
+ */
+
+import { describe, expect, test } from 'vitest';
+
+import { BlockError, Doc } from '../lib/docs.ts';
+import { blocks, type Files, GENERATORS, type Generators, problems, rendered, run } from '../lib/generated.ts';
+import { REPO_ROOT } from '../lib/paths.ts';
+import { finished } from '../lib/tools.ts';
+
+export const HARNESS_ID = 'generated-docs';
+
+const PLANTED = '# Planted\n\n<!-- generated: tasks -->\nhand-edited\n<!-- end: tasks -->\n';
+
+/** The generators no block of the docs names. */
+export function orphans(generators: Generators, names: readonly string[]): string[] {
+  return [...generators.keys()].filter((name) => !names.includes(name)).toSorted();
+}
+
+describe('the repository', () => {
+  test('every block is current and named by a generator, as the gate runs it', () => {
+    const done = finished(['node', 'harness/scripts/gen-docs.ts', '--check'], { cwd: REPO_ROOT });
+    expect([done.status, done.stderr]).toEqual([0, '']);
+  });
+
+  test('every generator has a block', () => {
+    expect(orphans(GENERATORS, blocks().map((block) => block.name))).toEqual([]);
+  });
+});
+
+describe('the generated-docs check', () => {
+  test('sees a hand-edited block as stale, and rendering restores it', () => {
+    const doc = new Doc('docs/planted.md', PLANTED);
+    expect(problems(doc, GENERATORS)).toEqual([
+      { path: 'docs/planted.md', line: 3, message: 'block "tasks" is stale: run `pnpm run fix`', writingFixesIt: true },
+    ]);
+    expect(problems(new Doc('docs/planted.md', rendered(doc, GENERATORS)), GENERATORS)).toEqual([]);
+  });
+
+  test('refuses an unknown block name and leaves it as it is', () => {
+    const doc = new Doc('docs/planted.md', PLANTED.replaceAll('tasks', 'planted'));
+    expect(problems(doc, GENERATORS)).toEqual([
+      { path: 'docs/planted.md', line: 3, message: 'no generator is named "planted"', writingFixesIt: false },
+    ]);
+    expect(rendered(doc, GENERATORS)).toBe(doc.text);
+  });
+
+  test('sees a generator with no block', () => {
+    const planted = new Map([...GENERATORS, ['planted', () => 'x']]);
+    expect(orphans(planted, blocks().map((block) => block.name))).toEqual(['planted']);
+  });
+
+  test.each([
+    '<!-- generated: a -->\n',
+    '<!-- end: a -->\n',
+    '<!-- generated: a -->\n<!-- end: b -->\n',
+    '<!-- generated: a -->\n<!-- generated: b -->\n',
+  ])('refuses the unpaired marker in %j', (text) => {
+    expect(() => new Doc('docs/planted.md', text).blocks()).toThrow(BlockError);
+  });
+
+  test('writing fixes a stale block and refuses an unknown one; checking writes nothing', () => {
+    const texts = new Map([
+      ['stale.md', PLANTED],
+      ['unknown.md', PLANTED.replaceAll('tasks', 'planted')],
+    ]);
+    const files: Files = {
+      paths: () => [...texts.keys()],
+      read: (path) => new Doc(path, texts.get(path) ?? ''),
+      write: (path, text) => {
+        texts.set(path, text);
+      },
+    };
+    expect(run(true, GENERATORS, files)).toHaveLength(2);
+    expect(texts.get('stale.md')).toBe(PLANTED);
+    expect(run(false, GENERATORS, files).map((problem) => problem.path)).toEqual(['unknown.md']);
+    expect(texts.get('stale.md')).not.toContain('hand-edited');
+    expect(texts.get('unknown.md')).toBe(PLANTED.replaceAll('tasks', 'planted'));
+    expect(run(true, GENERATORS, files).map((problem) => problem.path)).toEqual(['unknown.md']);
+  });
+});

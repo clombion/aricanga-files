@@ -27,6 +27,9 @@ if (typeof document !== 'undefined') {
     void fetch('/story.json')
       .then((r) => r.text())
       .then((json) => run(host, json))
-      .catch((err: unknown) => console.error('walking skeleton failed', err));
+      .catch((error: unknown) => {
+        // The failure is shown where the experience would have rendered.
+        host.textContent = `walking skeleton failed: ${error instanceof Error ? error.message : 'unknown error'}`;
+      });
   }
 }

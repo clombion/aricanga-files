@@ -1,8 +1,12 @@
-import { InkRuntime } from '../ink/ink-runtime';
+import type { InkRuntime } from '../ink/ink-runtime';
 import type { RenderContext, ReduceContext } from '../sim/context';
-import type { DataRequest, DriveInkOp, Effect, ScheduleCommit } from '../sim/effect';
+import {
+  type DataRequest,
+  type DriveInkOp,
+  type Effect,
+  parseDataRequest, parseDriveInkOp, parseScheduleCommit } from '../sim/effect';
 import { assertNever } from '../sim/exhaustive';
-import type { Command, Input } from '../sim/input';
+import type { Input } from '../sim/input';
 import type { Router } from '../sim/router';
 import { createTagOwnershipRouter } from '../sim/router';
 import type { Snapshot, SystemId } from '../sim/snapshot';
@@ -74,7 +78,7 @@ export class Runtime {
   }
 
   /** Drive the system from an inbound value, then pump ink while ready. */
-  send(input: Input<unknown, Command>, target?: SystemId): void {
+  send(input: Input<unknown>, target?: SystemId): void {
     switch (input.source) {
       case 'story':
         this.deliver(this.router.route(input.step, this.routeCtx()), input);
@@ -129,7 +133,7 @@ export class Runtime {
     }
   }
 
-  private deliver(id: SystemId, input: Input<unknown, Command>): void {
+  private deliver(id: SystemId, input: Input<unknown>): void {
     const system = this.systemOrThrow(id);
     let n = this.idSeq;
     const ctx: ReduceContext = { nextId: () => `id-${n++}` };
@@ -143,20 +147,17 @@ export class Runtime {
   private execute(originId: SystemId, effect: Effect): void {
     switch (effect.family) {
       case 'drive-ink':
-        this.driveInk(effect.payload as DriveInkOp);
+        this.driveInk(parseDriveInkOp(effect.payload));
         return;
       case 'schedule': {
-        const { delayMs, token } = effect.payload as ScheduleCommit;
+        const { delayMs, token } = parseScheduleCommit(effect.payload);
         this.host.scheduler.schedule(delayMs, () => {
           this.send({ source: 'resume', resume: { kind: 'commit-fired', token } }, originId);
         });
         return;
       }
       case 'fetch': {
-        const request = effect.payload as DataRequest;
-        void this.host.fetchData(request).then((value) => {
-          this.send({ source: 'resume', resume: { kind: 'data-arrived', request, value } }, originId);
-        });
+        void this.fetchThenResume(parseDataRequest(effect.payload), originId);
         return;
       }
       case 'present':
@@ -168,6 +169,11 @@ export class Runtime {
       default:
         assertNever(effect.family);
     }
+  }
+
+  private async fetchThenResume(request: DataRequest, originId: SystemId): Promise<void> {
+    const value = await this.host.fetchData(request);
+    this.send({ source: 'resume', resume: { kind: 'data-arrived', request, value } }, originId);
   }
 
   private driveInk(op: DriveInkOp): void {

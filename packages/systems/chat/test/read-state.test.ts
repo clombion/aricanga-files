@@ -3,7 +3,7 @@ import { type FixtureInput, type FixtureRun, runStream } from '@narratives/found
 import { hwmMonotonic } from '@narratives/system-chat/testing';
 import { expect, test } from 'vitest';
 import type { ChatMessageVM } from '../src/reduce';
-import { chatSystem } from '../src/system';
+import { type ChatViewModel, chatSystem } from '../src/system';
 
 const story = (text: string, rawTags: string[] = []): FixtureInput => ({
   input: {
@@ -23,10 +23,8 @@ const close = (): FixtureInput => ({
 const run = (inputs: FixtureInput[]): Promise<FixtureRun> =>
   runStream({ systems: [erase(chatSystem)], foreground: 'chat' }, inputs);
 
-const vm = (r: FixtureRun): { messages: Record<string, readonly ChatMessageVM[]>; lastRead: Record<string, string | null> } =>
-  r.view('chat') as never;
-const cursor = (r: FixtureRun): Record<string, string | null> => vm(r).lastRead;
-const history = (r: FixtureRun, chatId: string): readonly ChatMessageVM[] => vm(r).messages[chatId] ?? [];
+const cursor = (r: FixtureRun): ChatViewModel['lastRead'] => r.viewOf(chatSystem).lastRead;
+const history = (r: FixtureRun, chatId: string): readonly ChatMessageVM[] => r.viewOf(chatSystem).messages[chatId] ?? [];
 
 test('the read cursor advances to the last message when you close a chat (#1)', async () => {
   const r = await run([open('pat'), story('A', ['targetChat: pat']), story('B', ['targetChat: pat']), close()]);

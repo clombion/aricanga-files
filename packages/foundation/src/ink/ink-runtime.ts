@@ -21,6 +21,18 @@ export interface InkFixtures {
   readonly data?: DataResolver;
 }
 
+/** An ink value as text: ink passes externals strings, numbers and booleans, never objects. */
+function inkText(value: unknown): string {
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number' || typeof value === 'boolean') return `${value}`;
+  throw new TypeError(`ink passed an external a ${typeof value}, not a primitive`);
+}
+
+/** An ink value as a number. */
+function inkNumber(value: unknown): number {
+  return typeof value === 'number' ? value : Number(inkText(value));
+}
+
 export class InkRuntime {
   private readonly story: Story;
   private drained: ExternalCall[] = [];
@@ -32,11 +44,12 @@ export class InkRuntime {
   }
 
   private bindExternals(fixtures: InkFixtures): void {
-    const bind = (name: string, fn: (...args: never[]) => unknown): void => {
+    // ink hands an external its arguments untyped, so each handler takes `unknown` and converts.
+    const bind = (name: string, fn: (...args: unknown[]) => unknown): void => {
       // A story that doesn't declare the external simply never calls it; binding
       // an undeclared name is harmless. Guard so a missing declaration can't throw.
       try {
-        this.story.BindExternalFunction(name, fn as (...args: unknown[]) => unknown, false);
+        this.story.BindExternalFunction(name, fn, false);
       } catch {
         // not declared in this story — nothing to bind
       }
@@ -44,23 +57,23 @@ export class InkRuntime {
 
     const resolveName: NameResolver = fixtures.name ?? ((id) => id);
     const resolveData: DataResolver = fixtures.data ?? ((key) => key);
-    bind('name', (id: string) => resolveName(String(id)));
-    bind('data', (key: string) => resolveData(String(key)));
+    bind('name', (id) => resolveName(inkText(id)));
+    bind('data', (key) => resolveData(inkText(key)));
 
-    bind('delay_next', (seconds: number) => {
-      this.drained.push({ fn: 'delay_next', seconds: Number(seconds) });
+    bind('delay_next', (seconds) => {
+      this.drained.push({ fn: 'delay_next', seconds: inkNumber(seconds) });
     });
-    bind('play_sound', (sound: string) => {
-      this.drained.push({ fn: 'play_sound', sound: String(sound) });
+    bind('play_sound', (sound) => {
+      this.drained.push({ fn: 'play_sound', sound: inkText(sound) });
     });
     bind('advance_day', () => {
       this.drained.push({ fn: 'advance_day' });
     });
-    bind('request_data', (source: string, query: string, params?: string) => {
+    bind('request_data', (source, query, params) => {
       const call: ExternalCall =
         params === undefined
-          ? { fn: 'request_data', source: String(source), query: String(query) }
-          : { fn: 'request_data', source: String(source), query: String(query), params: String(params) };
+          ? { fn: 'request_data', source: inkText(source), query: inkText(query) }
+          : { fn: 'request_data', source: inkText(source), query: inkText(query), params: inkText(params) };
       this.drained.push(call);
       this.awaitingData = true;
       return '';

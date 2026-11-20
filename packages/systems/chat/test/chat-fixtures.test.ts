@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { erase } from '@narratives/foundation';
 import { runFixture } from '@narratives/foundation/testing';
 import { expect, test } from 'vitest';
+import { notificationOf } from '../src/effects';
 import { chatSystem } from '../src/system';
 
 // task-017 #5/#7 — chat ink fixtures driven through the shared harness, proving
@@ -20,7 +21,7 @@ test('single-chat fixture drives a Present-only trace', async () => {
 
 test('cross-chat fixture routes a targetChat message', async () => {
   const run = await runFixture({ story: ink('cross-chat'), systems: [erase(chatSystem)] });
-  const chatIds = run.effects.map((e) => (e.payload as { chatId: string }).chatId);
+  const chatIds = run.effects.map((e) => notificationOf(e)?.chatId);
   expect(chatIds).toContain('main');
   expect(chatIds).toContain('side');
 });
@@ -30,5 +31,6 @@ test('choices fixture captures the pre-choice trace and suspends cleanly', async
   // must still drive the pre-choice line and return without hanging.
   const run = await runFixture({ story: ink('choices'), systems: [erase(chatSystem)] });
   expect(run.trace.length).toBe(1);
-  expect((run.trace[0]?.input as { step: { text: string } }).step.text).toBe('Pick a reply');
+  const first = run.trace[0]?.input;
+  expect(first?.source === 'story' ? first.step.text : undefined).toBe('Pick a reply');
 });

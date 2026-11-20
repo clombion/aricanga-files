@@ -1,0 +1,2 @@
+// path: harness/lib/tools.ts
+export const ci: string | undefined = process.env.CI;

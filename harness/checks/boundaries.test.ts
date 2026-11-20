@@ -11,6 +11,7 @@
 import { describe, expect, test } from 'vitest';
 
 import { object, json } from '../lib/config.ts';
+import { OXLINT_CONFIG_FILES } from '../lib/lint-rules.ts';
 import { tracked, textOf } from '../lib/source-files.ts';
 import { Project } from '../lib/tools.ts';
 
@@ -42,7 +43,7 @@ const BOUNDARY_RULES = ['no-restricted-imports', 'no-restricted-globals', 'no-re
 
 /** The boundary findings oxlint reports for each fixture path, under a copy of the repository config. */
 function verdicts(fixtures: readonly Fixture[]): ReadonlyMap<string, boolean> {
-  const project = new Project({ copies: ['.oxlintrc.json'] });
+  const project = new Project({ copies: OXLINT_CONFIG_FILES });
   try {
     for (const fixture of fixtures) {
       project.write(fixture.path, fixture.text);

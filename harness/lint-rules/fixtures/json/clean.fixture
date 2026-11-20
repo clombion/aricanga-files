@@ -1,0 +1,4 @@
+// path: harness/scripts/json-clean.ts
+import config from '../../tsconfig.json' with { type: 'json' };
+
+export const planted: unknown = config;
