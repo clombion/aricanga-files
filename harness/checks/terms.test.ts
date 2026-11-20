@@ -11,7 +11,8 @@ import * as TOML from '@iarna/toml';
 import { describe, expect, test } from 'vitest';
 
 import { object } from '../lib/config.ts';
-import { currentSpans, currentText, type Prose, type Span } from '../lib/docs.ts';
+import { currentSpans, currentText } from '../lib/docs.ts';
+import type { Prose, Span } from '../lib/docs.ts';
 import { Exemptions, Prefixes, site } from '../lib/exemptions.ts';
 import { textOf } from '../lib/source-files.ts';
 
@@ -57,9 +58,9 @@ export function termsOf(text: string): Terms {
     throw new TypeError(`retired terms without a replacement: ${JSON.stringify(blank)}`);
   }
   return {
-    retired,
     refused: strings(data['refused'], 'refused'),
     refusedInCode: strings(data['refused-in-code'], 'refused-in-code'),
+    retired,
   };
 }
 
@@ -81,7 +82,7 @@ export function uses(terms: Terms, prose: readonly Prose[], spans: readonly Span
     found.push(
       ...prose
         .filter((line) => pattern.test(line.text))
-        .map((line) => ({ path: line.path, line: line.line, term, why: `use ${replacement}` })),
+        .map((line) => ({ line: line.line, path: line.path, term, why: `use ${replacement}` })),
     );
   }
   const refusals = [
@@ -94,7 +95,7 @@ export function uses(terms: Terms, prose: readonly Prose[], spans: readonly Span
     const regex = new RegExp(pattern, 'g');
     found.push(
       ...lines.flatMap((line) =>
-        [...line.text.matchAll(regex)].map((match) => ({ path: line.path, line: line.line, term: match[0], why })),
+        [...line.text.matchAll(regex)].map((match) => ({ line: line.line, path: line.path, term: match[0], why })),
       ),
     );
   }
@@ -129,19 +130,19 @@ describe('the terms check', () => {
   test('sees a planted retired term, refused pattern and code-only pattern, and lets the near misses through', () => {
     const terms = termsOf(PLANTED_TERMS);
     const prose = [
-      { path: 'docs/planted.md', line: 1, text: 'A Sentinel value closes TASK-12.' },
-      { path: 'docs/planted.md', line: 2, text: 'sentinels and ticket-4 in a doc' },
-      { path: 'src/planted.ts', line: 3, text: 'closes ticket-9' },
+      { line: 1, path: 'docs/planted.md', text: 'A Sentinel value closes TASK-12.' },
+      { line: 2, path: 'docs/planted.md', text: 'sentinels and ticket-4 in a doc' },
+      { line: 3, path: 'src/planted.ts', text: 'closes ticket-9' },
     ];
     const spans = [
-      { path: 'docs/planted.md', line: 4, text: 'TASK-7' },
-      { path: 'docs/planted.md', line: 5, text: 'sentinel' },
+      { line: 4, path: 'docs/planted.md', text: 'TASK-7' },
+      { line: 5, path: 'docs/planted.md', text: 'sentinel' },
     ];
     expect(uses(terms, prose, spans)).toEqual([
-      { path: 'docs/planted.md', line: 1, term: 'sentinel', why: 'use marker' },
-      { path: 'docs/planted.md', line: 1, term: 'TASK-12', why: 'the tracker' },
-      { path: 'docs/planted.md', line: 4, term: 'TASK-7', why: 'the tracker' },
-      { path: 'src/planted.ts', line: 3, term: 'ticket-9', why: 'the tracker' },
+      { line: 1, path: 'docs/planted.md', term: 'sentinel', why: 'use marker' },
+      { line: 1, path: 'docs/planted.md', term: 'TASK-12', why: 'the tracker' },
+      { line: 4, path: 'docs/planted.md', term: 'TASK-7', why: 'the tracker' },
+      { line: 3, path: 'src/planted.ts', term: 'ticket-9', why: 'the tracker' },
     ]);
   });
 

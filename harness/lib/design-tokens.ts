@@ -6,7 +6,8 @@
  * does not read custom properties. Zero and unitless numbers are not raw.
  */
 
-import stylelint, { type Rule } from 'stylelint';
+import stylelint from 'stylelint';
+import type { Rule } from 'stylelint';
 
 export const ruleName: string = 'harness/design-tokens';
 
@@ -61,7 +62,7 @@ const rule: Rule = (primary) => (root, result) => {
     }
     const found = custom ? rawTokenValues(declaration.value) : rawSizes(declaration.value);
     for (const [kind, value] of found) {
-      stylelint.utils.report({ ruleName, result, node: declaration, message: messages.raw(kind, value), word: value });
+      stylelint.utils.report({ message: messages.raw(kind, value), node: declaration, result, ruleName, word: value });
     }
   });
 };

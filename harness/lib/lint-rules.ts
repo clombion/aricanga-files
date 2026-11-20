@@ -13,7 +13,7 @@ import { join } from 'node:path';
 import { json, object } from './config.ts';
 import { fromRoot } from './paths.ts';
 import { textOf, tracked } from './source-files.ts';
-import { bin, finished, Project } from './tools.ts';
+import { Project, bin, finished } from './tools.ts';
 
 const FIXTURES_DIR = 'harness/lint-rules/fixtures/';
 
@@ -50,7 +50,7 @@ export function parseFixture(file: string, text: string): Fixture {
   if (path?.[1] === undefined) {
     throw new FixtureError(`${file}: the first line is not "// path: <where it is planted>"`);
   }
-  return { file, rule, kind, path: path[1], source: text.slice(path[0].length) };
+  return { file, kind, path: path[1], rule, source: text.slice(path[0].length) };
 }
 
 /** Every listed fixture. */
@@ -98,19 +98,19 @@ const SOLID_HOME = fromRoot('packages', 'characterisation', 'node_modules');
  * packages mapped to where the workspace installs them, so the type-aware rules see real types.
  */
 const PLANTED_TSCONFIG = JSON.stringify({
-  extends: './tsconfig.base.json',
   compilerOptions: {
     jsx: 'preserve',
     jsxImportSource: '@solidjs/web',
-    types: ['node'],
     paths: {
-      'solid-js': [join(SOLID_HOME, 'solid-js', 'types', 'index.d.ts')],
       '@solidjs/web': [join(SOLID_HOME, '@solidjs', 'web', 'types', 'index.d.ts')],
       '@solidjs/web/jsx-runtime': [join(SOLID_HOME, '@solidjs', 'web', 'types', 'jsx.d.ts')],
+      'solid-js': [join(SOLID_HOME, 'solid-js', 'types', 'index.d.ts')],
     },
+    types: ['node'],
   },
-  include: ['**/*.ts', '**/*.tsx'],
   exclude: ['node_modules', 'harness/lint-rules'],
+  extends: './tsconfig.base.json',
+  include: ['**/*.ts', '**/*.tsx'],
 });
 
 /** Lint the given fixtures under the repository's oxlint configuration, in one run. */
@@ -132,8 +132,8 @@ export function lintFixtures(planted: readonly Fixture[]): readonly Diagnostic[]
     }
     return diagnostics(outcome.stdout).map((found) => ({
       code: found.code,
-      message: found.message,
       file: found.file.replace(`${project.root}/`, ''),
+      message: found.message,
     }));
   } finally {
     project.remove();

@@ -18,7 +18,7 @@ import { json, object } from '../lib/config.ts';
 import { Accepted, Exemptions } from '../lib/exemptions.ts';
 import { OXLINT_CONFIG_FILES } from '../lib/lint-rules.ts';
 import { textOf } from '../lib/source-files.ts';
-import { finished, Project } from '../lib/tools.ts';
+import { Project, finished } from '../lib/tools.ts';
 import { fromRoot } from '../lib/paths.ts';
 
 export const HARNESS_ID = 'lint-settings';
@@ -48,50 +48,50 @@ const ESLINT_DIRECTIVE_TEXT = "export function say(): void {\n  // eslint-disabl
 
 /** Each plant's text and the rule codes oxlint must report for it, exactly. */
 const PLANTS: Readonly<Record<string, readonly [string, readonly string[]]>> = {
-  'src/explicit-any.ts': ['export const value: any = 1;\n', ['typescript(no-explicit-any)']],
-  'src/ts-ignore.ts': ['// @ts-ignore\nexport const value = 1;\n', ['typescript(ban-ts-comment)']],
-  'src/ts-expect-bare.ts': ['// @ts-expect-error\nexport const value: string = 1;\n', ['typescript(ban-ts-comment)']],
-  'src/floating.ts': [
-    'async function work(): Promise<void> {}\nexport function start(): void {\n  work();\n}\n',
-    ['typescript(no-floating-promises)'],
-  ],
-  'src/unsafe-assignment.ts': ["export const value: number = JSON.parse('1');\n", ['typescript(no-unsafe-assignment)']],
-  'src/unsafe-member.ts': [
-    "export function read(): void {\n  void JSON.parse('{}').field;\n}\n",
-    ['typescript(no-unsafe-member-access)'],
-  ],
-  'src/unsafe-call.ts': ["export function call(): void {\n  JSON.parse('{}')();\n}\n", ['typescript(no-unsafe-call)']],
-  'src/unsafe-return.ts': ["export function read(): number {\n  return JSON.parse('1');\n}\n", ['typescript(no-unsafe-return)']],
-  'src/unsafe-argument.ts': [
-    "function twice(value: number): number {\n  return value * 2;\n}\nexport const result = twice(JSON.parse('1'));\n",
-    ['typescript(no-unsafe-argument)'],
-  ],
+  'src/clean.ts': ['export function double(value: number): number {\n  return value * 2;\n}\n', []],
   'src/console.ts': ["export function say(): void {\n  console.log('x');\n}\n", ['eslint(no-console)']],
-  'src/switch.ts': [
-    "export function name(kind: 'a' | 'b'): string {\n  switch (kind) {\n    case 'a':\n      return 'A';\n  }\n  return '';\n}\n",
-    ['typescript(switch-exhaustiveness-check)'],
-  ],
-  'src/type-import.ts': [
-    "import { Shape } from './types';\nexport const shape: Shape = { kind: 'a' };\n",
-    ['typescript(consistent-type-imports)'],
-  ],
-  'src/focused.test.ts': [
-    "import { expect, test } from 'vitest';\ntest.only('a', () => {\n  expect(1).toBe(1);\n});\n",
-    ['vitest(no-focused-tests)'],
+  'src/destructure.tsx': [
+    'export function Bubble({ vm }: { vm: { text: string } }): unknown {\n  return <p>{vm.text}</p>;\n}\n',
+    ['aricanga(vm-prop)', 'solid(no-destructure)'],
   ],
   'src/disabled.test.ts': [
     "import { expect, test } from 'vitest';\ntest.skip('a', () => {\n  expect(1).toBe(1);\n});\n",
     ['vitest(no-disabled-tests)'],
   ],
-  'src/unused-directive.ts': [UNUSED_DIRECTIVE_TEXT, [UNUSED_DIRECTIVE]],
   'src/eslint-directive.ts': [ESLINT_DIRECTIVE_TEXT, ['eslint(no-console)']],
-  'src/destructure.tsx': [
-    'export function Bubble({ vm }: { vm: { text: string } }): unknown {\n  return <p>{vm.text}</p>;\n}\n',
-    ['aricanga(vm-prop)', 'solid(no-destructure)'],
-  ],
   'src/expect-described.ts': ['// @ts-expect-error: the planted mismatch this check needs\nexport const value: string = 1;\n', []],
+  'src/explicit-any.ts': ['export const value: any = 1;\n', ['typescript(no-explicit-any)']],
+  'src/floating.ts': [
+    'async function work(): Promise<void> {}\nexport function start(): void {\n  work();\n}\n',
+    ['typescript(no-floating-promises)'],
+  ],
+  'src/focused.test.ts': [
+    "import { expect, test } from 'vitest';\ntest.only('a', () => {\n  expect(1).toBe(1);\n});\n",
+    ['vitest(no-focused-tests)'],
+  ],
+  'src/switch.ts': [
+    "export function name(kind: 'a' | 'b'): string {\n  switch (kind) {\n    case 'a':\n      return 'A';\n  }\n  return '';\n}\n",
+    ['typescript(switch-exhaustiveness-check)'],
+  ],
+  'src/ts-expect-bare.ts': ['// @ts-expect-error\nexport const value: string = 1;\n', ['typescript(ban-ts-comment)']],
+  'src/ts-ignore.ts': ['// @ts-ignore\nexport const value = 1;\n', ['typescript(ban-ts-comment)']],
+  'src/type-import.ts': [
+    "import { Shape } from './types';\nexport const shape: Shape = { kind: 'a' };\n",
+    ['typescript(consistent-type-imports)'],
+  ],
   'src/types.ts': ['export interface Shape {\n  readonly kind: string;\n}\n', []],
-  'src/clean.ts': ['export function double(value: number): number {\n  return value * 2;\n}\n', []],
+  'src/unsafe-argument.ts': [
+    "function twice(value: number): number {\n  return value * 2;\n}\nexport const result = twice(JSON.parse('1'));\n",
+    ['typescript(no-unsafe-argument)'],
+  ],
+  'src/unsafe-assignment.ts': ["export const value: number = JSON.parse('1');\n", ['typescript(no-unsafe-assignment)']],
+  'src/unsafe-call.ts': ["export function call(): void {\n  JSON.parse('{}')();\n}\n", ['typescript(no-unsafe-call)']],
+  'src/unsafe-member.ts': [
+    "export function read(): void {\n  void JSON.parse('{}').field;\n}\n",
+    ['typescript(no-unsafe-member-access)'],
+  ],
+  'src/unsafe-return.ts': ["export function read(): number {\n  return JSON.parse('1');\n}\n", ['typescript(no-unsafe-return)']],
+  'src/unused-directive.ts': [UNUSED_DIRECTIVE_TEXT, [UNUSED_DIRECTIVE]],
 };
 
 const WARNING_PLANT = 'src/warning.ts';
@@ -116,13 +116,13 @@ interface Lint {
 
 /** The rule codes of oxlint's JSON report, by file. */
 export function codesByFile(report: unknown): ReadonlyMap<string, readonly string[]> {
-  const diagnostics = object(report, 'oxlint report')['diagnostics'];
+  const {diagnostics} = object(report, 'oxlint report');
   const found = new Map<string, string[]>();
   for (const entry of Array.isArray(diagnostics) ? diagnostics : []) {
     const fields = object(entry, 'diagnostic');
     const file = typeof fields['filename'] === 'string' ? fields['filename'] : '';
     const message = typeof fields['message'] === 'string' ? fields['message'] : '';
-    const code = typeof fields['code'] === 'string' ? fields['code'] : message.startsWith('Unused ') ? UNUSED_DIRECTIVE : message;
+    const code = typeof fields['code'] === 'string' ? fields['code'] : (message.startsWith('Unused ') ? UNUSED_DIRECTIVE : message);
     found.set(file, [...new Set([...(found.get(file) ?? []), code])].toSorted());
   }
   return found;
@@ -135,13 +135,13 @@ function lint(files: Readonly<Record<string, string>>, configText: string): Lint
     project.write('.oxlintrc.json', configText);
     project.write(
       'tsconfig.json',
-      JSON.stringify({ extends: './tsconfig.base.json', compilerOptions: { types: [], jsx: 'preserve' }, include: ['src'] }),
+      JSON.stringify({ compilerOptions: { jsx: 'preserve', types: [] }, extends: './tsconfig.base.json', include: ['src'] }),
     );
     for (const [path, text] of Object.entries(files)) {
       project.write(path, text);
     }
     const done = project.tool('oxlint', '-c', '.oxlintrc.json', '--format', 'json', ...Object.keys(files));
-    return { status: done.status, codes: codesByFile(json(done.stdout)) };
+    return { codes: codesByFile(json(done.stdout)), status: done.status };
   } finally {
     project.remove();
   }
@@ -228,7 +228,7 @@ describe('the strictness of the config', () => {
       'style is not at error',
       'suspicious is not at error',
     ]);
-    expect(turnedOff({ rules: { a: 'off', b: 'error' }, overrides: [{ files: ['x'], rules: { c: ['off'], d: 'warn' } }] })).toEqual(['a', 'c']);
+    expect(turnedOff({ overrides: [{ files: ['x'], rules: { c: ['off'], d: 'warn' } }], rules: { a: 'off', b: 'error' } })).toEqual(['a', 'c']);
   });
 });
 
@@ -250,7 +250,7 @@ describe('each option, by removal', () => {
 
 describe('the rule comparison', () => {
   test('sees a missing, an extra and a disabled rule, and reads severities', () => {
-    expect(enabled({ 'solid/a': 'error', 'solid/b': 2, 'solid/c': 'off', 'solid/d': ['warn', {}], other: 'error' }, 'solid/')).toEqual([
+    expect(enabled({ other: 'error', 'solid/a': 'error', 'solid/b': 2, 'solid/c': 'off', 'solid/d': ['warn', {}] }, 'solid/')).toEqual([
       'solid/a',
       'solid/b',
       'solid/d',

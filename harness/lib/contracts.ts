@@ -9,9 +9,11 @@
  */
 
 import * as ast from 'typescript/unstable/ast';
-import { type Checker, type Type, TypeFlags } from 'typescript/unstable/sync';
+import { TypeFlags } from 'typescript/unstable/sync';
+import type { Checker, Type } from 'typescript/unstable/sync';
 
-import { nameText, nodes, pathOf, type Scan, sourceOf, textOfNode } from './checker.ts';
+import { nameText, nodes, pathOf, sourceOf, textOfNode } from './checker.ts';
+import type { Scan } from './checker.ts';
 import { relative as relativeTo } from './paths.ts';
 import { Accepted, Prefixes } from './exemptions.ts';
 
@@ -67,7 +69,7 @@ export function contracts(scan: Scan, paths: readonly string[]): readonly Contra
       const type = checker.getDeclaredTypeOfSymbol(symbol);
       const words = stringLiterals(type);
       if (words !== undefined && words.length > 1) {
-        found.push({ owner: path, ownerPackage: packageOf(path), name: statement.name.text, words: new Set(words) });
+        found.push({ name: statement.name.text, owner: path, ownerPackage: packageOf(path), words: new Set(words) });
         continue;
       }
       const members = type.isUnionType() ? (type.getTypes() ?? []) : [];
@@ -83,9 +85,9 @@ export function contracts(scan: Scan, paths: readonly string[]): readonly Contra
         });
         if (discriminant.every((word) => word !== undefined)) {
           found.push({
+            name: `${statement.name.text}['${property.name}']`,
             owner: path,
             ownerPackage: packageOf(path),
-            name: `${statement.name.text}['${property.name}']`,
             words: new Set(discriminant),
           });
         }
@@ -122,7 +124,7 @@ function inTypeOrImport(node: ast.Node): boolean {
 
 /** Whether a node is the name its parent declares or accesses, not a value. */
 function names(node: ast.Node): boolean {
-  const parent = node.parent;
+  const {parent} = node;
   return 'name' in parent && parent.name === node;
 }
 
@@ -143,11 +145,11 @@ export function widenings(scan: Scan, file: ast.SourceFile, known: readonly Cont
     if (contract === undefined) {
       return;
     }
-    const parent = node.parent;
+    const {parent} = node;
     if (ast.isAsExpression(parent) && parent.type.kind === ast.SyntaxKind.StringKeyword) {
-      found.push({ path, contract: contract.name, form: 'asserted', code: textOfNode(parent) });
+      found.push({ code: textOfNode(parent), contract: contract.name, form: 'asserted', path });
     } else if (isPlainString(checker.getContextualType(node))) {
-      found.push({ path, contract: contract.name, form: 'widened', code: textOfNode(parent) });
+      found.push({ code: textOfNode(parent), contract: contract.name, form: 'widened', path });
     }
   });
   return found;
@@ -209,7 +211,7 @@ function descend(checker: Checker, types: readonly Type[], path: readonly string
  * the literal sits at a property path inside `arg` (`toEqual({ family: 'w' })`, `toContain('w')`).
  */
 function comparedTypes(checker: Checker, literal: ast.Node): readonly Type[] {
-  const parent = literal.parent;
+  const {parent} = literal;
   const typeOf = (node: ast.Node): readonly Type[] => {
     const type = checker.getTypeAtLocation(node);
     return type === undefined ? [] : [type];
@@ -283,7 +285,7 @@ export function respellings(scan: Scan, file: ast.SourceFile, known: readonly Co
     ) {
       continue;
     }
-    found.push({ path, contract: contract.name, form: 'respelled', code: textOfNode(node.parent) });
+    found.push({ code: textOfNode(node.parent), contract: contract.name, form: 'respelled', path });
   }
   return found;
 }

@@ -8,15 +8,15 @@ interface Fixture {
 }
 
 export const fixtures: Readonly<Record<string, () => Promise<Fixture>>> = {
-  adapter: () => import('./fixtures/adapter'),
-  'async-views': () => import('./fixtures/async-views'),
-  csp: () => import('./fixtures/csp'),
-  errored: () => import('./fixtures/errored'),
-  events: () => import('./fixtures/events'),
-  measurement: () => import('./fixtures/measurement'),
-  'mount-dispose': () => import('./fixtures/mount-dispose'),
-  ownership: () => import('./fixtures/ownership'),
-  performance: () => import('./fixtures/performance'),
-  properties: () => import('./fixtures/properties'),
-  props: () => import('./fixtures/props'),
+  adapter:  async () => import('./fixtures/adapter'),
+  'async-views':  async () => import('./fixtures/async-views'),
+  csp:  async () => import('./fixtures/csp'),
+  errored:  async () => import('./fixtures/errored'),
+  events:  async () => import('./fixtures/events'),
+  measurement:  async () => import('./fixtures/measurement'),
+  'mount-dispose':  async () => import('./fixtures/mount-dispose'),
+  ownership:  async () => import('./fixtures/ownership'),
+  performance:  async () => import('./fixtures/performance'),
+  properties:  async () => import('./fixtures/properties'),
+  props:  async () => import('./fixtures/props'),
 };

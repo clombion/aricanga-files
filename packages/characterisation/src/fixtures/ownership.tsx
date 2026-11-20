@@ -47,9 +47,9 @@ export function run(): void {
   document.body.append(probe);
   record({
     id: 'ownership/connected-callback-unowned',
+    note: `getOwner() in connectedCallback: ${String(probe.ownerAtConnect)}`,
     ok: probe.ownerAtConnect === null,
     threw: false,
-    note: `getOwner() in connectedCallback: ${String(probe.ownerAtConnect)}`,
   });
   probe.remove();
 
@@ -71,9 +71,9 @@ export function run(): void {
   });
   record({
     id: 'ownership/root-in-effect-callback',
+    note: rootThrown === undefined ? 'createRoot in an effect callback was allowed' : `refused: ${rootThrown}`,
     ok: true,
     threw: rootThrown !== undefined,
-    note: rootThrown === undefined ? 'createRoot in an effect callback was allowed' : `refused: ${rootThrown}`,
   });
 
   const detachedThrown = inEffectCallback(() => {
@@ -87,12 +87,12 @@ export function run(): void {
   });
   record({
     id: 'ownership/run-with-owner-null-in-effect-callback',
-    ok: true,
-    threw: detachedThrown !== undefined,
     note:
       detachedThrown === undefined
         ? 'runWithOwner(null) + createRoot in an effect callback was allowed'
         : `refused: ${detachedThrown}`,
+    ok: true,
+    threw: detachedThrown !== undefined,
   });
 
   markDone();

@@ -9,7 +9,8 @@
 import * as ast from 'typescript/unstable/ast';
 import type { Symbol as TsSymbol } from 'typescript/unstable/sync';
 
-import { isProduction, nodes, resolved, type Scan, sourceOf } from './checker.ts';
+import { isProduction, nodes, resolved, sourceOf } from './checker.ts';
+import type { Scan } from './checker.ts';
 import { Prefixes } from './exemptions.ts';
 
 /** Modules that read the harness library's types without being production modules themselves. */
@@ -52,7 +53,7 @@ function exportedTypes(scan: Scan): ReadonlyMap<number, ExportedType> {
         const symbol = scan.checker.getSymbolAtLocation(statement.name);
         if (symbol !== undefined) {
           const isPublic = scan.checker.getJsDocTagsOfSymbol(symbol).some((tag) => tag.name === 'public');
-          found.set(symbol.id, { path, name: statement.name.text, isPublic });
+          found.set(symbol.id, { isPublic, name: statement.name.text, path });
         }
       }
     }

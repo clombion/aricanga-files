@@ -13,15 +13,8 @@ import { describe, expect, test } from 'vitest';
 
 import { json, object } from '../lib/config.ts';
 import { Accepted } from '../lib/exemptions.ts';
-import {
-  codesAt,
-  type Fixture,
-  FixtureError,
-  fixtureFolders,
-  fixtures,
-  lintFixtures,
-  parseFixture,
-} from '../lib/lint-rules.ts';
+import { codesAt, FixtureError, fixtureFolders, fixtures, lintFixtures, parseFixture } from '../lib/lint-rules.ts';
+import type { Fixture } from '../lib/lint-rules.ts';
 import { textOf } from '../lib/source-files.ts';
 import { PLUGIN_NAME, RULES } from '../lint-rules/plugin.ts';
 
@@ -135,7 +128,7 @@ describe('the repository', () => {
     const outcome = planted.map((fixture) => {
       const codes = codesAt(found, fixture.path);
       const held = fixture.kind === 'fire' ? codes.includes(`${PLUGIN_NAME}(${fixture.rule})`) : codes.length === 0;
-      return { file: fixture.file, held, codes };
+      return { codes, file: fixture.file, held };
     });
     expect(outcome.filter((entry) => !entry.held)).toEqual([]);
   });
@@ -146,9 +139,9 @@ describe('the fixture reader', () => {
     const fixture = parseFixture('harness/lint-rules/fixtures/env/fire-import.fixture', '// path: a/b.ts\nexport {};\n');
     expect(fixture).toEqual({
       file: 'harness/lint-rules/fixtures/env/fire-import.fixture',
-      rule: 'env',
       kind: 'fire',
       path: 'a/b.ts',
+      rule: 'env',
       source: 'export {};\n',
     });
   });
@@ -163,7 +156,7 @@ describe('the fixture reader', () => {
 });
 
 function plantedFixture(rule: string, kind: 'fire' | 'clean'): Fixture {
-  return { file: `harness/lint-rules/fixtures/${rule}/${kind}.fixture`, rule, kind, path: `${rule}-${kind}.ts`, source: '' };
+  return { file: `harness/lint-rules/fixtures/${rule}/${kind}.fixture`, kind, path: `${rule}-${kind}.ts`, rule, source: '' };
 }
 
 describe('the check', () => {

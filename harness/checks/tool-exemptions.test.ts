@@ -47,11 +47,11 @@ export function oxlintEntries(config: unknown): Entry[] {
     throw new TypeError('.oxlintrc.json overrides is not a list');
   }
   return [
-    ...strings(fields['ignorePatterns'], 'ignorePatterns').map((glob) => ({ tool: 'oxlint ignorePatterns', glob })),
+    ...strings(fields['ignorePatterns'], 'ignorePatterns').map((glob) => ({ glob, tool: 'oxlint ignorePatterns' })),
     ...overrides.flatMap((override: unknown, index) =>
       strings(object(override, `override ${index}`)['files'], `override ${index} files`).map((glob) => ({
-        tool: `oxlint overrides[${index}]`,
         glob,
+        tool: `oxlint overrides[${index}]`,
       })),
     ),
   ];
@@ -66,12 +66,12 @@ export function vitestEntries(config: unknown): Entry[] {
     throw new TypeError('vitest projects is not a list');
   }
   return [
-    ...strings(coverage['include'], 'coverage.include').map((glob) => ({ tool: 'vitest coverage.include', glob })),
-    ...strings(coverage['exclude'], 'coverage.exclude').map((glob) => ({ tool: 'vitest coverage.exclude', glob })),
+    ...strings(coverage['include'], 'coverage.include').map((glob) => ({ glob, tool: 'vitest coverage.include' })),
+    ...strings(coverage['exclude'], 'coverage.exclude').map((glob) => ({ glob, tool: 'vitest coverage.exclude' })),
     ...projects.flatMap((project: unknown, index) =>
       strings(object(object(project, `project ${index}`)['test'] ?? {}, 'test')['include'], 'include').map((glob) => ({
-        tool: `vitest projects[${index}].include`,
         glob,
+        tool: `vitest projects[${index}].include`,
       })),
     ),
   ];
@@ -81,15 +81,15 @@ export function vitestEntries(config: unknown): Entry[] {
 export function biomeEntries(config: unknown): Entry[] {
   const files = object(object(config, 'biome.json')['files'] ?? {}, 'files');
   return strings(files['includes'], 'files.includes').map((glob) =>
-    glob.startsWith('!') ? { tool: 'biome files.includes (exclusion)', glob: glob.slice(1) } : { tool: 'biome files.includes', glob },
+    glob.startsWith('!') ? { glob: glob.slice(1), tool: 'biome files.includes (exclusion)' } : { glob, tool: 'biome files.includes' },
   );
 }
 
 /** oxfmt's ignore patterns. */
 export function oxfmtEntries(config: unknown): Entry[] {
   return strings(object(config, '.oxfmtrc.json')['ignorePatterns'], 'ignorePatterns').map((glob) => ({
-    tool: 'oxfmt ignorePatterns',
     glob,
+    tool: 'oxfmt ignorePatterns',
   }));
 }
 
@@ -98,11 +98,11 @@ export function knipEntries(config: unknown): Entry[] {
   const fields = object(config, 'knip.json');
   const workspaces = object(fields['workspaces'] ?? {}, 'workspaces');
   return [
-    ...strings(fields['ignore'], 'ignore').map((glob) => ({ tool: 'knip ignore', glob })),
+    ...strings(fields['ignore'], 'ignore').map((glob) => ({ glob, tool: 'knip ignore' })),
     ...Object.entries(workspaces).flatMap(([workspace, settings]) =>
       strings(object(settings, workspace)['ignore'], `${workspace}.ignore`).map((glob) => ({
-        tool: `knip workspaces[${workspace}].ignore`,
         glob: workspace === '.' ? glob : `${workspace}/${glob}`,
+        tool: `knip workspaces[${workspace}].ignore`,
       })),
     ),
   ];
@@ -112,14 +112,14 @@ export function knipEntries(config: unknown): Entry[] {
 export function stylelintEntries(config: unknown, ignoreFile: string): Entry[] {
   return [
     ...strings(object(config, '.stylelintrc.json')['ignoreFiles'], 'ignoreFiles').map((glob) => ({
-      tool: 'stylelint ignoreFiles',
       glob,
+      tool: 'stylelint ignoreFiles',
     })),
     ...ignoreFile
       .split('\n')
       .map((line) => line.trim())
       .filter((line) => line !== '' && !line.startsWith('#'))
-      .map((glob) => ({ tool: '.stylelintignore', glob })),
+      .map((glob) => ({ glob, tool: '.stylelintignore' })),
   ];
 }
 
@@ -174,15 +174,15 @@ describe('the readers and the matcher', () => {
       overrides: [{ files: ['packages/plant/**'] }, { files: ['packages/gone/**'] }],
     });
     expect(deadEntries(entries, LISTED)).toEqual([
-      { tool: 'oxlint ignorePatterns', glob: 'gone/**' },
-      { tool: 'oxlint overrides[1]', glob: 'packages/gone/**' },
+      { glob: 'gone/**', tool: 'oxlint ignorePatterns' },
+      { glob: 'packages/gone/**', tool: 'oxlint overrides[1]' },
     ]);
   });
 
   test('sees a dead coverage include, coverage exclude and project include', () => {
     const entries = vitestEntries({
       test: {
-        coverage: { include: ['packages/plant/src/**', 'packages/gone/src/**'], exclude: ['**/*.test.ts', '**/*.spec.ts'] },
+        coverage: { exclude: ['**/*.test.ts', '**/*.spec.ts'], include: ['packages/plant/src/**', 'packages/gone/src/**'] },
         projects: [{ test: { include: ['packages/**/*.test.ts'] } }, { test: { include: ['harness/checks/**/*.test.ts'] } }],
       },
     });
@@ -195,28 +195,28 @@ describe('the readers and the matcher', () => {
 
   test('reads a biome exclusion as the glob it excludes', () => {
     expect(biomeEntries({ files: { includes: ['packages/**/*.css', '!**/gone/**'] } })).toEqual([
-      { tool: 'biome files.includes', glob: 'packages/**/*.css' },
-      { tool: 'biome files.includes (exclusion)', glob: '**/gone/**' },
+      { glob: 'packages/**/*.css', tool: 'biome files.includes' },
+      { glob: '**/gone/**', tool: 'biome files.includes (exclusion)' },
     ]);
   });
 
   test('reads oxfmt, knip and stylelint ignores', () => {
-    expect(oxfmtEntries({ ignorePatterns: ['docs/**'] })).toEqual([{ tool: 'oxfmt ignorePatterns', glob: 'docs/**' }]);
+    expect(oxfmtEntries({ ignorePatterns: ['docs/**'] })).toEqual([{ glob: 'docs/**', tool: 'oxfmt ignorePatterns' }]);
     expect(knipEntries({ ignore: ['docs/**'], workspaces: { 'packages/plant': { ignore: ['src/b.css'] } } })).toEqual([
-      { tool: 'knip ignore', glob: 'docs/**' },
-      { tool: 'knip workspaces[packages/plant].ignore', glob: 'packages/plant/src/b.css' },
+      { glob: 'docs/**', tool: 'knip ignore' },
+      { glob: 'packages/plant/src/b.css', tool: 'knip workspaces[packages/plant].ignore' },
     ]);
     expect(stylelintEntries({ ignoreFiles: ['**/b.css'] }, '# a comment\n\ngone/**\n')).toEqual([
-      { tool: 'stylelint ignoreFiles', glob: '**/b.css' },
-      { tool: '.stylelintignore', glob: 'gone/**' },
+      { glob: '**/b.css', tool: 'stylelint ignoreFiles' },
+      { glob: 'gone/**', tool: '.stylelintignore' },
     ]);
   });
 
   test('a declared policy passes while it matches nothing, and fails as stale once it matches', () => {
     const policies = new Exemptions({ [site('oxlint ignorePatterns', '**/dist/**')]: 'planted: build output' });
-    const unmatched = deadEntries([{ tool: 'oxlint ignorePatterns', glob: '**/dist/**' }], LISTED);
+    const unmatched = deadEntries([{ glob: '**/dist/**', tool: 'oxlint ignorePatterns' }], LISTED);
     expect(policies.unexemptedBy(unmatched, (entry) => site(entry.tool, entry.glob))).toEqual([]);
-    const nowMatching = deadEntries([{ tool: 'oxlint ignorePatterns', glob: '**/dist/**' }], ['a/dist/x.js']);
+    const nowMatching = deadEntries([{ glob: '**/dist/**', tool: 'oxlint ignorePatterns' }], ['a/dist/x.js']);
     expect(() => policies.unexemptedBy(nowMatching, (entry) => site(entry.tool, entry.glob))).toThrow('stale');
   });
 });

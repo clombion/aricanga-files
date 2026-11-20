@@ -132,14 +132,14 @@ export function pinned(manifests: readonly Manifest[], lockText: string): readon
     for (const group of groups) {
       for (const [tool, specifier] of Object.entries(strings(fields[group], `${importer} ${group}`))) {
         if (!specifier.startsWith(WORKSPACE)) {
-          found.push({ tool, where: LOCKFILE, version: versions.get(tool) ?? '' });
+          found.push({ tool, version: versions.get(tool) ?? '', where: LOCKFILE });
         }
       }
     }
     if (importer === '.') {
-      found.push({ tool: 'node', where: 'package.json engines', version: engineRange(manifest) });
+      found.push({ tool: 'node', version: engineRange(manifest), where: 'package.json engines' });
       const manager = typeof fields['packageManager'] === 'string' ? fields['packageManager'] : '';
-      found.push({ tool: 'pnpm', where: 'package.json packageManager', version: manager.replace(/^pnpm@/, '') });
+      found.push({ tool: 'pnpm', version: manager.replace(/^pnpm@/, ''), where: 'package.json packageManager' });
     }
   }
   const unique = new Map(found.map((pin) => [pin.tool, pin]));

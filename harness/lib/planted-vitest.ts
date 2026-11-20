@@ -47,8 +47,8 @@ export function runPlanted(specs: Readonly<Record<string, string>>): ReadonlyMap
       for (const assertion of Array.isArray(assertions) ? assertions : []) {
         const fields = object(assertion, 'a test result');
         outcomes.set(String(fields['fullName']), {
-          status: String(fields['status']),
           failure: strings(fields['failureMessages']).join('\n'),
+          status: String(fields['status']),
         });
       }
     }

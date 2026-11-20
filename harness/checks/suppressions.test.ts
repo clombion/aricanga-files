@@ -137,7 +137,7 @@ export function cssComments(text: string): { readonly text: string; readonly lin
     } else if (text.startsWith('/*', index)) {
       const end = text.indexOf('*/', index + 2);
       const stop = end === -1 ? text.length : end + 2;
-      found.push({ text: text.slice(index, stop), line: text.slice(0, index).split('\n').length });
+      found.push({ line: text.slice(0, index).split('\n').length, text: text.slice(index, stop) });
       index = stop;
     } else {
       index += 1;
@@ -155,7 +155,7 @@ export function census(path: string, text: string): Census {
   const problems: Problem[] = [];
   const sites: string[] = [];
   const refuse = (line: number, problem: string): void => {
-    problems.push({ path, line, problem });
+    problems.push({ line, path, problem });
   };
   const count = (tool: string, rules: readonly string[], line: number): void => {
     if (CHECKS.has(`${tool}:${suffix(path)}`)) {
@@ -303,8 +303,8 @@ describe('the census', () => {
 
   test('a counted suppression that went away, or a new one, fails', () => {
     const counted = new CountedExemptions({ [site('a.ts', 'oxlint:no-console')]: [1, 'planted'] });
-    expect(() => counted.assertExact([])).toThrow(StaleExemptionError);
-    expect(() => counted.assertExact([site('a.ts', 'oxlint:no-console'), site('a.ts', 'oxlint:no-console')])).toThrow(
+    expect(() =>{  counted.assertExact([]); }).toThrow(StaleExemptionError);
+    expect(() =>{  counted.assertExact([site('a.ts', 'oxlint:no-console'), site('a.ts', 'oxlint:no-console')]); }).toThrow(
       StaleExemptionError,
     );
   });

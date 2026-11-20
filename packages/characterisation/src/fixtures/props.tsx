@@ -37,9 +37,9 @@ export function run(): void {
   const destructured = host.querySelector('#destructured')?.textContent;
   record({
     id: 'props/single-vm-prop-is-reactive',
+    note: `a field change, read through props: ${read ?? ''}; destructured: ${destructured ?? ''}`,
     ok: read === 'after',
     threw: false,
-    note: `a field change, read through props: ${read ?? ''}; destructured: ${destructured ?? ''}`,
   });
   setStore((draft) => {
     draft.bubble = { text: 'a new vm' };
@@ -49,9 +49,9 @@ export function run(): void {
   const destructuredNew = host.querySelector('#destructured')?.textContent;
   record({
     id: 'props/new-vm-reaches-only-the-undestructured-part',
+    note: `a new vm object, read through props: ${readNew ?? ''}; destructured: ${destructuredNew ?? ''}`,
     ok: readNew === 'a new vm',
     threw: false,
-    note: `a new vm object, read through props: ${readNew ?? ''}; destructured: ${destructuredNew ?? ''}`,
   });
   dispose();
   markDone();

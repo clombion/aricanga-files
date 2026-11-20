@@ -9,7 +9,8 @@
 
 import { describe, expect, test } from 'vitest';
 
-import { type Hunt, huntOf, hunt } from '../lib/stress.ts';
+import { huntOf, hunt } from '../lib/stress.ts';
+import type { Hunt } from '../lib/stress.ts';
 import { Project } from '../lib/tools.ts';
 
 export const HARNESS_ID = 'flake-hunter';
@@ -17,6 +18,13 @@ export const HARNESS_ID = 'flake-hunter';
 const CONFIG = 'export default { test: { include: ["*.test.ts"], expect: { requireAssertions: true } } };\n';
 
 const PLANTS: Readonly<Record<string, string>> = {
+  'independent.test.ts': [
+    "import { expect, test } from 'vitest';",
+    'const later = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 20));',
+    "test('a', async () => { const mine = ['a']; await later(); expect(mine).toEqual(['a']); });",
+    "test('b', async () => { const mine = ['b']; await later(); expect(mine).toEqual(['b']); });",
+    '',
+  ].join('\n'),
   'order.test.ts': [
     "import { expect, test } from 'vitest';",
     'const seen: string[] = [];',
@@ -33,13 +41,6 @@ const PLANTS: Readonly<Record<string, string>> = {
     "test('b', async () => { current = 'b'; await later(); expect(current).toBe('b'); });",
     '',
   ].join('\n'),
-  'independent.test.ts': [
-    "import { expect, test } from 'vitest';",
-    'const later = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 20));',
-    "test('a', async () => { const mine = ['a']; await later(); expect(mine).toEqual(['a']); });",
-    "test('b', async () => { const mine = ['b']; await later(); expect(mine).toEqual(['b']); });",
-    '',
-  ].join('\n'),
 };
 
 /** A plain run and a hunt of one planted spec: their exit statuses. */
@@ -51,7 +52,7 @@ async function plainAndHunted(file: string): Promise<readonly [number, readonly 
       project.write(path, text);
     }
     const plain = project.tool('vitest', 'run', '--root', project.root, '--config', 'vitest.config.ts', file);
-    const options: Hunt = { root: project.root, config: 'vitest.config.ts', seed: 1, copies: 4, repeats: 2, filters: [file] };
+    const options: Hunt = { config: 'vitest.config.ts', copies: 4, filters: [file], repeats: 2, root: project.root, seed: 1 };
     const hunted = await hunt(options);
     return [plain.status, hunted.map((result) => result.status)];
   } finally {
@@ -73,7 +74,7 @@ describe('the flake hunter, on planted specs', () => {
   });
 
   test('passes an independent spec in both', async () => {
-    expect(await plainAndHunted('independent.test.ts')).toEqual([0, [0, 0, 0, 0]]);
+    await expect(plainAndHunted('independent.test.ts')).resolves.toEqual([0, [0, 0, 0, 0]]);
   });
 });
 

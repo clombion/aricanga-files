@@ -1,7 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { Compiler } from 'inkjs/full';
-import { type Plugin, defineConfig } from 'vite';
+import { defineConfig } from 'vite';
+import type { Plugin } from 'vite';
 
 const fromHere = (p: string) => fileURLToPath(new URL(p, import.meta.url));
 
@@ -14,7 +15,6 @@ function compiledStory(): string {
 // so neither writes into the checkout.
 function compileInk(): Plugin {
   return {
-    name: 'compile-ink',
     configureServer(server) {
       server.middlewares.use('/story.json', (_request, response) => {
         response.setHeader('Content-Type', 'application/json');
@@ -24,10 +24,12 @@ function compileInk(): Plugin {
     generateBundle() {
       this.emitFile({ type: 'asset', fileName: 'story.json', source: compiledStory() });
     },
+    name: 'compile-ink',
   };
 }
 
 export default defineConfig({
+  build: { emptyOutDir: true, outDir: 'build' },
   plugins: [compileInk()],
   resolve: {
     alias: {
@@ -35,5 +37,4 @@ export default defineConfig({
       '@narratives/system-chat': fromHere('../../packages/systems/chat/src/index.ts'),
     },
   },
-  build: { outDir: 'build', emptyOutDir: true },
 });

@@ -1,17 +1,18 @@
-import { type Snapshot, decodeSnapshot, encodeSnapshot, fx, parseTag } from '@narratives/foundation';
+import { decodeSnapshot, encodeSnapshot, fx, parseTag } from '@narratives/foundation';
+import type { Snapshot } from '@narratives/foundation';
 import { expect, test } from 'vitest';
 
 test('parseTag splits key/value and preserves raw', () => {
-  expect(parseTag('speaker: Pat')).toEqual({ key: 'speaker', value: 'Pat', raw: 'speaker: Pat' });
+  expect(parseTag('speaker: Pat')).toEqual({ key: 'speaker', raw: 'speaker: Pat', value: 'Pat' });
   expect(parseTag('immediate')).toEqual({ key: 'immediate', raw: 'immediate' });
 });
 
 test('a snapshot round-trips through the codec to deep-equal', () => {
   const snap: Snapshot<{ chat: { count: number } }> = {
-    version: 1,
-    ink: '{"x":1}',
     idSeq: 7,
+    ink: '{"x":1}',
     state: { chat: { count: 3 } },
+    version: 1,
   };
   expect(decodeSnapshot(encodeSnapshot(snap))).toEqual(snap);
 });

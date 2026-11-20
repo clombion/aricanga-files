@@ -45,11 +45,6 @@ export const fx = {
     kind: op.op,
     payload: op,
   }),
-  schedule: (commit: ScheduleCommit): Effect<'schedule', 'commit', ScheduleCommit> => ({
-    family: 'schedule',
-    kind: 'commit',
-    payload: commit,
-  }),
   fetch: (request: DataRequest): Effect<'fetch', 'request-data', DataRequest> => ({
     family: 'fetch',
     kind: 'request-data',
@@ -64,6 +59,11 @@ export const fx = {
     family: 'present',
     kind,
     payload,
+  }),
+  schedule: (commit: ScheduleCommit): Effect<'schedule', 'commit', ScheduleCommit> => ({
+    family: 'schedule',
+    kind: 'commit',
+    payload: commit,
   }),
 } as const;
 
@@ -88,13 +88,13 @@ export function field(payload: unknown, name: string): unknown {
 /** A payload's named string field. */
 export function text(payload: unknown, name: string): string {
   const value = field(payload, name);
-  if (typeof value !== 'string') throw new EffectPayloadError(`effect payload ${name} is not a string`);
+  if (typeof value !== 'string') {throw new EffectPayloadError(`effect payload ${name} is not a string`);}
   return value;
 }
 
 function count(payload: unknown, name: string): number {
   const value = field(payload, name);
-  if (typeof value !== 'number') throw new EffectPayloadError(`effect payload ${name} is not a number`);
+  if (typeof value !== 'number') {throw new EffectPayloadError(`effect payload ${name} is not a number`);}
   return value;
 }
 
@@ -102,15 +102,19 @@ function count(payload: unknown, name: string): number {
 export function parseDriveInkOp(payload: unknown): DriveInkOp {
   const op = text(payload, 'op');
   switch (op) {
-    case 'choose':
+    case 'choose': {
       return { op, index: count(payload, 'index') };
-    case 'goto':
+    }
+    case 'goto': {
       return { op, knot: text(payload, 'knot') };
+    }
     case 'save-snap':
-    case 'load-snap':
+    case 'load-snap': {
       return { op, id: text(payload, 'id') };
-    default:
+    }
+    default: {
       throw new EffectPayloadError(`unknown drive-ink op ${op}`);
+    }
   }
 }
 
@@ -121,7 +125,7 @@ export function parseScheduleCommit(payload: unknown): ScheduleCommit {
 
 /** Parse a `fetch` payload. */
 export function parseDataRequest(payload: unknown): DataRequest {
-  const request = { source: text(payload, 'source'), query: text(payload, 'query') };
+  const request = { query: text(payload, 'query'), source: text(payload, 'source') };
   return hasField(payload, 'params')
     ? { ...request, params: text(payload, 'params') }
     : request;

@@ -3,7 +3,8 @@
  * `(props: PartProps<T>)`. Reading `props.vm` keeps the prop reactive and the part replaceable.
  */
 
-import { child, children, componentRule, nameOf, type Node, type Rule } from '../ast.ts';
+import { child, children, componentRule, nameOf } from '../ast.ts';
+import type { Node, Rule } from '../ast.ts';
 
 const COMPONENT = /^[A-Z]/;
 const FUNCTIONS = new Set(['ArrowFunctionExpression', 'FunctionExpression']);

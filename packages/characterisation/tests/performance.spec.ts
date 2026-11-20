@@ -18,7 +18,7 @@ function timing(value: unknown): Timing {
   }
   const { render, updates } = value;
   if (typeof render !== 'number' || typeof updates !== 'number') {
-    throw new Error(`not a timing: ${JSON.stringify(value)}`);
+    throw new TypeError(`not a timing: ${JSON.stringify(value)}`);
   }
   return { render, updates };
 }

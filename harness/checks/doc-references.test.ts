@@ -24,7 +24,8 @@ import { posix } from 'node:path';
 import { describe, expect, test } from 'vitest';
 
 import { json, object, repoTasks } from '../lib/config.ts';
-import { currentSpans, currentText, Doc, type Link, markdown, markdownPaths, type Prose, type Span } from '../lib/docs.ts';
+import { currentSpans, currentText, Doc, markdown, markdownPaths } from '../lib/docs.ts';
+import type { Link, Prose, Span } from '../lib/docs.ts';
 import { Accepted, Exemptions, Prefixes, site } from '../lib/exemptions.ts';
 import { fromRoot } from '../lib/paths.ts';
 import { heldFiles } from '../lib/scope.ts';
@@ -122,11 +123,11 @@ export function linkProblems(link: Link, files: readonly string[], docs: Readonl
   const resolved = target === '' ? link.path : posix.normalize(posix.join(posix.dirname(link.path), decodeURI(target)));
   const dirs = directories(files);
   if (!files.includes(resolved) && !dirs.has(resolved.replace(/\/$/, ''))) {
-    return [{ path: link.path, line: link.line, reference: link.target, problem: 'the linked file is not listed' }];
+    return [{ line: link.line, path: link.path, problem: 'the linked file is not listed', reference: link.target }];
   }
   if (fragment !== '' && !(docs.get(resolved)?.anchors().has(fragment) ?? false)) {
     return [
-      { path: link.path, line: link.line, reference: link.target, problem: 'the anchor is not a heading of the linked file' },
+      { line: link.line, path: link.path, problem: 'the anchor is not a heading of the linked file', reference: link.target },
     ];
   }
   return [];
@@ -173,8 +174,8 @@ interface Resolver {
 /** A backticked path, package, named value or task that resolves to nothing. */
 export function spanProblems(span: Span, resolver: Resolver): Unresolved[] {
   const { files, taskNames, installed, named } = resolver;
-  const text = span.text;
-  const unresolved = (problem: string): Unresolved[] => [{ path: span.path, line: span.line, reference: text, problem }];
+  const {text} = span;
+  const unresolved = (problem: string): Unresolved[] => [{ line: span.line, path: span.path, problem, reference: text }];
   for (const match of text.matchAll(PNPM_RUN)) {
     const task = match[1] ?? '';
     if (!taskNames.has(task)) {
@@ -207,7 +208,7 @@ export function spanProblems(span: Span, resolver: Resolver): Unresolved[] {
 export function adrProblems(line: Prose, files: readonly string[]): Unresolved[] {
   return [...line.text.matchAll(ADR)]
     .filter((match) => !files.some((file) => file.startsWith(`${DECISIONS}${match[1] ?? ''}-`)))
-    .map((match) => ({ path: line.path, line: line.line, reference: match[0], problem: 'no decision record has this number' }));
+    .map((match) => ({ line: line.line, path: line.path, problem: 'no decision record has this number', reference: match[0] }));
 }
 
 /** A locked tool in a shell fence run bare or through an unlocked runner. */
@@ -221,7 +222,7 @@ export function fenceProblems(doc: Doc): Unresolved[] {
         const bare = LOCKED_TOOLS.has(words[0] ?? '');
         const unlocked = UNLOCKED_RUNNERS.has(words[0] ?? '') || (words[0] === 'pnpm' && words[1] === 'dlx');
         return bare || unlocked
-          ? [{ path: doc.path, line: fence.line + offset + 1, reference: line.trim(), problem: 'a locked tool runs through pnpm' }]
+          ? [{ line: fence.line + offset + 1, path: doc.path, problem: 'a locked tool runs through pnpm', reference: line.trim() }]
           : [];
       }),
     );
@@ -232,7 +233,7 @@ function workspaces(): readonly (readonly [string, string])[] {
   return tracked()
     .filter((path) => path.endsWith('package.json') && !path.includes('node_modules/'))
     .flatMap((path) => {
-      const name = object(json(textOf(path)), path)['name'];
+      const {name} = object(json(textOf(path)), path);
       return typeof name === 'string' ? [[name, posix.dirname(path)] as const] : [];
     });
 }
@@ -284,7 +285,7 @@ describe('the repository', () => {
     const files = tracked();
     const names = repoTaskNames();
     const quoted = quotedValues();
-    const resolver: Resolver = { files, taskNames: names, installed: installedOnDisk, named: (value) => quoted.has(value) };
+    const resolver: Resolver = { files, installed: installedOnDisk, named: (value) => quoted.has(value), taskNames: names };
     const found = currentSpans().flatMap((span) => spanProblems(span, resolver));
     expect(SPANS_EXEMPT.unexemptedBy(found, key)).toEqual([]);
   });
@@ -335,9 +336,9 @@ const PLANTED_NAMED = new Accepted(['chat/showNotification', 'aricanga/autofocus
 
 const PLANTED_RESOLVER: Resolver = {
   files: ['src/a.ts', 'docs/planted.md', 'docs/other.md', 'packages/systems/chat/src/model/route.ts'],
-  taskNames: new Set(['check']),
   installed: (path) => PLANTED_INSTALLED.has(path),
   named: (value) => PLANTED_NAMED.has(value),
+  taskNames: new Set(['check']),
 };
 
 describe('the span check', () => {
@@ -353,7 +354,7 @@ describe('the span check', () => {
     ['chat/noSuchEffect', 'the path is not listed'],
     ['missing/rule.ts', 'the path is not listed'],
   ])('sees the planted span %s', (text, problem) => {
-    const found = spanProblems({ path: 'docs/planted.md', line: 1, text }, PLANTED_RESOLVER);
+    const found = spanProblems({ line: 1, path: 'docs/planted.md', text }, PLANTED_RESOLVER);
     expect(found.map((unresolved) => unresolved.problem)).toEqual([problem]);
   });
 
@@ -382,19 +383,19 @@ describe('the span check', () => {
     'chat/showNotification',
     'aricanga/autofocus',
   ])('lets the resolving span or placeholder %s through', (text) => {
-    expect(spanProblems({ path: 'docs/planted.md', line: 1, text }, PLANTED_RESOLVER)).toEqual([]);
+    expect(spanProblems({ line: 1, path: 'docs/planted.md', text }, PLANTED_RESOLVER)).toEqual([]);
   });
 });
 
 describe('the ADR check', () => {
   test('sees an ADR with no record and lets a recorded one through', () => {
     const files = ['docs/roadmap/decisions/0007-system-io-algebra.md'];
-    const line = { path: 'docs/planted.md', line: 1, text: 'See ADR-0007 and ADR-0042.' };
+    const line = { line: 1, path: 'docs/planted.md', text: 'See ADR-0007 and ADR-0042.' };
     expect(adrProblems(line, files).map((problem) => problem.reference)).toEqual(['ADR-0042']);
   });
 
   test('passes an exempted reference and fails a stale exemption', () => {
-    const planted = { path: 'docs/planted.md', line: 1, reference: 'ADR-0042', problem: 'no decision record has this number' };
+    const planted = { line: 1, path: 'docs/planted.md', problem: 'no decision record has this number', reference: 'ADR-0042' };
     const exempt = new Exemptions({ [site('docs/planted.md', 'ADR-0042')]: 'planted: written next' });
     expect(exempt.unexemptedBy([planted], key)).toEqual([]);
     expect(() => exempt.unexemptedBy([], key)).toThrow(/stale/);

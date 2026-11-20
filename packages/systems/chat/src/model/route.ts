@@ -1,5 +1,6 @@
 import type { InkStep, ReduceContext } from '@narratives/foundation';
-import { type ChatMessageVM, reduceStep } from '../reduce';
+import { reduceStep } from '../reduce';
+import type { ChatMessageVM } from '../reduce';
 import type { ChatState } from '../state';
 
 const DEFAULT_CHAT = 'main';
@@ -25,7 +26,7 @@ export function buildMessage(
   ctx: ReduceContext,
   time: number | null,
 ): ChatMessageVM {
-  return { id: ctx.nextId(), chatId, time, ...reduceStep(step) };
+  return { chatId, id: ctx.nextId(), time, ...reduceStep(step) };
 }
 
 // Append a message to its owning chat's history (immutably).

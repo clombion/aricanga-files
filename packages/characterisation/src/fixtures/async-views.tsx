@@ -33,9 +33,9 @@ export async function run(): Promise<void> {
   flush();
   record({
     id: 'async-views/async-read-outside-loading',
+    note: `thrown: ${thrown ?? '<nothing>'}; while pending: "${pending}"; after it resolved: "${host.textContent ?? ''}"`,
     ok: true,
     threw: thrown !== undefined,
-    note: `thrown: ${thrown ?? '<nothing>'}; while pending: "${pending}"; after it resolved: "${host.textContent ?? ''}"`,
   });
   dispose?.();
   host.remove();

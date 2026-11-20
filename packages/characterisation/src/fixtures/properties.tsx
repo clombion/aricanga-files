@@ -32,15 +32,15 @@ export function run(): void {
   const fallback = host.querySelector<HTMLInputElement>('#default');
   record({
     id: 'properties/value-is-a-property',
+    note: `value property: ${value?.value ?? ''}; value attribute: ${String(value?.getAttribute('value'))}`,
     ok: value?.value === 'bound' && value.getAttribute('value') === null,
     threw: false,
-    note: `value property: ${value?.value ?? ''}; value attribute: ${String(value?.getAttribute('value'))}`,
   });
   record({
     id: 'properties/checked-and-selected-are-properties',
+    note: `checked property: ${String(checked?.checked)}; checked attribute: ${String(checked?.hasAttribute('checked'))}; select value: ${selected?.value ?? ''}`,
     ok: checked?.checked === true && !checked.hasAttribute('checked') && selected?.value === 'b',
     threw: false,
-    note: `checked property: ${String(checked?.checked)}; checked attribute: ${String(checked?.hasAttribute('checked'))}; select value: ${selected?.value ?? ''}`,
   });
 
   if (fallback !== null) {
@@ -50,17 +50,17 @@ export function run(): void {
   flush();
   record({
     id: 'properties/default-value-is-initial-only',
+    note: `after a later defaultValue change, value: ${fallback?.value ?? ''}; defaultValue: ${fallback?.defaultValue ?? ''}`,
     ok: fallback?.value === 'typed by the user',
     threw: false,
-    note: `after a later defaultValue change, value: ${fallback?.value ?? ''}; defaultValue: ${fallback?.defaultValue ?? ''}`,
   });
   setOn(false);
   flush();
   record({
     id: 'properties/checked-follows-the-binding',
+    note: `checked after the signal turned false: ${String(checked?.checked)}`,
     ok: checked?.checked === false,
     threw: false,
-    note: `checked after the signal turned false: ${String(checked?.checked)}`,
   });
   dispose();
   markDone();

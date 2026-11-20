@@ -40,7 +40,8 @@ import { describe, expect, test } from 'vitest';
 import { Accepted, Exemptions, StaleExemptionError, site } from '../lib/exemptions.ts';
 import { heldFiles } from '../lib/scope.ts';
 import { textOf } from '../lib/source-files.ts';
-import { type Expression, importsFrom, type Node, type SourceFile, nodes, parse } from '../lib/ts-source.ts';
+import { importsFrom, nodes, parse } from '../lib/ts-source.ts';
+import type { Expression, Node, SourceFile } from '../lib/ts-source.ts';
 
 export const HARNESS_ID = 'exemption-lists';
 
@@ -213,7 +214,7 @@ function staleFailingReceivers(root: Node): Set<string> {
 
 /** Whether an identifier is a read of a binding, not a declaration, an import or a property name. */
 function isRead(node: Node): boolean {
-  const parent = node.parent;
+  const {parent} = node;
   return !(
     (isVariableDeclaration(parent) && parent.name === node) ||
     isImportSpecifier(parent) ||
@@ -246,7 +247,7 @@ export function findings(modules: Readonly<Record<string, string>>): Finding[] {
       const kind = declaration(value);
       if (kind === undefined) {
         if (isLiteral(value) && consulted.has(name)) {
-          found.push({ path, name, problem: UNDECLARED });
+          found.push({ name, path, problem: UNDECLARED });
         }
         continue;
       }
@@ -258,7 +259,7 @@ export function findings(modules: Readonly<Record<string, string>>): Finding[] {
         ? users.some((user) => staleFailingReceivers(user).has(name))
         : users.some((user) => reads(user).has(name));
       if (!live) {
-        found.push({ path, name, problem: UNCONSULTED });
+        found.push({ name, path, problem: UNCONSULTED });
       }
     }
   }
@@ -293,7 +294,7 @@ describe('the fence', () => {
   ])('sees a literal consulted by %s', (consult) => {
     for (const literal of ["['a', 'b']", "{ a: 1 }", "new Set(['a'])", "new Map([['a', 1]])", "['a'] as const"]) {
       const source = `const NAMES = ${literal};\nfunction helper(values: readonly string[]) { return values.includes('a'); }\nexport function check(x: string) { return ${consult}; }\n`;
-      expect(findings({ [P]: source })).toEqual([{ path: P, name: 'NAMES', problem: UNDECLARED }]);
+      expect(findings({ [P]: source })).toEqual([{ name: 'NAMES', path: P, problem: UNDECLARED }]);
     }
   });
 
@@ -319,7 +320,7 @@ describe('the fence', () => {
     "const NAME = new Accepted(['a']);",
     "const NAME = new Prefixes(['a']);",
   ])('sees a declaration nothing consults: %j', (source) => {
-    expect(findings({ [P]: source })).toEqual([{ path: P, name: 'NAME', problem: UNCONSULTED }]);
+    expect(findings({ [P]: source })).toEqual([{ name: 'NAME', path: P, problem: UNCONSULTED }]);
   });
 
   test('a declaration consulted by an importing module is live', () => {

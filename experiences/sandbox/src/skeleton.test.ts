@@ -12,13 +12,13 @@ test('walking skeleton: ink → reduce → Lit render', async () => {
   const json = new Compiler(src).Compile().ToJson() ?? '';
 
   const host = document.createElement('div');
-  document.body.appendChild(host);
+  document.body.append(host);
   await run(host, json);
 
   const el = host.querySelector('sk-message');
   expect(el).toBeTruthy(); // AC #3 component rendered
   expect(el).toBeInstanceOf(SkMessage);
-  if (el instanceof SkMessage) await el.updateComplete;
+  if (el instanceof SkMessage) {await el.updateComplete;}
   expect(el?.shadowRoot?.textContent).toContain('walking skeleton'); // text flowed through
   expect(el?.shadowRoot?.textContent).toContain('Skeleton:'); // AC #2 speaker tag parsed by reduce
 });

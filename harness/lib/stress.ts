@@ -56,11 +56,11 @@ function copyArgv(options: Hunt, index: number): readonly string[] {
 /** Run every copy of a hunt at once. */
 export async function hunt(options: Hunt): Promise<readonly CopyResult[]> {
   const argvs = Array.from({ length: options.copies }, (_, index) => copyArgv(options, index));
-  const outcomes = await runConcurrently(argvs, { timeoutMs: COPY_TIMEOUT_MS, cwd: options.root, env: isolatedEnv() });
+  const outcomes = await runConcurrently(argvs, { cwd: options.root, env: isolatedEnv(), timeoutMs: COPY_TIMEOUT_MS });
   return outcomes.map((outcome, index) => ({
+    output: outcome.kind === 'finished' ? outcome.stdout + outcome.stderr : JSON.stringify(outcome),
     seed: options.seed + index,
     status: outcome.kind === 'finished' ? outcome.status : -1,
-    output: outcome.kind === 'finished' ? outcome.stdout + outcome.stderr : JSON.stringify(outcome),
   }));
 }
 
@@ -81,11 +81,11 @@ export function huntOf(args: readonly string[]): Hunt {
     return value;
   };
   return {
-    root: REPO_ROOT,
     config: 'vitest.gate.config.ts',
-    seed: number('--seed', randomInt(1, 1_000_000)),
     copies: number('--copies', 4),
-    repeats: number('--repeats', 2),
     filters,
+    repeats: number('--repeats', 2),
+    root: REPO_ROOT,
+    seed: number('--seed', randomInt(1, 1_000_000)),
   };
 }

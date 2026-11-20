@@ -9,7 +9,8 @@
 import { describe, expect, test } from 'vitest';
 
 import { Exemptions } from '../lib/exemptions.ts';
-import { type Pin, pinned, pins, UPSTREAM } from '../lib/pins.ts';
+import { pinned, pins, UPSTREAM } from '../lib/pins.ts';
+import type { Pin } from '../lib/pins.ts';
 
 export const HARNESS_ID = 'tool-upgrades';
 
@@ -76,38 +77,38 @@ describe('the pin reader and the pin check', () => {
         {
           importer: '.',
           manifest: {
-            devDependencies: { oxlint: '1.94.0', planted: '^1.0.0', '@scope/tool': '^2.0.0', unlocked: '^1', local: 'workspace:*' },
+            devDependencies: { '@scope/tool': '^2.0.0', local: 'workspace:*', oxlint: '1.94.0', planted: '^1.0.0', unlocked: '^1' },
             engines: { node: '>=22.18.0' },
           },
         },
-        { importer: 'packages/app', manifest: { devDependencies: { vite: '^8.0.0' }, dependencies: { solid: '2.0.3' } } },
+        { importer: 'packages/app', manifest: { dependencies: { solid: '2.0.3' }, devDependencies: { vite: '^8.0.0' } } },
       ],
       LOCK,
     );
     expect(found).toEqual([
-      { tool: '@scope/tool', where: 'pnpm-lock.yaml', version: '2.1.0' },
-      { tool: 'node', where: 'package.json engines', version: '>=22.18.0' },
-      { tool: 'oxlint', where: 'pnpm-lock.yaml', version: '1.94.0' },
-      { tool: 'planted', where: 'pnpm-lock.yaml', version: '1.0.3' },
-      { tool: 'pnpm', where: 'package.json packageManager', version: '' },
-      { tool: 'unlocked', where: 'pnpm-lock.yaml', version: '' },
-      { tool: 'vite', where: 'pnpm-lock.yaml', version: '8.3.8' },
+      { tool: '@scope/tool', version: '2.1.0', where: 'pnpm-lock.yaml' },
+      { tool: 'node', version: '>=22.18.0', where: 'package.json engines' },
+      { tool: 'oxlint', version: '1.94.0', where: 'pnpm-lock.yaml' },
+      { tool: 'planted', version: '1.0.3', where: 'pnpm-lock.yaml' },
+      { tool: 'pnpm', version: '', where: 'package.json packageManager' },
+      { tool: 'unlocked', version: '', where: 'pnpm-lock.yaml' },
+      { tool: 'vite', version: '8.3.8', where: 'pnpm-lock.yaml' },
     ]);
   });
 
   test('read a pinned packageManager and a manifest with no engines, and refuse a dependency that is not a string', () => {
     expect(pinned([{ importer: '.', manifest: { packageManager: 'pnpm@10.28.0' } }], LOCK)).toEqual([
-      { tool: 'node', where: 'package.json engines', version: '' },
-      { tool: 'pnpm', where: 'package.json packageManager', version: '10.28.0' },
+      { tool: 'node', version: '', where: 'package.json engines' },
+      { tool: 'pnpm', version: '10.28.0', where: 'package.json packageManager' },
     ]);
     expect(() => pinned([{ importer: '.', manifest: { devDependencies: { oxlint: 1 } } }], LOCK)).toThrow(/is not a string/);
   });
 
   test('see a new pin without a row, a pin without a version, and a row without a pin', () => {
     const found: readonly Pin[] = [
-      { tool: 'node', where: 'package.json engines', version: '>=22.18.0' },
-      { tool: 'planted', where: 'pnpm-lock.yaml', version: '1.0.0' },
-      { tool: 'unlocked', where: 'pnpm-lock.yaml', version: '' },
+      { tool: 'node', version: '>=22.18.0', where: 'package.json engines' },
+      { tool: 'planted', version: '1.0.0', where: 'pnpm-lock.yaml' },
+      { tool: 'unlocked', version: '', where: 'pnpm-lock.yaml' },
     ];
     expect(pinProblems(found, new Map([['node', 'nodejs/node'], ['unlocked', 'someone/unlocked'], ['gone', 'someone/gone']]))).toEqual([
       'planted: pinned in pnpm-lock.yaml, with no upstream repository named',
@@ -117,6 +118,6 @@ describe('the pin reader and the pin check', () => {
   });
 
   test('let a fully named and pinned set through', () => {
-    expect(pinProblems([{ tool: 'node', where: 'package.json engines', version: '>=22' }], new Map([['node', 'nodejs/node']]))).toEqual([]);
+    expect(pinProblems([{ tool: 'node', version: '>=22', where: 'package.json engines' }], new Map([['node', 'nodejs/node']]))).toEqual([]);
   });
 });

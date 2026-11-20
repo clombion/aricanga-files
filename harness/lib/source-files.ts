@@ -38,8 +38,8 @@ export function tracked(root: string = REPO_ROOT): readonly string[] {
     return hit;
   }
   const outcome = run(['git', 'ls-files', '-z', '--cached', '--others', '--exclude-standard'], {
-    timeoutMs: 60_000,
     cwd: root,
+    timeoutMs: 60_000,
   });
   if (outcome.kind !== 'finished' || outcome.status !== 0) {
     throw new ListingError(`git could not list ${root}: ${JSON.stringify(outcome)}`);

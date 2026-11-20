@@ -9,7 +9,8 @@
 
 import { describe, expect, test } from 'vitest';
 
-import { currentText, type Prose } from '../lib/docs.ts';
+import { currentText } from '../lib/docs.ts';
+import type { Prose } from '../lib/docs.ts';
 import { Exemptions, Prefixes, site } from '../lib/exemptions.ts';
 
 export const HARNESS_ID = 'history-narration';
@@ -57,14 +58,14 @@ describe('the narration scan', () => {
     ['The first time we ran it, it hung.', 'The first time we'],
     ['Before this PR the gate wrote files.', 'Before this PR'],
   ])('sees the planted phrase in %j', (text, phrase) => {
-    expect(narration([{ path: 'docs/planted.md', line: 1, text }])).toEqual([site('docs/planted.md', phrase)]);
+    expect(narration([{ line: 1, path: 'docs/planted.md', text }])).toEqual([site('docs/planted.md', phrase)]);
   });
 
   test('sees a date in a comment of code only', () => {
-    expect(narration([{ path: 'src/planted.ts', line: 1, text: 'fixed on 2026-04-25' }])).toEqual([
+    expect(narration([{ line: 1, path: 'src/planted.ts', text: 'fixed on 2026-04-25' }])).toEqual([
       site('src/planted.ts', '2026-04-25'),
     ]);
-    expect(narration([{ path: 'docs/planted.md', line: 1, text: 'Measured on 2026-11-08.' }])).toEqual([]);
+    expect(narration([{ line: 1, path: 'docs/planted.md', text: 'Measured on 2026-11-08.' }])).toEqual([]);
   });
 
   test.each([
@@ -74,6 +75,6 @@ describe('the narration scan', () => {
     'Format it for nowhere in particular.',
     'The original order is kept.',
   ])('lets the near miss %j through', (text) => {
-    expect(narration([{ path: 'docs/planted.md', line: 1, text }])).toEqual([]);
+    expect(narration([{ line: 1, path: 'docs/planted.md', text }])).toEqual([]);
   });
 });

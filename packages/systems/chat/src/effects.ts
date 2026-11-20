@@ -1,6 +1,7 @@
 /** The chat system's present effects: their kinds, their constructors and the parsers that read them back. */
 
-import { type Effect, field, fx, hasField, text } from '@narratives/foundation';
+import { field, fx, hasField, text } from '@narratives/foundation';
+import type { Effect } from '@narratives/foundation';
 
 const CHAT_EFFECT = {
   notification: 'chat/showNotification',
@@ -39,6 +40,6 @@ export function receiptChangeOf(effect: Effect): ReceiptChange | undefined {
 /** Whether a chat effect declares a chat id, and the value it declares. */
 export function declaredChatId(effect: Effect): { readonly declared: boolean; readonly chatId: unknown } {
   return hasField(effect.payload, 'chatId')
-    ? { declared: true, chatId: field(effect.payload, 'chatId') }
-    : { declared: false, chatId: undefined };
+    ? { chatId: field(effect.payload, 'chatId'), declared: true }
+    : { chatId: undefined, declared: false };
 }

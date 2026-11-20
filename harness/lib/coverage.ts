@@ -13,7 +13,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { json, object } from './config.ts';
-import { CountedExemptions, type Mismatch, site } from './exemptions.ts';
+import { CountedExemptions, site } from './exemptions.ts';
+import type { Mismatch } from './exemptions.ts';
 import { REPO_ROOT } from './paths.ts';
 import { relativeTo } from './relative.ts';
 
@@ -48,7 +49,7 @@ function lines(statementMap: unknown, statements: unknown): { readonly total: nu
     byLine.set(line, Math.max(byLine.get(line) ?? 0, Number(count)));
   }
   const values = [...byLine.values()];
-  return { total: values.length, covered: values.filter((count) => count > 0).length };
+  return { covered: values.filter((count) => count > 0).length, total: values.length };
 }
 
 function reached(values: readonly number[]): number {
@@ -65,14 +66,14 @@ export function fileCoverage(report: unknown, root: string = REPO_ROOT): readonl
       const functions = counts(fields['f'], 'functions');
       const lineCounts = lines(fields['statementMap'], fields['s']);
       return {
-        path: relativeTo(root, file),
-        total: { statements: statements.length, branches: branches.length, functions: functions.length, lines: lineCounts.total },
         covered: {
-          statements: reached(statements),
           branches: reached(branches),
           functions: reached(functions),
           lines: lineCounts.covered,
+          statements: reached(statements),
         },
+        path: relativeTo(root, file),
+        total: { branches: branches.length, functions: functions.length, lines: lineCounts.total, statements: statements.length },
       };
     })
     .toSorted((a, b) => a.path.localeCompare(b.path));

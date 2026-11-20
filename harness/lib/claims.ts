@@ -36,63 +36,63 @@ export function clauses(text: string): readonly string[] {
 }
 
 function probe(pattern: RegExp, owner: string, roots: readonly string[] = ROOTS): Probe {
-  return { pattern, owner, roots };
+  return { owner, pattern, roots };
 }
 
 export const CLAIMS: readonly Claim[] = [
   {
-    path: 'harness/lib/docs.ts',
     clause: "The one reader of the repository's prose",
+    path: 'harness/lib/docs.ts',
     probe: probe(/^const FENCE = /m, 'harness/lib/docs.ts'),
   },
   {
-    path: 'harness/lib/exemptions.ts',
     clause: 'The one owner of exemption lists',
+    path: 'harness/lib/exemptions.ts',
     probe: probe(/^export class (?:\w*Exemptions|Accepted|Prefixes)\b/m, 'harness/lib/exemptions.ts'),
   },
   {
-    path: 'harness/lib/paths.ts',
     clause: 'nowhere else in the harness',
+    path: 'harness/lib/paths.ts',
     probe: probe(/\bimport\.meta\.url\b/, 'harness/lib/paths.ts', ['harness/lib/', 'harness/scripts/']),
   },
   {
-    path: 'harness/checks/repo-paths.test.ts',
     clause: 'The one module allowed to compute where the repository is',
+    path: 'harness/checks/repo-paths.test.ts',
     probe: probe(/\bimport\.meta\.url\b/, 'harness/lib/paths.ts', ['harness/lib/', 'harness/scripts/']),
   },
   {
-    path: 'packages/foundation/src/sim/system.ts',
     clause: 'the one place a',
+    path: 'packages/foundation/src/sim/system.ts',
     probe: probe(/^function reclaim\(/m, 'packages/foundation/src/sim/system.ts', ['packages/']),
   },
   {
-    path: 'harness/lib/output.ts',
     clause: "The one module of the harness's scripts that writes to the standard streams",
+    path: 'harness/lib/output.ts',
     probe: probe(/\bprocess\.(?:stdout|stderr)\b/, 'harness/lib/output.ts', ['harness/lib/', 'harness/scripts/']),
   },
   {
-    path: 'harness/lib/build.ts',
     clause: 'The one owner of building the product from the gate',
+    path: 'harness/lib/build.ts',
     probe: probe(/\bbin\('vite'\)/, 'harness/lib/build.ts', ['harness/']),
   },
   {
-    path: 'harness/lib/deadcode.ts',
     clause: 'The one owner of the unused-code scan',
+    path: 'harness/lib/deadcode.ts',
     probe: probe(/\bbin\('knip'\)/, 'harness/lib/deadcode.ts', ['harness/']),
   },
   {
-    path: 'harness/lib/node-floor.ts',
     clause: 'The one owner of the Node floor',
+    path: 'harness/lib/node-floor.ts',
     probe: probe(/\['engines'\]/, 'harness/lib/node-floor.ts', ['harness/']),
   },
   {
-    path: 'harness/lib/stylesheets.ts',
     clause: "The one owner of the harness's stylesheet scans",
+    path: 'harness/lib/stylesheets.ts',
     probe: probe(/\bstylelint\.lint\(/, 'harness/lib/stylesheets.ts', ['harness/']),
   },
   {
-    path: 'harness/lib/process.ts',
     clause: 'The one owner of starting a child process',
+    path: 'harness/lib/process.ts',
     probe: probe(/^import .* from 'node:child_process';$/m, 'harness/lib/process.ts'),
   },
 ];

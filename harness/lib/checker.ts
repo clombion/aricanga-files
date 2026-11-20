@@ -24,17 +24,17 @@ export { nodes };
 
 /** The compiler options of a scan: the shared base's strictness, every lib a held module reads. */
 const OPTIONS = {
-  target: 'es2022',
-  module: 'esnext',
-  moduleResolution: 'bundler',
-  lib: ['es2023', 'dom', 'dom.iterable'],
-  types: ['node', 'vite/client'],
+  allowImportingTsExtensions: true,
   jsx: 'preserve',
   jsxImportSource: '@solidjs/web',
-  strict: true,
+  lib: ['es2023', 'dom', 'dom.iterable'],
+  module: 'esnext',
+  moduleResolution: 'bundler',
   noEmit: true,
   skipLibCheck: true,
-  allowImportingTsExtensions: true,
+  strict: true,
+  target: 'es2022',
+  types: ['node', 'vite/client'],
 } as const;
 
 /** Test infrastructure packages: they exist only to test, so every module of theirs is test support. */
@@ -90,7 +90,7 @@ export function openScan(paths: readonly string[], sources: Readonly<Record<stri
     close();
     throw new Error('the scan project did not open');
   }
-  return { program: project.program, checker: project.checker, paths, close };
+  return { checker: project.checker, close, paths, program: project.program };
 }
 
 /** The source file of a covered path. */

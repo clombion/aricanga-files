@@ -40,12 +40,12 @@ export function install(): Installed {
         }
       };
       const handle = real(self, [fire, ...rest]);
-      pending.set(handle, { kind: 'timeout', at });
+      pending.set(handle, { at, kind: 'timeout' });
       return handle;
     }),
     patch(globalThis, 'setInterval', (real) => (self, args) => {
       const handle = real(self, args);
-      pending.set(handle, { kind: 'interval', at: caller() });
+      pending.set(handle, { at: caller(), kind: 'interval' });
       return handle;
     }),
     patch(globalThis, 'clearTimeout', (real) => {

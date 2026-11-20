@@ -10,9 +10,9 @@
 
 import { describe, expect, test } from 'vitest';
 
-import { object, json } from '../lib/config.ts';
+import { json, object } from '../lib/config.ts';
 import { OXLINT_CONFIG_FILES } from '../lib/lint-rules.ts';
-import { tracked, textOf } from '../lib/source-files.ts';
+import { textOf, tracked } from '../lib/source-files.ts';
 import { Project } from '../lib/tools.ts';
 
 export const HARNESS_ID = 'boundaries';
@@ -24,19 +24,19 @@ interface Fixture {
 }
 
 const FIXTURES: readonly Fixture[] = [
-  { path: 'packages/foundation/src/plant.ts', text: "export { chatSystem } from '@narratives/system-chat';\n", fails: true },
-  { path: 'packages/foundation/src/near.ts', text: "export { Story } from 'inkjs';\n", fails: false },
-  { path: 'packages/systems/cards/src/plant.ts', text: "export { chatSystem } from '@narratives/system-chat';\n", fails: true },
-  { path: 'packages/systems/cards/src/near.ts', text: "export { erase } from '@narratives/foundation';\n", fails: false },
-  { path: 'packages/systems/chat/src/plant.ts', text: "export * from '../../cards/src/system';\n", fails: true },
-  { path: 'packages/systems/chat/src/near.ts', text: "export * from './state';\n", fails: false },
-  { path: 'experiences/sandbox/src/plant.ts', text: "export * from '../../aricanga/src/aricanga-experience.js';\n", fails: true },
-  { path: 'experiences/sandbox/src/near.ts', text: "export { chatSystem } from '@narratives/system-chat';\n", fails: false },
-  { path: 'harness/lib/plant.ts', text: "export * from '@narratives/framework';\n", fails: true },
-  { path: 'harness/lib/near.ts', text: "export * from 'node:fs';\n", fails: false },
-  { path: 'packages/systems/chat/src/model/plant.ts', text: 'export const at = (): number => Date.now();\n', fails: true },
-  { path: 'packages/systems/chat/src/model/random.ts', text: 'export const id = (): number => Math.random();\n', fails: true },
-  { path: 'packages/systems/chat/src/state-near.ts', text: 'export const at = (): number => Date.now();\n', fails: false },
+  { fails: true, path: 'packages/foundation/src/plant.ts', text: "export { chatSystem } from '@narratives/system-chat';\n" },
+  { fails: false, path: 'packages/foundation/src/near.ts', text: "export { Story } from 'inkjs';\n" },
+  { fails: true, path: 'packages/systems/cards/src/plant.ts', text: "export { chatSystem } from '@narratives/system-chat';\n" },
+  { fails: false, path: 'packages/systems/cards/src/near.ts', text: "export { erase } from '@narratives/foundation';\n" },
+  { fails: true, path: 'packages/systems/chat/src/plant.ts', text: "export * from '../../cards/src/system';\n" },
+  { fails: false, path: 'packages/systems/chat/src/near.ts', text: "export * from './state';\n" },
+  { fails: true, path: 'experiences/sandbox/src/plant.ts', text: "export * from '../../aricanga/src/aricanga-experience.js';\n" },
+  { fails: false, path: 'experiences/sandbox/src/near.ts', text: "export { chatSystem } from '@narratives/system-chat';\n" },
+  { fails: true, path: 'harness/lib/plant.ts', text: "export * from '@narratives/framework';\n" },
+  { fails: false, path: 'harness/lib/near.ts', text: "export * from 'node:fs';\n" },
+  { fails: true, path: 'packages/systems/chat/src/model/plant.ts', text: 'export const at = (): number => Date.now();\n' },
+  { fails: true, path: 'packages/systems/chat/src/model/random.ts', text: 'export const id = (): number => Math.random();\n' },
+  { fails: false, path: 'packages/systems/chat/src/state-near.ts', text: 'export const at = (): number => Date.now();\n' },
 ];
 
 const BOUNDARY_RULES = ['no-restricted-imports', 'no-restricted-globals', 'no-restricted-properties'];
@@ -86,7 +86,7 @@ describe('the boundary lint', () => {
   });
 
   test('every system package has its own import override', () => {
-    const overrides = object(json(textOf('.oxlintrc.json')), '.oxlintrc.json')['overrides'];
+    const {overrides} = object(json(textOf('.oxlintrc.json')), '.oxlintrc.json');
     const globs = Array.isArray(overrides) ? overrides.flatMap((entry) => object(entry, 'override')['files']) : [];
     expect(systems().filter((name) => !globs.includes(`packages/systems/${name}/**`))).toEqual([]);
     expect(systems().length).toBeGreaterThan(1);

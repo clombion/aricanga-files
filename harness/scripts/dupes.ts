@@ -3,4 +3,4 @@
 import { main } from '../lib/dupes.ts';
 import { err, out } from '../lib/output.ts';
 
-process.exitCode = main({ out, err });
+process.exitCode = main({ err, out });

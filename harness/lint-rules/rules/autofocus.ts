@@ -1,6 +1,7 @@
 /** No `autofocus` in either spelling: jsx-a11y's no-autofocus sees React's `autoFocus`, not Solid's. */
 
-import { attributeRule, type Rule } from '../ast.ts';
+import { attributeRule } from '../ast.ts';
+import type { Rule } from '../ast.ts';
 
 export const autofocus: Rule = attributeRule(
   'No autofocus or autoFocus attribute; move focus on navigation instead.',

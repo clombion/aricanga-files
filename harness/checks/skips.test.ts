@@ -8,7 +8,7 @@
  * title of the test the skip belongs to, or `<module>`.
  */
 
-import { type CallExpression, type Expression, type Node, type SourceFile } from 'typescript/unstable/ast';
+import type { CallExpression, Expression, Node, SourceFile } from 'typescript/unstable/ast';
 import { isArrowFunction, isCallExpression, isFunctionExpression, isIdentifier, isNoSubstitutionTemplateLiteral, isObjectBindingPattern, isPropertyAccessExpression, isStringLiteral } from 'typescript/unstable/ast/is';
 import { describe, expect, test } from 'vitest';
 
@@ -128,6 +128,7 @@ describe('the repository', () => {
 
 describe('the scan', () => {
   const P = 'packages/plant/a.test.ts';
+
   test.each([
     ["import { test } from 'vitest';\ntest.skip('a', () => {});", 'a'],
     ["import { it } from 'vitest';\nit.todo('a');", 'a'],

@@ -1,6 +1,7 @@
 import type { Page } from '@playwright/test';
 
-import { diagnosticCodes, type ChxRecord, type ChxState } from '../src/harness';
+import { diagnosticCodes } from '../src/harness';
+import type { ChxRecord, ChxState } from '../src/harness';
 
 /** Console `[CODE]` diagnostics as Playwright sees them: the second source of truth. */
 export function captureConsoleCodes(page: Page): string[] {
@@ -36,7 +37,7 @@ const POLICY = "script-src 'self'; style-src 'self'";
 export async function servePolicy(page: Page, fixture: string): Promise<void> {
   await page.route(`**/?fixture=${fixture}`, async (route) => {
     const response = await route.fetch();
-    await route.fulfill({ response, headers: { ...response.headers(), 'content-security-policy': POLICY } });
+    await route.fulfill({ headers: { ...response.headers(), 'content-security-policy': POLICY }, response });
   });
 }
 

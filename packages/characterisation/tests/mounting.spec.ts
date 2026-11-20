@@ -1,5 +1,5 @@
-import { test, expect } from '@playwright/test';
-import { runFixture, rec } from './_helpers';
+import { expect, test } from '@playwright/test';
+import { rec, runFixture } from './_helpers';
 
 // Brief, "Run-time model → Mounting": each experience is mounted once into its
 // shadow root in connectedCallback and disposed in disconnectedCallback, with

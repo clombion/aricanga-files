@@ -16,7 +16,7 @@ export const ROOTS: readonly string[] = [
 ];
 
 /** Root files the harness holds besides the roots: the configuration the gate reads. */
-const ROOT_FILES: Accepted<string> = new Accepted([
+const ROOT_FILES = new Accepted<string>([
   'package.json',
   'tsconfig.json',
   'tsconfig.base.json',

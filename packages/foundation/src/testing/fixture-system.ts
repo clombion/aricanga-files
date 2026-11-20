@@ -1,8 +1,10 @@
 import type { ReduceContext, ReduceResult } from '../sim/context';
-import { type Effect, fx } from '../sim/effect';
+import { fx } from '../sim/effect';
+import type { Effect } from '../sim/effect';
 import { assertNever } from '../sim/exhaustive';
 import type { Command, Input } from '../sim/input';
-import { type System, erase } from '../sim/system';
+import { erase } from '../sim/system';
+import type { System } from '../sim/system';
 import type { AnySystem } from '../sim/system';
 
 // A vocabulary-neutral system that can emit every effect family and handle a
@@ -41,18 +43,22 @@ interface Gated {
  */
 function reduceResume<S extends Gated>(state: S, input: Input<S>): ReduceResult<S> {
   if (input.source !== 'resume') {
-    return { state, effects: [] };
+    return { effects: [], state };
   }
   switch (input.resume.kind) {
-    case 'commit-fired':
+    case 'commit-fired': {
       return input.resume.token === state.token ? { state: { ...state, busy: false }, effects: [] } : { state, effects: [] };
-    case 'data-arrived':
+    }
+    case 'data-arrived': {
       return { state: { ...state, fetched: input.resume.value }, effects: [] };
+    }
     case 'story-loaded':
-    case 'restored':
+    case 'restored': {
       return { state, effects: [] };
-    default:
+    }
+    default: {
       return assertNever(input.resume);
+    }
   }
 }
 
@@ -77,32 +83,38 @@ export function gatedSystem<S extends Gated, C extends Command>(
 }
 
 export const fixtureSystem: System<FixtureState, FixtureCommand, Effect, FixtureState> = gatedSystem<FixtureState, FixtureCommand>(
-  { id: 'fixture', tags: [FIXTURE_TAG], init: () => ({ lines: [], busy: false, token: 1, fetched: null, saved: false }) },
+  { id: 'fixture', init: () => ({ lines: [], busy: false, token: 1, fetched: null, saved: false }), tags: [FIXTURE_TAG] },
   (state, input): ReduceResult<FixtureState> => {
     if (input.source === 'story') {
       const lines = [...state.lines, input.step.text];
       // A `commit` tag turns the line into a scheduled commit (exercises the gate).
       if (input.step.tags.some((t) => t.key === 'commit')) {
         return {
-          state: { ...state, lines, busy: true },
           effects: [fx.schedule({ delayMs: 1, token: state.token })],
+          state: { ...state, busy: true, lines },
         };
       }
-      return { state: { ...state, lines }, effects: [fx.present('fixture/line', { text: input.step.text })] };
+      return { effects: [fx.present('fixture/line', { text: input.step.text })], state: { ...state, lines } };
     }
     switch (input.command.kind) {
-      case 'schedule':
+      case 'schedule': {
         return { state: { ...state, busy: true }, effects: [fx.schedule({ delayMs: 1, token: state.token })] };
-      case 'fetch':
+      }
+      case 'fetch': {
         return { state, effects: [fx.fetch({ source: 's', query: 'q' })] };
-      case 'present':
+      }
+      case 'present': {
         return { state, effects: [fx.present('fixture/ping', {})] };
-      case 'persist':
+      }
+      case 'persist': {
         return { state, effects: [fx.persist()] };
-      case 'choose':
+      }
+      case 'choose': {
         return { state, effects: [fx.driveInk({ op: 'choose', index: input.command.payload.index })] };
-      default:
+      }
+      default: {
         return { state, effects: [] };
+      }
     }
   },
 );

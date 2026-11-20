@@ -24,7 +24,7 @@ class EventsHost extends HTMLElement {
     const root = this.attachShadow({ mode: 'open' });
     this.dispose = render(
       () => (
-        <button type="button" id="delegated" onClick={() => this.setClicks(this.clicks() + 1)}>
+        <button type="button" id="delegated" onClick={() =>{  this.setClicks(this.clicks() + 1); }}>
           clicked {this.clicks()}
         </button>
       ),
@@ -47,9 +47,9 @@ export function run(): void {
   queueMicrotask(() => {
     record({
       id: 'events/non-bubbling-dispatch',
+      note: `delegated handler after a non-bubbling synthetic click: ${button?.textContent ?? '<none>'}`,
       ok: true,
       threw: false,
-      note: `delegated handler after a non-bubbling synthetic click: ${button?.textContent ?? '<none>'}`,
     });
     markDone();
   });

@@ -1,12 +1,6 @@
 import { Story } from 'inkjs';
-import {
-  type Choice,
-  type ExternalCall,
-  type InkStatus,
-  type InkStep,
-  type Tag,
-  parseTag,
-} from '../sim/story';
+import { parseTag } from '../sim/story';
+import type { Choice, ExternalCall, InkStatus, InkStep, Tag } from '../sim/story';
 
 // Host-owned wrapper over inkjs — the single inkjs touchpoint (ADR-0007). The
 // runtime owns this; the kernel never reads ink. `name`/`data` are resolved into
@@ -26,8 +20,8 @@ export interface InkFixtures {
 
 /** An ink value as text: ink passes externals strings, numbers and booleans, never objects. */
 function inkText(value: unknown): string {
-  if (typeof value === 'string') return value;
-  if (typeof value === 'number' || typeof value === 'boolean') return `${value}`;
+  if (typeof value === 'string') {return value;}
+  if (typeof value === 'number' || typeof value === 'boolean') {return `${value}`;}
   throw new TypeError(`ink passed an external a ${typeof value}, not a primitive`);
 }
 
@@ -78,8 +72,8 @@ export class InkRuntime {
     bind('request_data', (source, query, params) => {
       const call: ExternalCall =
         params === undefined
-          ? { fn: 'request_data', source: inkText(source), query: inkText(query) }
-          : { fn: 'request_data', source: inkText(source), query: inkText(query), params: inkText(params) };
+          ? { fn: 'request_data', query: inkText(query), source: inkText(source) }
+          : { fn: 'request_data', params: inkText(params), query: inkText(query), source: inkText(source) };
       this.drained.push(call);
       this.awaitingData = true;
       return '';
@@ -98,26 +92,26 @@ export class InkRuntime {
     const tags: readonly Tag[] = (this.story.currentTags ?? []).map(parseTag);
     const status = this.computeStatus();
     return {
-      text,
-      tags,
       choices: status === 'await-choice' ? this.currentChoices() : [],
       externalCalls: this.drained,
       status,
+      tags,
+      text,
     };
   }
 
   private computeStatus(): InkStatus {
-    if (this.awaitingData) return 'await-data';
-    if (this.story.canContinue) return 'continue';
-    if (this.story.currentChoices.length > 0) return 'await-choice';
+    if (this.awaitingData) {return 'await-data';}
+    if (this.story.canContinue) {return 'continue';}
+    if (this.story.currentChoices.length > 0) {return 'await-choice';}
     return 'end';
   }
 
   private currentChoices(): readonly Choice[] {
     return this.story.currentChoices.map((c) => ({
       index: c.index ?? 0,
-      text: c.text ?? '',
       tags: (c.tags ?? []).map(parseTag),
+      text: c.text ?? '',
     }));
   }
 

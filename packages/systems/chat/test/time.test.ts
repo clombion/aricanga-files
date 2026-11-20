@@ -1,5 +1,6 @@
 import { erase } from '@narratives/foundation';
-import { type FixtureInput, type FixtureRun, checkInvariant } from '@narratives/foundation/testing';
+import { checkInvariant } from '@narratives/foundation/testing';
+import type { FixtureInput, FixtureRun } from '@narratives/foundation/testing';
 import { forwardOnlyTime } from '@narratives/system-chat/testing';
 import * as fc from 'fast-check';
 import { expect, test } from 'vitest';
@@ -61,7 +62,7 @@ test('advance_day resets to next-day 09:00 first, then the message drifts (#1)',
   ]);
   expect(times(r)).toEqual([H(22), MINUTES_PER_DAY + H(9) + 1]);
   const t = times(r);
-  expect((t[1] ?? 0) > (t[0] ?? 0)).toBe(true); // forward across the day boundary
+  expect(t[1] ?? 0).toBeGreaterThan(t[0] ?? 0); // forward across the day boundary
 });
 
 test('forwardOnlyTime holds over generated time-tag streams (#4, #5)', async () => {
@@ -72,6 +73,6 @@ test('forwardOnlyTime holds over generated time-tag streams (#4, #5)', async () 
     timeArb.map((t): FixtureInput => story('m', [`time: ${t}`])),
     { maxLength: 10 },
   );
-  const result = await checkInvariant({ systems: [erase(chatSystem)], foreground: 'chat' }, streamArb, forwardOnlyTime);
+  const result = await checkInvariant({ foreground: 'chat', systems: [erase(chatSystem)] }, streamArb, forwardOnlyTime);
   expect(result.failed, result.message).toBe(false);
 });

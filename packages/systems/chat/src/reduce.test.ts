@@ -1,13 +1,14 @@
-import { type InkStep, parseTag } from '@narratives/foundation';
+import { parseTag } from '@narratives/foundation';
+import type { InkStep } from '@narratives/foundation';
 import { expect, test } from 'vitest';
 import { reduceStep } from './reduce';
 
 const step = (text: string, rawTags: string[] = []): InkStep => ({
-  text,
-  tags: rawTags.map(parseTag),
   choices: [],
   externalCalls: [],
   status: 'continue',
+  tags: rawTags.map(parseTag),
+  text,
 });
 
 // Stub reduce maps an ink step to a message view-model.

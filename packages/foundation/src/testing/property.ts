@@ -2,7 +2,8 @@ import * as fc from 'fast-check';
 import type { DataRequest } from '../sim/effect';
 import type { SystemId } from '../sim/snapshot';
 import type { AnySystem } from '../sim/system';
-import { type FixtureInput, type FixtureRun, runFixture } from './harness';
+import { runFixture } from './harness';
+import type { FixtureInput, FixtureRun } from './harness';
 import { canonical } from './serialize';
 
 // A rule violation found by an invariant predicate. `null` means the rule holds.
@@ -30,14 +31,14 @@ export interface StreamOptions {
 }
 
 // Drive a generated input stream through the REAL runtime over the ended story.
-export function runStream(opts: StreamOptions, inputs: readonly FixtureInput[]): Promise<FixtureRun> {
+export async function runStream(opts: StreamOptions, inputs: readonly FixtureInput[]): Promise<FixtureRun> {
   return runFixture({
+    inputs,
     story: ENDED_STORY,
     systems: opts.systems,
-    inputs,
-    ...(opts.foreground !== undefined ? { foreground: opts.foreground } : {}),
-    ...(opts.seed !== undefined ? { seed: opts.seed } : {}),
-    ...(opts.fetch !== undefined ? { fetch: opts.fetch } : {}),
+    ...(opts.foreground === undefined ? {} : { foreground: opts.foreground }),
+    ...(opts.seed === undefined ? {} : { seed: opts.seed }),
+    ...(opts.fetch === undefined ? {} : { fetch: opts.fetch }),
   });
 }
 

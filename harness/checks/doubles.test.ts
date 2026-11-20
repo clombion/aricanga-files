@@ -8,7 +8,7 @@
 
 import { describe, expect, test } from 'vitest';
 
-import { drain, Scripted, Tripwire, checkTrips, trip, tripped } from '../lib/doubles.ts';
+import { Scripted, Tripwire, checkTrips, drain, trip, tripped } from '../lib/doubles.ts';
 import { runPlanted } from '../lib/planted-vitest.ts';
 
 export const HARNESS_ID = 'doubles';
@@ -83,7 +83,7 @@ describe('a scripted double', () => {
 
   test('tripped fails when nothing tripped', () => {
     expect(() => {
-      tripped('never', () => undefined);
+      tripped('never', () => {});
     }).toThrow('expected a trip naming "never"');
   });
 });

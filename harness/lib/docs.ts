@@ -154,7 +154,7 @@ export class Doc {
       }
       const match = FENCE.exec(line);
       if (current === undefined) {
-        current = { line: number, info: (match?.[2] ?? '').trim(), lines: [] };
+        current = { info: (match?.[2] ?? '').trim(), line: number, lines: [] };
       } else if (match !== null && (match[2] ?? '').trim() === '') {
         found.push({ path: this.path, ...current });
         current = undefined;
@@ -167,13 +167,13 @@ export class Doc {
 
   /** Every inline code span outside the fences. */
   spans(): readonly Span[] {
-    return this.outside().flatMap(([line, text]) => spansOf(text).map((span) => ({ path: this.path, line, text: span })));
+    return this.outside().flatMap(([line, text]) => spansOf(text).map((span) => ({ line, path: this.path, text: span })));
   }
 
   /** Every inline link outside the fences and code spans. */
   links(): readonly Link[] {
     return this.outside().flatMap(([line, text]) =>
-      [...withoutSpans(text).matchAll(LINK)].map((match) => ({ path: this.path, line, target: match[2] ?? '' })),
+      [...withoutSpans(text).matchAll(LINK)].map((match) => ({ line, path: this.path, target: match[2] ?? '' })),
     );
   }
 
@@ -181,7 +181,7 @@ export class Doc {
   headings(): readonly Heading[] {
     return this.outside().flatMap(([line, text]) => {
       const match = HEADING.exec(text);
-      return match === null ? [] : [{ line, level: (match[1] ?? '').length, text: match[2] ?? '' }];
+      return match === null ? [] : [{ level: (match[1] ?? '').length, line, text: match[2] ?? '' }];
     });
   }
 
@@ -194,7 +194,7 @@ export class Doc {
   prose(): readonly Prose[] {
     return this.outside()
       .filter(([, text]) => text.trim() !== '')
-      .map(([line, text]) => ({ path: this.path, line, text: withoutSpans(text).replaceAll(HTML_COMMENT, '') }));
+      .map(([line, text]) => ({ line, path: this.path, text: withoutSpans(text).replaceAll(HTML_COMMENT, '') }));
   }
 
   /** Every generated block, refusing a marker without its pair. */
@@ -207,10 +207,10 @@ export class Doc {
       const start = BLOCK_START.exec(line);
       const end = BLOCK_END.exec(line);
       if (start !== null && open === undefined) {
-        open = { name: start[1] ?? '', line: number };
+        open = { line: number, name: start[1] ?? '' };
       } else if (end !== null && open !== undefined && end[1] === open.name) {
         const body = this.lines.slice(open.line, number - 1).join('\n');
-        found.push({ path: this.path, name: open.name, start: open.line, end: number, body });
+        found.push({ body, end: number, name: open.name, path: this.path, start: open.line });
         open = undefined;
       } else if (start !== null || end !== null) {
         throw new BlockError(`${this.path}:${number}: unpaired generated-block marker ${JSON.stringify(line)}`);
@@ -325,7 +325,7 @@ export function currentText(): readonly Prose[] {
   const found: Prose[] = markdownPaths().flatMap((path) => markdown(path).prose());
   for (const path of codePaths()) {
     for (const [line, text] of codeComments(path, textOf(path))) {
-      found.push({ path, line, text: withoutSpans(text) });
+      found.push({ line, path, text: withoutSpans(text) });
     }
   }
   return found;
@@ -336,7 +336,7 @@ export function currentSpans(): readonly Span[] {
   const found: Span[] = markdownPaths().flatMap((path) => markdown(path).spans());
   for (const path of codePaths()) {
     for (const [line, text] of codeComments(path, textOf(path))) {
-      found.push(...spansOf(text).map((span) => ({ path, line, text: span })));
+      found.push(...spansOf(text).map((span) => ({ line, path, text: span })));
     }
   }
   return found;

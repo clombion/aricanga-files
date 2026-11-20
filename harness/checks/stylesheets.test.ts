@@ -12,17 +12,8 @@
 
 import { describe, expect, test } from 'vitest';
 
-import {
-  customPropertyProblems,
-  duplicateRules,
-  lintSheet,
-  readers,
-  type Sheet,
-  sheets,
-  sheetsOf,
-  unusedClasses,
-  withoutSheets,
-} from '../lib/stylesheets.ts';
+import { customPropertyProblems, duplicateRules, lintSheet, readers, sheets, sheetsOf, unusedClasses, withoutSheets } from '../lib/stylesheets.ts';
+import type { Sheet } from '../lib/stylesheets.ts';
 import { rawSizes, rawTokenValues } from '../lib/design-tokens.ts';
 import { json, object } from '../lib/config.ts';
 import { textOf } from '../lib/source-files.ts';
@@ -79,13 +70,13 @@ const PLANTS: readonly (readonly [string, string, string])[] = [
   ['plugin/no-unsupported-browser-features', '.a {\n  initial-letter: 2;\n}\n', '.a {\n  display: grid;\n}\n'],
   ['scale-unlimited/declaration-strict-value', '.a {\n  color: #fff;\n}\n', '.a {\n  color: var(--ink);\n}\n'],
   ['scale-unlimited/declaration-strict-value', '.a {\n  z-index: 3;\n}\n', '.a {\n  z-index: var(--layer-top);\n}\n'],
-  ['scale-unlimited/declaration-strict-value', '.a {\n  transition-duration: 200ms;\n}' + RM, '.a {\n  transition-duration: var(--quick);\n}' + RM],
-  ['scale-unlimited/declaration-strict-value', '.a {\n  transition-timing-function: ease-in;\n}' + RM, '.a {\n  transition-timing-function: var(--ease-out);\n}' + RM],
+  ['scale-unlimited/declaration-strict-value', `.a {\n  transition-duration: 200ms;\n}${  RM}`, `.a {\n  transition-duration: var(--quick);\n}${  RM}`],
+  ['scale-unlimited/declaration-strict-value', `.a {\n  transition-timing-function: ease-in;\n}${  RM}`, `.a {\n  transition-timing-function: var(--ease-out);\n}${  RM}`],
   ['a11y/content-property-no-static-value', '.a::before {\n  content: "New";\n}\n', '.a::before {\n  content: "";\n}\n'],
   ['a11y/font-size-is-readable', '.a {\n  font-size: 12px;\n}\n', '.a {\n  font-size: var(--text-body);\n}\n'],
   ['a11y/line-height-is-vertical-rhythmed', '.a {\n  line-height: 1.2;\n}\n', '.a {\n  line-height: 1.5;\n}\n'],
   ['a11y/media-prefers-color-scheme', '.a {\n  color: #000;\n}\n', '.a {\n  color: var(--ink);\n}\n'],
-  ['a11y/media-prefers-reduced-motion', '.a {\n  transition: opacity var(--quick) var(--ease-out);\n}\n', '.a {\n  transition: opacity var(--quick) var(--ease-out);\n}' + RM],
+  ['a11y/media-prefers-reduced-motion', '.a {\n  transition: opacity var(--quick) var(--ease-out);\n}\n', `.a {\n  transition: opacity var(--quick) var(--ease-out);\n}${  RM}`],
   ['a11y/no-display-none', '.a {\n  display: none;\n}\n', '.a {\n  display: block;\n}\n'],
   ['a11y/no-obsolete-attribute', '[dropzone] {\n  color: var(--x);\n}\n', '[hidden] {\n  color: var(--x);\n}\n'],
   ['a11y/no-obsolete-element', 'blink {\n  color: var(--x);\n}\n', 'em {\n  color: var(--x);\n}\n'],
@@ -102,14 +93,14 @@ describe('the lint, on planted sheets', () => {
   });
 
   test.each(PLANTS)('%s fails its plant and passes its near miss', async (rule, failing, passing) => {
-    expect(await lintText('plant/theme.css', failing)).toContain(rule);
-    expect(await lintText('plant/theme.css', passing)).toEqual([]);
+    await expect(lintText('plant/theme.css', failing)).resolves.toContain(rule);
+    await expect(lintText('plant/theme.css', passing)).resolves.toEqual([]);
   });
 
   test('a token file defines raw values; a custom property anywhere else may not', async () => {
     const tokens = ':root {\n  --gap: 0.5rem;\n  --ink: #111;\n  --quick: 150ms;\n  --layer-top: 10;\n}\n';
-    expect(await lintText('plant/tokens.css', tokens)).toEqual([]);
-    expect(await lintText('plant/theme.css', tokens)).toEqual([
+    await expect(lintText('plant/tokens.css', tokens)).resolves.toEqual([]);
+    await expect(lintText('plant/theme.css', tokens)).resolves.toEqual([
       'harness/design-tokens',
       'harness/design-tokens',
       'harness/design-tokens',
@@ -120,7 +111,7 @@ describe('the lint, on planted sheets', () => {
   test('reads a stylesheet written in a module', async () => {
     const module = "import { css } from 'lit';\nexport const styles = css`\n  .a {\n    color: #fff;\n  }\n`;\n";
     expect(sheetsOf('plant/part.ts', module).map((sheet) => sheet.line)).toEqual([2]);
-    expect(await lintText('plant/part.ts', module)).toContain('scale-unlimited/declaration-strict-value');
+    await expect(lintText('plant/part.ts', module)).resolves.toContain('scale-unlimited/declaration-strict-value');
   });
 
   test('the token rule lets zero, unitless numbers and var() through', () => {
@@ -134,16 +125,16 @@ describe('the lint, on planted sheets', () => {
 
 /** A planted sheet starting on the first line of its file. */
 function plantedSheet(path: string, text: string): Sheet {
-  return { path, line: 1, text };
+  return { line: 1, path, text };
 }
 
 describe('the cross-sheet scans, on planted sheets', () => {
   test('sees a custom property defined but never read, and one read but never defined', async () => {
     const tokens = plantedSheet('plant/tokens.css', ':root {\n  --gap: 8px;\n  --unread: 1px;\n}\n');
     const theme = plantedSheet('plant/theme.css', '.a {\n  padding: var(--gap) var(--undefined);\n}\n');
-    expect(await customPropertyProblems([tokens, theme], new Map([['plant/a.ts', "el.className = 'a';"]]))).toEqual([
-      { path: 'plant/tokens.css', line: 0, rule: 'custom-property-unread', text: '--unread' },
-      { path: '', line: 0, rule: 'custom-property-undefined', text: '--undefined' },
+    await expect(customPropertyProblems([tokens, theme], new Map([['plant/a.ts', "el.className = 'a';"]]))).resolves.toEqual([
+      { line: 0, path: 'plant/tokens.css', rule: 'custom-property-unread', text: '--unread' },
+      { line: 0, path: '', rule: 'custom-property-undefined', text: '--undefined' },
     ]);
   });
 
@@ -151,7 +142,7 @@ describe('the cross-sheet scans, on planted sheets', () => {
     const theme = plantedSheet('plant/theme.css', '.a {\n  color: var(--from-module);\n}\n');
     const module = new Map([['plant/a.ts', "el.style.setProperty('--from-module', value);\nconst x = 'var(--theme)';"]]);
     const tokens = plantedSheet('plant/tokens.css', ':root {\n  --theme: 1px;\n}\n');
-    expect(await customPropertyProblems([theme, tokens], module)).toEqual([]);
+    await expect(customPropertyProblems([theme, tokens], module)).resolves.toEqual([]);
   });
 
   test('sees a class no module names, and lets a named class through', async () => {
@@ -166,7 +157,7 @@ describe('the cross-sheet scans, on planted sheets', () => {
     expect((await unusedClasses(sheetsOf('plant/part.ts', own), lonely)).map((finding) => finding.text)).toEqual(['lonely']);
     const named = `${own}export const view = '<p class="lonely"></p>';\n`;
     const used = new Map([['plant/part.ts', withoutSheets('plant/part.ts', named)]]);
-    expect(await unusedClasses(sheetsOf('plant/part.ts', named), used)).toEqual([]);
+    await expect(unusedClasses(sheetsOf('plant/part.ts', named), used)).resolves.toEqual([]);
   });
 
   test('reads a substitution in a sheet as a value, and a css string in a string literal as no sheet', () => {
@@ -181,7 +172,7 @@ describe('the cross-sheet scans, on planted sheets', () => {
       'plant/theme.css',
       '.a {\n  color: var(--x);\n}\n\n@media (width >= 40rem) {\n  .a {\n    margin: 0;\n  }\n}\n',
     );
-    expect(await duplicateRules(media)).toEqual([]);
+    await expect(duplicateRules(media)).resolves.toEqual([]);
     const nested = plantedSheet('plant/theme.css', '@media print {\n  .a, .b {\n    margin: 0;\n  }\n\n  .b, .a {\n    color: var(--x);\n  }\n}\n');
     expect((await duplicateRules(nested)).map((finding) => finding.text)).toEqual(['@media print :: .a, .b']);
   });

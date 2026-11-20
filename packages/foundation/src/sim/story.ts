@@ -40,6 +40,6 @@ export interface InkStep {
 /** Parse a raw ink tag (`"speaker: Pat"`) into a structured Tag. */
 export function parseTag(raw: string): Tag {
   const i = raw.indexOf(':');
-  if (i === -1) return { key: raw.trim(), raw };
-  return { key: raw.slice(0, i).trim(), value: raw.slice(i + 1).trim(), raw };
+  if (i === -1) {return { key: raw.trim(), raw };}
+  return { key: raw.slice(0, i).trim(), raw, value: raw.slice(i + 1).trim() };
 }

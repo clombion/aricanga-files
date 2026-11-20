@@ -35,7 +35,7 @@ export function tasks(packageJson: unknown): ReadonlyMap<string, Task> {
     if (typeof script !== 'string') {
       throw new ConfigError(`script ${name} is not a string`);
     }
-    found.set(name, { name, script, commands: script.split('&&').map((command) => command.trim()) });
+    found.set(name, { commands: script.split('&&').map((command) => command.trim()), name, script });
   }
   return found;
 }

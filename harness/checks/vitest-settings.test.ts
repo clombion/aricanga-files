@@ -34,60 +34,60 @@ const IMPORTS = "import { expect, test, vi } from 'vitest';\n";
 const PLANTS: readonly Plant[] = [
   {
     name: 'only',
-    text: `${IMPORTS}test.only('a', () => {\n  expect(1).toBe(1);\n});\ntest('b', () => {\n  expect(2).toBe(2);\n});\n`,
-    revert: { allowOnly: true },
     ordered: false,
+    revert: { allowOnly: true },
+    text: `${IMPORTS}test.only('a', () => {\n  expect(1).toBe(1);\n});\ntest('b', () => {\n  expect(2).toBe(2);\n});\n`,
   },
   {
     name: 'no-assertion',
-    text: `${IMPORTS}test('a', () => {\n  void vi;\n});\n`,
-    revert: { expect: { requireAssertions: false } },
     ordered: false,
+    revert: { expect: { requireAssertions: false } },
+    text: `${IMPORTS}test('a', () => {\n  void vi;\n});\n`,
   },
   {
     name: 'globals',
-    text: "test('a', () => {\n  expect(1).toBe(1);\n});\n",
-    revert: { globals: true },
     ordered: false,
+    revert: { globals: true },
+    text: "test('a', () => {\n  expect(1).toBe(1);\n});\n",
   },
   {
     name: 'leaked-spy',
-    text: `${IMPORTS}const clock = { now: (): number => 1 };\ntest('a', () => {\n  vi.spyOn(clock, 'now').mockReturnValue(2);\n  expect(clock.now()).toBe(2);\n});\ntest('b', () => {\n  expect(clock.now()).toBe(2);\n});\n`,
-    revert: { restoreMocks: false },
     ordered: true,
+    revert: { restoreMocks: false },
+    text: `${IMPORTS}const clock = { now: (): number => 1 };\ntest('a', () => {\n  vi.spyOn(clock, 'now').mockReturnValue(2);\n  expect(clock.now()).toBe(2);\n});\ntest('b', () => {\n  expect(clock.now()).toBe(2);\n});\n`,
   },
   {
     name: 'leaked-global',
-    text: `${IMPORTS}test('a', () => {\n  vi.stubGlobal('plantedGlobal', 1);\n  expect(Reflect.get(globalThis, 'plantedGlobal')).toBe(1);\n});\ntest('b', () => {\n  expect(Reflect.get(globalThis, 'plantedGlobal')).toBe(1);\n});\n`,
-    revert: { unstubGlobals: false },
     ordered: true,
+    revert: { unstubGlobals: false },
+    text: `${IMPORTS}test('a', () => {\n  vi.stubGlobal('plantedGlobal', 1);\n  expect(Reflect.get(globalThis, 'plantedGlobal')).toBe(1);\n});\ntest('b', () => {\n  expect(Reflect.get(globalThis, 'plantedGlobal')).toBe(1);\n});\n`,
   },
   {
     name: 'leaked-env',
-    text: `${IMPORTS}test('a', () => {\n  vi.stubEnv('PLANTED_ENV', '1');\n  expect(process.env.PLANTED_ENV).toBe('1');\n});\ntest('b', () => {\n  expect(process.env.PLANTED_ENV).toBe('1');\n});\n`,
-    revert: { unstubEnvs: false },
     ordered: true,
+    revert: { unstubEnvs: false },
+    text: `${IMPORTS}test('a', () => {\n  vi.stubEnv('PLANTED_ENV', '1');\n  expect(process.env.PLANTED_ENV).toBe('1');\n});\ntest('b', () => {\n  expect(process.env.PLANTED_ENV).toBe('1');\n});\n`,
   },
   {
     name: 'order',
-    text: `${IMPORTS}const ran: number[] = [];\nfor (let index = 0; index < 20; index += 1) {\n  test(\`t\${index}\`, () => {\n    ran.push(index);\n    expect(ran).toEqual(Array.from({ length: index + 1 }, (_, at) => at));\n  });\n}\n`,
-    revert: { sequence: { shuffle: false } },
     ordered: false,
+    revert: { sequence: { shuffle: false } },
+    text: `${IMPORTS}const ran: number[] = [];\nfor (let index = 0; index < 20; index += 1) {\n  test(\`t\${index}\`, () => {\n    ran.push(index);\n    expect(ran).toEqual(Array.from({ length: index + 1 }, (_, at) => at));\n  });\n}\n`,
   },
 ];
 
 const DEFAULTS: readonly Plant[] = [
-  { name: 'empty', text: 'export const nothing = 1;\n', revert: {}, ordered: false },
+  { name: 'empty', ordered: false, revert: {}, text: 'export const nothing = 1;\n' },
   {
     name: 'unhandled',
-    text: `${IMPORTS}test('a', () => {\n  void Promise.reject(new Error('planted'));\n  expect(1).toBe(1);\n});\n`,
-    revert: {},
     ordered: false,
+    revert: {},
+    text: `${IMPORTS}test('a', () => {\n  void Promise.reject(new Error('planted'));\n  expect(1).toBe(1);\n});\n`,
   },
 ];
 
 const SHUFFLE_OFF: Overrides = { sequence: { shuffle: false } };
-const SEEDED: Overrides = { sequence: { shuffle: true, seed: 1 } };
+const SEEDED: Overrides = { sequence: { seed: 1, shuffle: true } };
 
 function merge(...layers: readonly Overrides[]): Overrides {
   const merged: Record<string, unknown> = {};
@@ -120,7 +120,7 @@ function status(plant: Plant, overrides: Overrides): number {
 }
 
 function order(plant: Plant): Overrides {
-  return plant.name === 'order' ? SEEDED : plant.ordered ? SHUFFLE_OFF : {};
+  return plant.name === 'order' ? SEEDED : (plant.ordered ? SHUFFLE_OFF : {});
 }
 
 describe('each setting', () => {
@@ -143,6 +143,6 @@ describe('the defaults the gate keeps', () => {
 
 describe('the plants', () => {
   test('a clean spec passes under the gate config', () => {
-    expect(status({ name: 'clean', text: `${IMPORTS}test('a', () => {\n  expect(1).toBe(1);\n});\n`, revert: {}, ordered: false }, {})).toBe(0);
+    expect(status({ name: 'clean', ordered: false, revert: {}, text: `${IMPORTS}test('a', () => {\n  expect(1).toBe(1);\n});\n` }, {})).toBe(0);
   });
 });

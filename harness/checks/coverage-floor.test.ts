@@ -13,16 +13,8 @@ import { join } from 'node:path';
 import { describe, expect, test } from 'vitest';
 
 import { object } from '../lib/config.ts';
-import {
-  COVERAGE_DIR,
-  DEBT,
-  type FileCoverage,
-  fileCoverage,
-  floorProblems,
-  gateReport,
-  main,
-  shortfalls,
-} from '../lib/coverage.ts';
+import { COVERAGE_DIR, DEBT, fileCoverage, floorProblems, gateReport, main, shortfalls } from '../lib/coverage.ts';
+import type { FileCoverage } from '../lib/coverage.ts';
 import { CountedExemptions, site } from '../lib/exemptions.ts';
 import { tracked } from '../lib/source-files.ts';
 import { Project } from '../lib/tools.ts';
@@ -99,9 +91,9 @@ describe('the floor', () => {
 
 describe('the debt', () => {
   const file: FileCoverage = {
+    covered: { branches: 2, functions: 1, lines: 3, statements: 2 },
     path: 'src/a.ts',
-    total: { statements: 4, branches: 2, functions: 1, lines: 4 },
-    covered: { statements: 2, branches: 2, functions: 1, lines: 3 },
+    total: { branches: 2, functions: 1, lines: 4, statements: 4 },
   };
 
   test('passes its exact shortfall', () => {
@@ -159,7 +151,7 @@ describe('the gate', () => {
       project.write(
         'coverage-final.json',
         JSON.stringify({
-          [join(project.root, 'src/a.ts')]: { s: { '0': 0 }, b: {}, f: {}, statementMap: { '0': { start: { line: 1 } } } },
+          [join(project.root, 'src/a.ts')]: { b: {}, f: {}, s: { '0': 0 }, statementMap: { '0': { start: { line: 1 } } } },
         }),
       );
       const errors: string[] = [];

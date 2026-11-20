@@ -5,7 +5,7 @@
  */
 
 import { render } from '@solidjs/web';
-import { createStore, flush, For, reconcile } from 'solid-js';
+import { For, createStore, flush, reconcile } from 'solid-js';
 
 import { markDone, record } from '../harness';
 import type { Message } from '../support';
@@ -60,6 +60,6 @@ export function run(): void {
   Array.from({ length: WARM_UPS }, once);
   const runs = Array.from({ length: REPETITIONS }, once);
   const result = { render: fastest(runs.map((entry) => entry.render)), updates: fastest(runs.map((entry) => entry.updates)) };
-  record({ id: 'performance/messages', ok: true, threw: false, note: JSON.stringify(result) });
+  record({ id: 'performance/messages', note: JSON.stringify(result), ok: true, threw: false });
   markDone();
 }

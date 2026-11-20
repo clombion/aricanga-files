@@ -1,6 +1,7 @@
 /** A JSON module is imported with `with { type: 'json' }`, the form the platform requires. */
 
-import { child, children, moduleSource, nameOf, type Node, problemMeta, type Rule, text } from '../ast.ts';
+import { child, children, moduleSource, nameOf, problemMeta, text } from '../ast.ts';
+import type { Node, Rule } from '../ast.ts';
 
 function declaresJson(node: Node): boolean {
   return children(node, 'attributes').some(
@@ -9,7 +10,6 @@ function declaresJson(node: Node): boolean {
 }
 
 export const json: Rule = {
-  meta: problemMeta("Import JSON with { type: 'json' }."),
   create(context) {
     return {
       ImportDeclaration(node) {
@@ -24,4 +24,5 @@ export const json: Rule = {
       },
     };
   },
+  meta: problemMeta("Import JSON with { type: 'json' }."),
 };

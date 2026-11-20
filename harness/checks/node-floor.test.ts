@@ -7,7 +7,7 @@
 
 import { describe, expect, test } from 'vitest';
 
-import { floor, FloorError, meets, pinned, repoFloor, version } from '../lib/node-floor.ts';
+import { FloorError, floor, meets, pinned, repoFloor, version } from '../lib/node-floor.ts';
 
 export const HARNESS_ID = 'node-floor';
 

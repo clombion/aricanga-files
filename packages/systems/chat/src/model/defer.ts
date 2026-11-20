@@ -18,7 +18,7 @@ export function isImmediate(step: InkStep): boolean {
 }
 
 function clearDeferred(state: ChatState, chatId: string): ChatState {
-  if (!(chatId in state.deferredMessages)) return state;
+  if (!(chatId in state.deferredMessages)) {return state;}
   const { [chatId]: _drop, ...rest } = state.deferredMessages;
   return { ...state, deferredMessages: rest };
 }
@@ -46,10 +46,10 @@ export function placeMessage(state: ChatState, message: ChatMessageVM, immediate
       // bypass deferral: flush the queued messages, then this one, into history.
       const queued = state.deferredMessages[chatId] ?? [];
       let next = clearDeferred(state, chatId);
-      for (const m of queued) next = appendMessage(next, m);
-      return { state: appendMessage(next, message), effects: [] };
+      for (const m of queued) {next = appendMessage(next, m);}
+      return { effects: [], state: appendMessage(next, message) };
     }
-    return { state: appendDeferred(state, message), effects: [] };
+    return { effects: [], state: appendDeferred(state, message) };
   }
 
   const next = appendMessage(state, message);
@@ -62,11 +62,11 @@ export function placeMessage(state: ChatState, message: ChatMessageVM, immediate
         ? next.lastReadMessageId
         : { ...next.lastReadMessageId, [chatId]: state.messageHistory[chatId]?.at(-1)?.id ?? null };
     return {
-      state: { ...next, notifiedChatIds: [...next.notifiedChatIds, chatId], lastReadMessageId },
       effects: [showNotification({ chatId, preview: message.text })],
+      state: { ...next, lastReadMessageId, notifiedChatIds: [...next.notifiedChatIds, chatId] },
     };
   }
-  return { state: next, effects: [] };
+  return { effects: [], state: next };
 }
 
 // Open a chat: focus it, clear its notified state, and replay its deferred queue
@@ -76,10 +76,10 @@ export function openChat(state: ChatState, chatId: string): ChatState {
   const queued = state.deferredMessages[chatId] ?? [];
   let next: ChatState = {
     ...state,
-    currentView: { type: 'chat', chatId },
+    currentView: { chatId, type: 'chat' },
     notifiedChatIds: state.notifiedChatIds.filter((c) => c !== chatId),
   };
-  for (const m of queued) next = appendMessage(next, m);
+  for (const m of queued) {next = appendMessage(next, m);}
   return clearDeferred(next, chatId);
 }
 

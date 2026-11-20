@@ -11,19 +11,8 @@ import { dirname, join } from 'node:path';
 
 import { afterEach, describe, expect, test } from 'vitest';
 
-import {
-  type Clone,
-  main,
-  cloneKey,
-  clones,
-  COMMON,
-  MAX_SIZE,
-  noReport,
-  reportOf,
-  RUNS,
-  scan,
-  type Runner,
-} from '../lib/dupes.ts';
+import { main, cloneKey, clones, COMMON, MAX_SIZE, noReport, reportOf, RUNS, scan } from '../lib/dupes.ts';
+import type { Clone, Runner } from '../lib/dupes.ts';
 import { Exemptions } from '../lib/exemptions.ts';
 import { REPO_ROOT } from '../lib/paths.ts';
 import { typescriptFiles } from '../lib/scope.ts';
@@ -61,11 +50,11 @@ const cleanRunner: Runner = (argv) => {
   const output = argv[argv.indexOf('--output') + 1] ?? '';
   const files = typescriptFiles().map((path) => ({ path: join(REPO_ROOT, path) }));
   writeFileSync(join(output, 'jscpd-report.json'), JSON.stringify({ duplicates: [], summary: { files } }));
-  return { kind: 'finished', argv, status: 0, stdout: '', stderr: '' };
+  return { argv, kind: 'finished', status: 0, stderr: '', stdout: '' };
 };
 
 /** A runner whose jscpd exits 2. */
-const failingRunner: Runner = (argv) => ({ kind: 'finished', argv, status: 2, stdout: '', stderr: 'planted' });
+const failingRunner: Runner = (argv) => ({ argv, kind: 'finished', status: 2, stderr: 'planted', stdout: '' });
 
 function plant(files: Readonly<Record<string, string>>): { readonly root: string; readonly listed: readonly string[] } {
   const root = mkdtempSync(join(tmpdir(), 'clones-'));
@@ -74,32 +63,32 @@ function plant(files: Readonly<Record<string, string>>): { readonly root: string
     mkdirSync(dirname(join(root, path)), { recursive: true });
     writeFileSync(join(root, path), text, 'utf8');
   }
-  return { root, listed: Object.keys(files).toSorted() };
+  return { listed: Object.keys(files).toSorted(), root };
 }
 
 afterEach(() => {
   for (const root of roots.splice(0)) {
-    rmSync(root, { recursive: true, force: true });
+    rmSync(root, { force: true, recursive: true });
   }
 });
 
 describe('the repository', () => {
   test('has no copied code', () => {
     const errors: string[] = [];
-    const status = main({ out: () => undefined, err: (text) => errors.push(text) });
+    const status = main({ err: (text) => errors.push(text), out: () => undefined });
     expect([status, errors]).toEqual([0, []]);
   });
 
   test('main reports a clean scan and exits 0', () => {
     const out: string[] = [];
     const errors: string[] = [];
-    expect([main({ out: (text) => out.push(text), err: (text) => errors.push(text) }, cleanRunner), errors]).toEqual([0, []]);
+    expect([main({ err: (text) => errors.push(text), out: (text) => out.push(text) }, cleanRunner), errors]).toEqual([0, []]);
     expect(out).toEqual([`no copied code in the ${typescriptFiles().length} held TypeScript files\n`]);
   });
 
   test('main reports each problem and exits 1', () => {
     const errors: string[] = [];
-    expect([main({ out: () => undefined, err: (text) => errors.push(text) }, failingRunner), errors]).toEqual([
+    expect([main({ err: (text) => errors.push(text), out: () => undefined }, failingRunner), errors]).toEqual([
       1,
       ['exact: jscpd exited 2: planted\n', 'cross-file: jscpd exited 2: planted\n'],
     ]);
@@ -127,14 +116,14 @@ describe('the scan', () => {
   });
 
   test('sees a small clone in two files in the cross-file run only', () => {
-    const { root, listed } = plant({ 'a/one.ts': SMALL_PLANT, 'a/sub/two.ts': SMALL_PLANT, 'a/filler.ts': FILLER });
+    const { root, listed } = plant({ 'a/filler.ts': FILLER, 'a/one.ts': SMALL_PLANT, 'a/sub/two.ts': SMALL_PLANT });
     expect(scan(root, ['a'], listed, NONE)).toEqual(['clone (cross-file): a/one.ts and a/sub/two.ts']);
   });
 
   test('leaves a small clone inside one file to the exact run', () => {
     const { root, listed } = plant({
-      'a/one.ts': `${SMALL_PLANT}\n${SMALL_PLANT.replace('pick', 'keep')}`,
       'a/filler.ts': FILLER,
+      'a/one.ts': `${SMALL_PLANT}\n${SMALL_PLANT.replace('pick', 'keep')}`,
     });
     expect(scan(root, ['a'], listed, NONE)).toEqual([]);
   });
@@ -157,7 +146,7 @@ describe('the scan', () => {
   });
 
   test('fails a file over the size limit', () => {
-    const { root, listed } = plant({ 'a/one.ts': FILLER, 'a/huge.ts': '' });
+    const { root, listed } = plant({ 'a/huge.ts': '', 'a/one.ts': FILLER });
     truncateSync(join(root, 'a', 'huge.ts'), MAX_SIZE + 1);
     expect(scan(root, ['a'], listed, NONE)).toEqual([`coverage: a/huge.ts is over jscpd's size limit (${MAX_SIZE + 1} bytes)`]);
   });
@@ -165,18 +154,19 @@ describe('the scan', () => {
 
 describe('a run that gives no report', () => {
   const argv = ['jscpd'];
+
   test.each([
-    [{ kind: 'finished', argv, status: 2, stdout: '', stderr: 'bad flag' } as const, 'exact: jscpd exited 2: bad flag'],
-    [{ kind: 'timed-out', argv, timeoutMs: 300_000 } as const, 'exact: jscpd ran past 300000 ms'],
-    [{ kind: 'not-started', argv, reason: 'not found' } as const, 'exact: jscpd could not start (not found): run `pnpm install`'],
-    [{ kind: 'finished', argv, status: 0, stdout: '', stderr: '' } as const, 'exact: jscpd wrote no report'],
+    [{ argv, kind: 'finished', status: 2, stderr: 'bad flag', stdout: '' } as const, 'exact: jscpd exited 2: bad flag'],
+    [{ argv, kind: 'timed-out', timeoutMs: 300_000 } as const, 'exact: jscpd ran past 300000 ms'],
+    [{ argv, kind: 'not-started', reason: 'not found' } as const, 'exact: jscpd could not start (not found): run `pnpm install`'],
+    [{ argv, kind: 'finished', status: 0, stderr: '', stdout: '' } as const, 'exact: jscpd wrote no report'],
   ])('is a problem: %o', (outcome, problem) => {
     const runner: Runner = () => outcome;
     expect(scan(tmpdir(), ['a'], [], NONE, runner)[0]).toBe(problem);
   });
 
   test('a finished run with its report is no problem', () => {
-    expect(noReport({ kind: 'finished', argv, status: 0, stdout: '', stderr: '' }, true)).toBeUndefined();
+    expect(noReport({ argv, kind: 'finished', status: 0, stderr: '', stdout: '' }, true)).toBeUndefined();
   });
 
   test('the report reader refuses a report of another shape', () => {

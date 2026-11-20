@@ -8,14 +8,14 @@ const MORNING = 9 * 60; // 09:00 — the start-of-day time an `advance_day` rese
  * Pure — no `Date` (the reducer is clock-free; formatting is the view's job). */
 function parseTimeOfDay(raw: string): number | null {
   const m = /^\s*(\d{1,2}):(\d{2})\s*(AM|PM)?\s*$/i.exec(raw);
-  if (m === null) return null;
+  if (m === null) {return null;}
   let hour = Number(m[1]);
   const minute = Number(m[2]);
-  if (hour > 23 || minute > 59) return null;
+  if (hour > 23 || minute > 59) {return null;}
   const period = m[3]?.toUpperCase();
-  if (period !== undefined && (hour < 1 || hour > 12)) return null; // AM/PM requires 1–12
-  if (period === 'PM' && hour !== 12) hour += 12;
-  if (period === 'AM' && hour === 12) hour = 0;
+  if (period !== undefined && (hour < 1 || hour > 12)) {return null;} // AM/PM requires 1–12
+  if (period === 'PM' && hour !== 12) {hour += 12;}
+  if (period === 'AM' && hour === 12) {hour = 0;}
   return hour * 60 + minute;
 }
 
@@ -29,7 +29,7 @@ const dayOf = (clock: number): number => Math.floor(clock / MINUTES_PER_DAY);
 // clock is rejected; drift/duration only add; drift/duration are inert until an
 // anchor exists. Returns the same reference when nothing changed.
 export function advanceTime(state: ChatState, step: InkStep): ChatState {
-  let clock = state.clock;
+  let {clock} = state;
 
   if (step.externalCalls.some((c) => c.fn === 'advance_day')) {
     const nextDay = clock === null ? 1 : dayOf(clock) + 1;
@@ -39,12 +39,12 @@ export function advanceTime(state: ChatState, step: InkStep): ChatState {
   if (step.text !== '') {
     const timeTag = step.tags.find((t) => t.key === 'time')?.value;
     const durationTag = step.tags.find((t) => t.key === 'duration')?.value;
-    const snap = timeTag !== undefined ? parseTimeOfDay(timeTag) : null;
-    const jump = durationTag !== undefined ? Number.parseInt(durationTag, 10) : Number.NaN;
+    const snap = timeTag === undefined ? null : parseTimeOfDay(timeTag);
+    const jump = durationTag === undefined ? Number.NaN : Number.parseInt(durationTag, 10);
 
     if (snap !== null) {
       const candidate = (clock === null ? 0 : dayOf(clock)) * MINUTES_PER_DAY + snap;
-      if (clock === null || candidate > clock) clock = candidate; // establish, else forward-only
+      if (clock === null || candidate > clock) {clock = candidate;} // establish, else forward-only
     } else if (!Number.isNaN(jump) && clock !== null) {
       clock += jump;
     } else if (clock !== null) {

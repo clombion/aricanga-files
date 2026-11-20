@@ -9,7 +9,7 @@ export interface Message {
 }
 
 /** Resolve after `milliseconds` on the timer queue: past every pending microtask and flush. */
-export function settle(milliseconds = 0): Promise<void> {
+export async function settle(milliseconds = 0): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
 
@@ -27,10 +27,10 @@ export function mount<K extends keyof HTMLElementTagNameMap>(
   document.body.append(host);
   const disposeView = render(view, host);
   return {
-    host,
     dispose: () => {
       disposeView();
       host.remove();
     },
+    host,
   };
 }

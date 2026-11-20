@@ -2,7 +2,8 @@ import { expect, test } from 'vitest';
 import type { ReduceResult } from '../sim/context';
 import type { Effect } from '../sim/effect';
 import type { Command } from '../sim/input';
-import { type System, erase } from '../sim/system';
+import { erase } from '../sim/system';
+import type { System } from '../sim/system';
 import { fixtureSystemErased } from './fixture-system';
 import { storyStreamArb } from './generators';
 import { checkDeterministic } from './property';
@@ -18,10 +19,10 @@ test('the determinism property rejects a nondeterministic reducer (#2)', async (
   let hidden = 0;
   const flaky: System<{ n: number }, Command, Effect, { n: number }> = {
     id: 'flaky',
-    tags: ['note'],
     init: () => ({ n: 0 }),
     reduce: (): ReduceResult<{ n: number }> => ({ state: { n: hidden++ }, effects: [] }),
     status: () => 'free',
+    tags: ['note'],
     view: (state) => state,
   };
   const result = await checkDeterministic({ systems: [erase(flaky)] }, storyStreamArb({ tagKeys: ['note'] }));

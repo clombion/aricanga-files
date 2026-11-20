@@ -25,12 +25,12 @@ export interface ChatState {
 
 export function initChatState(): ChatState {
   return {
-    messageHistory: {},
-    deferredMessages: {},
-    lastReadMessageId: {},
-    notifiedChatIds: [],
-    currentView: { type: 'hub' },
     activeChat: null,
     clock: null,
+    currentView: { type: 'hub' },
+    deferredMessages: {},
+    lastReadMessageId: {},
+    messageHistory: {},
+    notifiedChatIds: [],
   };
 }

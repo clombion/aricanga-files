@@ -12,7 +12,8 @@
 
 import { describe, expect, test } from 'vitest';
 
-import { closure, type Hook, hooks, repoHooks, repoTasks, RUN, type Task, tasks } from '../lib/config.ts';
+import { closure, hooks, repoHooks, repoTasks, RUN, tasks } from '../lib/config.ts';
+import type { Hook, Task } from '../lib/config.ts';
 import { Accepted } from '../lib/exemptions.ts';
 import { Project } from '../lib/tools.ts';
 
@@ -185,8 +186,8 @@ describe('the gate check', () => {
 describe('the hook check', () => {
   test('sees each planted hook', () => {
     const plantedHooks = hooks({
-      'pre-commit': { commands: { lint: { run: 'oxlint' } } },
       'post-merge': { commands: { late: { run: 'pnpm run check' } } },
+      'pre-commit': { commands: { lint: { run: 'oxlint' } } },
       'pre-push': { commands: { 'pushed-subjects': { run: 'node harness/scripts/check-pushed.ts' } } },
     });
     expect(hookProblems(plantedHooks)).toEqual([
@@ -201,7 +202,7 @@ describe('the hook check', () => {
 
 /** A planted manifest pinning one dependency at `version`. */
 function manifest(version: string): string {
-  return JSON.stringify({ name: 'plant', version: '0.0.0', private: true, devDependencies: { 'smol-toml': version } });
+  return JSON.stringify({ devDependencies: { 'smol-toml': version }, name: 'plant', private: true, version: '0.0.0' });
 }
 
 describe('the lock check', () => {

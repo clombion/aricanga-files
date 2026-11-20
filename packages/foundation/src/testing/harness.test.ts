@@ -1,20 +1,21 @@
 import { expect, test } from 'vitest';
 import type { Input } from '../sim/input';
-import { FIXTURE_TAG, type FixtureCommand, fixtureSystem, fixtureSystemErased } from './fixture-system';
+import { FIXTURE_TAG, fixtureSystem, fixtureSystemErased } from './fixture-system';
+import type { FixtureCommand } from './fixture-system';
 import { runFixture } from './harness';
 import { canonical } from './serialize';
 
 const player = (kind: FixtureCommand['kind'], payload?: unknown): { input: Input<unknown>; target: string } => ({
-  input: { source: 'player', command: { kind, payload } },
+  input: { command: { kind, payload }, source: 'player' },
   target: 'fixture',
 });
 
 test('runFixture captures the full multi-family stream headlessly (#1, #2, #4)', async () => {
   const run = await runFixture({
-    story: `Start # ${FIXTURE_TAG}: 1\n`,
-    systems: [fixtureSystemErased],
     fetch: () => 'VALUE',
     inputs: [player('present'), player('fetch'), player('persist'), player('schedule')],
+    story: `Start # ${FIXTURE_TAG}: 1\n`,
+    systems: [fixtureSystemErased],
   });
 
   // The trace is the correlated reduce stream, not just one effect family.
@@ -34,10 +35,10 @@ test('runFixture captures the full multi-family stream headlessly (#1, #2, #4)',
 
 test('same fixture + same seed ⇒ identical trace (#3)', async () => {
   const opts = {
-    story: `Start # ${FIXTURE_TAG}: 1\n`,
-    systems: [fixtureSystemErased],
     fetch: () => 'VALUE',
     inputs: [player('schedule'), player('fetch')],
+    story: `Start # ${FIXTURE_TAG}: 1\n`,
+    systems: [fixtureSystemErased],
   };
   const a = await runFixture(opts);
   const b = await runFixture(opts);
@@ -55,9 +56,9 @@ test('a choose-command drives an ink choice via DriveInk (#4)', async () => {
   ].join('\n');
 
   const run = await runFixture({
+    inputs: [player('choose', { index: 0 })],
     story,
     systems: [fixtureSystemErased],
-    inputs: [player('choose', { index: 0 })],
   });
 
   // the post-choice line was reached only because DriveInk(choose) advanced ink
@@ -66,10 +67,10 @@ test('a choose-command drives an ink choice via DriveInk (#4)', async () => {
 
 test('golden tripwire: the canonical stream matches the recorded golden (#6)', async () => {
   const run = await runFixture({
-    story: `Start # ${FIXTURE_TAG}: 1\n`,
-    systems: [fixtureSystemErased],
     fetch: () => 'VALUE',
     inputs: [player('present'), player('schedule')],
+    story: `Start # ${FIXTURE_TAG}: 1\n`,
+    systems: [fixtureSystemErased],
   });
   // A reducer change that alters the observable stream fails this diff.
   await expect(canonical(run.trace)).toMatchFileSnapshot('./__goldens__/fixture-stream.json');

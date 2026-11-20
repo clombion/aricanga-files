@@ -6,7 +6,7 @@ import { closeChat, openChat } from './defer';
 // before-all/top, and the cursor must never un-read).
 function markRead(state: ChatState, chatId: string): ChatState {
   const last = (state.messageHistory[chatId] ?? []).at(-1);
-  if (last === undefined) return state;
+  if (last === undefined) {return state;}
   return { ...state, lastReadMessageId: { ...state.lastReadMessageId, [chatId]: last.id } };
 }
 
@@ -25,5 +25,5 @@ export function openWithReadState(state: ChatState, chatId: string): ChatState {
 // Close: mark the current chat read, then return to the hub.
 export function closeWithReadState(state: ChatState): ChatState {
   const prev = focusedChat(state);
-  return closeChat(prev !== undefined ? markRead(state, prev) : state);
+  return closeChat(prev === undefined ? state : markRead(state, prev));
 }

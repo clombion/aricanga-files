@@ -22,9 +22,9 @@ export async function run(): Promise<void> {
   const width = host.querySelector('#measured')?.getBoundingClientRect().width ?? 0;
   record({
     id: 'measurement/apply-flush-layout',
+    note: `before flush: ${beforeFlush ?? ''}; after flush: ${afterFlush ?? ''}; width ${width}`,
     ok: beforeFlush === 'short' && afterFlush?.startsWith('a much longer') === true && width > 0,
     threw: false,
-    note: `before flush: ${beforeFlush ?? ''}; after flush: ${afterFlush ?? ''}; width ${width}`,
   });
   dispose();
 
@@ -49,9 +49,9 @@ export async function run(): Promise<void> {
   disposeEffect();
   record({
     id: 'measurement/flush-in-effect-callback',
+    note: effectError === undefined ? 'flush() in an effect callback returned' : `refused: ${effectError}`,
     ok: true,
     threw: effectError !== undefined,
-    note: effectError === undefined ? 'flush() in an effect callback returned' : `refused: ${effectError}`,
   });
 
   let settledError: string | undefined;
@@ -69,9 +69,9 @@ export async function run(): Promise<void> {
   await settle();
   record({
     id: 'measurement/flush-in-on-settled',
+    note: settledError === undefined ? 'flush() in onSettled returned' : `refused: ${settledError}`,
     ok: true,
     threw: settledError !== undefined,
-    note: settledError === undefined ? 'flush() in onSettled returned' : `refused: ${settledError}`,
   });
   disposeSettled();
 

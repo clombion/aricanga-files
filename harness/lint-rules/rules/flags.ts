@@ -3,13 +3,14 @@
  * kernel's snapshot says and what an error boundary holds.
  */
 
-import { child, children, componentRule, nameOf, type Rule } from '../ast.ts';
+import { child, children, componentRule, nameOf } from '../ast.ts';
+import type { Rule } from '../ast.ts';
 
 const FLAG = /^(is|has)?(loading|pending|busy|error|errored|failed|failure)$/i;
 const SIGNALS = new Set(['createSignal', 'createStore']);
 
-export const flags: Rule = componentRule('No loading/error signal in a component; read the state from the view-model.', (context) => {
-  return {
+export const flags: Rule = componentRule('No loading/error signal in a component; read the state from the view-model.', (context) => (
+  {
     VariableDeclarator(node) {
       const init = child(node, 'init');
       const pattern = child(node, 'id');
@@ -25,5 +26,5 @@ export const flags: Rule = componentRule('No loading/error signal in a component
         });
       }
     },
-  };
-});
+  }
+));

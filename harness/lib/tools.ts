@@ -8,8 +8,9 @@ import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writ
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 
-import { fromRoot, REPO_ROOT } from './paths.ts';
-import { environment, type Finished, run } from './process.ts';
+import { REPO_ROOT, fromRoot } from './paths.ts';
+import { environment, run } from './process.ts';
+import type { Finished } from './process.ts';
 
 /** The bound on one tool run from a check. */
 const TIMEOUT_MS = 300_000;
@@ -31,7 +32,7 @@ export function finished(
   argv: readonly string[],
   options: { readonly cwd: string; readonly env?: Readonly<Record<string, string>>; readonly input?: string },
 ): Finished {
-  const outcome = run(argv, { timeoutMs: TIMEOUT_MS, env: options.env ?? isolatedEnv(), ...options });
+  const outcome = run(argv, { env: options.env ?? isolatedEnv(), timeoutMs: TIMEOUT_MS, ...options });
   if (outcome.kind !== 'finished') {
     throw new ToolError(`${argv.join(' ')} did not finish: ${JSON.stringify(outcome)}`);
   }
@@ -90,6 +91,6 @@ export class Project {
   }
 
   remove(): void {
-    rmSync(this.root, { recursive: true, force: true });
+    rmSync(this.root, { force: true, recursive: true });
   }
 }

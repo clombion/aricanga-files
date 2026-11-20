@@ -4,10 +4,10 @@
  * packages/characterisation/performance-baseline.json, so noise between runs stays inside the margin.
  */
 
-import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { fromRoot, REPO_ROOT } from '../lib/paths.ts';
+import { REPO_ROOT, fromRoot } from '../lib/paths.ts';
 import { bin, finished } from '../lib/tools.ts';
 import { json } from '../lib/config.ts';
 import { out } from '../lib/output.ts';

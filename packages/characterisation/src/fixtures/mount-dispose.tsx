@@ -37,24 +37,24 @@ class ChxHost extends HTMLElement {
 customElements.define('chx-host', ChxHost);
 
 export async function run(): Promise<void> {
-  const app = document.getElementById('app');
+  const app = document.querySelector('#app');
   const host = document.createElement('chx-host');
-  app?.appendChild(host);
+  app?.append(host);
   await settle();
 
   const sr = host.shadowRoot;
   const bubble = sr?.querySelector('p[part="bubble"]');
   record({
     id: 'mount/renders-into-shadow-root',
+    note: `shadow html: ${sr?.innerHTML ?? '<none>'}`,
     ok: !!bubble && bubble.textContent === 'hello',
     threw: false,
-    note: `shadow html: ${sr?.innerHTML ?? '<none>'}`,
   });
   record({
     id: 'mount/setup-ran-once',
+    note: `setupRuns=${setupRuns}`,
     ok: setupRuns === 1,
     threw: false,
-    note: `setupRuns=${setupRuns}`,
   });
 
   host.remove();
@@ -62,9 +62,9 @@ export async function run(): Promise<void> {
 
   record({
     id: 'mount/dispose-runs-cleanup-once',
+    note: `cleanupRuns=${cleanupRuns}`,
     ok: cleanupRuns === 1,
     threw: false,
-    note: `cleanupRuns=${cleanupRuns}`,
   });
 
   markDone();

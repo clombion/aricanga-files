@@ -7,7 +7,8 @@
  * own postcss, handed back by a one-rule collector plugin.
  */
 
-import stylelint, { type Rule, type RuleBase } from 'stylelint';
+import stylelint from 'stylelint';
+import type { Rule, RuleBase } from 'stylelint';
 import {
   isIdentifier,
   isNoSubstitutionTemplateLiteral,
@@ -58,11 +59,11 @@ function cssTemplates(
     if (!isTaggedTemplateExpression(node) || !isIdentifier(node.tag) || node.tag.text !== 'css') {
       return [];
     }
-    const template = node.template;
+    const {template} = node;
     const body = isNoSubstitutionTemplateLiteral(template)
       ? template.text
       : template.head.text + template.templateSpans.map((span) => `0${span.literal.text}`).join('');
-    return [{ text: body, start: text.indexOf('`', template.pos) + 1, end: template.end - 1 }];
+    return [{ end: template.end - 1, start: text.indexOf('`', template.pos) + 1, text: body }];
   });
 }
 
@@ -73,9 +74,9 @@ function lineAt(text: string, index: number): number {
 /** The sheets one file holds: the whole file for `.css`, each `css` tagged template for a module. */
 export function sheetsOf(path: string, text: string): readonly Sheet[] {
   if (path.endsWith('.css')) {
-    return [{ path, line: 1, text }];
+    return [{ line: 1, path, text }];
   }
-  return cssTemplates(path, text).map((template) => ({ path, line: lineAt(text, template.start), text: template.text }));
+  return cssTemplates(path, text).map((template) => ({ line: lineAt(text, template.start), path, text: template.text }));
 }
 
 /** A module's text with its `css` templates blanked, so a sheet never counts as its own reader. */
@@ -106,8 +107,8 @@ export async function lintSheet(sheet: Sheet): Promise<readonly SheetFinding[]> 
   const linted = await stylelint.lint({ code: sheet.text, codeFilename, configFile: fromRoot('.stylelintrc.json') });
   return linted.results.flatMap((result) =>
     result.warnings.map((warning) => ({
-      path: sheet.path,
       line: sheet.line + warning.line - 1,
+      path: sheet.path,
       rule: warning.rule,
       text: warning.text,
     })),
@@ -142,7 +143,7 @@ export async function customPropertyProblems(
 ): Promise<readonly SheetFinding[]> {
   const defined = new Map<string, string>();
   const read = new Set<string>();
-  const roots = await Promise.all(all.map(async (sheet) => ({ sheet, root: await parse(sheet.text) })));
+  const roots = await Promise.all(all.map(async (sheet) => ({ root: await parse(sheet.text), sheet })));
   for (const { sheet, root } of roots) {
     root.walkDecls((declaration) => {
       if (declaration.prop.startsWith('--')) {
@@ -164,10 +165,10 @@ export async function customPropertyProblems(
   return [
     ...[...defined]
       .filter(([name]) => !read.has(name))
-      .map(([name, path]) => ({ path, line: 0, rule: 'custom-property-unread', text: name })),
+      .map(([name, path]) => ({ line: 0, path, rule: 'custom-property-unread', text: name })),
     ...[...read]
       .filter((name) => !defined.has(name))
-      .map((name) => ({ path: '', line: 0, rule: 'custom-property-undefined', text: name })),
+      .map((name) => ({ line: 0, path: '', rule: 'custom-property-undefined', text: name })),
   ];
 }
 
@@ -179,7 +180,7 @@ export async function unusedClasses(
   modules: ReadonlyMap<string, string>,
 ): Promise<readonly SheetFinding[]> {
   const found: SheetFinding[] = [];
-  const roots = await Promise.all(all.map(async (sheet) => ({ sheet, root: await parse(sheet.text) })));
+  const roots = await Promise.all(all.map(async (sheet) => ({ root: await parse(sheet.text), sheet })));
   for (const { sheet, root } of roots) {
     root.walkRules((rule) => {
       for (const match of rule.selector.matchAll(CLASS)) {
@@ -187,7 +188,7 @@ export async function unusedClasses(
         const named = new RegExp(`(?<![\\w-])${name}(?![\\w-])`);
         if (![...modules.values()].some((text) => named.test(text))) {
           const line = sheet.line + (rule.source?.start?.line ?? 1) - 1;
-          found.push({ path: sheet.path, line, rule: 'class-unused', text: name });
+          found.push({ line, path: sheet.path, rule: 'class-unused', text: name });
         }
       }
     });
@@ -201,7 +202,7 @@ export async function duplicateRules(sheet: Sheet): Promise<readonly SheetFindin
   const found: SheetFinding[] = [];
   (await parse(sheet.text)).walkRules((rule) => {
     const context: string[] = [];
-    for (let parent = rule.parent; parent !== undefined && parent.type !== 'root'; parent = parent.parent) {
+    for (let {parent} = rule; parent !== undefined && parent.type !== 'root'; parent = parent.parent) {
       if (parent.type === 'atrule' && 'name' in parent && 'params' in parent) {
         context.unshift(`@${parent.name} ${parent.params}`);
       }
@@ -214,7 +215,7 @@ export async function duplicateRules(sheet: Sheet): Promise<readonly SheetFindin
     const key = `${context.join(' > ')} :: ${selector}`;
     if (seen.has(key)) {
       const line = sheet.line + (rule.source?.start?.line ?? 1) - 1;
-      found.push({ path: sheet.path, line, rule: 'selector-repeated', text: key });
+      found.push({ line, path: sheet.path, rule: 'selector-repeated', text: key });
     }
     seen.add(key);
   });

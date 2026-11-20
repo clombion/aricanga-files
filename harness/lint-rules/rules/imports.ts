@@ -1,6 +1,7 @@
 /** What the module-boundary rules share: visiting every place a module names another module. */
 
-import { child, children, type Context, moduleSource, nameOf, type Node, type Visitor } from '../ast.ts';
+import { child, children, moduleSource, nameOf } from '../ast.ts';
+import type { Context, Node, Visitor } from '../ast.ts';
 
 /** A module a file names, with the names it imports from it (empty for a bare or dynamic import). */
 interface Imported {
@@ -23,13 +24,13 @@ export function onImports(seen: (imported: Imported) => void): Visitor {
   const visit = (node: Node): void => {
     const source = moduleSource(node);
     if (source !== undefined) {
-      seen({ source, names: node.type === 'ImportDeclaration' ? importedNames(node) : [], node });
+      seen({ names: node.type === 'ImportDeclaration' ? importedNames(node) : [], node, source });
     }
   };
   return {
-    ImportDeclaration: visit,
-    ExportNamedDeclaration: visit,
     ExportAllDeclaration: visit,
+    ExportNamedDeclaration: visit,
+    ImportDeclaration: visit,
     ImportExpression: visit,
   };
 }

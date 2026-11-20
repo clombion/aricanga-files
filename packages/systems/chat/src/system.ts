@@ -1,16 +1,11 @@
-import {
-  type Command,
-  type Effect,
-  hasField,
-  type ReduceResult,
-  type System,
-  text,
-} from '@narratives/foundation';
+import { hasField, text } from '@narratives/foundation';
+import type { Command, Effect, ReduceResult, System } from '@narratives/foundation';
 import { isImmediate, placeMessage } from './model/defer';
 import { closeWithReadState, openWithReadState } from './model/read-state';
 import { buildMessage, readChatSwitch, resolveChatId } from './model/route';
 import { advanceTime } from './model/time';
-import { type ChatState, initChatState } from './state';
+import { initChatState } from './state';
+import type { ChatState } from './state';
 
 // The chat player commands: open a chat (focus + clear-notified + replay) or
 // close back to the hub.
@@ -52,7 +47,6 @@ export function openedChat(command: Command): string | undefined {
 
 export const chatSystem: System<ChatState, ChatCommand, Effect, ChatViewModel> = {
   id: 'chat',
-  tags: [...CHAT_TAGS],
   init: (_seed) => initChatState(),
   reduce(state, input, ctx): ReduceResult<ChatState> {
     if (input.source === 'player') {
@@ -78,6 +72,7 @@ export const chatSystem: System<ChatState, ChatCommand, Effect, ChatViewModel> =
     return placeMessage(timed, message, isImmediate(step));
   },
   status: () => 'free',
+  tags: [...CHAT_TAGS],
   view: (state) => ({
     view: state.currentView,
     messages: state.messageHistory,

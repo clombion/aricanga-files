@@ -1,16 +1,15 @@
 /** A view reads view-models, never the kernel: no `reduce` or effect types imported into a view module. */
 
-import { problemMeta, relativeFile, type Rule } from '../ast.ts';
+import { problemMeta, relativeFile } from '../ast.ts';
+import type { Rule } from '../ast.ts';
 import { onImports, refuse } from './imports.ts';
 
-const VIEW = /\/src\/view\//;
 const KERNEL_NAMES = new Set(['reduce', 'Effect', 'FoundationEffect', 'ReduceResult', 'ReduceContext']);
 const KERNEL_MODULES = /(^|\/)(reduce|sim\/effect|sim\/context|model\/[^/]+)(\.ts)?$/;
 
 export const viewImports: Rule = {
-  meta: problemMeta('A view module imports no reduce, no effect type and no model module.'),
   create(context) {
-    if (!VIEW.test(relativeFile(context))) {
+    if (!relativeFile(context).includes('/src/view/')) {
       return {};
     }
     return onImports((imported) => {
@@ -22,4 +21,5 @@ export const viewImports: Rule = {
       }
     });
   },
+  meta: problemMeta('A view module imports no reduce, no effect type and no model module.'),
 };

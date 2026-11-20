@@ -8,8 +8,8 @@ import type { FixtureInput } from './harness';
 
 export function tagArb(keys: readonly string[]): fc.Arbitrary<Tag> {
   return fc
-    .tuple(fc.constantFrom(...keys), fc.string({ minLength: 1, maxLength: 8 }))
-    .map(([key, value]) => ({ key, value, raw: `${key}: ${value}` }));
+    .tuple(fc.constantFrom(...keys), fc.string({ maxLength: 8, minLength: 1 }))
+    .map(([key, value]) => ({ key, raw: `${key}: ${value}`, value }));
 }
 
 /** @public */
@@ -23,15 +23,15 @@ export interface StepGenOptions {
 
 export function inkStepArb(opts: StepGenOptions = {}): fc.Arbitrary<InkStep> {
   const keys = opts.tagKeys ?? ['speaker'];
-  const textArb = opts.texts ? fc.constantFrom(...opts.texts) : fc.string({ minLength: 1, maxLength: 12 });
+  const textArb = opts.texts ? fc.constantFrom(...opts.texts) : fc.string({ maxLength: 12, minLength: 1 });
   return fc
-    .record({ text: textArb, tags: fc.array(tagArb(keys), { maxLength: opts.maxTags ?? 3 }) })
+    .record({ tags: fc.array(tagArb(keys), { maxLength: opts.maxTags ?? 3 }), text: textArb })
     .map(({ text, tags }) => ({
-      text,
-      tags,
       choices: [],
       externalCalls: [],
       status: 'continue' as const,
+      tags,
+      text,
     }));
 }
 

@@ -25,8 +25,9 @@ import { join } from 'node:path';
 
 import { json, object } from './config.ts';
 import { Exemptions } from './exemptions.ts';
-import { fromRoot, REPO_ROOT } from './paths.ts';
-import { type Outcome, run } from './process.ts';
+import { REPO_ROOT, fromRoot } from './paths.ts';
+import { run } from './process.ts';
+import type { Outcome } from './process.ts';
 import { relativeTo as posixRelative } from './relative.ts';
 import { ROOTS, typescriptFiles } from './scope.ts';
 
@@ -52,8 +53,8 @@ export const COMMON: readonly string[] = [
 ];
 
 export const RUNS: Readonly<Record<'exact' | 'cross-file', readonly string[]>> = {
-  exact: ['--min-lines', '5', '--min-tokens', '50'],
   'cross-file': ['--min-lines', '5', '--min-tokens', '30'],
+  exact: ['--min-lines', '5', '--min-tokens', '50'],
 };
 
 /** A clone jscpd found: the run, the two files (relative to the root, sorted) and the fragment's hash. */
@@ -99,7 +100,7 @@ export function clones(runName: string, report: unknown, root: string): readonly
     }
     const fragment = createHash('sha256').update(String(fields['fragment'])).digest('hex').slice(0, 12);
     const [low = first, high = second] = [first, second].toSorted();
-    found.push({ run: runName, first: low, second: high, fragment });
+    found.push({ first: low, fragment, run: runName, second: high });
   }
   return found;
 }
@@ -114,7 +115,7 @@ function scanned(report: unknown, root: string): ReadonlySet<string> {
 function coverageProblems(listed: readonly string[], seen: ReadonlySet<string>, root: string): readonly string[] {
   const problems: string[] = [];
   for (const path of listed) {
-    const size = statSync(join(root, path)).size;
+    const {size} = statSync(join(root, path));
     if (size > MAX_SIZE) {
       problems.push(`coverage: ${path} is over jscpd's size limit (${size} bytes)`);
     } else if (!seen.has(path) && readFileSync(join(root, path), 'utf8').split('\n').length - 1 > SMALL_FILE_LINES) {
@@ -141,7 +142,7 @@ export function noReport(outcome: Outcome, reported: boolean): string | undefine
 /** The runner jscpd is started through; the scan takes it so a check can plant an outcome. */
 export type Runner = (argv: readonly string[], cwd: string) => Outcome;
 
-const defaultRunner: Runner = (argv, cwd) => run(argv, { timeoutMs: TIMEOUT_MS, cwd });
+const defaultRunner: Runner = (argv, cwd) => run(argv, { cwd, timeoutMs: TIMEOUT_MS });
 
 /** Run jscpd once and return its parsed report, or the reason it gave none. */
 export function reportOf(flags: readonly string[], roots: readonly string[], root: string, runner: Runner = defaultRunner): unknown {
@@ -152,7 +153,7 @@ export function reportOf(flags: readonly string[], roots: readonly string[], roo
     const problem = noReport(outcome, existsSync(report));
     return problem ?? json(readFileSync(report, 'utf8'));
   } finally {
-    rmSync(folder, { recursive: true, force: true });
+    rmSync(folder, { force: true, recursive: true });
   }
 }
 
@@ -181,8 +182,8 @@ export function scan(
     problems.push(
       ...allowed.unexemptedBy(found, cloneKey).map((clone) => `clone (${clone.run}): ${clone.first} and ${clone.second}`),
     );
-  } catch (stale) {
-    problems.push(String(stale));
+  } catch (error) {
+    problems.push(String(error));
   }
   return problems;
 }

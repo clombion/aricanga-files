@@ -5,12 +5,15 @@ import type { Lifecycle } from './input';
 // An exhaustive switch over a closed union compiles and is total.
 function describeLifecycle(l: Lifecycle): `init:${number}` | Lifecycle['kind'] {
   switch (l.kind) {
-    case 'init':
+    case 'init': {
       return `init:${l.seed}`;
-    case 'reset':
+    }
+    case 'reset': {
       return l.kind;
-    default:
+    }
+    default: {
       return assertNever(l);
+    }
   }
 }
 
@@ -23,12 +26,14 @@ test('an exhaustive switch over a closed union compiles and runs', () => {
 function broken(l: Lifecycle): string {
   // oxlint-disable-next-line typescript/switch-exhaustiveness-check -- the planted missing case this test proves the compiler refuses
   switch (l.kind) {
-    case 'init':
+    case 'init': {
       return `init:${l.seed}`;
+    }
     // 'reset' deliberately unhandled — `l` is still inhabited in `default`.
-    default:
+    default: {
       // @ts-expect-error -- `l` is `{kind:'reset'}` here, not `never`
       return assertNever(l);
+    }
   }
 }
 

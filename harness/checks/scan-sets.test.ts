@@ -19,12 +19,12 @@ import { isTestInfrastructure } from '../lib/checker.ts';
 import { object } from '../lib/config.ts';
 import { Exemptions } from '../lib/exemptions.ts';
 import { matches } from '../lib/globs.ts';
-import { fromRoot, REPO_ROOT } from '../lib/paths.ts';
+import { REPO_ROOT, fromRoot } from '../lib/paths.ts';
 import { projects } from '../lib/projects.ts';
 import { relativeTo } from '../lib/relative.ts';
 import { typescriptFiles } from '../lib/scope.ts';
-import { FLOOR, listing, ListingError, textOf, tracked } from '../lib/source-files.ts';
-import { finished, Project } from '../lib/tools.ts';
+import { FLOOR, ListingError, listing, textOf, tracked } from '../lib/source-files.ts';
+import { Project, finished } from '../lib/tools.ts';
 import gate from '../../vitest.gate.config.ts';
 
 export const HARNESS_ID = 'scan-sets';
@@ -157,7 +157,7 @@ describe('the listing', () => {
     try {
       expect(() => tracked(folder)).toThrow(ListingError);
     } finally {
-      rmSync(folder, { recursive: true, force: true });
+      rmSync(folder, { force: true, recursive: true });
     }
   });
 
@@ -178,7 +178,7 @@ describe('the listing', () => {
 describe('the repository', () => {
   test('every held TypeScript file is reached by oxlint, oxfmt and coverage', () => {
     const files = typescriptFiles();
-    const found = unreached(files, { oxlint: oxlintFiles(), oxfmt: oxfmtFiles(files), coverage: coverageReached(files) });
+    const found = unreached(files, { coverage: coverageReached(files), oxfmt: oxfmtFiles(files), oxlint: oxlintFiles() });
     expect(UNREACHED.unexempted(found)).toEqual([]);
   });
 
@@ -187,7 +187,7 @@ describe('the repository', () => {
   });
 
   test('knip declares its scan set', () => {
-    expect(tracked().includes('knip.json'), 'knip.json is missing: knip scans nothing the harness can hold').toBe(true);
+    expect(tracked()).toContain('knip.json');
   });
 });
 
@@ -197,7 +197,7 @@ describe('the scan-set checks', () => {
   });
 
   test('see a file a planted scan set misses', () => {
-    expect(unreached(['a.ts', 'b.ts'], { oxlint: new Set(['a.ts']), oxfmt: new Set(['a.ts', 'b.ts']) })).toEqual(['b.ts: oxlint']);
+    expect(unreached(['a.ts', 'b.ts'], { oxfmt: new Set(['a.ts', 'b.ts']), oxlint: new Set(['a.ts']) })).toEqual(['b.ts: oxlint']);
   });
 
   test('see a file in no project, in two production projects, and a test in production', () => {

@@ -42,21 +42,21 @@ export async function run(): Promise<void> {
   };
   record({
     id: 'csp/style-prop',
+    note: `style prop color: ${computed('object')}; attribute: ${host.querySelector('#object')?.getAttribute('style') ?? '<none>'}`,
     ok: true,
     threw: false,
-    note: `style prop color: ${computed('object')}; attribute: ${host.querySelector('#object')?.getAttribute('style') ?? '<none>'}`,
   });
   record({
     id: 'csp/cssom-from-a-ref-applies',
+    note: `ref + style.setProperty color: ${computed('cssom')}`,
     ok: computed('cssom') === color,
     threw: false,
-    note: `ref + style.setProperty color: ${computed('cssom')}`,
   });
   record({
     id: 'csp/violations',
+    note: `violations: ${violations.length === 0 ? 'none' : violations.join(' | ')}`,
     ok: true,
     threw: false,
-    note: `violations: ${violations.length === 0 ? 'none' : violations.join(' | ')}`,
   });
   dispose();
   markDone();

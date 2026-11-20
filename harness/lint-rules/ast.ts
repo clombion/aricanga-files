@@ -39,18 +39,18 @@ export interface Rule {
 /** The options schema every path-scoped rule accepts: globs of the files it does not hold. */
 const IGNORE_SCHEMA: readonly unknown[] = [
   {
-    type: 'object',
-    properties: { ignore: { type: 'array', items: { type: 'string' } } },
     additionalProperties: false,
+    properties: { ignore: { items: { type: 'string' }, type: 'array' } },
+    type: 'object',
   },
 ];
 
 /** The options schema of a rule with owners: globs of the files allowed what the rule refuses. */
 export const OWNERS_SCHEMA: readonly unknown[] = [
   {
-    type: 'object',
-    properties: { owners: { type: 'array', items: { type: 'string' } } },
     additionalProperties: false,
+    properties: { owners: { items: { type: 'string' }, type: 'array' } },
+    type: 'object',
   },
 ];
 
@@ -144,7 +144,7 @@ export function relativeFile(context: Context): string {
 function globToRegExp(glob: string): RegExp {
   const pattern = glob
     .split('**')
-    .map((part) => part.replaceAll(/[.+^${}()|[\]\\]/g, '\\$&').replaceAll('*', '[^/]*'))
+    .map((part) => part.replaceAll(/[.+^${}()|[\]\\]/g, String.raw`\$&`).replaceAll('*', '[^/]*'))
     .join('.*');
   return new RegExp(`^${pattern}$`);
 }
@@ -172,21 +172,20 @@ function heldComponentFile(context: Context): boolean {
 
 /** A rule's meta: every project rule reports a problem. */
 export function problemMeta(description: string, schema: readonly unknown[] = []): Rule['meta'] {
-  return { type: 'problem', docs: { description }, schema };
+  return { docs: { description }, schema, type: 'problem' };
 }
 
 /** A rule that holds component modules only: `.tsx` files outside its `ignore` globs. */
 export function componentRule(description: string, create: (context: Context) => Visitor): Rule {
   return {
-    meta: problemMeta(description, IGNORE_SCHEMA),
     create: (context) => (heldComponentFile(context) ? create(context) : {}),
+    meta: problemMeta(description, IGNORE_SCHEMA),
   };
 }
 
 /** A rule refusing every JSX attribute whose name `refused` holds. */
 export function attributeRule(description: string, refused: (name: string) => boolean, message: string): Rule {
   return {
-    meta: problemMeta(description),
     create: (context) => ({
       JSXAttribute(node) {
         const name = nameOf(child(node, 'name'));
@@ -195,5 +194,6 @@ export function attributeRule(description: string, refused: (name: string) => bo
         }
       },
     }),
+    meta: problemMeta(description),
   };
 }

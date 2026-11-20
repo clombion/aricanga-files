@@ -3,8 +3,8 @@
 // `undefined` is normalized to `null` so a present-but-undefined field (e.g. an
 // empty `Command.payload` or `fx.persist`) reads consistently across runs.
 function canonicalize(value: unknown): unknown {
-  if (value === undefined) return null;
-  if (Array.isArray(value)) return value.map(canonicalize);
+  if (value === undefined) {return null;}
+  if (Array.isArray(value)) {return value.map(canonicalize);}
   if (value !== null && typeof value === 'object') {
     const out: Record<string, unknown> = {};
     for (const [key, field] of Object.entries(value).toSorted(([a], [b]) => a.localeCompare(b))) {

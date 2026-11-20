@@ -1,9 +1,9 @@
 /** No two-argument `.then(onFulfilled, onRejected)`: a rejection handler there misses errors thrown in the first. */
 
-import { child, children, memberName, problemMeta, type Rule } from '../ast.ts';
+import { child, children, memberName, problemMeta } from '../ast.ts';
+import type { Rule } from '../ast.ts';
 
 export const promises: Rule = {
-  meta: problemMeta('No two-argument .then; chain .catch, or await in a try.'),
   create(context) {
     return {
       CallExpression(node) {
@@ -14,4 +14,5 @@ export const promises: Rule = {
       },
     };
   },
+  meta: problemMeta('No two-argument .then; chain .catch, or await in a try.'),
 };

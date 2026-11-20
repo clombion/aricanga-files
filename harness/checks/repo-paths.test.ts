@@ -7,7 +7,8 @@
  * path asks `paths.ts` (`REPO_ROOT`, `fromRoot`, `relative`).
  */
 
-import { type Identifier, SyntaxKind } from 'typescript/unstable/ast';
+import { SyntaxKind } from 'typescript/unstable/ast';
+import type { Identifier } from 'typescript/unstable/ast';
 import { isIdentifier, isMetaProperty, isPropertyAccessExpression, isPropertyAssignment } from 'typescript/unstable/ast/is';
 import { describe, expect, test } from 'vitest';
 
@@ -26,7 +27,7 @@ const URL_MODULES = new Accepted(['node:url', 'url']);
 
 /** Whether an identifier names a property (`a.__dirname`, `{ __dirname: 1 }`) rather than a variable. */
 function isPropertyName(node: Identifier): boolean {
-  const parent = node.parent;
+  const {parent} = node;
   return (
     (isPropertyAccessExpression(parent) && parent.name === node) ||
     (isPropertyAssignment(parent) && parent.name === node)

@@ -14,7 +14,7 @@ const ink = (name: string): string =>
 
 test('single-chat fixture drives a Present-only trace', async () => {
   const run = await runFixture({ story: ink('single-chat'), systems: [erase(chatSystem)] });
-  expect(run.trace.length).toBe(2); // two messages
+  expect(run.trace).toHaveLength(2); // two messages
   expect([...new Set(run.effects.map((e) => e.family))]).toEqual(['present']);
   expect(run.effects.every((e) => e.kind === 'chat/showNotification')).toBe(true);
 });
@@ -30,7 +30,7 @@ test('choices fixture captures the pre-choice trace and suspends cleanly', async
   // The chat stub does not handle choices yet (physics, 020–026); the harness
   // must still drive the pre-choice line and return without hanging.
   const run = await runFixture({ story: ink('choices'), systems: [erase(chatSystem)] });
-  expect(run.trace.length).toBe(1);
+  expect(run.trace).toHaveLength(1);
   const first = run.trace[0]?.input;
   expect(first?.source === 'story' ? first.step.text : undefined).toBe('Pick a reply');
 });

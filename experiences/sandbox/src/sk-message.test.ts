@@ -6,7 +6,7 @@ import { SkMessage } from './sk-message';
 test('sk-message registers, renders into shadow DOM, and reacts to changes', async () => {
   const el = new SkMessage();
   el.text = 'hello';
-  document.body.appendChild(el);
+  document.body.append(el);
   await el.updateComplete;
 
   expect(customElements.get('sk-message')).toBeTruthy(); // AC #4 registered

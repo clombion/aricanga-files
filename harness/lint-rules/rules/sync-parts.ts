@@ -3,7 +3,8 @@
  * `<Loading>` in a component module. The kernel's effects carry all asynchronous work.
  */
 
-import { child, componentRule, flag, jsxName, memberName, nameOf, type Node, type Rule } from '../ast.ts';
+import { child, componentRule, flag, jsxName, memberName, nameOf } from '../ast.ts';
+import type { Node, Rule } from '../ast.ts';
 
 const CHAINS = new Set(['then', 'catch', 'finally']);
 
@@ -17,8 +18,6 @@ export const syncParts: Rule = componentRule('No async, await, promise, .then or
     }
   };
   return {
-    FunctionDeclaration: onFunction,
-    FunctionExpression: onFunction,
     ArrowFunctionExpression: onFunction,
     AwaitExpression(node) {
       refuse(node, 'await');
@@ -30,9 +29,11 @@ export const syncParts: Rule = componentRule('No async, await, promise, .then or
         refuse(node, `.${name}`);
       }
     },
-    NewExpression(node) {
-      if (nameOf(child(node, 'callee')) === 'Promise') {
-        refuse(node, 'new Promise');
+    FunctionDeclaration: onFunction,
+    FunctionExpression: onFunction,
+    JSXOpeningElement(node) {
+      if (jsxName(node) === 'Loading') {
+        refuse(node, '<Loading>');
       }
     },
     MemberExpression(node) {
@@ -40,9 +41,9 @@ export const syncParts: Rule = componentRule('No async, await, promise, .then or
         refuse(node, `Promise.${memberName(node) ?? ''}`);
       }
     },
-    JSXOpeningElement(node) {
-      if (jsxName(node) === 'Loading') {
-        refuse(node, '<Loading>');
+    NewExpression(node) {
+      if (nameOf(child(node, 'callee')) === 'Promise') {
+        refuse(node, 'new Promise');
       }
     },
   };

@@ -1,4 +1,5 @@
-import { defineConfig, type UserConfig } from 'vite';
+import { defineConfig } from 'vite';
+import type { UserConfig } from 'vite';
 import solid from '@solidjs/vite-plugin';
 
 // Dev-mode Solid build so the runtime's structured diagnostics ([CODE] message)
@@ -7,22 +8,22 @@ import solid from '@solidjs/vite-plugin';
 // invoked, so `vite build` + `vite preview` and `vite dev` both carry the dev
 // runtime. The native @solidjs/compiler is used (no Babel).
 const config: UserConfig = defineConfig({
-  root: import.meta.dirname,
-  plugins: [solid({ dev: true })],
+  build: {
+    minify: false,
+    sourcemap: true,
+    target: 'es2022',
+  },
   define: {
     // Belt-and-braces: ensure the dev runtime condition resolves even under build.
     'import.meta.env.DEV': 'true',
   },
+  plugins: [solid({ dev: true })],
+  preview: { port: 8100 },
   resolve: {
     conditions: ['development', 'browser'],
   },
+  root: import.meta.dirname,
   server: { port: 8100 },
-  preview: { port: 8100 },
-  build: {
-    target: 'es2022',
-    minify: false,
-    sourcemap: true,
-  },
 });
 
 export default config;

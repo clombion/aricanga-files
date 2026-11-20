@@ -24,7 +24,7 @@ export function trip(message: string): never {
 
 /** Take every recorded trip. */
 export function drain(): string[] {
-  return trips.splice(0, trips.length);
+  return trips.splice(0);
 }
 
 /** Throw if any trip was recorded, naming when it was seen. */

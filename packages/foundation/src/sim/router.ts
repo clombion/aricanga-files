@@ -22,7 +22,7 @@ export function createTagOwnershipRouter(): Router {
       const stepKeys = new Set(step.tags.map((t) => t.key));
       const claimers: SystemId[] = [];
       for (const [id, system] of ctx.systems) {
-        if (system.tags.some((tag) => stepKeys.has(tag))) claimers.push(id);
+        if (system.tags.some((tag) => stepKeys.has(tag))) {claimers.push(id);}
       }
       if (claimers.length > 1) {
         throw new Error(

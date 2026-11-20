@@ -1,6 +1,7 @@
 /** No effect that only copies a value into a signal: derive it (a memo or a plain function) instead. */
 
-import { child, children, componentRule, nameOf, type Node, type Rule } from '../ast.ts';
+import { child, children, componentRule, nameOf } from '../ast.ts';
+import type { Node, Rule } from '../ast.ts';
 
 const EFFECTS = new Set(['createEffect', 'createRenderEffect']);
 const SETTER = /^set[A-Z]/;
@@ -17,8 +18,8 @@ function onlyCall(fn: Node): Node | undefined {
   return statements.length === 1 && only?.type === 'ExpressionStatement' ? child(only, 'expression') : undefined;
 }
 
-export const mirrors: Rule = componentRule('No effect whose only work is calling a setter; derive the value.', (context) => {
-  return {
+export const mirrors: Rule = componentRule('No effect whose only work is calling a setter; derive the value.', (context) => (
+  {
     CallExpression(node) {
       if (!EFFECTS.has(nameOf(child(node, 'callee')) ?? '')) {
         return;
@@ -30,5 +31,5 @@ export const mirrors: Rule = componentRule('No effect whose only work is calling
         context.report({ message: `an effect that only calls ${setter} mirrors a value: derive it instead`, node });
       }
     },
-  };
-});
+  }
+));

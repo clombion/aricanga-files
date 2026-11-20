@@ -1,11 +1,13 @@
 import { Compiler } from 'inkjs/full';
-import { type Host, Runtime } from '../host/runtime';
+import { Runtime } from '../host/runtime';
+import type { Host } from '../host/runtime';
 import { InkRuntime } from '../ink/ink-runtime';
 import type { RenderContext } from '../sim/context';
 import type { DataRequest, Effect } from '../sim/effect';
 import type { Command, Input } from '../sim/input';
 import type { Snapshot, SystemId } from '../sim/snapshot';
-import { type AnySystem, type System, viewOf } from '../sim/system';
+import { viewOf } from '../sim/system';
+import type { AnySystem, System } from '../sim/system';
 import type { ReduceRecord } from '../sim/trace';
 
 export interface FixtureInput {
@@ -38,7 +40,7 @@ export interface FixtureRun {
   ): TViewModel;
 }
 
-const DEFAULT_RENDER: RenderContext = { now: 0, locale: 'en' };
+const DEFAULT_RENDER: RenderContext = { locale: 'en', now: 0 };
 const DRAIN_GUARD = 10_000;
 
 /** Compile ink source to story JSON headlessly. */
@@ -52,10 +54,12 @@ export function compileInk(source: string): string {
 // settle in a fixed order before the trace is read.
 export async function runFixture(opts: FixtureOptions): Promise<FixtureRun> {
   const trace: ReduceRecord[] = [];
-  const timers: Array<() => void> = [];
+  const timers: (() => void)[] = [];
   let stored: string | null = null;
 
   const host: Host = {
+    fetchData:  async (request) => Promise.resolve(opts.fetch ? opts.fetch(request) : null),
+    present: () => {},
     scheduler: {
       schedule: (_delayMs, fire) => {
         timers.push(fire);
@@ -68,15 +72,11 @@ export async function runFixture(opts: FixtureOptions): Promise<FixtureRun> {
         stored = data;
       },
     },
-    fetchData: (request) => Promise.resolve(opts.fetch ? opts.fetch(request) : null),
-    present: () => {},
   };
 
   const runtime = new Runtime({
-    ink: new InkRuntime(compileInk(opts.story)),
-    systems: opts.systems,
     host,
-    seed: opts.seed ?? 0,
+    ink: new InkRuntime(compileInk(opts.story)),
     observer: {
       observe: (record) => {
         // Capture an immutable copy so a later (mis)mutating reducer can't corrupt
@@ -84,7 +84,9 @@ export async function runFixture(opts: FixtureOptions): Promise<FixtureRun> {
         trace.push(structuredClone(record));
       },
     },
-    ...(opts.foreground !== undefined ? { foreground: opts.foreground } : {}),
+    seed: opts.seed ?? 0,
+    systems: opts.systems,
+    ...(opts.foreground === undefined ? {} : { foreground: opts.foreground }),
   });
 
   // Settle until a full pass produces no new reductions and no timers remain.
@@ -92,9 +94,9 @@ export async function runFixture(opts: FixtureOptions): Promise<FixtureRun> {
     let last = -1;
     let guard = 0;
     while (last !== trace.length || timers.length > 0) {
-      if (++guard > DRAIN_GUARD) throw new Error('runFixture: drain did not converge');
+      if (++guard > DRAIN_GUARD) {throw new Error('runFixture: drain did not converge');}
       last = trace.length;
-      while (timers.length > 0) timers.shift()?.(); // CommitFired → send → pump
+      while (timers.length > 0) {timers.shift()?.();} // CommitFired → send → pump
       // Each pass must settle before the next is measured: the order of passes is the trace's order.
       // oxlint-disable-next-line eslint/no-await-in-loop -- passes run in sequence by design (deterministic drain)
       await Promise.resolve(); // let Fetch microtasks resolve and re-enter send
@@ -114,9 +116,9 @@ export async function runFixture(opts: FixtureOptions): Promise<FixtureRun> {
   }
 
   return {
-    trace,
     effects: trace.flatMap((record) => record.effects),
     snapshot: runtime.snapshot(),
+    trace,
     viewOf: (system, render) =>
       viewOf(system, { systemId: system.id, value: runtime.view(system.id, render ?? DEFAULT_RENDER) }),
   };

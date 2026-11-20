@@ -9,7 +9,7 @@ import { chatSystem } from '../src/system';
 // is importable from a sibling test (the new subpath).
 test('routing ownership holds over generated targetChat streams', async () => {
   const result = await checkInvariant(
-    { systems: [erase(chatSystem)], foreground: 'chat' },
+    { foreground: 'chat', systems: [erase(chatSystem)] },
     storyStreamArb({ tagKeys: ['speaker', 'chat', 'targetChat'] }),
     routingOwnership,
   );

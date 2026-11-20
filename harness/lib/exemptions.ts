@@ -102,7 +102,7 @@ export class CountedExemptions {
     const keys = new Set([...counts.keys(), ...this.entries.keys()]);
     return [...keys]
       .toSorted()
-      .map((key) => ({ key, found: counts.get(key) ?? 0, registered: this.entries.get(key)?.[0] ?? 0 }))
+      .map((key) => ({ found: counts.get(key) ?? 0, key, registered: this.entries.get(key)?.[0] ?? 0 }))
       .filter((mismatch) => mismatch.found !== mismatch.registered);
   }
 

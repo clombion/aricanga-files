@@ -3,7 +3,7 @@
  * what cleanup runs for the throwing branch; and what an uncaught throw does to later updates.
  */
 
-import { createSignal, createStore, Errored, flush, For, onSettled } from 'solid-js';
+import { Errored, For, createSignal, createStore, flush, onSettled } from 'solid-js';
 
 import { markDone, record } from '../harness';
 import { errorText, mount, settle } from '../support';
@@ -36,8 +36,8 @@ function Part(props: { readonly vm: Row }) {
 export async function run(): Promise<void> {
   const [store, setStore] = createStore<{ rows: Row[] }>({
     rows: [
-      { id: 'a', text: 'alpha', broken: false },
-      { id: 'b', text: 'beta', broken: false },
+      { broken: false, id: 'a', text: 'alpha' },
+      { broken: false, id: 'b', text: 'beta' },
     ],
   });
   const { host, dispose } = mount('ul', () => (
@@ -66,15 +66,15 @@ export async function run(): Promise<void> {
   const fallback = host.querySelector('li[data-fallback="b"]')?.textContent;
   record({
     id: 'errored/part-boundary-contains-a-throw',
+    note: `sibling: ${sibling ?? '<gone>'}; fallback: ${fallback ?? '<none>'}`,
     ok: sibling === 'alpha' && fallback?.includes('part b broke') === true,
     threw: false,
-    note: `sibling: ${sibling ?? '<gone>'}; fallback: ${fallback ?? '<none>'}`,
   });
   record({
     id: 'errored/throwing-branch-cleanup',
+    note: `settled cleanups run when part b threw: ${settledCleanups - settledBefore}`,
     ok: true,
     threw: false,
-    note: `settled cleanups run when part b threw: ${settledCleanups - settledBefore}`,
   });
   dispose();
 
@@ -108,9 +108,9 @@ export async function run(): Promise<void> {
   disposeBare();
   record({
     id: 'errored/unbounded-throw',
+    note: `thrown: ${uncaught ?? '<nothing>'}; a later update threw: ${later ?? '<nothing>'}; text after it: ${bare.textContent ?? ''}`,
     ok: true,
     threw: uncaught !== undefined,
-    note: `thrown: ${uncaught ?? '<nothing>'}; a later update threw: ${later ?? '<nothing>'}; text after it: ${bare.textContent ?? ''}`,
   });
 
   await settle();

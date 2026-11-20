@@ -1,4 +1,5 @@
-import { type Effect, type Host, InkRuntime, createExperience, erase } from '@narratives/foundation';
+import { InkRuntime, createExperience, erase } from '@narratives/foundation';
+import type { Effect, Host } from '@narratives/foundation';
 import { Compiler } from 'inkjs/full';
 import { cardsSystem } from '@narratives/system-cards';
 import { chatSystem } from '@narratives/system-chat';
@@ -17,12 +18,12 @@ function compile(src: string): string {
 function recordingHost(): { host: Host; presented: string[] } {
   const presented: string[] = [];
   const host: Host = {
-    scheduler: { schedule: () => () => {} },
-    store: { load: () => null, save: () => {} },
-    fetchData: () => Promise.resolve(null),
+    fetchData:  async () => Promise.resolve(null),
     present: (effect: Effect) => {
       presented.push(effect.kind);
     },
+    scheduler: { schedule: () => () => {} },
+    store: { load: () => null, save: () => {} },
   };
   return { host, presented };
 }
@@ -38,10 +39,10 @@ function drain(exp: { step(): boolean }): void {
 test('a speaker-tagged step routes to chat even when cards is foreground', () => {
   const { host, presented } = recordingHost();
   const exp = createExperience({
-    ink: new InkRuntime(compile('Hello # speaker: Pat\n')),
-    systems: [erase(cardsSystem), erase(chatSystem)],
     foreground: 'cards',
     host,
+    ink: new InkRuntime(compile('Hello # speaker: Pat\n')),
+    systems: [erase(cardsSystem), erase(chatSystem)],
   });
   drain(exp);
   expect(presented).toContain('chat/showNotification');
@@ -50,10 +51,10 @@ test('a speaker-tagged step routes to chat even when cards is foreground', () =>
 test('a stat-tagged step routes to cards even when chat is foreground', () => {
   const { host, presented } = recordingHost();
   const exp = createExperience({
-    ink: new InkRuntime(compile('Courage up # stat: courage:+2\n')),
-    systems: [erase(chatSystem), erase(cardsSystem)],
     foreground: 'chat',
     host,
+    ink: new InkRuntime(compile('Courage up # stat: courage:+2\n')),
+    systems: [erase(chatSystem), erase(cardsSystem)],
   });
   drain(exp);
   expect(presented).toContain('cards/statChanged');
@@ -61,8 +62,8 @@ test('a stat-tagged step routes to cards even when chat is foreground', () => {
 
 test('createExperience fails loud on empty systems and unknown foreground', () => {
   const { host } = recordingHost();
-  expect(() => createExperience({ ink: ink(), systems: [], host })).toThrow('at least one system');
+  expect(() => createExperience({ host, ink: ink(), systems: [] })).toThrow('at least one system');
   expect(() =>
-    createExperience({ ink: ink(), systems: [erase(chatSystem)], foreground: 'nope', host }),
+    createExperience({ foreground: 'nope', host, ink: ink(), systems: [erase(chatSystem)] }),
   ).toThrow('foreground system "nope" is not registered');
 });

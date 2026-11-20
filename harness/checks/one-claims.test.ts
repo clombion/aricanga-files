@@ -8,9 +8,11 @@
 
 import { describe, expect, test } from 'vitest';
 
-import { type Claim, CLAIMS, clauses, type Probe } from '../lib/claims.ts';
-import { currentText, Doc, type Prose } from '../lib/docs.ts';
-import { Exemptions, site, StaleExemptionError } from '../lib/exemptions.ts';
+import { CLAIMS, clauses } from '../lib/claims.ts';
+import type { Claim, Probe } from '../lib/claims.ts';
+import { currentText, Doc } from '../lib/docs.ts';
+import type { Prose } from '../lib/docs.ts';
+import { Exemptions, StaleExemptionError, site } from '../lib/exemptions.ts';
 import { typescriptFiles } from '../lib/scope.ts';
 import { textOf } from '../lib/source-files.ts';
 
@@ -59,13 +61,13 @@ describe('the repository', () => {
 
 describe('the claims check', () => {
   test('sees an unregistered claim', () => {
-    const planted = [{ path: 'src/planted.ts', line: 1, text: 'This module is the only reader of the cache.' }];
+    const planted = [{ line: 1, path: 'src/planted.ts', text: 'This module is the only reader of the cache.' }];
     expect(registry([]).unexempted(foundClaims(planted))).toEqual([site('src/planted.ts', 'the only reader of the cache')]);
   });
 
   test('fails an entry whose claim is gone', () => {
     const gone: Claim[] = [
-      { path: 'src/planted.ts', clause: 'the only reader of the cache', probe: { pattern: /x/, owner: 'src/planted.ts', roots: ['src/'] } },
+      { clause: 'the only reader of the cache', path: 'src/planted.ts', probe: { owner: 'src/planted.ts', pattern: /x/, roots: ['src/'] } },
     ];
     expect(() => registry(gone).unexempted([])).toThrow(StaleExemptionError);
   });
@@ -76,11 +78,11 @@ describe('the claims check', () => {
       ['src/other.ts', 'export function read() {}\n'],
       ['docs/x.ts', 'export function read() {}\n'],
     ]);
-    expect(probeProblems({ pattern: /^export function read\b/m, owner: 'src/owner.ts', roots: ['src/'] }, texts)).toEqual([
-      '/^export function read\\b/m matches outside its owner, in src/other.ts',
+    expect(probeProblems({ owner: 'src/owner.ts', pattern: /^export function read\b/m, roots: ['src/'] }, texts)).toEqual([
+      String.raw`/^export function read\b/m matches outside its owner, in src/other.ts`,
     ]);
-    expect(probeProblems({ pattern: /^export function write\b/m, owner: 'src/owner.ts', roots: ['src/'] }, texts)).toEqual([
-      '/^export function write\\b/m does not match in its owner src/owner.ts',
+    expect(probeProblems({ owner: 'src/owner.ts', pattern: /^export function write\b/m, roots: ['src/'] }, texts)).toEqual([
+      String.raw`/^export function write\b/m does not match in its owner src/owner.ts`,
     ]);
   });
 

@@ -69,14 +69,14 @@ function plantedRuns(
 ): readonly { status: number; output: string }[] {
   const project = new Project();
   try {
-    project.write('package.json', JSON.stringify({ name: 'plant', version: '0.0.0', private: true, type: 'module' }));
+    project.write('package.json', JSON.stringify({ name: 'plant', private: true, type: 'module', version: '0.0.0' }));
     project.write('knip.json', JSON.stringify(config));
     for (const [path, text] of Object.entries(files)) {
       project.write(path, text);
     }
     return deadcodeRuns().map((args) => {
       const run = knip(project.root, args);
-      return { status: run.status, output: run.stdout + run.stderr };
+      return { output: run.stdout + run.stderr, status: run.status };
     });
   } finally {
     project.remove();
@@ -85,8 +85,8 @@ function plantedRuns(
 
 const CLEAN = {
   'src/index.ts': "export { a } from './lib.ts';\n",
-  'src/lib.ts': 'export const a = 1;\n',
   'src/lib.test.ts': "import { a } from './lib.ts';\nconsole.assert(a === 1);\n",
+  'src/lib.ts': 'export const a = 1;\n',
 };
 
 describe('the repository', () => {
@@ -131,8 +131,8 @@ describe('the deadcode check, on a planted package', () => {
   test('fails an export only a test reads, in production mode only', () => {
     const runs = plantedRuns({
       ...CLEAN,
-      'src/lib.ts': 'export const a = 1;\nexport const testOnly = 2;\n',
       'src/lib.test.ts': "import { a, testOnly } from './lib.ts';\nconsole.assert(a + testOnly === 3);\n",
+      'src/lib.ts': 'export const a = 1;\nexport const testOnly = 2;\n',
     });
     expect(runs.map((run) => [run.status, run.output.includes('testOnly')])).toEqual([
       [1, true],
@@ -153,7 +153,7 @@ describe('the deadcode check, on a planted package', () => {
     expect(strictnessProblems(strict, ['exports', 'types'])).toEqual([]);
     expect(
       strictnessProblems(
-        { rules: { exports: 'warn' }, ignoreIssues: { 'src/x.ts': ['exports'] }, ignoreFiles: ['src/y.ts'] },
+        { ignoreFiles: ['src/y.ts'], ignoreIssues: { 'src/x.ts': ['exports'] }, rules: { exports: 'warn' } },
         ['exports', 'types'],
       ),
     ).toEqual([
@@ -167,11 +167,11 @@ describe('the deadcode check, on a planted package', () => {
   test('keys every kind of ignore entry', () => {
     expect(
       ignoreEntries({
-        ignoreWorkspaces: ['w'],
-        ignoreDependencies: ['d'],
         ignoreBinaries: ['b'],
+        ignoreDependencies: ['d'],
         ignoreFiles: ['f'],
         ignoreIssues: { 'src/x.ts': ['exports', 'types'] },
+        ignoreWorkspaces: ['w'],
       }),
     ).toEqual([
       'ignoreWorkspaces:w',

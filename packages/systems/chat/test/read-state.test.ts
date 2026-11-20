@@ -1,7 +1,8 @@
 import type { FixtureRun } from '@narratives/foundation/testing';
 import { hwmMonotonic } from '@narratives/system-chat/testing';
 import { expect, test } from 'vitest';
-import { type ChatViewModel, chatSystem } from '../src/system';
+import { chatSystem } from '../src/system';
+import type { ChatViewModel } from '../src/system';
 import { close, messagesOf as history, open, run, story } from './support';
 
 const cursor = (r: FixtureRun): ChatViewModel['lastRead'] => r.viewOf(chatSystem).lastRead;

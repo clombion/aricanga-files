@@ -1,4 +1,5 @@
-import { css, type CSSResult, html, LitElement, type PropertyDeclarations, type TemplateResult } from 'lit';
+import { css, html, LitElement } from 'lit';
+import type { CSSResult, PropertyDeclarations, TemplateResult } from 'lit';
 
 // Baseline Lit Web Component for the Phase 0 skeleton (replaced by a Solid part in #24).
 // No decorators — uses static `properties` so it compiles cleanly under strict

@@ -1,10 +1,5 @@
-import {
-  type Command,
-  type Effect,
-  type ReduceResult,
-  type System,
-  fx,
-} from '@narratives/foundation';
+import { fx } from '@narratives/foundation';
+import type { Command, Effect, ReduceResult, System } from '@narratives/foundation';
 
 export const CARD_TAGS = ['card', 'stat'] as const;
 
@@ -26,7 +21,6 @@ export interface CardsViewModel {
 // Phase 1 STUB system — applies a `# stat:` tag and advances the deck.
 export const cardsSystem: System<CardsState, Command, Effect, CardsViewModel> = {
   id: 'cards',
-  tags: [...CARD_TAGS],
   init: (_seed) => ({ deckCursor: 0, stats: {}, history: [] }),
   reduce(state, input, _ctx): ReduceResult<CardsState> {
     if (input.source !== 'story') return { state, effects: [] };
@@ -48,5 +42,6 @@ export const cardsSystem: System<CardsState, Command, Effect, CardsViewModel> = 
     };
   },
   status: () => 'free',
+  tags: [...CARD_TAGS],
   view: (state) => ({ cursor: state.deckCursor, stats: state.stats }),
 };

@@ -13,7 +13,8 @@
 import * as ast from 'typescript/unstable/ast';
 import type { Symbol as TsSymbol } from 'typescript/unstable/sync';
 
-import { isPlatform, nameText, nodes, pathOf, qualifiedName, type Scan } from './checker.ts';
+import { isPlatform, nameText, nodes, pathOf, qualifiedName } from './checker.ts';
+import type { Scan } from './checker.ts';
 import { Accepted, site } from './exemptions.ts';
 
 /** A root a rule covers, and its owner there (null: no module of the root may use the API). */
@@ -33,7 +34,7 @@ interface Rule {
 const KERNEL = ['packages/foundation/', 'packages/systems/'];
 
 function nobody(...roots: string[]): Scope[] {
-  return roots.map((root) => ({ root, owner: null }));
+  return roots.map((root) => ({ owner: null, root }));
 }
 
 export const RULES: readonly Rule[] = [
@@ -42,7 +43,7 @@ export const RULES: readonly Rule[] = [
     names: new Accepted(
       ['spawn', 'spawnSync', 'exec', 'execSync', 'execFile', 'execFileSync', 'fork'].map((call) => `child_process.${call}`),
     ),
-    scopes: [...nobody(...KERNEL, 'experiences/sandbox/'), { root: 'harness/', owner: 'harness/lib/process.ts' }],
+    scopes: [...nobody(...KERNEL, 'experiences/sandbox/'), { owner: 'harness/lib/process.ts', root: 'harness/' }],
     why: 'every child process is bounded and its outcome is one of three',
   },
   {
@@ -62,7 +63,7 @@ export const RULES: readonly Rule[] = [
       'crypto.randomInt',
       'crypto.getRandomValues',
     ]),
-    scopes: [...nobody(...KERNEL, 'experiences/sandbox/'), { root: 'harness/', owner: 'harness/lib/stress.ts' }],
+    scopes: [...nobody(...KERNEL, 'experiences/sandbox/'), { owner: 'harness/lib/stress.ts', root: 'harness/' }],
     why: 'ids and draws come from the seed, so a run replays; the flake hunter draws the seed it prints and replays from',
   },
   {
@@ -70,8 +71,8 @@ export const RULES: readonly Rule[] = [
     names: new Accepted(['console', 'NodeJS.Process.stdout', 'NodeJS.Process.stderr']),
     scopes: [
       ...nobody(...KERNEL, 'experiences/sandbox/'),
-      { root: 'harness/', owner: 'harness/lib/output.ts' },
-      { root: 'packages/characterisation/', owner: 'packages/characterisation/src/harness.ts' },
+      { owner: 'harness/lib/output.ts', root: 'harness/' },
+      { owner: 'packages/characterisation/src/harness.ts', root: 'packages/characterisation/' },
     ],
     why: 'the kernel reports through effects and the event bus; one module of a tool says what it says',
   },
@@ -79,9 +80,9 @@ export const RULES: readonly Rule[] = [
     name: 'json-parse',
     names: new Accepted(['JSON.parse']),
     scopes: [
-      { root: 'packages/foundation/', owner: 'packages/foundation/src/host/codec.ts' },
+      { owner: 'packages/foundation/src/host/codec.ts', root: 'packages/foundation/' },
       ...nobody('packages/systems/', 'experiences/sandbox/'),
-      { root: 'harness/', owner: 'harness/lib/config.ts' },
+      { owner: 'harness/lib/config.ts', root: 'harness/' },
     ],
     why: "one typed boundary narrows JSON's untyped values: the snapshot codec, the harness's config reader",
   },
@@ -102,7 +103,7 @@ export const RULES: readonly Rule[] = [
     ]),
     scopes: [
       ...nobody(...KERNEL, 'harness/'),
-      { root: 'experiences/sandbox/', owner: 'experiences/sandbox/src/main.ts' },
+      { owner: 'experiences/sandbox/src/main.ts', root: 'experiences/sandbox/' },
     ],
     why: "data reaches the kernel through the Fetch effect; one module of a host makes the request",
   },
@@ -129,7 +130,7 @@ export const RULES: readonly Rule[] = [
     names: new Accepted(['NodeJS.Process.env']),
     scopes: [
       ...nobody(...KERNEL, 'experiences/sandbox/', 'packages/characterisation/'),
-      { root: 'harness/', owner: 'harness/lib/process.ts' },
+      { owner: 'harness/lib/process.ts', root: 'harness/' },
     ],
     why: 'every setting is read once, in one module',
   },
@@ -168,7 +169,7 @@ function inTypeOrImport(node: ast.Node): boolean {
 
 /** Whether an identifier is the name a declaration introduces, or a property name read elsewhere. */
 function declaresOrNames(node: ast.Identifier): boolean {
-  const parent = node.parent;
+  const {parent} = node;
   const named =
     ast.isVariableDeclaration(parent) ||
     ast.isFunctionDeclaration(parent) ||

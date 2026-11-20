@@ -8,12 +8,7 @@
  * by extension: a `.tsx` path parses as JSX.
  */
 
-import {
-  type CommentRange,
-  type Expression,
-  type Node,
-  type SourceFile,
-} from 'typescript/unstable/ast';
+import type { CommentRange, Expression, Node, SourceFile } from 'typescript/unstable/ast';
 import {
   isIdentifier,
   isImportDeclaration,
@@ -70,8 +65,8 @@ export function api(): API {
     session = new API({
       cwd: REPO_ROOT,
       fs: {
-        readFile: (fileName) => virtual.get(fileName),
         fileExists: (fileName) => (virtual.has(fileName) ? true : undefined),
+        readFile: (fileName) => virtual.get(fileName),
       },
     });
     process.once('exit', closeSession);
@@ -103,7 +98,7 @@ export function nodes(root: Node): Node[] {
   const visit = (node: Node): undefined => {
     found.push(node);
     node.forEachChild(visit);
-    return undefined;
+    return;
   };
   visit(root);
   return found;
@@ -118,7 +113,7 @@ interface Comment {
 
 /** Every comment of a module, in order; comment-like text inside strings and templates is not one. */
 export function comments(file: SourceFile): Comment[] {
-  const text = file.text;
+  const {text} = file;
   const lines = text.split('\n');
   const seen = new Map<number, CommentRange>();
   const collect = (ranges: readonly CommentRange[] | undefined): void => {
@@ -141,9 +136,9 @@ export function comments(file: SourceFile): Comment[] {
     .map((range) => {
       const { line, character } = file.getLineAndCharacterOfPosition(range.pos);
       return {
-        text: text.slice(range.pos, range.end),
-        line: line + 1,
         code: (lines[line] ?? '').slice(0, character).trim(),
+        line: line + 1,
+        text: text.slice(range.pos, range.end),
       };
     });
 }

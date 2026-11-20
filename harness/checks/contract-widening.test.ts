@@ -11,8 +11,10 @@
 
 import { describe, expect, test } from 'vitest';
 
-import { type Scan, scannedFiles, sourceOf } from '../lib/checker.ts';
-import { type Contract, contracts, type ContractSite, respellings, widenings } from '../lib/contracts.ts';
+import { scannedFiles, sourceOf } from '../lib/checker.ts';
+import type { Scan } from '../lib/checker.ts';
+import { contracts, respellings, widenings } from '../lib/contracts.ts';
+import type { Contract, ContractSite } from '../lib/contracts.ts';
 import { Accepted } from '../lib/exemptions.ts';
 import { usePlanted, useScan } from '../lib/scan-hooks.ts';
 

@@ -10,10 +10,11 @@ import { writeFileSync } from 'node:fs';
 
 import { checkModules } from './checks.ts';
 import { repoTasks } from './config.ts';
-import { type Block, type Doc, markdown, markdownPaths } from './docs.ts';
+import { markdown, markdownPaths } from './docs.ts';
+import type { Block, Doc } from './docs.ts';
 import { Accepted } from './exemptions.ts';
 import { fromRoot } from './paths.ts';
-import { pins, UPSTREAM } from './pins.ts';
+import { UPSTREAM, pins } from './pins.ts';
 
 export type Generators = ReadonlyMap<string, () => string>;
 
@@ -66,16 +67,16 @@ export function problems(doc: Doc, generators: Generators): readonly Problem[] {
     const render = generators.get(block.name);
     if (render === undefined) {
       return [
-        { path: doc.path, line: block.start, message: `no generator is named ${JSON.stringify(block.name)}`, writingFixesIt: false },
+        { line: block.start, message: `no generator is named ${JSON.stringify(block.name)}`, path: doc.path, writingFixesIt: false },
       ];
     }
     return block.body === render()
       ? []
       : [
           {
-            path: doc.path,
             line: block.start,
             message: `block ${JSON.stringify(block.name)} is stale: run \`pnpm run fix\``,
+            path: doc.path,
             writingFixesIt: true,
           },
         ];

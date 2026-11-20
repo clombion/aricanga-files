@@ -46,10 +46,10 @@ export function environment(): Record<string, string> {
 }
 
 /** Run one `argv` without blocking, to its end or its bound, never through a shell. */
-function start(argv: readonly string[], options: RunOptions): Promise<Outcome> {
+ async function start(argv: readonly string[], options: RunOptions): Promise<Outcome> {
   const [command, ...args] = argv;
   if (command === undefined) {
-    return Promise.resolve({ kind: 'not-started', argv, reason: 'empty argv' });
+    return Promise.resolve({ argv, kind: 'not-started', reason: 'empty argv' });
   }
   return new Promise((resolve) => {
     const child = spawn(command, args, { cwd: options.cwd, env: options.env ?? process.env });
@@ -68,14 +68,14 @@ function start(argv: readonly string[], options: RunOptions): Promise<Outcome> {
     });
     child.on('error', (error) => {
       clearTimeout(timer);
-      resolve({ kind: 'not-started', argv, reason: error.message });
+      resolve({ argv, kind: 'not-started', reason: error.message });
     });
     child.on('close', (status) => {
       clearTimeout(timer);
       resolve(
         timedOut || status === null
-          ? { kind: 'timed-out', argv, timeoutMs: options.timeoutMs }
-          : { kind: 'finished', argv, status, stdout, stderr },
+          ? { argv, kind: 'timed-out', timeoutMs: options.timeoutMs }
+          : { argv, kind: 'finished', status, stderr, stdout },
       );
     });
     child.stdin.end(options.input ?? '');
@@ -83,33 +83,33 @@ function start(argv: readonly string[], options: RunOptions): Promise<Outcome> {
 }
 
 /** Run every `argv` at once, each bounded on its own; the outcomes in the order given. */
-export function runConcurrently(argvs: readonly (readonly string[])[], options: RunOptions): Promise<Outcome[]> {
-  return Promise.all(argvs.map((argv) => start(argv, options)));
+export async function runConcurrently(argvs: readonly (readonly string[])[], options: RunOptions): Promise<Outcome[]> {
+  return Promise.all(argvs.map( async (argv) => start(argv, options)));
 }
 
 /** Run `argv` to its end or its bound, never through a shell. */
 export function run(argv: readonly string[], options: RunOptions): Outcome {
   const [command, ...args] = argv;
   if (command === undefined) {
-    return { kind: 'not-started', argv, reason: 'empty argv' };
+    return { argv, kind: 'not-started', reason: 'empty argv' };
   }
   const result = spawnSync(command, args, {
     cwd: options.cwd,
+    encoding: 'utf8',
     env: options.env ?? environment(),
     input: options.input,
-    timeout: options.timeoutMs,
     killSignal: 'SIGKILL',
-    encoding: 'utf8',
     maxBuffer: 256 * 1024 * 1024,
+    timeout: options.timeoutMs,
   });
   if (result.error !== undefined) {
     if ('code' in result.error && result.error.code === 'ETIMEDOUT') {
-      return { kind: 'timed-out', argv, timeoutMs: options.timeoutMs };
+      return { argv, kind: 'timed-out', timeoutMs: options.timeoutMs };
     }
-    return { kind: 'not-started', argv, reason: result.error.message };
+    return { argv, kind: 'not-started', reason: result.error.message };
   }
   if (result.status === null) {
-    return { kind: 'timed-out', argv, timeoutMs: options.timeoutMs };
+    return { argv, kind: 'timed-out', timeoutMs: options.timeoutMs };
   }
-  return { kind: 'finished', argv, status: result.status, stdout: result.stdout, stderr: result.stderr };
+  return { argv, kind: 'finished', status: result.status, stderr: result.stderr, stdout: result.stdout };
 }

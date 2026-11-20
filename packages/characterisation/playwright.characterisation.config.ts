@@ -1,4 +1,5 @@
-import { defineConfig, devices, type PlaywrightTestConfig } from '@playwright/test';
+import { defineConfig, devices } from '@playwright/test';
+import type { PlaywrightTestConfig } from '@playwright/test';
 
 // Step 1 of Phase 3 runs in all three engines, desktop and mobile emulation.
 // Firefox has no Playwright device descriptor (no touch/mobile emulation), so
@@ -6,19 +7,10 @@ import { defineConfig, devices, type PlaywrightTestConfig } from '@playwright/te
 const PORT = 8100;
 
 const config: PlaywrightTestConfig = defineConfig({
-  testDir: './tests',
-  testMatch: '**/*.spec.ts',
-  timeout: 30_000,
   expect: { timeout: 5_000 },
-  fullyParallel: true,
   forbidOnly: true,
-  retries: 0,
-  reporter: [['list'], ['html', { outputFolder: '.output/report', open: 'never' }]],
+  fullyParallel: true,
   outputDir: '.output/results',
-  use: {
-    baseURL: `http://localhost:${PORT}/`,
-    trace: 'off',
-  },
   projects: [
     { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
     { name: 'firefox', use: { ...devices['Desktop Firefox'] } },
@@ -26,6 +18,15 @@ const config: PlaywrightTestConfig = defineConfig({
     { name: 'mobile-chrome', use: { ...devices['Pixel 7'] } },
     { name: 'mobile-safari', use: { ...devices['iPhone 14'] } },
   ],
+  reporter: [['list'], ['html', { outputFolder: '.output/report', open: 'never' }]],
+  retries: 0,
+  testDir: './tests',
+  testMatch: '**/*.spec.ts',
+  timeout: 30_000,
+  use: {
+    baseURL: `http://localhost:${PORT}/`,
+    trace: 'off',
+  },
   webServer: {
     command: `pnpm exec vite --port ${PORT} --strictPort`,
     cwd: import.meta.dirname,

@@ -5,7 +5,8 @@
  * attribute, and is not a binding. An `<option>`'s change is handled by its enclosing `<select>`.
  */
 
-import { child, jsxAttributes, jsxName, type Node, problemMeta, type Rule } from '../ast.ts';
+import { child, jsxAttributes, jsxName, problemMeta } from '../ast.ts';
+import type { Node, Rule } from '../ast.ts';
 
 const CONTROLLED = ['value', 'checked', 'selected'];
 const HANDLERS = ['onInput', 'onChange', 'onClick', 'on:input', 'on:change', 'on:click'];
@@ -35,7 +36,6 @@ function isBinding(attribute: Node): boolean {
 }
 
 export const controlled: Rule = {
-  meta: problemMeta('A bound value/checked/selected only on an element that handles its change.'),
   create(context) {
     return {
       JSXOpeningElement(node) {
@@ -57,4 +57,5 @@ export const controlled: Rule = {
       },
     };
   },
+  meta: problemMeta('A bound value/checked/selected only on an element that handles its change.'),
 };

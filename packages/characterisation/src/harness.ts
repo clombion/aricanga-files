@@ -54,7 +54,7 @@ function hookConsole(state: ChxState): void {
 
 function bus(): ChxState {
   if (window.chxResults === undefined) {
-    const state: ChxState = { records: [], diagnostics: [], done: false };
+    const state: ChxState = { diagnostics: [], done: false, records: [] };
     window.chxResults = state;
     hookConsole(state);
     return state;
@@ -64,7 +64,7 @@ function bus(): ChxState {
 
 function paint(): void {
   const state = bus();
-  let pre = document.getElementById('results');
+  let pre = document.querySelector('#results');
   if (pre === null) {
     pre = document.createElement('pre');
     pre.id = 'results';

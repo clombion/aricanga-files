@@ -95,11 +95,11 @@ export function checkBuild(app: string, root: string = REPO_ROOT): BuildResult {
     const built = buildApp(app, outDir, root);
     return {
       app,
-      status: built.status,
       output: built.stdout + built.stderr,
+      status: built.status,
       written: writes(before, checkoutState(root)),
     };
   } finally {
-    rmSync(outDir, { recursive: true, force: true });
+    rmSync(outDir, { force: true, recursive: true });
   }
 }

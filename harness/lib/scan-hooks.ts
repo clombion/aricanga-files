@@ -2,7 +2,8 @@
 
 import { afterAll, beforeAll } from 'vitest';
 
-import { openScan, type Scan, scannedFiles } from './checker.ts';
+import { openScan, scannedFiles } from './checker.ts';
+import type { Scan } from './checker.ts';
 
 /** Open a scan over `paths` (with `sources` overlaid) for the check's tests; the result reads it. */
 export function useScan(
@@ -13,6 +14,7 @@ export function useScan(
   beforeAll(() => {
     scan = openScan(paths(), sources());
   }, 120_000);
+
   afterAll(() => {
     scan?.close();
   });

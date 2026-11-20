@@ -8,7 +8,8 @@
 import { describe, expect, test } from 'vitest';
 
 import { BlockError, Doc } from '../lib/docs.ts';
-import { blocks, type Files, GENERATORS, type Generators, problems, rendered, run } from '../lib/generated.ts';
+import { blocks, GENERATORS, problems, rendered, run } from '../lib/generated.ts';
+import type { Files, Generators } from '../lib/generated.ts';
 import { REPO_ROOT } from '../lib/paths.ts';
 import { finished } from '../lib/tools.ts';
 
@@ -36,7 +37,7 @@ describe('the generated-docs check', () => {
   test('sees a hand-edited block as stale, and rendering restores it', () => {
     const doc = new Doc('docs/planted.md', PLANTED);
     expect(problems(doc, GENERATORS)).toEqual([
-      { path: 'docs/planted.md', line: 3, message: 'block "tasks" is stale: run `pnpm run fix`', writingFixesIt: true },
+      { line: 3, message: 'block "tasks" is stale: run `pnpm run fix`', path: 'docs/planted.md', writingFixesIt: true },
     ]);
     expect(problems(new Doc('docs/planted.md', rendered(doc, GENERATORS)), GENERATORS)).toEqual([]);
   });
@@ -44,7 +45,7 @@ describe('the generated-docs check', () => {
   test('refuses an unknown block name and leaves it as it is', () => {
     const doc = new Doc('docs/planted.md', PLANTED.replaceAll('tasks', 'planted'));
     expect(problems(doc, GENERATORS)).toEqual([
-      { path: 'docs/planted.md', line: 3, message: 'no generator is named "planted"', writingFixesIt: false },
+      { line: 3, message: 'no generator is named "planted"', path: 'docs/planted.md', writingFixesIt: false },
     ]);
     expect(rendered(doc, GENERATORS)).toBe(doc.text);
   });

@@ -21,9 +21,9 @@ export function createEventBus(): EventBus {
   return {
     emit(event) {
       const set = handlers.get(event.type);
-      if (set === undefined) return;
+      if (set === undefined) {return;}
       // A snapshot: a handler may unsubscribe while the event is being delivered.
-      for (const handler of Array.from(set)) handler(event);
+      for (const handler of [...set]) {handler(event);}
     },
     on(type, handler) {
       let set = handlers.get(type);

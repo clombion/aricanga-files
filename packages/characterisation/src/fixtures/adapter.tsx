@@ -4,10 +4,11 @@
  */
 
 import { render } from '@solidjs/web';
-import { createMemo, createRoot, createStore, flush, For, reconcile } from 'solid-js';
+import { For, createMemo, createRoot, createStore, flush, reconcile } from 'solid-js';
 
 import { markDone, record } from '../harness';
-import { errorText, type Message, mount, settle } from '../support';
+import { errorText, mount, settle } from '../support';
+import type { Message } from '../support';
 
 interface Snapshot {
   readonly messages: readonly Message[];
@@ -37,9 +38,9 @@ export async function run(): Promise<void> {
   const kept = ['a', 'b', 'c'].every((id) => before.get(id) === after.get(id));
   record({
     id: 'adapter/reconcile-keeps-nodes-by-id',
+    note: `nodes kept for a,b,c: ${String(kept)}; b text: ${after.get('b')?.textContent ?? '<none>'}; items: ${after.size}`,
     ok: kept && after.get('b')?.textContent === 'TWO' && after.size === 4,
     threw: false,
-    note: `nodes kept for a,b,c: ${String(kept)}; b text: ${after.get('b')?.textContent ?? '<none>'}; items: ${after.size}`,
   });
 
   await new Promise<void>((resolve) => {
@@ -51,9 +52,9 @@ export async function run(): Promise<void> {
   });
   record({
     id: 'adapter/apply-from-timer',
+    note: `after a timer apply: ${host.textContent ?? ''}`,
     ok: host.querySelector('li')?.textContent === 'from a timer' && host.querySelectorAll('li').length === 1,
     threw: false,
-    note: `after a timer apply: ${host.textContent ?? ''}`,
   });
   dispose();
 

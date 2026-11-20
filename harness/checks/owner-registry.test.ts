@@ -10,8 +10,10 @@
 
 import { describe, expect, test } from 'vitest';
 
-import { type Scan, scannedFiles, sourceOf } from '../lib/checker.ts';
-import { keyOf, ownerUses, RULES, type Site, sites } from '../lib/owners.ts';
+import { scannedFiles, sourceOf } from '../lib/checker.ts';
+import type { Scan } from '../lib/checker.ts';
+import { keyOf, ownerUses, RULES, sites } from '../lib/owners.ts';
+import type { Site } from '../lib/owners.ts';
 import { usePlanted, useScan } from '../lib/scan-hooks.ts';
 import { tracked } from '../lib/source-files.ts';
 

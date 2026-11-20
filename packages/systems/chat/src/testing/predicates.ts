@@ -1,4 +1,5 @@
-import { type ReduceRecord, stateOf } from '@narratives/foundation';
+import { stateOf } from '@narratives/foundation';
+import type { ReduceRecord } from '@narratives/foundation';
 import type { FixtureRun, Violation } from '@narratives/foundation/testing';
 import { declaredChatId, notificationOf, receiptChangeOf } from '../effects';
 import type { ChatState } from '../state';
@@ -28,7 +29,7 @@ export function routingOwnership(run: FixtureRun): Violation | null {
         const inHistory = (state.messageHistory[target] ?? []).some((m) => m.text === input.step.text);
         const inDeferred = (state.deferredMessages[target] ?? []).some((m) => m.text === input.step.text);
         if (!inHistory && !inDeferred) {
-          return { rule: 'routing-ownership', detail: `message for "${target}" reached neither history nor deferred`, at };
+          return { at, detail: `message for "${target}" reached neither history nor deferred`, rule: 'routing-ownership' };
         }
       }
     }
@@ -44,13 +45,13 @@ export function notifyOnce(run: FixtureRun): Violation | null {
   for (const rec of run.trace) {
     const { input } = rec;
     const opened = input.source === 'player' ? openedChat(input.command) : undefined;
-    if (opened !== undefined) notified.delete(opened);
+    if (opened !== undefined) {notified.delete(opened);}
     for (const eff of rec.effects) {
       const notification = notificationOf(eff);
       if (notification !== undefined) {
         const { chatId } = notification;
         if (notified.has(chatId)) {
-          return { rule: 'notify-once', detail: `chat "${chatId}" notified twice in one epoch`, at };
+          return { at, detail: `chat "${chatId}" notified twice in one epoch`, rule: 'notify-once' };
         }
         notified.add(chatId);
       }
@@ -67,7 +68,7 @@ export function seedExclusion(run: FixtureRun): Violation | null {
     const { input } = rec;
     if (input.source === 'lifecycle' && input.lifecycle.kind === 'init') {
       if (rec.effects.some((e) => e.kind === 'chat/showNotification')) {
-        return { rule: 'seed-exclusion', detail: 'seed init emitted a notification', at };
+        return { at, detail: 'seed init emitted a notification', rule: 'seed-exclusion' };
       }
     }
     at += 1;
@@ -81,9 +82,9 @@ export function hwmMonotonic(run: FixtureRun): Violation | null {
   let at = 0;
   for (const rec of run.trace) {
     for (const [chatId, cursor] of Object.entries(asChat(rec).lastReadMessageId)) {
-      if (cursor !== null) set.add(chatId);
+      if (cursor !== null) {set.add(chatId);}
       else if (set.has(chatId)) {
-        return { rule: 'hwm-monotonic', detail: `read cursor for "${chatId}" reset to null`, at };
+        return { at, detail: `read cursor for "${chatId}" reset to null`, rule: 'hwm-monotonic' };
       }
     }
     at += 1;
@@ -99,7 +100,7 @@ export function forwardOnlyTime(run: FixtureRun): Violation | null {
     const { clock } = asChat(rec);
     if (clock !== null) {
       if (clock < last) {
-        return { rule: 'forward-only-time', detail: `clock went backward to ${clock} (was ${last})`, at };
+        return { at, detail: `clock went backward to ${clock} (was ${last})`, rule: 'forward-only-time' };
       }
       last = clock;
     }
@@ -116,7 +117,7 @@ export function effectsCarryChatId(run: FixtureRun): Violation | null {
     if (eff.kind.startsWith('chat/')) {
       const { declared, chatId } = declaredChatId(eff);
       if (declared && (chatId === null || chatId === undefined || chatId === '')) {
-        return { rule: 'effects-carry-chatid', detail: `effect "${eff.kind}" has an absent chatId` };
+        return { detail: `effect "${eff.kind}" has an absent chatId`, rule: 'effects-carry-chatid' };
       }
     }
   }
@@ -124,7 +125,7 @@ export function effectsCarryChatId(run: FixtureRun): Violation | null {
 }
 
 // Receipt monotonic (#13): a message receipt only advances sent → delivered → read.
-const RECEIPT_RANK: Readonly<Record<string, number>> = { sent: 0, delivered: 1, read: 2 };
+const RECEIPT_RANK: Readonly<Record<string, number>> = { delivered: 1, read: 2, sent: 0 };
 export function receiptMonotonic(run: FixtureRun): Violation | null {
   const seen = new Map<string, number>();
   for (const eff of run.effects) {
@@ -134,7 +135,7 @@ export function receiptMonotonic(run: FixtureRun): Violation | null {
       const rank = RECEIPT_RANK[receipt] ?? -1;
       const prev = seen.get(messageId) ?? -1;
       if (rank < prev) {
-        return { rule: 'receipt-monotonic', detail: `receipt for "${messageId}" regressed to "${receipt}"` };
+        return { detail: `receipt for "${messageId}" regressed to "${receipt}"`, rule: 'receipt-monotonic' };
       }
       seen.set(messageId, rank);
     }

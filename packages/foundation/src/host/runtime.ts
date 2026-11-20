@@ -1,11 +1,8 @@
 import type { InkRuntime } from '../ink/ink-runtime';
 import { encodeSnapshot } from './codec';
-import type { RenderContext, ReduceContext } from '../sim/context';
-import {
-  type DataRequest,
-  type DriveInkOp,
-  type Effect,
-  parseDataRequest, parseDriveInkOp, parseScheduleCommit } from '../sim/effect';
+import type { ReduceContext, RenderContext } from '../sim/context';
+import { parseDataRequest, parseDriveInkOp, parseScheduleCommit } from '../sim/effect';
+import type { DataRequest, DriveInkOp, Effect } from '../sim/effect';
 import { assertNever } from '../sim/exhaustive';
 import type { Input } from '../sim/input';
 import type { Router } from '../sim/router';
@@ -27,7 +24,7 @@ export interface Host {
 /** @public */
 export interface RuntimeConfig {
   readonly ink: InkRuntime;
-  readonly systems: ReadonlyArray<AnySystem>;
+  readonly systems: readonly AnySystem[];
   readonly host: Host;
   readonly router?: Router;
   readonly foreground?: SystemId;
@@ -59,7 +56,7 @@ export class Runtime {
 
   constructor(config: RuntimeConfig) {
     const first = config.systems[0];
-    if (first === undefined) throw new Error('Runtime requires at least one system');
+    if (first === undefined) {throw new Error('Runtime requires at least one system');}
 
     this.ink = config.ink;
     this.host = config.host;
@@ -68,7 +65,7 @@ export class Runtime {
     this.version = config.version ?? SNAPSHOT_VERSION;
     this.idSeq = config.seed ?? 0;
 
-    for (const system of config.systems) this.systems.set(system.id, system);
+    for (const system of config.systems) {this.systems.set(system.id, system);}
 
     this.foreground = config.foreground ?? first.id;
     if (!this.systems.has(this.foreground)) {
@@ -76,31 +73,35 @@ export class Runtime {
     }
 
     const initSeed = config.seed ?? 0;
-    for (const system of config.systems) this.states.set(system.id, system.init(initSeed));
+    for (const system of config.systems) {this.states.set(system.id, system.init(initSeed));}
   }
 
   /** Drive the system from an inbound value, then pump ink while ready. */
   send(input: Input<unknown>, target?: SystemId): void {
     switch (input.source) {
-      case 'story':
+      case 'story': {
         this.deliver(this.router.route(input.step, this.routeCtx()), input);
         break;
+      }
       case 'player':
-      case 'resume':
+      case 'resume': {
         this.deliver(this.requireTarget(target), input);
         break;
-      case 'lifecycle':
+      }
+      case 'lifecycle': {
         for (const id of this.systems.keys()) this.deliver(id, input);
         break;
-      default:
+      }
+      default: {
         assertNever(input);
+      }
     }
     this.pump();
   }
 
   /** Test seam: advance ink one step if ready. Returns whether it advanced. */
   step(): boolean {
-    if (this.blocked() || !this.ink.canContinue()) return false;
+    if (this.blocked() || !this.ink.canContinue()) {return false;}
     const step = this.ink.continue();
     this.deliver(this.router.route(step, this.routeCtx()), { source: 'story', step });
     return true;
@@ -112,8 +113,8 @@ export class Runtime {
 
   snapshot(): Snapshot {
     const state: Record<SystemId, unknown> = {};
-    for (const [id, st] of this.states) state[id] = st;
-    return { version: this.version, ink: this.ink.toJson(), idSeq: this.idSeq, state };
+    for (const [id, st] of this.states) {state[id] = st;}
+    return { idSeq: this.idSeq, ink: this.ink.toJson(), state, version: this.version };
   }
 
   restore(snap: Snapshot): void {
@@ -121,7 +122,7 @@ export class Runtime {
     this.idSeq = snap.idSeq;
     this.ink.loadJson(snap.ink);
     for (const [id, st] of Object.entries(snap.state)) {
-      if (this.systems.has(id)) this.states.set(id, st);
+      if (this.systems.has(id)) {this.states.set(id, st);}
     }
   }
 
@@ -131,7 +132,7 @@ export class Runtime {
     while (!this.blocked() && this.ink.canContinue()) {
       const step = this.ink.continue();
       this.deliver(this.router.route(step, this.routeCtx()), { source: 'story', step });
-      if (step.status !== 'continue') break;
+      if (step.status !== 'continue') {break;}
     }
   }
 
@@ -142,19 +143,20 @@ export class Runtime {
     const result = system.reduce(this.states.get(id), input, ctx);
     this.idSeq = n;
     this.states.set(id, result.state);
-    this.observer?.observe({ systemId: id, input, effects: result.effects, state: result.state });
-    for (const effect of result.effects) this.execute(id, effect);
+    this.observer?.observe({ effects: result.effects, input, state: result.state, systemId: id });
+    for (const effect of result.effects) {this.execute(id, effect);}
   }
 
   private execute(originId: SystemId, effect: Effect): void {
     switch (effect.family) {
-      case 'drive-ink':
+      case 'drive-ink': {
         this.driveInk(parseDriveInkOp(effect.payload));
         return;
+      }
       case 'schedule': {
         const { delayMs, token } = parseScheduleCommit(effect.payload);
         this.host.scheduler.schedule(delayMs, () => {
-          this.send({ source: 'resume', resume: { kind: 'commit-fired', token } }, originId);
+          this.send({ resume: { kind: 'commit-fired', token }, source: 'resume' }, originId);
         });
         return;
       }
@@ -162,40 +164,47 @@ export class Runtime {
         void this.fetchThenResume(parseDataRequest(effect.payload), originId);
         return;
       }
-      case 'present':
+      case 'present': {
         this.host.present(effect);
         return;
-      case 'persist':
+      }
+      case 'persist': {
         this.host.store.save(encodeSnapshot(this.snapshot()));
         return;
-      default:
+      }
+      default: {
         assertNever(effect.family);
+      }
     }
   }
 
   private async fetchThenResume(request: DataRequest, originId: SystemId): Promise<void> {
     const value = await this.host.fetchData(request);
-    this.send({ source: 'resume', resume: { kind: 'data-arrived', request, value } }, originId);
+    this.send({ resume: { kind: 'data-arrived', request, value }, source: 'resume' }, originId);
   }
 
   private driveInk(op: DriveInkOp): void {
     switch (op.op) {
-      case 'choose':
+      case 'choose': {
         this.ink.choose(op.index);
         return;
-      case 'save-snap':
+      }
+      case 'save-snap': {
         this.host.store.save(this.ink.toJson());
         return;
+      }
       case 'load-snap': {
         const json = this.host.store.load();
-        if (json !== null) this.ink.loadJson(json);
+        if (json !== null) {this.ink.loadJson(json);}
         return;
       }
-      case 'goto':
+      case 'goto': {
         // Knot navigation is added with the physics that needs it.
         return;
-      default:
+      }
+      default: {
         assertNever(op);
+      }
     }
   }
 
@@ -205,7 +214,7 @@ export class Runtime {
 
   private blocked(): boolean {
     for (const [id, state] of this.states) {
-      if (this.systemOrThrow(id).status(state) !== 'free') return true;
+      if (this.systemOrThrow(id).status(state) !== 'free') {return true;}
     }
     return false;
   }
@@ -219,7 +228,7 @@ export class Runtime {
 
   private systemOrThrow(id: SystemId): AnySystem {
     const system = this.systems.get(id);
-    if (system === undefined) throw new Error(`unknown system "${id}"`);
+    if (system === undefined) {throw new Error(`unknown system "${id}"`);}
     return system;
   }
 }

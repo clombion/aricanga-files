@@ -1,4 +1,5 @@
-import { type Host, Runtime } from '../host/runtime';
+import { Runtime } from '../host/runtime';
+import type { Host } from '../host/runtime';
 import type { InkRuntime } from '../ink/ink-runtime';
 import type { RenderContext } from '../sim/context';
 import type { Input } from '../sim/input';
@@ -9,7 +10,7 @@ import type { AnySystem } from '../sim/system';
 /** @public */
 export interface ExperienceConfig {
   readonly ink: InkRuntime;
-  readonly systems: ReadonlyArray<AnySystem>;
+  readonly systems: readonly AnySystem[];
   readonly host: Host;
   readonly foreground?: SystemId;
   readonly router?: Router;
@@ -33,10 +34,10 @@ export interface Experience {
 export function createExperience(config: ExperienceConfig): Experience {
   const runtime = new Runtime(config);
   return {
-    send: (input, target) => runtime.send(input, target),
+    restore: (snap) =>{  runtime.restore(snap); },
+    send: (input, target) =>{  runtime.send(input, target); },
+    snapshot: () => runtime.snapshot(),
     step: () => runtime.step(),
     view: (id, render) => runtime.view(id, render),
-    snapshot: () => runtime.snapshot(),
-    restore: (snap) => runtime.restore(snap),
   };
 }

@@ -13,7 +13,7 @@ export async function run(host: HTMLElement, storyJson: string): Promise<void> {
   host.replaceChildren();
   while (runtime.canContinue()) {
     const step = runtime.continue();
-    if (!step.text) continue;
+    if (!step.text) {continue;}
     const vm = reduceStep(step);
     const el = new SkMessage();
     el.text = vm.speaker ? `${vm.speaker}: ${vm.text}` : vm.text;
@@ -22,11 +22,11 @@ export async function run(host: HTMLElement, storyJson: string): Promise<void> {
 }
 
 if (typeof document !== 'undefined') {
-  const host = document.getElementById('app');
+  const host = document.querySelector<HTMLElement>('#app');
   if (host) {
     void fetch('/story.json')
-      .then((r) => r.text())
-      .then((json) => run(host, json))
+      .then( async (r) => r.text())
+      .then( async (json) => run(host, json))
       .catch((error: unknown) => {
         // The failure is shown where the experience would have rendered.
         host.textContent = `walking skeleton failed: ${error instanceof Error ? error.message : 'unknown error'}`;
