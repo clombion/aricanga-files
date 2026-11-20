@@ -1,0 +1,26 @@
+import { defineConfig } from 'vite';
+import solid from '@solidjs/vite-plugin';
+
+// Dev-mode Solid build so the runtime's structured diagnostics ([CODE] message)
+// print to the console — that console stream is what the characterisation specs
+// assert against. `mode: 'development'` is forced regardless of how vite is
+// invoked, so `vite build` + `vite preview` and `vite dev` both carry the dev
+// runtime. The native @solidjs/compiler is used (no Babel).
+export default defineConfig({
+  root: import.meta.dirname,
+  plugins: [solid({ dev: true })],
+  define: {
+    // Belt-and-braces: ensure the dev runtime condition resolves even under build.
+    'import.meta.env.DEV': 'true',
+  },
+  resolve: {
+    conditions: ['development', 'browser'],
+  },
+  server: { port: 8100 },
+  preview: { port: 8100 },
+  build: {
+    target: 'es2022',
+    minify: false,
+    sourcemap: true,
+  },
+});

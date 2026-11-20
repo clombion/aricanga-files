@@ -67,3 +67,6 @@ backlog
 .env
 experiences/*/utils/translation/.env
 
+
+# Characterisation suite (Playwright) output
+packages/characterisation/.output/

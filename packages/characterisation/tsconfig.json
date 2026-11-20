@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "jsx": "preserve",
+    "jsxImportSource": "@solidjs/web",
+    "types": ["vite/client"],
+    "composite": false,
+    "declaration": false,
+    "noEmit": true
+  },
+  "include": ["src", "tests", "vite.config.ts", "playwright.characterisation.config.ts"]
+}
