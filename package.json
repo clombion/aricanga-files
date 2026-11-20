@@ -132,5 +132,11 @@
   },
   "engines": {
     "node": ">=22.18.0"
+  },
+  "imports": {
+    "#lib/*": "./harness/lib/*",
+    "#checks/*": "./harness/checks/*",
+    "#lint-rules/*": "./harness/lint-rules/*",
+    "#scripts/*": "./harness/scripts/*"
   }
 }
