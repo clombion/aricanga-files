@@ -41,8 +41,8 @@ upgrade reruns the suite before it lands.
   id keeps the DOM nodes of every item whose id persists, a changed field
   updates in place, and applying from a timer works the same way.
 - A write from a component body or a memo throws
-  `REACTIVE_WRITE_IN_OWNED_SCOPE` in dev. The adapter is the one writer, and
-  `createStore`/`reconcile` appear only in its module (lint `store-owner`).
+  `REACTIVE_WRITE_IN_OWNED_SCOPE` in dev. Writes come from the adapter, and the lint
+  `store-owner` holds `createStore`/`reconcile` to its module.
 - A store's draft respects `readonly`, so the store's internal state type is
   writable while the view-model types parts receive stay readonly.
 
