@@ -27,10 +27,10 @@ const PLANTS: Readonly<Record<string, string>> = {
     "export const own: Unread = 'a';",
     '',
   ].join('\n'),
-  'packages/systems/__types_reader.ts': "import type { Read } from '../foundation/src/__types_owner';\nexport const x: Read = 1;\n",
+  'harness/checks/__types.test.ts': "import type { ReadByCheck } from '../../packages/foundation/src/__types_owner';\nexport const z: ReadByCheck = { a: 1 };\n",
   'packages/foundation/src/__types_index.ts': "export type { OnlyReexported } from './__types_owner';\n",
   'packages/systems/__types.test.ts': "import type { ReadByTest } from '../foundation/src/__types_owner';\nexport const y: ReadByTest = 2;\n",
-  'harness/checks/__types.test.ts': "import type { ReadByCheck } from '../../packages/foundation/src/__types_owner';\nexport const z: ReadByCheck = { a: 1 };\n",
+  'packages/systems/__types_reader.ts': "import type { Read } from '../foundation/src/__types_owner';\nexport const x: Read = 1;\n",
 };
 
 const plantedScan = usePlanted(new Map(Object.entries(PLANTS)));

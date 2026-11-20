@@ -13,6 +13,11 @@ import { runPlanted } from '#lib/planted-vitest.ts';
 
 const HARNESS_ID = 'network-guard';
 
+/** A port number given before the host, as `net.connect(port, host)` takes them. */
+const DISCARD_PORT = 9;
+/** A port number given alone, which names no host. */
+const HTTP_PORT = 80;
+
 const PLANTED = `import dns from 'node:dns';
 import net from 'node:net';
 import { expect, test } from 'vitest';
@@ -76,13 +81,17 @@ describe('the guard', () => {
     expect(isLocalHost(host)).toBe(local);
   });
 
-  test('reads the host of each connect and fetch form', () => {
+  test('reads the host of each connect form', () => {
     expect.hasAssertions();
-    expect(connectHost([9, '192.0.2.1'])).toBe('192.0.2.1');
+    expect(connectHost([DISCARD_PORT, '192.0.2.1'])).toBe('192.0.2.1');
     expect(connectHost([{ host: 'example.com', port: 443 }])).toBe('example.com');
     expect(connectHost([{ path: '/tmp/planted.sock' }])).toBeUndefined();
     expect(connectHost(['/tmp/planted.sock'])).toBeUndefined();
-    expect(connectHost([80])).toBeUndefined();
+    expect(connectHost([HTTP_PORT])).toBeUndefined();
+  });
+
+  test('reads the host of each fetch form', () => {
+    expect.hasAssertions();
     expect(fetchHost('https://example.com/x')).toBe('example.com');
     expect(fetchHost(new Request('http://192.0.2.1/'))).toBe('192.0.2.1');
     expect(fetchHost('/relative')).toBe('localhost');
@@ -93,7 +102,7 @@ describe('the guards, through a planted Vitest run', () => {
   test('fail a connection, a lookup and a fetch of another host, and pass this machine', () => {
     expect.hasAssertions();
     const outcomes = runPlanted({ 'network.test.ts': PLANTED });
-    expect([...outcomes].map(([name, outcome]) => [name, outcome.status])).toStrictEqual([
+    expect([...outcomes].map(([name, { status }]: readonly [string, Readonly<{ status: string }>]) => [name, status])).toStrictEqual([
       ['a connection to another host trips', 'failed'],
       ['a lookup of another host trips', 'failed'],
       ['a fetch of another host trips', 'failed'],

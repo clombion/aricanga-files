@@ -126,7 +126,7 @@ function knipEntries(config: unknown): Entry[] {
   const workspaces = object(fields['workspaces'] ?? {}, 'workspaces');
   return [
     ...strings(fields['ignore'], 'ignore').map((glob) => ({ glob, tool: 'knip ignore' })),
-    ...Object.entries(workspaces).flatMap(([workspace, settings]) =>
+    ...Object.entries(workspaces).flatMap(([workspace, settings]: readonly [string, unknown]) =>
       strings(object(settings, workspace)['ignore'], `${workspace}.ignore`).map((glob) => ({
         glob: workspace === '.' ? glob : `${workspace}/${glob}`,
         tool: `knip workspaces[${workspace}].ignore`,

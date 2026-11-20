@@ -10,7 +10,7 @@
  */
 
 import { FLOOR, ListingError, listing, tracked } from '#lib/source-files.ts';
-import { TEST_FILE, coverageReached, oxfmtFiles, oxlintFiles, projectDirectory, projectMembers } from './scan-sets.sets.ts';
+import { coverageReached, isTestFile, oxfmtFiles, oxlintFiles, projectDirectory, projectMembers } from './scan-sets.sets.ts';
 import { describe, expect, test } from 'vitest';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { Exemptions } from '#lib/exemptions.ts';
@@ -92,7 +92,7 @@ function fileProblems(path: string, holding: readonly string[]): readonly string
   if (production.length > ONE_PROJECT) {
     return [`${path}: in ${production.length} production projects`];
   }
-  return TEST_FILE.test(path) && first !== undefined ? [`${path}: a test in the production project ${first}`] : [];
+  return isTestFile(path) && first !== undefined ? [`${path}: a test in the production project ${first}`] : [];
 }
 
 /**

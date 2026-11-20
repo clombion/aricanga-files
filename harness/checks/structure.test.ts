@@ -32,8 +32,8 @@ function doubleModules(paths: readonly string[]): string[] {
     stems.set(stem, (stems.get(stem) ?? new Set()).add(path.endsWith('.tsx') ? '.tsx' : '.ts'));
   }
   return [...stems]
-    .filter(([, kinds]) => kinds.size > ONE_KIND)
-    .map(([stem]) => stem)
+    .filter(([, kinds]: readonly [string, ReadonlySet<string>]) => kinds.size > ONE_KIND)
+    .map(([stem]: readonly [string, ReadonlySet<string>]) => stem)
     .toSorted();
 }
 

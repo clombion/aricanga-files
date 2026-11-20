@@ -10,7 +10,17 @@ import { matches } from '#lib/globs.ts';
 import { projects } from '#lib/projects.ts';
 import { relativeTo } from '#lib/relative.ts';
 
-const TEST_FILE: RegExp = /(?:\.test\.tsx?$|\/test\/|^harness\/checks\/|^packages\/characterisation\/tests\/)/u;
+const TEST_FILE = /(?:\.test\.tsx?$|\/test\/|^harness\/checks\/|^packages\/characterisation\/tests\/)/u;
+/**
+ * Whether a path is a test module: a test file, a file under a test folder, a harness check or a browser spec.
+ *
+ * @param {string} path - A repository path.
+ * @returns {boolean} Whether it holds tests.
+ */
+function isTestFile(path: string): boolean {
+  return TEST_FILE.test(path);
+}
+
 const UNFORMATTED = '\nconst   plantedUnformatted   =   1  ;\n';
 
 /**
@@ -101,7 +111,7 @@ async function coverageReached(files: readonly string[]): Promise<ReadonlySet<st
   const include = globs(coverage['include']);
   const exclude = globs(coverage['exclude']);
   const covered = (path: string): boolean => include.some((glob) => matches(glob, path)) && !exclude.some((glob) => matches(glob, path));
-  return new Set(files.filter((path) => TEST_FILE.test(path) || isTestInfrastructure(path) || covered(path)));
+  return new Set(files.filter((path) => isTestFile(path) || isTestInfrastructure(path) || covered(path)));
 }
 
-export { TEST_FILE, coverageReached, oxfmtFiles, oxlintFiles, projectDirectory, projectMembers };
+export { coverageReached, isTestFile, oxfmtFiles, oxlintFiles, projectDirectory, projectMembers };

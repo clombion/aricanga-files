@@ -41,9 +41,12 @@ const PLUGIN_PATH = './harness/lint-rules/plugin.ts';
 const README = 'harness/lint-rules/README.md';
 const TABLE_ROW = /^\| `aricanga\/(?<rule>[a-z-]+)` \| (?<description>.+) \|$/gmu;
 
+/** What the README reads of a rule: its description. */
+type Described = Readonly<{ meta: Readonly<{ docs: Readonly<{ description: string }> }> }>;
+
 const ruleNames = (): readonly string[] => Object.keys(RULES).toSorted();
 const descriptions = (): ReadonlyMap<string, string> =>
-  new Map(Object.entries(RULES).map(([name, rule]) => [name, rule.meta.docs.description]));
+  new Map(Object.entries(RULES).map(([name, rule]: readonly [string, Described]) => [name, rule.meta.docs.description]));
 
 /**
  * What breaks "every rule has a fixture folder with both kinds, and every folder a rule".
