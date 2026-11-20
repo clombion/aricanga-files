@@ -75,6 +75,8 @@ const CANONICAL: readonly (readonly [string, string])[] = [
   ['settings', 'export const x = process.env.X;\n'],
 ];
 
+const IN_A_TEST = 'packages/systems/chat/test/__in_a_test.test.ts';
+
 const NEAR_MISSES: readonly (readonly [string, string])[] = [
   ['packages/foundation/src/__miss_type.ts', "import type { ChildProcess } from 'node:child_process';\nexport let child: ChildProcess | undefined;\nexport let store: Storage | undefined;\n"],
   ['packages/foundation/src/__miss_own_now.ts', 'const clock = { now: () => 1 };\nclock.now();\n'],
@@ -84,64 +86,90 @@ const NEAR_MISSES: readonly (readonly [string, string])[] = [
   ['utils/__miss_uncovered.ts', 'Math.random();\n'],
 ];
 
-const plants = new Map<string, string>();
-const expected: Site[] = [];
-FORMS.forEach(([rule, text], index) => {
-  const path = `packages/foundation/src/__form_${index}.ts`;
-  plants.set(path, text);
-  expected.push({ path, rule });
-});
-for (const rule of RULES) {
-  for (const [name, text] of CANONICAL) {
-    for (const scope of name === rule.name ? rule.scopes : []) {
-      const path = `${scope.root}__root_${rule.name}.ts`;
-      plants.set(path, text);
-      expected.push({ path, rule: rule.name });
-    }
-  }
-}
-plants.set('packages/systems/chat/test/__in_a_test.test.ts', 'Math.random();\n');
-expected.push({ path: 'packages/systems/chat/test/__in_a_test.test.ts', rule: 'random' });
-for (const [path, text] of NEAR_MISSES) {
-  plants.set(path, text);
+/** A planted module, and the rule the scan must report in it, if any. */
+interface Plant {
+  readonly path: string;
+  readonly text: string;
+  readonly rule?: string;
 }
 
+/**
+ * One module per call form, each in a root every rule covers.
+ *
+ * @returns {readonly Plant[]} The form plants, each with its rule.
+ */
+function formPlants(): readonly Plant[] {
+  return FORMS.map(([rule, text]: readonly [string, string], index) => ({ path: `packages/foundation/src/__form_${index}.ts`, rule, text }));
+}
+
+/**
+ * One canonical use per root each rule covers.
+ *
+ * @returns {readonly Plant[]} The root plants, each with its rule.
+ */
+function rootPlants(): readonly Plant[] {
+  const canonical = new Map(CANONICAL);
+  return RULES.flatMap((rule) => {
+    const text = canonical.get(rule.name);
+    return text === undefined ? [] : rule.scopes.map((scope) => ({ path: `${scope.root}__root_${rule.name}.ts`, rule: rule.name, text }));
+  });
+}
+
+const PLANTED: readonly Plant[] = [
+  ...formPlants(),
+  ...rootPlants(),
+  { path: IN_A_TEST, rule: 'random', text: 'Math.random();\n' },
+  ...NEAR_MISSES.map(([path, text]: readonly [string, string]) => ({ path, text })),
+];
+const plants = new Map(PLANTED.map((plant) => [plant.path, plant.text] as const));
+const expected: readonly Site[] = PLANTED.flatMap((plant) => (plant.rule === undefined ? [] : [{ path: plant.path, rule: plant.rule }]));
 const plantedScan = usePlanted(plants);
 const repoScan = useScan();
 
-function sitesIn(scan: Scan, paths: readonly string[]): Site[] {
+/**
+ * The guarded-API sites in some modules of a scan.
+ *
+ * @param {() => Scan} scanOf - The hook that hands out the open scan.
+ * @param {readonly string[]} paths - The modules to read.
+ * @returns {Site[]} Their sites.
+ */
+function sitesIn(scanOf: () => Scan, paths: readonly string[]): Site[] {
+  const scan = scanOf();
   return paths.flatMap((path) => sites(scan, sourceOf(scan, path)));
 }
+
+/** Each owned scope, as the rule's name, its owner module and the rule. */
+const OWNED = RULES.flatMap((rule) =>
+  rule.scopes.flatMap((scope) => (scope.owner === null ? [] : [[rule.name, scope.owner, rule] as const])),
+);
 
 describe('the repository', () => {
   test('no guarded API is used outside its owner', () => {
     expect.hasAssertions();
-    expect(sitesIn(repoScan(), scannedFiles())).toStrictEqual([]);
+    expect(sitesIn(repoScan, scannedFiles())).toStrictEqual([]);
   });
 
-  test.each(RULES.flatMap((rule) => rule.scopes.flatMap((scope) => (scope.owner === null ? [] : [[rule.name, scope.owner] as const]))))(
-    'the %s owner %s exists and uses its API',
-    (name, owner) => {
-      expect.hasAssertions();
-      const rule = RULES.find((candidate) => candidate.name === name);
-      expect(tracked()).toContain(owner);
-      expect(rule !== undefined && ownerUses(repoScan(), sourceOf(repoScan(), owner), rule)).toBe(true);
-    },
-  );
+  test.each(OWNED)('the %s owner %s exists and uses its API', (_name, owner, rule) => {
+    expect.hasAssertions();
+    const scan = repoScan();
+    const file = sourceOf(scan, owner);
+    expect(tracked()).toContain(owner);
+    expect(ownerUses(scan, file, rule)).toBe(true);
+  });
 });
 
 describe('the scan', () => {
   test('sees each planted call form and each planted root', () => {
     expect.hasAssertions();
     expect(CANONICAL.map(([name]) => name).toSorted()).toStrictEqual(RULES.map((rule) => rule.name).toSorted());
-    const planted = [...plants.keys()].filter((path) => /__(form|root|in_a_test)/u.test(path));
-    const found = sitesIn(plantedScan(), planted).map(keyOf).toSorted();
-    expect(found).toStrictEqual(expected.map(keyOf).toSorted());
+    const planted = [...plants.keys()].filter((path) => /__(?:form|root|in_a_test)/u.test(path));
+    const found = sitesIn(plantedScan, planted).map((site) => keyOf(site)).toSorted();
+    expect(found).toStrictEqual(expected.map((site) => keyOf(site)).toSorted());
   });
 
   test.each(NEAR_MISSES.map(([path]) => path))('lets the near miss %s through', (path) => {
     expect.hasAssertions();
-    expect(sitesIn(plantedScan(), [path])).toStrictEqual([]);
+    expect(sitesIn(plantedScan, [path])).toStrictEqual([]);
   });
 });
 
