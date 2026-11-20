@@ -30,7 +30,7 @@ export function rec(state: ChxState, id: string): ChxRecord | undefined {
 }
 
 /** The policy the experiences ship under: scripts and styles from the page's own origin only. */
-export const POLICY = "script-src 'self'; style-src 'self'";
+const POLICY = "script-src 'self'; style-src 'self'";
 
 /** Serve the fixture page under `POLICY`. */
 export async function servePolicy(page: Page, fixture: string): Promise<void> {

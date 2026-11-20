@@ -9,6 +9,8 @@ import { join } from 'node:path';
 
 import { fromRoot, REPO_ROOT } from '../lib/paths.ts';
 import { bin, finished } from '../lib/tools.ts';
+import { json } from '../lib/config.ts';
+import { out } from '../lib/output.ts';
 
 const RESULTS = fromRoot('packages/characterisation/.output/results');
 const RUNS = 3;
@@ -23,11 +25,11 @@ for (let runIndex = 0; runIndex < RUNS; runIndex += 1) {
 }
 
 function record(status: number): void {
-  process.stdout.write(`performance run exited ${status}\n`);
+  out(`performance run exited ${status}\n`);
   for (const entry of readdirSync(RESULTS)) {
   const file = join(RESULTS, entry, 'performance.json');
   try {
-    const parsed: unknown = JSON.parse(readFileSync(file, 'utf8'));
+    const parsed = json(readFileSync(file, 'utf8'));
     if (typeof parsed === 'object' && parsed !== null && 'project' in parsed && 'render' in parsed && 'updates' in parsed) {
       const { project, render, updates } = parsed;
       if (typeof project === 'string' && typeof render === 'number' && typeof updates === 'number') {
@@ -45,4 +47,4 @@ function record(status: number): void {
 }
 const sorted = Object.fromEntries(Object.entries(baseline).toSorted(([a], [b]) => a.localeCompare(b)));
 writeFileSync(fromRoot('packages/characterisation/performance-baseline.json'), `${JSON.stringify(sorted, null, 2)}\n`);
-process.stdout.write(`baseline written for ${Object.keys(sorted).join(', ')}\n`);
+out(`baseline written for ${Object.keys(sorted).join(', ')}\n`);

@@ -13,7 +13,9 @@
  *
  * Every suppression that passes is a site `(path, tool:rule)`, and `SUPPRESSIONS` holds each site's
  * count and reason: a new suppression, or one that went away, fails until its count is updated.
- * oxlint's `reportUnusedDisableDirectives` fails a disable that suppresses nothing.
+ * oxlint's `reportUnusedDisableDirectives` fails a disable that suppresses nothing. The reader the
+ * census parses through closes its TypeScript session idempotently, so the exit hook after an explicit
+ * close is a no-op and a later parse opens a fresh session.
  */
 
 import { describe, expect, test } from 'vitest';
@@ -21,7 +23,7 @@ import { describe, expect, test } from 'vitest';
 import { Accepted, CountedExemptions, Exemptions, StaleExemptionError, site } from '../lib/exemptions.ts';
 import { heldFiles } from '../lib/scope.ts';
 import { textOf } from '../lib/source-files.ts';
-import { body, comments, parse } from '../lib/ts-source.ts';
+import { body, closeSession, comments, parse } from '../lib/ts-source.ts';
 
 export const HARNESS_ID = 'suppressions';
 
@@ -305,5 +307,16 @@ describe('the census', () => {
     expect(() => counted.assertExact([site('a.ts', 'oxlint:no-console'), site('a.ts', 'oxlint:no-console')])).toThrow(
       StaleExemptionError,
     );
+  });
+});
+
+describe('the source reader', () => {
+  test('closes its session once, and parses on a fresh session after', () => {
+    parse('packages/plant/src/a.ts', 'export const a = 1;\n');
+    closeSession();
+    expect(() => {
+      closeSession();
+    }).not.toThrow();
+    expect(parse('packages/plant/src/b.ts', 'export const b = 2;\n').statements).toHaveLength(1);
   });
 });

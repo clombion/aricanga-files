@@ -7,8 +7,7 @@ import { render } from '@solidjs/web';
 import { createMemo, flush } from 'solid-js';
 
 import { markDone, record } from '../harness';
-
-const settle = (milliseconds: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, milliseconds));
+import { errorText, settle } from '../support';
 
 function AsyncPart() {
   const text = createMemo(async () => {
@@ -27,7 +26,7 @@ export async function run(): Promise<void> {
     dispose = render(() => <AsyncPart />, host);
     flush();
   } catch (error) {
-    thrown = error instanceof Error ? error.message : String(error);
+    thrown = errorText(error);
   }
   const pending = host.textContent ?? '';
   await settle(60);

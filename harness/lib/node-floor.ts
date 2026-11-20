@@ -6,7 +6,7 @@
 import { json, object } from './config.ts';
 import { textOf } from './source-files.ts';
 
-export type Version = readonly [number, number, number];
+type Version = readonly [number, number, number];
 
 export class FloorError extends Error {
   override readonly name = 'FloorError';

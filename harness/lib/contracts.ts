@@ -16,7 +16,7 @@ import { relative as relativeTo } from './paths.ts';
 import { Accepted, Prefixes } from './exemptions.ts';
 
 /** The roots whose exported unions are contracts: the kernel's packages. */
-export const CONTRACT_ROOTS: Prefixes = new Prefixes(['packages/foundation/src/', 'packages/systems/']);
+const CONTRACT_ROOTS: Prefixes = new Prefixes(['packages/foundation/src/', 'packages/systems/']);
 
 /** A closed union: the module that owns it, its package, its name, and its words. */
 export interface Contract {

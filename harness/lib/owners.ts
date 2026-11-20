@@ -62,8 +62,8 @@ export const RULES: readonly Rule[] = [
       'crypto.randomInt',
       'crypto.getRandomValues',
     ]),
-    scopes: nobody(...KERNEL, 'experiences/sandbox/', 'harness/'),
-    why: 'ids and draws come from the seed, so a run replays',
+    scopes: [...nobody(...KERNEL, 'experiences/sandbox/'), { root: 'harness/', owner: 'harness/lib/stress.ts' }],
+    why: 'ids and draws come from the seed, so a run replays; the flake hunter draws the seed it prints and replays from',
   },
   {
     name: 'standard-streams',
@@ -183,7 +183,7 @@ function declaresOrNames(node: ast.Identifier): boolean {
 }
 
 /** The qualified names every runtime use of a platform API in a file resolves to. */
-export function uses(scan: Scan, file: ast.SourceFile): readonly string[] {
+function uses(scan: Scan, file: ast.SourceFile): readonly string[] {
   const { checker } = scan;
   const found: string[] = [];
   const add = (symbol: TsSymbol | undefined): void => {

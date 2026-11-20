@@ -1,30 +1,10 @@
-import { erase, parseTag } from '@narratives/foundation';
-import { type FixtureInput, type FixtureRun, runStream } from '@narratives/foundation/testing';
+import type { FixtureRun } from '@narratives/foundation/testing';
 import { hwmMonotonic } from '@narratives/system-chat/testing';
 import { expect, test } from 'vitest';
-import type { ChatMessageVM } from '../src/reduce';
-import { type ChatCommand, type ChatViewModel, chatSystem } from '../src/system';
-
-const story = (text: string, rawTags: string[] = []): FixtureInput => ({
-  input: {
-    source: 'story',
-    step: { text, tags: rawTags.map(parseTag), choices: [], externalCalls: [], status: 'continue' },
-  },
-});
-const open = (chatId: string): FixtureInput => ({
-  input: { source: 'player', command: { kind: 'open', payload: { chatId } } satisfies ChatCommand },
-  target: 'chat',
-});
-const close = (): FixtureInput => ({
-  input: { source: 'player', command: { kind: 'close', payload: undefined } satisfies ChatCommand },
-  target: 'chat',
-});
-
-const run = (inputs: FixtureInput[]): Promise<FixtureRun> =>
-  runStream({ systems: [erase(chatSystem)], foreground: 'chat' }, inputs);
+import { type ChatViewModel, chatSystem } from '../src/system';
+import { close, messagesOf as history, open, run, story } from './support';
 
 const cursor = (r: FixtureRun): ChatViewModel['lastRead'] => r.viewOf(chatSystem).lastRead;
-const history = (r: FixtureRun, chatId: string): readonly ChatMessageVM[] => r.viewOf(chatSystem).messages[chatId] ?? [];
 
 test('the read cursor advances to the last message when you close a chat (#1)', async () => {
   const r = await run([open('pat'), story('A', ['targetChat: pat']), story('B', ['targetChat: pat']), close()]);

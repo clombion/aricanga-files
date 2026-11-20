@@ -1,8 +1,8 @@
 /**
  * Vitest, under this project's settings, fails each planted test a bare configuration would pass.
  *
- * Each plant runs in a planted project holding a copy of `vitest.gate.config.ts`, as a spec of the
- * `rebuild` project. A plant must fail under the gate config and pass once only its setting is
+ * Each plant runs in a planted project holding a copy of `vitest.gate.config.ts` and the harness lib
+ * its setup file loads, as a spec of the `rebuild` project. A plant must fail under the gate config and pass once only its setting is
  * reverted (vitest's own `mergeConfig` over the copy): `.only` under `allowOnly: false`, a test with
  * no assertion under `requireAssertions`, an unimported `test` under `globals: false`, a test
  * leaning on a spy, a global or an env variable a previous test left under `restoreMocks`,
@@ -105,7 +105,7 @@ function merge(...layers: readonly Overrides[]): Overrides {
 
 /** The exit status of one plant run under the gate config with `overrides` merged over its `test`. */
 function status(plant: Plant, overrides: Overrides): number {
-  const project = new Project({ copies: ['vitest.gate.config.ts'] });
+  const project = new Project({ copies: ['vitest.gate.config.ts', 'harness/lib'] });
   try {
     project.write(
       'vitest.planted.config.ts',

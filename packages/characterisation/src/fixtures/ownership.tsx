@@ -9,6 +9,7 @@
 import { createEffect, createMemo, createRoot, flush, getOwner, runWithOwner } from 'solid-js';
 
 import { markDone, record } from '../harness';
+import { errorText } from '../support';
 
 class OwnerProbe extends HTMLElement {
   ownerAtConnect: unknown = 'not connected';
@@ -29,7 +30,7 @@ function inEffectCallback(body: () => void): string | undefined {
         try {
           body();
         } catch (error) {
-          thrown = error instanceof Error ? error.message : String(error);
+          thrown = errorText(error);
         }
       },
     );

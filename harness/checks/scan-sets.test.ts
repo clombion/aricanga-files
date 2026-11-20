@@ -15,6 +15,7 @@ import { join } from 'node:path';
 
 import { describe, expect, test } from 'vitest';
 
+import { isTestInfrastructure } from '../lib/checker.ts';
 import { object } from '../lib/config.ts';
 import { Exemptions } from '../lib/exemptions.ts';
 import { matches } from '../lib/globs.ts';
@@ -30,15 +31,7 @@ export const HARNESS_ID = 'scan-sets';
 
 /** Held files a scan set leaves out while the gap is being closed, keyed by `<path>: <scan set>`. */
 const UNREACHED = Exemptions.grouped({
-  'adopting: browser code, measured by the Playwright characterisation suite; bring it under a coverage include with browser coverage': [
-    'packages/characterisation/src/fixtures/mount-dispose.tsx: coverage',
-    'packages/characterisation/src/harness.ts: coverage',
-    'packages/characterisation/src/main.tsx: coverage',
-    'packages/characterisation/src/registry.ts: coverage',
-  ],
   'adopting: configuration modules no test imports; include them in coverage and import them from the settings checks': [
-    'packages/characterisation/playwright.characterisation.config.ts: coverage',
-    'packages/characterisation/vite.config.ts: coverage',
     'experiences/sandbox/vite.config.ts: coverage',
     'vitest.gate.config.ts: coverage',
   ],
@@ -145,7 +138,7 @@ function coverageReached(files: readonly string[]): ReadonlySet<string> {
   const exclude = Array.isArray(coverage['exclude']) ? coverage['exclude'].map(String) : [];
   return new Set(
     files.filter(
-      (path) => TEST_FILE.test(path) || (include.some((glob) => matches(glob, path)) && !exclude.some((glob) => matches(glob, path))),
+      (path) => TEST_FILE.test(path) || isTestInfrastructure(path) || (include.some((glob) => matches(glob, path)) && !exclude.some((glob) => matches(glob, path))),
     ),
   );
 }

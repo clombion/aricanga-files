@@ -3,7 +3,7 @@
  * label-has-associated-control knows only React's `htmlFor` and has no option for `for`.
  */
 
-import { child, children, jsxAttributes, jsxName, type Node, type Rule } from '../ast.ts';
+import { child, children, jsxAttributes, jsxName, type Node, problemMeta, type Rule } from '../ast.ts';
 
 const CONTROLS = new Set(['input', 'select', 'textarea', 'meter', 'output', 'progress']);
 const DEPTH = 2;
@@ -20,11 +20,7 @@ function wrapsControl(element: Node, depth: number): boolean {
 }
 
 export const labels: Rule = {
-  meta: {
-    type: 'problem',
-    docs: { description: 'A label has `for` or wraps its control; `htmlFor` is the React spelling.' },
-    schema: [],
-  },
+  meta: problemMeta('A label has `for` or wraps its control; `htmlFor` is the React spelling.'),
   create(context) {
     return {
       JSXElement(node) {

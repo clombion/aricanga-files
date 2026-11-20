@@ -3,10 +3,10 @@
  * what cleanup runs for the throwing branch; and what an uncaught throw does to later updates.
  */
 
-import { render } from '@solidjs/web';
 import { createSignal, createStore, Errored, flush, For, onSettled } from 'solid-js';
 
 import { markDone, record } from '../harness';
+import { errorText, mount, settle } from '../support';
 
 /** The store's own state: its draft is written in place. */
 interface Row {
@@ -33,8 +33,6 @@ function Part(props: { readonly vm: Row }) {
   );
 }
 
-const settle = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0));
-
 export async function run(): Promise<void> {
   const [store, setStore] = createStore<{ rows: Row[] }>({
     rows: [
@@ -42,20 +40,15 @@ export async function run(): Promise<void> {
       { id: 'b', text: 'beta', broken: false },
     ],
   });
-  const host = document.createElement('ul');
-  document.body.append(host);
-  const dispose = render(
-    () => (
-      <For each={store.rows}>
-        {(row) => (
-          <Errored fallback={(error) => <li data-fallback={row.id}>{String(error())}</li>}>
-            <Part vm={row} />
-          </Errored>
-        )}
-      </For>
-    ),
-    host,
-  );
+  const { host, dispose } = mount('ul', () => (
+    <For each={store.rows}>
+      {(row) => (
+        <Errored fallback={(error) => <li data-fallback={row.id}>{String(error())}</li>}>
+          <Part vm={row} />
+        </Errored>
+      )}
+    </For>
+  ));
   flush();
   await settle();
   const settledBefore = settledCleanups;
@@ -84,39 +77,33 @@ export async function run(): Promise<void> {
     note: `settled cleanups run when part b threw: ${settledCleanups - settledBefore}`,
   });
   dispose();
-  host.remove();
 
-  const bare = document.createElement('div');
-  document.body.append(bare);
   const [broken, setBroken] = createSignal(false);
   const [label, setLabel] = createSignal('first');
-  const disposeBare = render(
-    () => (
-      <p>
-        {(() => {
-          if (broken()) {
-            throw new Error('unbounded throw');
-          }
-          return label();
-        })()}
-      </p>
-    ),
-    bare,
-  );
+  const { host: bare, dispose: disposeBare } = mount('div', () => (
+    <p>
+      {(() => {
+        if (broken()) {
+          throw new Error('unbounded throw');
+        }
+        return label();
+      })()}
+    </p>
+  ));
   flush();
   let uncaught: string | undefined;
   try {
     setBroken(true);
     flush();
   } catch (error) {
-    uncaught = error instanceof Error ? error.message : String(error);
+    uncaught = errorText(error);
   }
   let later: string | undefined;
   try {
     setLabel('second');
     flush();
   } catch (error) {
-    later = error instanceof Error ? error.message : String(error);
+    later = errorText(error);
   }
   disposeBare();
   record({
@@ -125,7 +112,6 @@ export async function run(): Promise<void> {
     threw: uncaught !== undefined,
     note: `thrown: ${uncaught ?? '<nothing>'}; a later update threw: ${later ?? '<nothing>'}; text after it: ${bare.textContent ?? ''}`,
   });
-  bare.remove();
 
   await settle();
   markDone();

@@ -40,6 +40,11 @@ const OPTIONS = {
 /** Test infrastructure packages: they exist only to test, so every module of theirs is test support. */
 const TEST_PACKAGES = new Prefixes(['packages/characterisation/']);
 
+/** Whether a module belongs to a test infrastructure package (run by Playwright, not by Vitest). */
+export function isTestInfrastructure(path: string): boolean {
+  return TEST_PACKAGES.starts(path);
+}
+
 /**
  * A module that ships: not a Vitest test, a Playwright spec, test support under a `test/`, `tests/`
  * or `testing/` directory, or a module of a test infrastructure package. Every rule holds both
@@ -47,7 +52,7 @@ const TEST_PACKAGES = new Prefixes(['packages/characterisation/']);
  */
 export function isProduction(path: string): boolean {
   return (
-    !/\.(test|spec)\.tsx?$/.test(path) && !/(^|\/)(test|tests|testing)\//.test(path) && !TEST_PACKAGES.starts(path)
+    !/\.(test|spec)\.tsx?$/.test(path) && !/(^|\/)(test|tests|testing)\//.test(path) && !isTestInfrastructure(path)
   );
 }
 
@@ -86,11 +91,6 @@ export function openScan(paths: readonly string[], sources: Readonly<Record<stri
     throw new Error('the scan project did not open');
   }
   return { program: project.program, checker: project.checker, paths, close };
-}
-
-/** A scan over every held module. */
-export function repositoryScan(): Scan {
-  return openScan(scannedFiles());
 }
 
 /** The source file of a covered path. */

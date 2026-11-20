@@ -3,7 +3,7 @@
  * `(props: PartProps<T>)`. Reading `props.vm` keeps the prop reactive and the part replaceable.
  */
 
-import { child, children, heldComponentFile, IGNORE_SCHEMA, nameOf, type Node, type Rule } from '../ast.ts';
+import { child, children, componentRule, nameOf, type Node, type Rule } from '../ast.ts';
 
 const COMPONENT = /^[A-Z]/;
 const FUNCTIONS = new Set(['ArrowFunctionExpression', 'FunctionExpression']);
@@ -34,32 +34,22 @@ function problem(fn: Node): string | undefined {
   return 'a part takes exactly one prop, vm: type props as { vm: T } or PartProps<T>';
 }
 
-export const vmProp: Rule = {
-  meta: {
-    type: 'problem',
-    docs: { description: 'A component takes a single undestructured props with exactly one prop, vm.' },
-    schema: IGNORE_SCHEMA,
-  },
-  create(context) {
-    if (!heldComponentFile(context)) {
-      return {};
+export const vmProp: Rule = componentRule('A component takes a single undestructured props with exactly one prop, vm.', (context) => {
+  const check = (name: string | undefined, fn: Node): void => {
+    const why = name !== undefined && COMPONENT.test(name) ? problem(fn) : undefined;
+    if (why !== undefined) {
+      context.report({ message: `${name ?? ''}: ${why}`, node: fn });
     }
-    const check = (name: string | undefined, fn: Node): void => {
-      const why = name !== undefined && COMPONENT.test(name) ? problem(fn) : undefined;
-      if (why !== undefined) {
-        context.report({ message: `${name ?? ''}: ${why}`, node: fn });
+  };
+  return {
+    FunctionDeclaration(node) {
+      check(nameOf(child(node, 'id')), node);
+    },
+    VariableDeclarator(node) {
+      const init = child(node, 'init');
+      if (init !== undefined && FUNCTIONS.has(init.type)) {
+        check(nameOf(child(node, 'id')), init);
       }
-    };
-    return {
-      FunctionDeclaration(node) {
-        check(nameOf(child(node, 'id')), node);
-      },
-      VariableDeclarator(node) {
-        const init = child(node, 'init');
-        if (init !== undefined && FUNCTIONS.has(init.type)) {
-          check(nameOf(child(node, 'id')), init);
-        }
-      },
-    };
-  },
-};
+    },
+  };
+});

@@ -53,20 +53,28 @@ export function mount(files: ReadonlyMap<string, string>): () => void {
   };
 }
 
+/**
+ * Close the open session, if there is one. Idempotent: the session is forgotten before it is closed,
+ * so a second call (or the exit hook after an explicit close) finds nothing to close, and a later
+ * `api()` starts a fresh session instead of handing out a closed one.
+ */
+export function closeSession(): void {
+  const open = session;
+  session = undefined;
+  open?.close();
+}
+
 /** The process's one TypeScript API session; type-aware scans open their projects on it. */
 export function api(): API {
   if (session === undefined) {
-    const started = new API({
+    session = new API({
       cwd: REPO_ROOT,
       fs: {
         readFile: (fileName) => virtual.get(fileName),
         fileExists: (fileName) => (virtual.has(fileName) ? true : undefined),
       },
     });
-    process.once('exit', () => {
-      started.close();
-    });
-    session = started;
+    process.once('exit', closeSession);
   }
   return session;
 }
@@ -154,15 +162,15 @@ export function body(comment: string): string {
     .trim();
 }
 
-/** The local names a module imports from `module`, mapped to the names they import. */
-export function importsFrom(file: SourceFile, module: string): ReadonlyMap<string, string> {
+/**
+ * The local names a module imports from `module`, mapped to the names they import. `module` is a
+ * specifier, or a test of the specifier as the module writes it.
+ */
+export function importsFrom(file: SourceFile, module: string | ((specifier: string) => boolean)): ReadonlyMap<string, string> {
+  const named = typeof module === 'string' ? (specifier: string): boolean => specifier === module : module;
   const found = new Map<string, string>();
   for (const statement of file.statements) {
-    if (
-      isImportDeclaration(statement) &&
-      isStringLiteral(statement.moduleSpecifier) &&
-      statement.moduleSpecifier.text === module
-    ) {
+    if (isImportDeclaration(statement) && isStringLiteral(statement.moduleSpecifier) && named(statement.moduleSpecifier.text)) {
       const bindings = statement.importClause?.namedBindings;
       if (bindings !== undefined && isNamedImports(bindings)) {
         for (const element of bindings.elements) {

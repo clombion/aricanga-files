@@ -3,33 +3,28 @@
  * `default…` forms set initial state and leave the current value to the user.
  */
 
-import { render } from '@solidjs/web';
 import { createSignal, flush } from 'solid-js';
 
 import { markDone, record } from '../harness';
+import { mount } from '../support';
 
 export function run(): void {
   const [text, setText] = createSignal('bound');
   const [on, setOn] = createSignal(true);
   const [initial, setInitial] = createSignal('initial');
-  const host = document.createElement('form');
-  document.body.append(host);
-  const dispose = render(
-    () => (
-      <>
-        <input id="value" value={text()} onInput={(event) => setText(event.currentTarget.value)} />
-        <input id="checked" type="checkbox" checked={on()} onChange={(event) => setOn(event.currentTarget.checked)} />
-        <select id="selected" onChange={(event) => setOn(event.currentTarget.value === 'b')}>
-          <option value="a">a</option>
-          <option value="b" selected={on()}>
-            b
-          </option>
-        </select>
-        <input id="default" defaultValue={initial()} />
-      </>
-    ),
-    host,
-  );
+  const { host, dispose } = mount('form', () => (
+    <>
+      <input id="value" value={text()} onInput={(event) => setText(event.currentTarget.value)} />
+      <input id="checked" type="checkbox" checked={on()} onChange={(event) => setOn(event.currentTarget.checked)} />
+      <select id="selected" onChange={(event) => setOn(event.currentTarget.value === 'b')}>
+        <option value="a">a</option>
+        <option value="b" selected={on()}>
+          b
+        </option>
+      </select>
+      <input id="default" defaultValue={initial()} />
+    </>
+  ));
   flush();
   const value = host.querySelector<HTMLInputElement>('#value');
   const checked = host.querySelector<HTMLInputElement>('#checked');
@@ -68,6 +63,5 @@ export function run(): void {
     note: `checked after the signal turned false: ${String(checked?.checked)}`,
   });
   dispose();
-  host.remove();
   markDone();
 }

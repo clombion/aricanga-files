@@ -1,9 +1,9 @@
 /** Props: a part's single `vm` prop, read without destructuring, stays reactive; a destructured one does not. */
 
-import { render } from '@solidjs/web';
 import { createStore, flush } from 'solid-js';
 
 import { markDone, record } from '../harness';
+import { mount } from '../support';
 
 /** The store's own state: its draft is written in place. */
 interface Bubble {
@@ -22,17 +22,12 @@ function Destructured({ vm }: { readonly vm: Bubble }) {
 
 export function run(): void {
   const [store, setStore] = createStore<{ bubble: Bubble }>({ bubble: { text: 'before' } });
-  const host = document.createElement('div');
-  document.body.append(host);
-  const dispose = render(
-    () => (
-      <>
-        <Read vm={store.bubble} />
-        <Destructured vm={store.bubble} />
-      </>
-    ),
-    host,
-  );
+  const { host, dispose } = mount('div', () => (
+    <>
+      <Read vm={store.bubble} />
+      <Destructured vm={store.bubble} />
+    </>
+  ));
   flush();
   setStore((draft) => {
     draft.bubble.text = 'after';
@@ -59,6 +54,5 @@ export function run(): void {
     note: `a new vm object, read through props: ${readNew ?? ''}; destructured: ${destructuredNew ?? ''}`,
   });
   dispose();
-  host.remove();
   markDone();
 }

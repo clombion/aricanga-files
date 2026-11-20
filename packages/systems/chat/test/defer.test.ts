@@ -1,27 +1,9 @@
-import { erase, parseTag } from '@narratives/foundation';
-import { type FixtureInput, type FixtureRun, runStream } from '@narratives/foundation/testing';
+import type { FixtureRun } from '@narratives/foundation/testing';
 import { notifyOnce } from '@narratives/system-chat/testing';
 import { expect, test } from 'vitest';
-import type { ChatMessageVM } from '../src/reduce';
 import { notificationOf } from '../src/effects';
-import { type ChatCommand, chatSystem } from '../src/system';
+import { messagesOf as history, open, run, story } from './support';
 
-const story = (text: string, rawTags: string[] = []): FixtureInput => ({
-  input: {
-    source: 'story',
-    step: { text, tags: rawTags.map(parseTag), choices: [], externalCalls: [], status: 'continue' },
-  },
-});
-const open = (chatId: string): FixtureInput => ({
-  input: { source: 'player', command: { kind: 'open', payload: { chatId } } satisfies ChatCommand },
-  target: 'chat',
-});
-
-const run = (inputs: FixtureInput[]): Promise<FixtureRun> =>
-  runStream({ systems: [erase(chatSystem)], foreground: 'chat' }, inputs);
-
-const history = (r: FixtureRun, chatId: string): readonly ChatMessageVM[] =>
-  r.viewOf(chatSystem).messages[chatId] ?? [];
 const notifications = (r: FixtureRun, chatId: string): number =>
   r.effects.filter((e) => notificationOf(e)?.chatId === chatId).length;
 

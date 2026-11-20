@@ -80,7 +80,7 @@ function writes(before: ReadonlyMap<string, string>, after: ReadonlyMap<string, 
 }
 
 /** One app's build: whether it succeeded, its output, and what it wrote into the checkout. */
-export interface BuildResult {
+interface BuildResult {
   readonly app: string;
   readonly status: number;
   readonly output: string;

@@ -23,9 +23,7 @@ import {
   isElementAccessExpression,
   isFunctionDeclaration,
   isIdentifier,
-  isImportDeclaration,
   isImportSpecifier,
-  isNamedImports,
   isNewExpression,
   isNumericLiteral,
   isObjectLiteralExpression,
@@ -33,7 +31,6 @@ import {
   isPropertyAccessExpression,
   isPropertyAssignment,
   isSatisfiesExpression,
-  isStringLiteral,
   isVariableDeclaration,
   isVariableStatement,
 } from 'typescript/unstable/ast/is';
@@ -43,7 +40,7 @@ import { describe, expect, test } from 'vitest';
 import { Accepted, Exemptions, StaleExemptionError, site } from '../lib/exemptions.ts';
 import { heldFiles } from '../lib/scope.ts';
 import { textOf } from '../lib/source-files.ts';
-import { type Expression, type Node, type SourceFile, nodes, parse } from '../lib/ts-source.ts';
+import { type Expression, importsFrom, type Node, type SourceFile, nodes, parse } from '../lib/ts-source.ts';
 
 export const HARNESS_ID = 'exemption-lists';
 
@@ -233,25 +230,9 @@ function reads(root: Node): Set<string> {
   );
 }
 
-/** The names a module imports from the module at `target`, resolving relative specifiers. */
-function importedFrom(file: SourceFile, path: string, target: string): Set<string> {
-  const found = new Set<string>();
-  for (const statement of file.statements) {
-    if (
-      isImportDeclaration(statement) &&
-      isStringLiteral(statement.moduleSpecifier) &&
-      statement.moduleSpecifier.text.startsWith('.') &&
-      normalize(join(dirname(path), statement.moduleSpecifier.text)) === target
-    ) {
-      const bindings = statement.importClause?.namedBindings;
-      if (bindings !== undefined && isNamedImports(bindings)) {
-        for (const element of bindings.elements) {
-          found.add(element.name.text);
-        }
-      }
-    }
-  }
-  return found;
+/** Whether a module at `path` names the module at `target` with `specifier`. */
+function namesModule(path: string, target: string): (specifier: string) => boolean {
+  return (specifier) => specifier.startsWith('.') && normalize(join(dirname(path), specifier)) === target;
 }
 
 /** The fence's findings over `{path: source}` of harness modules. */
@@ -271,7 +252,7 @@ export function findings(modules: Readonly<Record<string, string>>): Finding[] {
       }
       const users = [
         file,
-        ...importers.filter(([otherPath, other]) => importedFrom(other, otherPath, path).has(name)).map(([, other]) => other),
+        ...importers.filter(([otherPath, other]) => importsFrom(other, namesModule(otherPath, path)).has(name)).map(([, other]) => other),
       ];
       const live = CONSULTED_BY_CALL.has(kind)
         ? users.some((user) => staleFailingReceivers(user).has(name))
