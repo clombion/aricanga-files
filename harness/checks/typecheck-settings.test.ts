@@ -14,8 +14,8 @@
  */
 
 import { describe, expect, test } from 'vitest';
+import { textOf, tracked } from '#lib/source-files.ts';
 import { Project } from '#lib/tools.ts';
-import { textOf } from '#lib/source-files.ts';
 
 const HARNESS_ID = 'typecheck-settings';
 
@@ -172,6 +172,11 @@ const SHAPES: readonly Plant[] = [
   },
 ];
 
+/** Where the harness library lives; the exemptions owner and its modules are copied from under it. */
+const LIB = 'harness/lib/';
+/** The exemptions owner and the modules it re-exports. */
+const EXEMPTIONS_MODULE = /^harness\/lib\/exemptions(?:\.ts|\/[^/]+\.ts)$/u;
+
 const SUPPORT: Readonly<Record<string, string>> = {
   'src/clean.ts': 'export function double(value: number): number {\n  return value * 2;\n}\n',
   'src/types.ts': 'export type Shape = { readonly kind: string };\n',
@@ -218,7 +223,9 @@ function plantedConfig(overrides: Readonly<Record<string, Setting>>): string {
 function plantAll(project: Project, overrides: Readonly<Record<string, Setting>>): void {
   project.write('node_modules/@typescript/lib-dom/package.json', JSON.stringify({ name: '@typescript/lib-dom', types: 'index.d.ts', version: '0.0.0' }));
   project.write('node_modules/@typescript/lib-dom/index.d.ts', 'declare const replacedLib: number;\n');
-  project.write('src/exemptions.ts', textOf('harness/lib/exemptions.ts'));
+  for (const path of tracked().filter((candidate) => EXEMPTIONS_MODULE.test(candidate))) {
+    project.write(`src/${path.slice(LIB.length)}`, textOf(path));
+  }
   for (const [path, text] of Object.entries(SUPPORT)) {
     project.write(path, text);
   }

@@ -120,7 +120,7 @@ function quotedValues(): ReadonlySet<string> {
 }
 
 /**
- * The rule ids the locked oxlint knows, as `plugin/rule` (`node/no-process-env`), read from its own listing.
+ * The rule ids the locked oxlint knows, each a plugin and a rule joined by a slash (`node/no-process-env`), read from its own listing.
  *
  * @returns {ReadonlySet<string>} The rule ids.
  */
