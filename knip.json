@@ -1,0 +1,127 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "ignoreWorkspaces": [
+    "packages/framework",
+    "packages/tests",
+    "packages/test-utils",
+    "experiences/aricanga"
+  ],
+  "ignoreDependencies": [
+    "@ai-sdk/anthropic",
+    "@ai-sdk/google",
+    "@ai-sdk/openai",
+    "@eslint/js",
+    "@narratives/framework",
+    "@narratives/test-utils",
+    "@viz-js/viz",
+    "ai",
+    "jscpd",
+    "remark-parse",
+    "unified",
+    "unist-util-visit",
+    "xstate",
+    "zod",
+    "@solidjs/compiler"
+  ],
+  "ignoreIssues": {
+    "harness/lib/checks.ts": [
+      "files"
+    ],
+    "harness/lib/config.ts": [
+      "exports"
+    ],
+    "harness/lib/exemptions.ts": [
+      "exports"
+    ],
+    "harness/lib/paths.ts": [
+      "exports"
+    ],
+    "harness/lib/process.ts": [
+      "types"
+    ],
+    "harness/lib/projects.ts": [
+      "exports"
+    ],
+    "harness/lib/scope.ts": [
+      "exports"
+    ],
+    "harness/lib/source-files.ts": [
+      "exports"
+    ],
+    "harness/lib/tools.ts": [
+      "exports"
+    ],
+    "packages/characterisation/src/harness.ts": [
+      "exports"
+    ],
+    "packages/characterisation/tests/_helpers.ts": [
+      "exports"
+    ],
+    "packages/systems/chat/src/model/defer.ts": [
+      "exports"
+    ],
+    "packages/systems/chat/src/model/read-state.ts": [
+      "exports"
+    ],
+    "packages/systems/chat/src/model/route.ts": [
+      "exports"
+    ],
+    "packages/systems/chat/src/model/time.ts": [
+      "exports"
+    ],
+    "packages/systems/chat/src/system.ts": [
+      "types"
+    ],
+    "packages/systems/chat/test/regression-ledger.ts": [
+      "exports",
+      "types"
+    ],
+    "packages/characterisation/playwright.characterisation.config.ts": [
+      "binaries"
+    ]
+  },
+  "workspaces": {
+    ".": {
+      "entry": [
+        "harness/scripts/*.ts",
+        "harness/checks/*.test.ts"
+      ],
+      "project": [
+        "harness/**/*.ts"
+      ],
+      "playwright": false
+    },
+    "packages/foundation": {
+      "project": [
+        "src/**/*.ts!"
+      ]
+    },
+    "packages/systems/chat": {
+      "project": [
+        "src/**/*.ts!",
+        "test/**/*.ts"
+      ]
+    },
+    "packages/systems/cards": {
+      "project": [
+        "src/**/*.ts!"
+      ]
+    },
+    "experiences/sandbox": {
+      "project": [
+        "src/**/*.ts!"
+      ]
+    },
+    "packages/characterisation": {
+      "project": [
+        "src/**/*.{ts,tsx}",
+        "tests/**/*.ts"
+      ],
+      "playwright": {
+        "config": [
+          "playwright.characterisation.config.ts"
+        ]
+      }
+    }
+  }
+}

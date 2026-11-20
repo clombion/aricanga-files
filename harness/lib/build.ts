@@ -26,7 +26,7 @@ export function apps(): readonly string[] {
 }
 
 /** Build one app in check mode into `outDir`, loading its config with Node's own loader. */
-export function buildApp(app: string, outDir: string, cwd: string = REPO_ROOT): Finished {
+function buildApp(app: string, outDir: string, cwd: string = REPO_ROOT): Finished {
   return finished(
     [
       bin('vite'),
@@ -52,7 +52,7 @@ export function buildApp(app: string, outDir: string, cwd: string = REPO_ROOT): 
  * The untracked and ignored files of a checkout (outside node_modules), each with its content hash
  * and modification time, so a rewrite with identical content still counts as a write.
  */
-export function checkoutState(root: string): ReadonlyMap<string, string> {
+function checkoutState(root: string): ReadonlyMap<string, string> {
   const status = finished(
     [
       'git',
@@ -82,7 +82,7 @@ export function checkoutState(root: string): ReadonlyMap<string, string> {
 }
 
 /** The paths a step created or changed between two checkout states. */
-export function writes(before: ReadonlyMap<string, string>, after: ReadonlyMap<string, string>): readonly string[] {
+function writes(before: ReadonlyMap<string, string>, after: ReadonlyMap<string, string>): readonly string[] {
   return [...after].filter(([path, hash]) => before.get(path) !== hash).map(([path]) => path);
 }
 
