@@ -167,6 +167,13 @@ describe('the scan', () => {
     expect(found).toStrictEqual(expected.map((site) => keyOf(site)).toSorted());
   });
 
+  test('plants a canonical use in every root of every rule, and each call form', () => {
+    expect.hasAssertions();
+    const roots = RULES.flatMap((rule) => rule.scopes.map((scope) => `${scope.root}__root_${rule.name}.ts`));
+    const forms = FORMS.map((_form, index) => `packages/foundation/src/__form_${index}.ts`);
+    expect([...plants.keys()].filter((path) => /__(?:form|root)_/u.test(path)).toSorted()).toStrictEqual([...roots, ...forms].toSorted());
+  });
+
   test.each(NEAR_MISSES.map(([path]) => path))('lets the near miss %s through', (path) => {
     expect.hasAssertions();
     expect(sitesIn(plantedScan, [path])).toStrictEqual([]);
