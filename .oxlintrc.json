@@ -101,5 +101,159 @@
     "vitest/no-focused-tests": "error",
     "vitest/no-disabled-tests": "error"
   },
-  "overrides": []
+  "overrides": [
+    {
+      "files": [
+        "packages/foundation/**"
+      ],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": [
+                  "@narratives/*",
+                  "sandbox",
+                  "**/systems/**",
+                  "**/experiences/**"
+                ],
+                "message": "foundation imports nothing from the rebuild (ADR-0005)"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": [
+        "packages/systems/chat/**"
+      ],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": [
+                  "@narratives/*",
+                  "!@narratives/foundation",
+                  "!@narratives/foundation/*",
+                  "!@narratives/system-chat",
+                  "!@narratives/system-chat/*",
+                  "**/experiences/**",
+                  "../../*/src/**",
+                  "!../../chat/src/**",
+                  "../../../*/src/**",
+                  "!../../../chat/src/**"
+                ],
+                "message": "a system imports only foundation: no other system, no experience, no POC (ADR-0005)"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": [
+        "packages/systems/cards/**"
+      ],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": [
+                  "@narratives/*",
+                  "!@narratives/foundation",
+                  "!@narratives/foundation/*",
+                  "!@narratives/system-cards",
+                  "!@narratives/system-cards/*",
+                  "**/experiences/**",
+                  "../../*/src/**",
+                  "!../../cards/src/**",
+                  "../../../*/src/**",
+                  "!../../../cards/src/**"
+                ],
+                "message": "a system imports only foundation: no other system, no experience, no POC (ADR-0005)"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": [
+        "experiences/sandbox/**"
+      ],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": [
+                  "@narratives/framework",
+                  "@narratives/framework/*",
+                  "@narratives/test-utils",
+                  "@narratives/test-utils/*",
+                  "**/aricanga/**",
+                  "../../experiences/**"
+                ],
+                "message": "an experience imports foundation and systems only: no other experience, no POC (ADR-0005)"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": [
+        "packages/characterisation/**",
+        "harness/**"
+      ],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": [
+                  "@narratives/framework",
+                  "@narratives/framework/*",
+                  "@narratives/test-utils",
+                  "@narratives/test-utils/*"
+                ],
+                "message": "the rebuild never imports the POC reference (ADR-0006, Scope)"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": [
+        "packages/systems/*/src/system.ts",
+        "packages/systems/*/src/model/**"
+      ],
+      "rules": {
+        "no-restricted-globals": [
+          "error",
+          {
+            "name": "Date",
+            "message": "no Date in a reducer: time is simulation-derived (ADR-0007)"
+          }
+        ],
+        "no-restricted-properties": [
+          "error",
+          {
+            "object": "Math",
+            "property": "random",
+            "message": "no Math.random in a reducer: ids come from ctx.nextId (ADR-0007)"
+          }
+        ]
+      }
+    }
+  ]
 }
