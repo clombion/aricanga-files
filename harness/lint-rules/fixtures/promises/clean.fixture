@@ -1,0 +1,4 @@
+// path: harness/scripts/promises-clean.ts
+export function settle(pending: Promise<number>): Promise<number> {
+  return pending.then((value) => value * 2).catch(() => 0);
+}

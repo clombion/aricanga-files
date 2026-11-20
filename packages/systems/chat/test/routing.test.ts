@@ -15,8 +15,7 @@ const run = (inputs: FixtureInput[]): Promise<FixtureRun> =>
   runStream({ systems: [erase(chatSystem)], foreground: 'chat' }, inputs);
 
 const messagesOf = (r: FixtureRun, chatId: string): readonly ChatMessageVM[] => {
-  const vm = r.view('chat') as { messages: Readonly<Record<string, readonly ChatMessageVM[]>> };
-  return vm.messages[chatId] ?? [];
+  return r.viewOf(chatSystem).messages[chatId] ?? [];
 };
 
 test('a # chat: tag sets the default route for subsequent messages (#1)', async () => {

@@ -1,0 +1,11 @@
+// path: packages/systems/chat/src/view/flags-fire.tsx
+import { createSignal } from 'solid-js';
+
+export function Thread(props: { vm: { title: string } }) {
+  const [loading, setLoading] = createSignal(true);
+  return (
+    <button type="button" onClick={() => setLoading(false)}>
+      {loading() ? '…' : props.vm.title}
+    </button>
+  );
+}

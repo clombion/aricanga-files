@@ -30,12 +30,12 @@ test('manifest ids are unique and every entry has a rationale', () => {
 // AC#3/#5 — every kernel-physics bug keeps a fixture + predicate + consuming task
 // alive (so the durable repro data can't silently rot).
 test('every kernel-physics entry has a non-empty fixture, predicate, and task', () => {
-  for (const e of LEDGER) {
-    if (e.disposition.kind === 'kernel-physics') {
-      expect(fixture(e.disposition.fixture).length).toBeGreaterThan(0);
-      expect(e.disposition.predicate).not.toBe('');
-      expect(e.disposition.task).toMatch(/^task-\d+$/);
-    }
+  const physics = LEDGER.flatMap((e) => (e.disposition.kind === 'kernel-physics' ? [e.disposition] : []));
+  expect(physics.length).toBeGreaterThan(0);
+  for (const disposition of physics) {
+    expect(fixture(disposition.fixture).length).toBeGreaterThan(0);
+    expect(disposition.predicate).not.toBe('');
+    expect(disposition.task).toMatch(/^task-\d+$/);
   }
 });
 

@@ -5,11 +5,11 @@ import type { RenderContext } from '../sim/context';
 import type { DataRequest, Effect } from '../sim/effect';
 import type { Command, Input } from '../sim/input';
 import type { Snapshot, SystemId } from '../sim/snapshot';
-import type { AnySystem } from '../sim/system';
+import { type AnySystem, type System, viewOf } from '../sim/system';
 import type { ReduceRecord } from '../sim/trace';
 
 export interface FixtureInput {
-  readonly input: Input<unknown, Command>;
+  readonly input: Input<unknown>;
   readonly target?: SystemId;
 }
 
@@ -30,7 +30,11 @@ export interface FixtureRun {
   /** The flattened effect stream across all reductions. */
   readonly effects: readonly Effect[];
   readonly snapshot: Snapshot;
-  view(id: SystemId, render?: RenderContext): unknown;
+  /** A system's view-model after the run, typed by the system. */
+  viewOf<TState, TCommand extends Command, TEffect extends Effect, TViewModel>(
+    system: System<TState, TCommand, TEffect, TViewModel>,
+    render?: RenderContext,
+  ): TViewModel;
 }
 
 const DEFAULT_RENDER: RenderContext = { now: 0, locale: 'en' };
@@ -76,7 +80,7 @@ export async function runFixture(opts: FixtureOptions): Promise<FixtureRun> {
       observe: (record) => {
         // Capture an immutable copy so a later (mis)mutating reducer can't corrupt
         // the recorded stream (run-twice determinism leans on this).
-        trace.push(structuredClone(record) as ReduceRecord);
+        trace.push(structuredClone(record));
       },
     },
     ...(opts.foreground !== undefined ? { foreground: opts.foreground } : {}),
@@ -90,7 +94,10 @@ export async function runFixture(opts: FixtureOptions): Promise<FixtureRun> {
       if (++guard > DRAIN_GUARD) throw new Error('runFixture: drain did not converge');
       last = trace.length;
       while (timers.length > 0) timers.shift()?.(); // CommitFired → send → pump
+      // Each pass must settle before the next is measured: the order of passes is the trace's order.
+      // oxlint-disable-next-line eslint/no-await-in-loop -- passes run in sequence by design (deterministic drain)
       await Promise.resolve(); // let Fetch microtasks resolve and re-enter send
+      // oxlint-disable-next-line eslint/no-await-in-loop -- passes run in sequence by design (deterministic drain)
       await Promise.resolve();
     }
   };
@@ -101,13 +108,15 @@ export async function runFixture(opts: FixtureOptions): Promise<FixtureRun> {
   await drain();
   for (const { input, target } of opts.inputs ?? []) {
     runtime.send(input, target);
+    // oxlint-disable-next-line eslint/no-await-in-loop -- inputs are delivered in order, each after the last settles
     await drain();
   }
 
   return {
     trace,
-    effects: trace.flatMap((record) => [...record.effects]),
+    effects: trace.flatMap((record) => record.effects),
     snapshot: runtime.snapshot(),
-    view: (id, render) => runtime.view(id, render ?? DEFAULT_RENDER),
+    viewOf: (system, render) =>
+      viewOf(system, { systemId: system.id, value: runtime.view(system.id, render ?? DEFAULT_RENDER) }),
   };
 }

@@ -2,14 +2,14 @@
  * Every pinned tool has its upstream repository named, and every named repository pins a tool.
  *
  * The pins come from the root `package.json`, the held workspace packages' devDependencies and
- * `pnpm-lock.yaml` (`harness/lib/pins.ts`). `harness.md`'s table of them is generated, so a bump the
- * fix task has not rendered fails the generated-docs check.
+ * `pnpm-lock.yaml` (`harness/lib/pins.ts`). `harness.md`'s table of them is generated
+ * (`harness/lib/generated.ts`), so a bump the fix task has not rendered fails the generated-docs check.
  */
 
 import { describe, expect, test } from 'vitest';
 
 import { Exemptions } from '../lib/exemptions.ts';
-import { type Pin, pinned, pins, pinsTable, UPSTREAM } from '../lib/pins.ts';
+import { type Pin, pinned, pins, UPSTREAM } from '../lib/pins.ts';
 
 export const HARNESS_ID = 'tool-upgrades';
 
@@ -20,14 +20,14 @@ const PENDING = new Exemptions({
 });
 
 /** A pin with no upstream or no version, and an upstream entry that pins nothing. */
-export function pinProblems(found: readonly Pin[], upstream: Readonly<Record<string, string>>): readonly string[] {
+export function pinProblems(found: readonly Pin[], upstream: ReadonlyMap<string, string>): readonly string[] {
   const problems = found
-    .filter((pin) => (upstream[pin.tool] ?? '') === '')
+    .filter((pin) => (upstream.get(pin.tool) ?? '') === '')
     .map((pin) => `${pin.tool}: pinned in ${pin.where}, with no upstream repository named`);
   problems.push(...found.filter((pin) => pin.version === '').map((pin) => `${pin.tool}: pinned in ${pin.where}, with no version`));
   const named = new Set(found.map((pin) => pin.tool));
   problems.push(
-    ...Object.keys(upstream)
+    ...[...upstream.keys()]
       .toSorted()
       .filter((tool) => !named.has(tool))
       .map((tool) => `${tool}: named upstream, but nothing pins it`),
@@ -67,12 +67,6 @@ describe('the repository', () => {
   test('every pin has its upstream and every upstream a pin', () => {
     expect(PENDING.unexempted(pinProblems(pins(), UPSTREAM))).toEqual([]);
   });
-
-  test('the pins table renders a row per pin', () => {
-    const table = pinsTable().split('\n');
-    expect(table.slice(0, 2)).toEqual(['| Tool | Upstream | Pinned in | Pin |', '| --- | --- | --- | --- |']);
-    expect(table).toHaveLength(pins().length + 2);
-  });
 });
 
 describe('the pin reader and the pin check', () => {
@@ -107,7 +101,7 @@ describe('the pin reader and the pin check', () => {
       { tool: 'planted', where: 'pnpm-lock.yaml', version: '1.0.0' },
       { tool: 'unlocked', where: 'pnpm-lock.yaml', version: '' },
     ];
-    expect(pinProblems(found, { node: 'nodejs/node', unlocked: 'someone/unlocked', gone: 'someone/gone' })).toEqual([
+    expect(pinProblems(found, new Map([['node', 'nodejs/node'], ['unlocked', 'someone/unlocked'], ['gone', 'someone/gone']]))).toEqual([
       'planted: pinned in pnpm-lock.yaml, with no upstream repository named',
       'unlocked: pinned in pnpm-lock.yaml, with no version',
       'gone: named upstream, but nothing pins it',
@@ -115,6 +109,6 @@ describe('the pin reader and the pin check', () => {
   });
 
   test('let a fully named and pinned set through', () => {
-    expect(pinProblems([{ tool: 'node', where: 'package.json engines', version: '>=22' }], { node: 'nodejs/node' })).toEqual([]);
+    expect(pinProblems([{ tool: 'node', where: 'package.json engines', version: '>=22' }], new Map([['node', 'nodejs/node']]))).toEqual([]);
   });
 });

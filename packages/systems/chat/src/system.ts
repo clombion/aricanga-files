@@ -42,7 +42,7 @@ export const chatSystem: System<ChatState, ChatCommand, Effect, ChatViewModel> =
   id: 'chat',
   tags: [...CHAT_TAGS],
   init: (_seed) => initChatState(),
-  reduce(state, input, ctx): ReduceResult<ChatState, Effect> {
+  reduce(state, input, ctx): ReduceResult<ChatState> {
     if (input.source === 'player') {
       const { command } = input;
       if (command.kind === 'open') return { state: openWithReadState(state, command.payload.chatId), effects: [] };

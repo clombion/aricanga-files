@@ -1,7 +1,7 @@
 import { type Host, Runtime } from '../host/runtime';
 import type { InkRuntime } from '../ink/ink-runtime';
 import type { RenderContext } from '../sim/context';
-import type { Command, Input } from '../sim/input';
+import type { Input } from '../sim/input';
 import type { Router } from '../sim/router';
 import type { Snapshot, SystemId } from '../sim/snapshot';
 import type { AnySystem } from '../sim/system';
@@ -17,7 +17,7 @@ export interface ExperienceConfig {
 
 export interface Experience {
   /** Inject an inbound value (story routed by tag; player/resume by target). */
-  send(input: Input<unknown, Command>, target?: SystemId): void;
+  send(input: Input<unknown>, target?: SystemId): void;
   /** Advance ink one step if ready; returns whether it advanced. */
   step(): boolean;
   view(id: SystemId, render: RenderContext): unknown;

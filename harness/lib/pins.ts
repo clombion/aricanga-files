@@ -5,58 +5,60 @@
  * of every held workspace package, each at the version `pnpm-lock.yaml` holds, plus Node's
  * `engines.node` floor and pnpm's `packageManager`. `UPSTREAM` names each tool's repository; the
  * tool-upgrades check fails on a pin it does not name and on a row that pins nothing, and
- * `pinsTable` renders the table of `harness.md`.
+ * `harness/lib/generated.ts` renders the table of `harness.md`.
  */
 
 import { object, json } from './config.ts';
 import { held } from './scope.ts';
 import { textOf, tracked } from './source-files.ts';
 
-/** The upstream `owner/repo` of every pinned tool. */
-export const UPSTREAM: Readonly<Record<string, string>> = {
-  '@ai-sdk/anthropic': 'vercel/ai',
-  '@ai-sdk/google': 'vercel/ai',
-  '@ai-sdk/openai': 'vercel/ai',
-  '@axe-core/playwright': 'dequelabs/axe-core-npm',
-  '@biomejs/biome': 'biomejs/biome',
-  '@commitlint/cli': 'conventional-changelog/commitlint',
-  '@commitlint/config-conventional': 'conventional-changelog/commitlint',
-  '@iarna/toml': 'iarna/iarna-toml',
-  '@playwright/test': 'microsoft/playwright',
-  '@solidjs/compiler': 'solidjs/solid',
-  '@solidjs/vite-plugin': 'solidjs/vite-plugin-solid',
-  '@types/iarna__toml': 'DefinitelyTyped/DefinitelyTyped',
-  '@types/node': 'DefinitelyTyped/DefinitelyTyped',
-  '@viz-js/viz': 'mdaines/viz-js',
-  '@vitest/coverage-v8': 'vitest-dev/vitest',
-  ai: 'vercel/ai',
-  eslint: 'eslint/eslint',
-  'eslint-plugin-solid': 'solidjs-community/eslint-plugin-solid',
-  'fast-check': 'dubzzz/fast-check',
-  'happy-dom': 'capricorn86/happy-dom',
-  inkjs: 'y-lohse/inkjs',
-  jscpd: 'kucherenko/jscpd',
-  knip: 'webpro-nl/knip',
-  lefthook: 'evilmartians/lefthook',
-  node: 'nodejs/node',
-  oxfmt: 'oxc-project/oxc',
-  oxlint: 'oxc-project/oxc',
-  'oxlint-tsgolint': 'oxc-project/tsgolint',
-  pnpm: 'pnpm/pnpm',
-  'remark-parse': 'remarkjs/remark',
-  sharp: 'lovell/sharp',
-  stylelint: 'stylelint/stylelint',
-  'stylelint-config-standard': 'stylelint/stylelint-config-standard',
-  'stylelint-no-unsupported-browser-features': 'RJWadley/stylelint-no-unsupported-browser-features',
-  'stylelint-plugin-logical-css': 'yuschick/stylelint-plugin-logical-css',
-  typescript: 'microsoft/TypeScript',
-  unified: 'unifiedjs/unified',
-  'unist-util-visit': 'syntax-tree/unist-util-visit',
-  vite: 'vitejs/vite',
-  vitest: 'vitest-dev/vitest',
-  xstate: 'statelyai/xstate',
-  zod: 'colinhacks/zod',
-};
+/** The upstream GitHub repository of every pinned tool, written as owner and repository name. */
+export const UPSTREAM: ReadonlyMap<string, string> = new Map([
+  ['@ai-sdk/anthropic', 'vercel/ai'],
+  ['@ai-sdk/google', 'vercel/ai'],
+  ['@ai-sdk/openai', 'vercel/ai'],
+  ['@axe-core/playwright', 'dequelabs/axe-core-npm'],
+  ['@biomejs/biome', 'biomejs/biome'],
+  ['@commitlint/cli', 'conventional-changelog/commitlint'],
+  ['@commitlint/config-conventional', 'conventional-changelog/commitlint'],
+  ['@double-great/stylelint-a11y', 'double-great/stylelint-a11y'],
+  ['@iarna/toml', 'iarna/iarna-toml'],
+  ['@playwright/test', 'microsoft/playwright'],
+  ['@solidjs/compiler', 'solidjs/solid'],
+  ['@solidjs/vite-plugin', 'solidjs/vite-plugin-solid'],
+  ['@types/iarna__toml', 'DefinitelyTyped/DefinitelyTyped'],
+  ['@types/node', 'DefinitelyTyped/DefinitelyTyped'],
+  ['@vitest/coverage-v8', 'vitest-dev/vitest'],
+  ['@viz-js/viz', 'mdaines/viz-js'],
+  ['ai', 'vercel/ai'],
+  ['eslint', 'eslint/eslint'],
+  ['eslint-plugin-solid', 'solidjs-community/eslint-plugin-solid'],
+  ['fast-check', 'dubzzz/fast-check'],
+  ['happy-dom', 'capricorn86/happy-dom'],
+  ['inkjs', 'y-lohse/inkjs'],
+  ['jscpd', 'kucherenko/jscpd'],
+  ['knip', 'webpro-nl/knip'],
+  ['lefthook', 'evilmartians/lefthook'],
+  ['node', 'nodejs/node'],
+  ['oxfmt', 'oxc-project/oxc'],
+  ['oxlint', 'oxc-project/oxc'],
+  ['oxlint-tsgolint', 'oxc-project/tsgolint'],
+  ['pnpm', 'pnpm/pnpm'],
+  ['remark-parse', 'remarkjs/remark'],
+  ['sharp', 'lovell/sharp'],
+  ['stylelint', 'stylelint/stylelint'],
+  ['stylelint-config-standard', 'stylelint/stylelint-config-standard'],
+  ['stylelint-declaration-strict-value', 'AndyOGo/stylelint-declaration-strict-value'],
+  ['stylelint-no-unsupported-browser-features', 'RJWadley/stylelint-no-unsupported-browser-features'],
+  ['stylelint-plugin-logical-css', 'yuschick/stylelint-plugin-logical-css'],
+  ['typescript', 'microsoft/TypeScript'],
+  ['unified', 'unifiedjs/unified'],
+  ['unist-util-visit', 'syntax-tree/unist-util-visit'],
+  ['vite', 'vitejs/vite'],
+  ['vitest', 'vitest-dev/vitest'],
+  ['xstate', 'statelyai/xstate'],
+  ['zod', 'colinhacks/zod'],
+]);
 
 /** A pinned tool: its name, the file that pins it, and its version there. */
 export interface Pin {
@@ -151,13 +153,4 @@ export function pins(): readonly Pin[] {
       manifest: json(textOf(path)),
     }));
   return pinned(manifests, textOf(LOCKFILE));
-}
-
-/** The markdown table of the pins, as `harness.md`'s generated `pins` block holds it. */
-export function pinsTable(found: readonly Pin[] = pins(), upstream: Readonly<Record<string, string>> = UPSTREAM): string {
-  const rows = found.map((pin) => {
-    const repo = upstream[pin.tool] ?? '';
-    return `| \`${pin.tool}\` | [${repo}](https://github.com/${repo}) | \`${pin.where}\` | ${pin.version} |`;
-  });
-  return ['| Tool | Upstream | Pinned in | Pin |', '| --- | --- | --- | --- |', ...rows].join('\n');
 }
