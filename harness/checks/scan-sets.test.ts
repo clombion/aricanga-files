@@ -9,19 +9,13 @@
  * held by the clones check's own coverage of the listing; and knip's, once `knip.json` declares it.
  */
 
-import { FLOOR, ListingError, listing, textOf, tracked } from '#lib/source-files.ts';
-import { Project, finished } from '#lib/tools.ts';
-import { REPO_ROOT, fromRoot } from '#lib/paths.ts';
+import { FLOOR, ListingError, listing, tracked } from '#lib/source-files.ts';
+import { TEST_FILE, coverageReached, oxfmtFiles, oxlintFiles, projectDirectory, projectMembers } from './scan-sets.sets.ts';
 import { describe, expect, test } from 'vitest';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtemp, rm } from 'node:fs/promises';
 import { Exemptions } from '#lib/exemptions.ts';
-import gate from '../../vitest.gate.config.ts';
-import { isTestInfrastructure } from '#lib/checker.ts';
-import { join } from 'node:path';
-import { matches } from '#lib/globs.ts';
-import { object } from '#lib/config.ts';
-import { projects } from '#lib/projects.ts';
-import { relativeTo } from '#lib/relative.ts';
+import { Project } from '#lib/tools.ts';
+import { join } from 'node:path/posix';
 import { tmpdir } from 'node:os';
 import { typescriptFiles } from '#lib/scope.ts';
 
@@ -63,115 +57,51 @@ const UNPROJECTED = Exemptions.grouped({
   ],
 });
 
-const TEST_FILE = /(\.test\.tsx?$|\/test\/|^harness\/checks\/|^packages\/characterisation\/tests\/)/u;
-const PRODUCTION_PROJECT = /^(packages\/(foundation|systems\/[^/]+)|experiences\/[^/]+)\/tsconfig\.json$/u;
-const UNFORMATTED = '\nconst   plantedUnformatted   =   1  ;\n';
+const PRODUCTION_PROJECT = /^(?:packages\/(?:foundation|systems\/[^/]+)|experiences\/[^/]+)\/tsconfig\.json$/u;
+/** A file in more than this many production projects is held twice. */
+const ONE_PROJECT = 1;
 
 /**
  * Each held file with the scan sets that miss it, as `<path>: <scan set>`.
  *
- * @param {readonly string[]} files - The files.
+ * @param {readonly string[]} files - The held files.
  * @param {Readonly<Record<string, ReadonlySet<string>>>} sets - Each scan's set of files, by scan.
- * @returns {readonly string[]} Each held file with the scan sets that miss it, as `<path>: <scan set>`.
+ * @returns {readonly string[]} One entry per file and scan set that misses it.
  */
 function unreached(files: readonly string[], sets: Readonly<Record<string, ReadonlySet<string>>>): readonly string[] {
-  return files.flatMap((path) => Object.entries(sets).filter(([, reached]) => !reached.has(path)).map(([name]) => `${path}: ${name}`));
+  const named: readonly (readonly [string, ReadonlySet<string>])[] = Object.entries(sets);
+  return files.flatMap((path) => named.filter(([, reached]) => !reached.has(path)).map(([name]) => `${path}: ${name}`));
+}
+
+/**
+ * The problem of one file's projects: in none, in two production projects, or a test in a production project.
+ *
+ * @param {string} path - The file.
+ * @param {readonly string[]} holding - The projects holding it.
+ * @returns {readonly string[]} Its problem, if any.
+ */
+function fileProblems(path: string, holding: readonly string[]): readonly string[] {
+  const production = holding.filter((project) => PRODUCTION_PROJECT.test(project));
+  const [first] = production;
+  if (holding.length < ONE_PROJECT) {
+    return [`${path}: in no TypeScript project`];
+  }
+  if (production.length > ONE_PROJECT) {
+    return [`${path}: in ${production.length} production projects`];
+  }
+  return TEST_FILE.test(path) && first !== undefined ? [`${path}: a test in the production project ${first}`] : [];
 }
 
 /**
  * The project problems: a file in no project, in two production projects, or a test in a production project.
  *
- * @param {readonly string[]} files - The files.
- * @param {ReadonlyMap<string, ReadonlySet<string>>} members - Each set's members, by set.
- * @returns {readonly string[]} The project problems: a file in no project, in two production projects, or a test in a production project.
+ * @param {readonly string[]} files - The held files.
+ * @param {ReadonlyMap<string, ReadonlySet<string>>} members - Each project's files, by project.
+ * @returns {readonly string[]} One problem per file.
  */
 function projectProblems(files: readonly string[], members: ReadonlyMap<string, ReadonlySet<string>>): readonly string[] {
-  return files.flatMap((path) => {
-    const holding = [...members].filter(([, set]) => set.has(path)).map(([project]) => project);
-    const production = holding.filter((project) => PRODUCTION_PROJECT.test(project));
-    if (holding.length === 0) {
-      return [`${path}: in no TypeScript project`];
-    }
-    if (production.length > 1) {
-      return [`${path}: in ${production.length} production projects`];
-    }
-    return TEST_FILE.test(path) && production.length > 0 ? [`${path}: a test in the production project ${production[0] ?? ''}`] : [];
-  });
-}
-
-/**
- * The files oxlint lints in the checkout, from its own listing.
- *
- * @returns {ReadonlySet<string>} The files oxlint lints in the checkout, from its own listing.
- */
-function oxlintFiles(): ReadonlySet<string> {
-  const done = finished([fromRoot('node_modules', '.bin', 'oxlint'), '--debug=files'], { cwd: REPO_ROOT });
-  return new Set(done.stdout.split('\n').filter((line) => line !== ''));
-}
-
-/**
- * The files oxfmt formats: every held file planted unformatted in a copy of the checkout's config.
- *
- * @param {readonly string[]} files - The files.
- * @returns {ReadonlySet<string>} The files oxfmt formats: every held file planted unformatted in a copy of the checkout's config.
- */
-function oxfmtFiles(files: readonly string[]): ReadonlySet<string> {
-  const ignores = ['.gitignore', '.prettierignore', '.oxfmtrc.json'].filter((path) => tracked().includes(path));
-  const project = new Project({ copies: ignores });
-  try {
-    for (const path of files) {
-      project.write(path, textOf(path) + UNFORMATTED);
-    }
-    const done = project.tool('oxfmt', '--list-different');
-    return new Set(done.stdout.split('\n').filter((line) => line !== ''));
-  } finally {
-    project.remove();
-  }
-}
-
-/**
- * The directory a project file sits in, with a trailing slash (empty at the root).
- *
- * @param {string} project - The project.
- * @returns {string} The directory a project file sits in, with a trailing slash (empty at the root).
- */
-function projectDirectory(project: string): string {
-  const at = project.lastIndexOf('/');
-  return at === -1 ? '' : project.slice(0, at + 1);
-}
-
-/**
- * The files each TypeScript project holds: those it lists (`tsc --listFilesOnly`) under its own
- * directory. A package's source a dependent project resolves through the package's exports is
- * listed there too, but held by its own package.
- *
- * @returns {ReadonlyMap<string, ReadonlySet<string>>} The files each TypeScript project holds: those it lists (`tsc --listFilesOnly`) under its own directory.
- */
-function projectMembers(): ReadonlyMap<string, ReadonlySet<string>> {
-  return new Map(
-    projects().map((project) => {
-      const done = finished([fromRoot('node_modules', '.bin', 'tsc'), '--listFilesOnly', '-p', project], { cwd: REPO_ROOT });
-      const listed = done.stdout.split('\n').filter((line) => line !== '').map((path) => relativeTo(REPO_ROOT, path));
-      return [project, new Set(listed.filter((path) => path.startsWith(projectDirectory(project))))];
-    }),
-  );
-}
-
-/**
- * The non-test files Vitest's coverage `include` reaches and its `exclude` does not take back.
- *
- * @param {readonly string[]} files - The files.
- * @returns {ReadonlySet<string>} The non-test files Vitest's coverage `include` reaches and its `exclude` does not take back.
- */
-function coverageReached(files: readonly string[]): ReadonlySet<string> {
-  const coverage = object(object(object(gate, 'vitest.gate.config.ts')['test'], 'test')['coverage'], 'coverage');
-  const include = Array.isArray(coverage['include']) ? coverage['include'].map(String) : [];
-  const exclude = Array.isArray(coverage['exclude']) ? coverage['exclude'].map(String) : [];
-  return new Set(
-    files.filter(
-      (path) => TEST_FILE.test(path) || isTestInfrastructure(path) || (include.some((glob) => matches(glob, path)) && !exclude.some((glob) => matches(glob, path))),
-    ),
-  );
+  const projectsOf: readonly (readonly [string, ReadonlySet<string>])[] = [...members];
+  return files.flatMap((path) => fileProblems(path, projectsOf.filter(([, set]) => set.has(path)).map(([project]) => project)));
 }
 
 describe('the listing', () => {
@@ -185,13 +115,13 @@ describe('the listing', () => {
     expect(() => listing('', tmpdir())).toThrow(ListingError);
   });
 
-  test('refuses a folder git cannot list', () => {
+  test('refuses a folder git cannot list', async () => {
     expect.hasAssertions();
-    const folder = mkdtempSync(join(tmpdir(), 'unlisted-'));
+    const folder = await mkdtemp(join(tmpdir(), 'unlisted-'));
     try {
       expect(() => tracked(folder)).toThrow(ListingError);
     } finally {
-      rmSync(folder, { force: true, recursive: true });
+      await rm(folder, { force: true, recursive: true });
     }
   });
 
@@ -199,7 +129,7 @@ describe('the listing', () => {
     expect.hasAssertions();
     const project = new Project({ linkModules: false });
     try {
-      const names = Array.from({ length: FLOOR }, (_, index) => `f${index}.ts`);
+      const names = Array.from({ length: FLOOR }, (_value, index) => `f${index}.ts`);
       for (const name of names) {
         project.write(name, '');
       }
@@ -211,16 +141,18 @@ describe('the listing', () => {
 });
 
 describe('the repository', () => {
-  test('every held TypeScript file is reached by oxlint, oxfmt and coverage', () => {
+  test('every held TypeScript file is reached by oxlint, oxfmt and coverage', async () => {
     expect.hasAssertions();
     const files = typescriptFiles();
-    const found = unreached(files, { coverage: coverageReached(files), oxfmt: oxfmtFiles(files), oxlint: oxlintFiles() });
+    const coverage = await coverageReached(files);
+    const found = unreached(files, { coverage, oxfmt: oxfmtFiles(files), oxlint: oxlintFiles() });
     expect(UNREACHED.unexempted(found)).toStrictEqual([]);
   });
 
   test('every held TypeScript file is in a project, once in production, and no test is in production', () => {
     expect.hasAssertions();
-    expect(UNPROJECTED.unexempted(projectProblems(typescriptFiles(), projectMembers()))).toStrictEqual([]);
+    const problems = projectProblems(typescriptFiles(), projectMembers());
+    expect(UNPROJECTED.unexempted(problems)).toStrictEqual([]);
   });
 
   test('knip declares its scan set', () => {
@@ -260,4 +192,4 @@ describe('the scan-set checks', () => {
   });
 });
 
-export { HARNESS_ID, projectDirectory, projectProblems, unreached };
+export { HARNESS_ID };

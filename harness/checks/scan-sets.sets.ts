@@ -1,0 +1,107 @@
+/** The scan sets of the `scan-sets` check: the files each tool reaches, read from the tool itself. */
+
+import { Project, finished } from '#lib/tools.ts';
+import { REPO_ROOT, fromRoot } from '#lib/paths.ts';
+import { textOf, tracked } from '#lib/source-files.ts';
+import { dirname } from 'node:path/posix';
+import { gateCoverage } from './gate-config.ts';
+import { isTestInfrastructure } from '#lib/checker.ts';
+import { matches } from '#lib/globs.ts';
+import { projects } from '#lib/projects.ts';
+import { relativeTo } from '#lib/relative.ts';
+
+const TEST_FILE = /(?:\.test\.tsx?$|\/test\/|^harness\/checks\/|^packages\/characterisation\/tests\/)/u;
+const UNFORMATTED = '\nconst   plantedUnformatted   =   1  ;\n';
+
+/**
+ * The lines of a tool's output that name something.
+ *
+ * @param {string} stdout - The tool's output.
+ * @returns {readonly string[]} Its non-empty lines.
+ */
+function lines(stdout: string): readonly string[] {
+  return stdout.split('\n').filter((line) => line !== '');
+}
+
+/**
+ * The files oxlint lints in the checkout, from its own listing.
+ *
+ * @returns {ReadonlySet<string>} The files oxlint lints.
+ */
+function oxlintFiles(): ReadonlySet<string> {
+  const done = finished([fromRoot('node_modules', '.bin', 'oxlint'), '--debug=files'], { cwd: REPO_ROOT });
+  return new Set(lines(done.stdout));
+}
+
+/**
+ * The files oxfmt formats: every held file planted unformatted in a copy of the checkout's config.
+ *
+ * @param {readonly string[]} files - The held files.
+ * @returns {ReadonlySet<string>} The files oxfmt would change.
+ */
+function oxfmtFiles(files: readonly string[]): ReadonlySet<string> {
+  const ignores = ['.gitignore', '.prettierignore', '.oxfmtrc.json'].filter((path) => tracked().includes(path));
+  const project = new Project({ copies: ignores });
+  try {
+    for (const path of files) {
+      project.write(path, textOf(path) + UNFORMATTED);
+    }
+    return new Set(lines(project.tool('oxfmt', '--list-different').stdout));
+  } finally {
+    project.remove();
+  }
+}
+
+/**
+ * The directory a project file sits in, with a trailing slash (empty at the root).
+ *
+ * @param {string} project - The project file.
+ * @returns {string} Its directory.
+ */
+function projectDirectory(project: string): string {
+  const directory = dirname(project);
+  return directory === '.' ? '' : `${directory}/`;
+}
+
+/**
+ * The files each TypeScript project holds: those it lists (`tsc --listFilesOnly`) under its own
+ * directory. A package's source a dependent project resolves through the package's exports is
+ * listed there too, but held by its own package.
+ *
+ * @returns {ReadonlyMap<string, ReadonlySet<string>>} Each project's held files, by project.
+ */
+function projectMembers(): ReadonlyMap<string, ReadonlySet<string>> {
+  return new Map(
+    projects().map((project) => {
+      const done = finished([fromRoot('node_modules', '.bin', 'tsc'), '--listFilesOnly', '-p', project], { cwd: REPO_ROOT });
+      const listed = lines(done.stdout).map((path) => relativeTo(REPO_ROOT, path));
+      return [project, new Set(listed.filter((path) => path.startsWith(projectDirectory(project))))];
+    }),
+  );
+}
+
+/**
+ * The globs of one coverage list.
+ *
+ * @param {unknown} list - A `coverage.include` or `coverage.exclude` value.
+ * @returns {readonly string[]} Its globs.
+ */
+function globs(list: unknown): readonly string[] {
+  return Array.isArray(list) ? list.map(String) : [];
+}
+
+/**
+ * The non-test files the coverage `include` of Vitest reaches and its `exclude` does not take back.
+ *
+ * @param {readonly string[]} files - The held files.
+ * @returns {Promise<ReadonlySet<string>>} The files coverage reaches, tests counted as reached.
+ */
+async function coverageReached(files: readonly string[]): Promise<ReadonlySet<string>> {
+  const coverage = await gateCoverage();
+  const include = globs(coverage['include']);
+  const exclude = globs(coverage['exclude']);
+  const covered = (path: string): boolean => include.some((glob) => matches(glob, path)) && !exclude.some((glob) => matches(glob, path));
+  return new Set(files.filter((path) => TEST_FILE.test(path) || isTestInfrastructure(path) || covered(path)));
+}
+
+export { TEST_FILE, coverageReached, oxfmtFiles, oxlintFiles, projectDirectory, projectMembers };

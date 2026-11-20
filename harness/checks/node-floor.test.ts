@@ -25,15 +25,15 @@ describe('the repository', () => {
 describe('the floor check', () => {
   test('fails a Node below the floor, at each part of the version', () => {
     expect.hasAssertions();
-    expect(meets([22, 17, 9], floor('>=22.18.0'))).toBe(false);
-    expect(meets([21, 99, 99], floor('>=22.18.0'))).toBe(false);
-    expect(meets([22, 18, 0], floor('>=22.18.1'))).toBe(false);
+    expect(meets(version('22.17.9'), floor('>=22.18.0'))).toBe(false);
+    expect(meets(version('21.99.99'), floor('>=22.18.0'))).toBe(false);
+    expect(meets(version('22.18.0'), floor('>=22.18.1'))).toBe(false);
   });
 
   test('passes a Node at or above the floor', () => {
     expect.hasAssertions();
-    expect(meets([22, 18, 0], floor('>=22.18.0'))).toBe(true);
-    expect(meets([23, 0, 0], floor('>= 22.18.0'))).toBe(true);
+    expect(meets(version('22.18.0'), floor('>=22.18.0'))).toBe(true);
+    expect(meets(version('23.0.0'), floor('>= 22.18.0'))).toBe(true);
   });
 
   test.each(['^22.18.0', '22.x', '>=22', '>=22.18.0 <23', ''])('refuses the range %j', (range) => {
@@ -44,7 +44,8 @@ describe('the floor check', () => {
   test('refuses a pin that is not an exact version', () => {
     expect.hasAssertions();
     expect(() => version('lts/*')).toThrow(FloorError);
-    expect(version('v22.23.5')).toStrictEqual([22, 23, 5]);
+    expect(version('v22.23.5')).toStrictEqual(version('22.23.5'));
+    expect(version('v22.23.5').join('.')).toBe('22.23.5');
   });
 });
 
