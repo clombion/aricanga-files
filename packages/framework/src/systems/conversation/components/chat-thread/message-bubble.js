@@ -204,7 +204,7 @@ export function renderMessageBubble({ msg, isLast, chatId, isFresh = false }) {
  * @returns {string} - HTML with learning highlights
  */
 // Re-export text utilities for backward compatibility
-export { escapeHtml, escapeAttr, processText, LEARNING_HIGHLIGHT_CSS };
+export { escapeAttr, escapeHtml, LEARNING_HIGHLIGHT_CSS, processText };
 
 /**
  * Render an audio message bubble

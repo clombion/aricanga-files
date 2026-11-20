@@ -10,8 +10,8 @@
   },
   "peerDependencies": {
     "@narratives/framework": "workspace:*",
-    "@playwright/test": "^1.40.0",
-    "vitest": "^4.0.0"
+    "@playwright/test": "^1.65.1",
+    "vitest": "^5.1.1"
   },
   "files": [
     "src"

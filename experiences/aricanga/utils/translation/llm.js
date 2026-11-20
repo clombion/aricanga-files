@@ -13,7 +13,7 @@ import { anthropic } from '@ai-sdk/anthropic';
 import { google } from '@ai-sdk/google';
 import { openai } from '@ai-sdk/openai';
 import TOML from '@iarna/toml';
-import { generateObject } from 'ai';
+import { generateText, Output } from 'ai';
 import { z } from 'zod';
 
 import { validateHighlights, validatePlaceholders } from '../../../../utils/lib/ink-writer.js';
@@ -377,14 +377,14 @@ export async function translate(
     constraints,
   };
 
-  const { object } = await generateObject({
+  const { output } = await generateText({
     model: provider,
-    schema: TranslationResultSchema,
+    output: Output.object({ schema: TranslationResultSchema }),
     system: buildSystemPrompt(targetLang, fullContext),
     prompt: buildTranslationPrompt(items),
   });
 
-  return object.translations;
+  return output.translations;
 }
 
 /**

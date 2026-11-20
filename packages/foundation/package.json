@@ -16,6 +16,6 @@
     }
   },
   "dependencies": {
-    "inkjs": "^2.3.2"
+    "inkjs": "^2.4.0"
   }
 }

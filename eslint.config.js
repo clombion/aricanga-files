@@ -30,18 +30,16 @@ export default [
     plugins: { boundaries },
     settings: {
       'boundaries/elements': [
-        { type: 'foundation', mode: 'folder', pattern: 'packages/foundation' },
-        { type: 'system', mode: 'folder', pattern: 'packages/systems/*', capture: ['name'] },
-        { type: 'experience', mode: 'folder', pattern: 'experiences/*', capture: ['name'] },
+        { type: 'foundation', pattern: 'packages/foundation' },
+        { type: 'system', pattern: 'packages/systems/*', capture: ['name'] },
+        { type: 'experience', pattern: 'experiences/*', capture: ['name'] },
       ],
       'import/resolver': {
         typescript: {
           alwaysTryTypes: true,
-          project: [
-            'packages/foundation/tsconfig.json',
-            'packages/systems/*/tsconfig.json',
-            'experiences/*/tsconfig.json',
-          ],
+          // The root tsconfig references every linted package (one project, no
+          // multi-project scan).
+          project: 'tsconfig.json',
         },
       },
     },
@@ -50,10 +48,13 @@ export default [
         'error',
         {
           default: 'disallow',
-          rules: [
-            { from: { type: 'foundation' }, disallow: { to: { type: '*' } } },
-            { from: { type: 'system' }, allow: { to: { type: 'foundation' } } },
-            { from: { type: 'experience' }, allow: { to: { type: ['foundation', 'system'] } } },
+          policies: [
+            { from: { element: { type: 'foundation' } }, disallow: { to: { element: { type: '*' } } } },
+            { from: { element: { type: 'system' } }, allow: { to: { element: { type: 'foundation' } } } },
+            {
+              from: { element: { type: 'experience' } },
+              allow: { to: { element: { types: ['foundation', 'system'] } } },
+            },
           ],
         },
       ],

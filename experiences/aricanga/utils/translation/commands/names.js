@@ -2,7 +2,7 @@
  * names.js - LLM-assisted name localization suggestions
  *
  * Suggests localized names for characters and entities based on setting context.
- * Uses structured output (generateObject) for reliable JSON responses.
+ * Uses structured output (generateText + Output.object) for reliable JSON responses.
  */
 
 import { copyFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
@@ -10,7 +10,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import TOML from '@iarna/toml';
-import { generateObject } from 'ai';
+import { generateText, Output } from 'ai';
 import { z } from 'zod';
 
 import { generateBackupTimestamp } from '../../../../../utils/lib/ink-writer.js';
@@ -400,13 +400,13 @@ export async function run(flags, _positional) {
     );
   } else {
     const provider = getProvider(providerName, modelOverride);
-    const { object } = await generateObject({
+    const { output } = await generateText({
       model: provider,
-      schema: NameSuggestionSchema,
+      output: Output.object({ schema: NameSuggestionSchema }),
       system: buildSystemPrompt(settingContext),
       prompt: buildUserPrompt(characters, entities, type),
     });
-    suggestions = object;
+    suggestions = output;
   }
 
   // Format output
