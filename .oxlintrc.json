@@ -257,6 +257,12 @@
           "ToJson"
         ]
       }
+    ],
+    "typescript/prefer-readonly-parameter-types": [
+      "error",
+      {
+        "treatMethodsAsReadonly": true
+      }
     ]
   },
   "overrides": [
