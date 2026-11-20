@@ -11,6 +11,7 @@
 
 import { Slot } from './lists.ts';
 import { patch } from './patch.ts';
+import { present } from './present.ts';
 
 /** A timer not yet fired or cleared, with where it was set. */
 interface Pending {
@@ -38,7 +39,7 @@ const AT = /^at /u;
  * @returns {string} The setter's stack frame.
  */
 function caller(): string {
-  const line = new Error('timer').stack?.split('\n')[SETTER_FRAME] ?? '';
+  const line = present(new Error('timer').stack?.split('\n').at(SETTER_FRAME), 'the stack frame of the code that set the timer');
   return line.trim().replace(AT, '');
 }
 
