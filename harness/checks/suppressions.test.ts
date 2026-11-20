@@ -25,14 +25,22 @@ import { body, comments, parse } from '../lib/ts-source.ts';
 
 export const HARNESS_ID = 'suppressions';
 
-/** The file suffixes each suppressing tool checks. */
-const CHECKS: Readonly<Record<string, Accepted<string>>> = {
-  oxlint: new Accepted(['.ts', '.tsx', '.js', '.mjs']),
-  typescript: new Accepted(['.ts', '.tsx']),
-  biome: new Accepted(['.css', '.json']),
-  stylelint: new Accepted(['.css']),
-  coverage: new Accepted(['.ts', '.tsx', '.js', '.mjs']),
-};
+/** Which suppressing tool checks which file suffix, as `tool:suffix`. */
+const CHECKS = new Accepted([
+  'oxlint:.ts',
+  'oxlint:.tsx',
+  'oxlint:.js',
+  'oxlint:.mjs',
+  'typescript:.ts',
+  'typescript:.tsx',
+  'biome:.css',
+  'biome:.json',
+  'stylelint:.css',
+  'coverage:.ts',
+  'coverage:.tsx',
+  'coverage:.js',
+  'coverage:.mjs',
+]);
 
 /** The held suffixes whose comments the census reads. */
 const SCANNED = new Accepted(['.ts', '.tsx', '.js', '.mjs', '.css']);
@@ -114,7 +122,7 @@ export function census(path: string, text: string): Census {
     problems.push({ path, line, problem });
   };
   const count = (tool: string, rules: readonly string[], line: number): void => {
-    if (CHECKS[tool]?.has(suffix(path)) === true) {
+    if (CHECKS.has(`${tool}:${suffix(path)}`)) {
       sites.push(...rules.map((rule) => site(path, `${tool}:${rule}`)));
     } else {
       refuse(line, `${tool} does not check ${suffix(path)} files`);
