@@ -1,0 +1,4 @@
+// path: packages/systems/chat/src/view/controlled-fire.tsx
+export function Draft(props: { vm: { text: string } }) {
+  return <input value={props.vm.text} />;
+}

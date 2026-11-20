@@ -7,8 +7,8 @@ function canonicalize(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(canonicalize);
   if (value !== null && typeof value === 'object') {
     const out: Record<string, unknown> = {};
-    for (const key of Object.keys(value).sort()) {
-      out[key] = canonicalize((value as Record<string, unknown>)[key]);
+    for (const [key, field] of Object.entries(value).toSorted(([a], [b]) => a.localeCompare(b))) {
+      out[key] = canonicalize(field);
     }
     return out;
   }

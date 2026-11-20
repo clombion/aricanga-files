@@ -1,0 +1,4 @@
+// path: harness/scripts/env-import.ts
+import { env } from 'node:process';
+
+export const ci: string | undefined = env.CI;

@@ -1,4 +1,4 @@
-import fc from 'fast-check';
+import * as fc from 'fast-check';
 import type { InkStep, Tag } from '../sim/story';
 import type { FixtureInput } from './harness';
 
@@ -22,9 +22,9 @@ export interface StepGenOptions {
 
 export function inkStepArb(opts: StepGenOptions = {}): fc.Arbitrary<InkStep> {
   const keys = opts.tagKeys ?? ['speaker'];
-  const text = opts.texts ? fc.constantFrom(...opts.texts) : fc.string({ minLength: 1, maxLength: 12 });
+  const textArb = opts.texts ? fc.constantFrom(...opts.texts) : fc.string({ minLength: 1, maxLength: 12 });
   return fc
-    .record({ text, tags: fc.array(tagArb(keys), { maxLength: opts.maxTags ?? 3 }) })
+    .record({ text: textArb, tags: fc.array(tagArb(keys), { maxLength: opts.maxTags ?? 3 }) })
     .map(({ text, tags }) => ({
       text,
       tags,

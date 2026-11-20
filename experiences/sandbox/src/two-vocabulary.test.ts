@@ -27,6 +27,8 @@ function recordingHost(): { host: Host; presented: string[] } {
   return { host, presented };
 }
 
+const ink = (): InkRuntime => new InkRuntime(compile('x\n'));
+
 function drain(exp: { step(): boolean }): void {
   while (exp.step()) {
     /* pump the whole story */
@@ -59,9 +61,8 @@ test('a stat-tagged step routes to cards even when chat is foreground', () => {
 
 test('createExperience fails loud on empty systems and unknown foreground', () => {
   const { host } = recordingHost();
-  const ink = () => new InkRuntime(compile('x\n'));
-  expect(() => createExperience({ ink: ink(), systems: [], host })).toThrow();
+  expect(() => createExperience({ ink: ink(), systems: [], host })).toThrow('at least one system');
   expect(() =>
     createExperience({ ink: ink(), systems: [erase(chatSystem)], foreground: 'nope', host }),
-  ).toThrow();
+  ).toThrow('foreground system "nope" is not registered');
 });

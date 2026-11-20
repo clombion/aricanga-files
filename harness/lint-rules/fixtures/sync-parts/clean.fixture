@@ -1,0 +1,4 @@
+// path: packages/systems/chat/src/view/sync-parts-clean.tsx
+export function Bubble(props: { vm: { text: string } }) {
+  return <p>{props.vm.text}</p>;
+}

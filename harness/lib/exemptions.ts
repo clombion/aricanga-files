@@ -132,7 +132,7 @@ export class Accepted<T extends string | number> {
   }
 
   [Symbol.iterator](): Iterator<T> {
-    return [...this.values].toSorted().values();
+    return [...this.values].toSorted((a, b) => String(a).localeCompare(String(b))).values();
   }
 }
 

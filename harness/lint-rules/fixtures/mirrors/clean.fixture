@@ -1,0 +1,5 @@
+// path: packages/systems/chat/src/view/mirrors-clean.tsx
+export function Title(props: { vm: { title: string } }) {
+  const shown = () => props.vm.title.toUpperCase();
+  return <h1>{shown()}</h1>;
+}

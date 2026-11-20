@@ -1,10 +1,10 @@
 import { expect, test } from 'vitest';
-import type { Command, Input } from '../sim/input';
-import { FIXTURE_TAG, fixtureSystemErased } from './fixture-system';
+import type { Input } from '../sim/input';
+import { FIXTURE_TAG, fixtureSystem, fixtureSystemErased } from './fixture-system';
 import { runFixture } from './harness';
 import { canonical } from './serialize';
 
-const player = (kind: string, payload: unknown = undefined): { input: Input<unknown, Command>; target: string } => ({
+const player = (kind: string, payload?: unknown): { input: Input<unknown>; target: string } => ({
   input: { source: 'player', command: { kind, payload } },
   target: 'fixture',
 });
@@ -28,8 +28,8 @@ test('runFixture captures the full multi-family stream headlessly (#1, #2, #4)',
   expect(families).toContain('schedule');
 
   // suspending effects settled deterministically via the drain
-  expect((run.view('fixture') as { fetched: unknown }).fetched).toBe('VALUE');
-  expect((run.view('fixture') as { busy: boolean }).busy).toBe(false);
+  expect(run.viewOf(fixtureSystem).fetched).toBe('VALUE');
+  expect(run.viewOf(fixtureSystem).busy).toBe(false);
 });
 
 test('same fixture + same seed ⇒ identical trace (#3)', async () => {
@@ -61,7 +61,7 @@ test('a choose-command drives an ink choice via DriveInk (#4)', async () => {
   });
 
   // the post-choice line was reached only because DriveInk(choose) advanced ink
-  expect((run.view('fixture') as { lines: string[] }).lines).toContain('Resolved');
+  expect(run.viewOf(fixtureSystem).lines).toContain('Resolved');
 });
 
 test('golden tripwire: the canonical stream matches the recorded golden (#6)', async () => {

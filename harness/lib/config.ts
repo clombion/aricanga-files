@@ -6,8 +6,6 @@ export class ConfigError extends Error {
   override readonly name = 'ConfigError';
 }
 
-type Json = null | boolean | number | string | Json[] | { [key: string]: Json };
-
 /** A plain JSON object, or a refusal naming what it was instead. */
 export function object(value: unknown, what: string): Readonly<Record<string, unknown>> {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
@@ -18,7 +16,7 @@ export function object(value: unknown, what: string): Readonly<Record<string, un
 
 /** Parse JSON text into a value the readers narrow; never a typed cast. */
 export function json(text: string): unknown {
-  const parsed: Json = JSON.parse(text);
+  const parsed: unknown = JSON.parse(text);
   return parsed;
 }
 

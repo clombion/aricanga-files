@@ -26,7 +26,7 @@ export const cardsSystem: System<CardsState, Command, Effect, CardsViewModel> = 
   id: 'cards',
   tags: [...CARD_TAGS],
   init: (_seed) => ({ deckCursor: 0, stats: {}, history: [] }),
-  reduce(state, input, _ctx): ReduceResult<CardsState, Effect> {
+  reduce(state, input, _ctx): ReduceResult<CardsState> {
     if (input.source !== 'story') return { state, effects: [] };
     const statTag = input.step.tags.find((t) => t.key === 'stat');
     if (statTag?.value === undefined) return { state, effects: [] };

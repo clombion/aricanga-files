@@ -1,10 +1,11 @@
 import { Compiler } from 'inkjs/full';
 import { beforeEach, expect, test, vi } from 'vitest';
 import { InkRuntime } from '../ink/ink-runtime';
-import type { ReduceContext, ReduceResult } from '../sim/context';
+import type { ReduceResult } from '../sim/context';
 import { type Effect, fx } from '../sim/effect';
+import { assertNever } from '../sim/exhaustive';
 import type { Command, Input } from '../sim/input';
-import { type AnySystem, type System, erase } from '../sim/system';
+import { type AnySystem, type System, erase, viewOf } from '../sim/system';
 import type { SaveStore, Scheduler } from '../services/services';
 import { type Host, Runtime } from './runtime';
 
@@ -30,7 +31,7 @@ const harness: System<HState, HCommand, Effect, HState> = {
   id: 'h',
   tags: ['h'],
   init: () => ({ lines: [], ids: [], busyCommit: false, token: COMMIT_TOKEN, fetched: null }),
-  reduce(state, input, ctx): ReduceResult<HState, Effect> {
+  reduce(state, input, ctx): ReduceResult<HState> {
     switch (input.source) {
       case 'story': {
         const id = ctx.nextId();
@@ -66,8 +67,11 @@ const harness: System<HState, HCommand, Effect, HState> = {
               : { state, effects: [] }; // stale token — no-op
           case 'data-arrived':
             return { state: { ...state, fetched: input.resume.value }, effects: [] };
-          default:
+          case 'story-loaded':
+          case 'restored':
             return { state, effects: [] };
+          default:
+            return assertNever(input.resume);
         }
       case 'lifecycle':
         return { state, effects: [] };
@@ -78,6 +82,9 @@ const harness: System<HState, HCommand, Effect, HState> = {
   status: (state) => (state.busyCommit ? 'busy-commit' : 'free'),
   view: (state) => state,
 };
+
+const hView = (rt: Runtime): HState =>
+  viewOf(harness, { systemId: 'h', value: rt.view('h', { now: 0, locale: 'en' }) });
 
 // --- fakes for the host shell ---
 
@@ -133,7 +140,7 @@ test('pump suspends on busy-commit and resumes on the matching CommitFired (#1, 
   expect(rt.step()).toBe(false); // gate closed: "World" is NOT pumped while busy-commit
   expect(fires).toHaveLength(1);
   fires[0]?.(); // CommitFired resumes; pump continues to "World"
-  expect((rt.view('h', { now: 0, locale: 'en' }) as HState).lines).toEqual(['Hello', 'World']);
+  expect(hView(rt).lines).toEqual(['Hello', 'World']);
 });
 
 test('a stale commit token is a no-op (#3)', () => {
@@ -142,14 +149,14 @@ test('a stale commit token is a no-op (#3)', () => {
   // deliver a CommitFired with a token the state has moved past
   rt.send({ source: 'resume', resume: { kind: 'commit-fired', token: 999 } }, 'h');
   // still busy → "World" not pumped
-  expect((rt.view('h', { now: 0, locale: 'en' }) as HState).lines).toEqual(['Hello']);
+  expect(hView(rt).lines).toEqual(['Hello']);
 });
 
 test('a Fetch effect round-trips to a DataArrived resume (#2)', async () => {
   const rt = makeRuntime();
   rt.send({ source: 'player', command: { kind: 'fetch', payload: undefined } }, 'h');
   await Promise.resolve(); // let fetchData's microtask resolve and re-enter send
-  expect((rt.view('h', { now: 0, locale: 'en' }) as HState).fetched).toBe('VALUE');
+  expect(hView(rt).fetched).toBe('VALUE');
 });
 
 test('an unknown present kind is a typed error (#2)', () => {
@@ -182,7 +189,7 @@ test('ids do not collide across snapshot/restore (#4)', () => {
   const rt2 = makeRuntime();
   rt2.restore(snap);
   rt2.send({ source: 'player', command: { kind: 'mint', payload: undefined } }, 'h');
-  const ids = (rt2.view('h', { now: 0, locale: 'en' }) as HState).ids;
+  const ids = hView(rt2).ids;
   // the restored allocator continues at id-2 — the new id does not collide with
   // the restored id-0/id-1 (all ids remain distinct)
   expect(ids[ids.length - 1]).toBe('id-2');
@@ -194,5 +201,6 @@ test('the runtime drives a vocabulary-agnostic system with no system import in f
   const input: Input<HState, HCommand> = { source: 'lifecycle', lifecycle: { kind: 'reset' } };
   expect(input.source).toBe('lifecycle');
   expect(typeof erase).toBe('function');
+  // oxlint-disable-next-line typescript/unbound-method -- isMockFunction inspects the function, it never calls it
   expect(vi.isMockFunction(host.present)).toBe(false);
 });

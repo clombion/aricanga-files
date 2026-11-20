@@ -1,0 +1,5 @@
+// path: packages/systems/chat/src/view/sync-parts-async.tsx
+export async function Bubble(props: { vm: { text: Promise<string> } }) {
+  const text = await props.vm.text;
+  return <p>{text}</p>;
+}

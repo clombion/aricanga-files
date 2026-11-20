@@ -19,12 +19,12 @@ export type {
   DataRequest,
   DriveInkOp,
 } from './sim/effect';
-export { fx } from './sim/effect';
+export { EffectPayloadError, field, fx, hasField, text } from './sim/effect';
 export type { Command, Resume, Lifecycle, Input } from './sim/input';
 export type { KernelStatus, ReduceContext, ReduceResult, RenderContext } from './sim/context';
 export type { SystemId, Snapshot } from './sim/snapshot';
-export type { System, AnySystem } from './sim/system';
-export { erase } from './sim/system';
+export type { System, AnySystem, Owned } from './sim/system';
+export { erase, stateOf, viewOf } from './sim/system';
 export type { ReduceRecord, ReduceObserver } from './sim/trace';
 export { assertNever } from './sim/exhaustive';
 export type { Router, RouteContext } from './sim/router';

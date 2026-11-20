@@ -1,0 +1,4 @@
+// path: packages/systems/chat/src/view/style-prop-clean.tsx
+export function Bubble(props: { vm: { text: string } }) {
+  return <p class="bubble">{props.vm.text}</p>;
+}
