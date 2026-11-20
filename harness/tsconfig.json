@@ -1,15 +1,17 @@
 {
   "extends": "../tsconfig.base.json",
   "compilerOptions": {
-    "composite": false,
-    "declaration": false,
-    "declarationMap": false,
-    "sourceMap": false,
     "noEmit": true,
     "allowImportingTsExtensions": true,
     "erasableSyntaxOnly": true,
-    "lib": ["ES2023"],
-    "types": ["node"]
+    "lib": [
+      "ES2023"
+    ],
+    "types": [
+      "node"
+    ]
   },
-  "include": ["**/*.ts"]
+  "include": [
+    "**/*.ts"
+  ]
 }
