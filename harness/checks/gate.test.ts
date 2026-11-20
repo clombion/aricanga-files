@@ -155,20 +155,23 @@ function scriptsOf(read: ReadonlyMap<string, Task>): Readonly<Record<string, str
 }
 
 describe('the repository', () => {
-  test('the gate writes nothing and runs locked tools', () => {
+  test('the gate writes nothing and runs locked tools', async () => {
     expect.hasAssertions();
-    expect(gateProblems(repoTasks())).toStrictEqual([]);
+    const repoTaskMap = await repoTasks();
+    expect(gateProblems(repoTaskMap)).toStrictEqual([]);
   });
 
-  test('no task or hook runs an unlocked tool', () => {
+  test('no task or hook runs an unlocked tool', async () => {
     expect.hasAssertions();
-    const commands = [...repoTasks().values()].flatMap((task) => task.commands);
-    expect(runnerProblems([...commands, ...repoHooks().map((hook) => hook.run)])).toStrictEqual([]);
+    const [repoTaskMap, repoHookList] = await Promise.all([repoTasks(), repoHooks()]);
+    const commands = [...repoTaskMap.values()].flatMap((task) => task.commands);
+    expect(runnerProblems([...commands, ...repoHookList.map((hook) => hook.run)])).toStrictEqual([]);
   });
 
-  test('the hooks run the gate', () => {
+  test('the hooks run the gate', async () => {
     expect.hasAssertions();
-    expect(hookProblems(repoHooks())).toStrictEqual([]);
+    const repoHookList = await repoHooks();
+    expect(hookProblems(repoHookList)).toStrictEqual([]);
   });
 });
 

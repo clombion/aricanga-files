@@ -67,9 +67,9 @@ packages:
 `;
 
 describe('the repository', () => {
-  test('every pin has its upstream and every upstream a pin', () => {
+  test('every pin has its upstream and every upstream a pin', async () => {
     expect.hasAssertions();
-    const problems = pinProblems(pins(), UPSTREAM);
+    const problems = pinProblems(await pins(), UPSTREAM);
     expect(PENDING.unexempted(problems)).toStrictEqual([]);
   });
 });

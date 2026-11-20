@@ -13,7 +13,7 @@ import { Exemptions, StaleExemptionError, site } from '#lib/exemptions.ts';
 import { describe, expect, test } from 'vitest';
 import type { DeepReadonly } from './readonly.ts';
 import type { Prose } from '#lib/docs.ts';
-import { textOf } from '#lib/source-files.ts';
+import { textsOf } from '#lib/source-files.ts';
 import { typescriptFiles } from '#lib/scope.ts';
 
 const HARNESS_ID = 'one-claims';
@@ -74,22 +74,24 @@ function probeProblems(probe: DeepReadonly<Probe>, texts: ReadonlyMap<string, st
 /**
  * The held TypeScript sources, by path.
  *
- * @returns {ReadonlyMap<string, string>} Each held module's text, by path.
+ * @returns {Promise<ReadonlyMap<string, string>>} Each held module's text, by path.
  */
-function sources(): ReadonlyMap<string, string> {
-  return new Map(typescriptFiles().map((path) => [path, textOf(path)] as const));
+async function sources(): Promise<ReadonlyMap<string, string>> {
+  const files = await typescriptFiles();
+  const texts = await textsOf(files);
+  return new Map(texts);
 }
 
 describe('the repository', () => {
-  test('every claim is registered and every entry is live', () => {
+  test('every claim is registered and every entry is live', async () => {
     expect.hasAssertions();
-    const found = foundClaims(currentText());
+    const found = foundClaims(await currentText());
     expect(registry(CLAIMS).unexempted(found)).toStrictEqual([]);
   });
 
-  test.each(CLAIMS.map((claim: DeepReadonly<Claim>) => [`${claim.path}: ${claim.clause}`, claim] as const))('the claim %s holds', (_label: string, claim: DeepReadonly<Claim>) => {
+  test.each(CLAIMS.map((claim: DeepReadonly<Claim>) => [`${claim.path}: ${claim.clause}`, claim] as const))('the claim %s holds', async (_label: string, claim: DeepReadonly<Claim>) => {
     expect.hasAssertions();
-    expect(probeProblems(claim.probe, sources())).toStrictEqual([]);
+    expect(probeProblems(claim.probe, await sources())).toStrictEqual([]);
   });
 });
 

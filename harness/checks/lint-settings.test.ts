@@ -133,10 +133,10 @@ function categoryProblems(configText: unknown): readonly string[] {
 /**
  * The `v2-strict` rules of eslint-plugin-solid, read from the locked plugin.
  *
- * @returns {Options} The rule settings.
+ * @returns {Promise<Options>} The rule settings.
  */
-function v2Strict(): Options {
-  const done = finished(
+async function v2Strict(): Promise<Options> {
+  const done = await finished(
     [
       process.execPath,
       '--input-type=module',
@@ -151,45 +151,51 @@ function v2Strict(): Options {
 /**
  * The rule settings of the repository config.
  *
- * @returns {Options} The settings, by rule.
+ * @returns {Promise<Options>} The settings, by rule.
  */
-function repoRules(): Options {
-  return object(repoConfig()['rules'] ?? {}, 'rules');
+async function repoRules(): Promise<Options> {
+  const repo = await repoConfig();
+  return object(repo['rules'] ?? {}, 'rules');
 }
 
 /**
  * The JS plugins the repository config loads.
  *
- * @returns {readonly unknown[]} The listed plugins.
+ * @returns {Promise<readonly unknown[]>} The listed plugins.
  */
-function jsPlugins(): readonly unknown[] {
-  const plugins = repoConfig()['jsPlugins'];
-  return Array.isArray(plugins) ? plugins : [];
+async function jsPlugins(): Promise<readonly unknown[]> {
+  const repo = await repoConfig();
+  const plugins = repo['jsPlugins'];
+  const listed: readonly unknown[] = Array.isArray(plugins) ? plugins : [];
+  return listed;
 }
 
 describe('the repository config', () => {
-  test('fails each planted violation with exactly its rule, and passes the near misses', () => {
+  test('fails each planted violation with exactly its rule, and passes the near misses', async () => {
     expect.hasAssertions();
-    const [reported, expected] = plantedCodes();
+    const [reported, expected] = await plantedCodes();
     expect(reported).toStrictEqual(expected);
   });
 
-  test('turns on exactly the rules of eslint-plugin-solid v2-strict, loaded as a JS plugin', () => {
+  test('turns on exactly the rules of eslint-plugin-solid v2-strict, loaded as a JS plugin', async () => {
     expect.hasAssertions();
-    expect(jsPlugins()).toContain('eslint-plugin-solid');
-    expect(enabled(repoRules(), 'solid/')).toStrictEqual(enabled(v2Strict(), 'solid/'));
+    const [plugins, rules, strict] = await Promise.all([jsPlugins(), repoRules(), v2Strict()]);
+    expect(plugins).toContain('eslint-plugin-solid');
+    expect(enabled(rules, 'solid/')).toStrictEqual(enabled(strict, 'solid/'));
   });
 });
 
 describe('the strictness of the config', () => {
-  test('turns every category on at error', () => {
+  test('turns every category on at error', async () => {
     expect.hasAssertions();
-    expect(categoryProblems(repoConfig())).toStrictEqual([]);
+    const repo = await repoConfig();
+    expect(categoryProblems(repo)).toStrictEqual([]);
   });
 
-  test('declares every rule it turns off with its reason', () => {
+  test('declares every rule it turns off with its reason', async () => {
     expect.hasAssertions();
-    const off = turnedOff(repoConfig());
+    const repo = await repoConfig();
+    const off = turnedOff(repo);
     expect(TURNED_OFF.unexempted(off)).toStrictEqual([]);
   });
 
@@ -209,22 +215,24 @@ describe('the strictness of the config', () => {
 });
 
 describe('each option, by removal', () => {
-  test('denyWarnings: a lone warning fails the run, and passes without it', () => {
+  test('denyWarnings: a lone warning fails the run, and passes without it', async () => {
     expect.hasAssertions();
     const warn = { 'eslint/no-debugger': 'warn' };
-    expect(lint({ [WARNING_PLANT]: WARNING_TEXT }, config({}, warn)).status).toBe(EXIT_FINDINGS);
-    expect(lint({ [WARNING_PLANT]: WARNING_TEXT }, config({ denyWarnings: false }, warn)).status).toBe(EXIT_CLEAN);
+    const denied = await lint({ [WARNING_PLANT]: WARNING_TEXT }, await config({}, warn));
+    expect(denied.status).toBe(EXIT_FINDINGS);
+    const allowed = await lint({ [WARNING_PLANT]: WARNING_TEXT }, await config({ denyWarnings: false }, warn));
+    expect(allowed.status).toBe(EXIT_CLEAN);
   });
 
-  test('reportUnusedDisableDirectives: an unused directive passes without it', () => {
+  test('reportUnusedDisableDirectives: an unused directive passes without it', async () => {
     expect.hasAssertions();
-    const run = lint({ 'src/unused-directive.ts': UNUSED_DIRECTIVE_TEXT }, config({ reportUnusedDisableDirectives: 'off' }));
+    const run = await lint({ 'src/unused-directive.ts': UNUSED_DIRECTIVE_TEXT }, await config({ reportUnusedDisableDirectives: 'off' }));
     expect(run.status).toBe(EXIT_CLEAN);
   });
 
-  test('respectEslintDisableDirectives: false, an eslint-disable comment silences its rule once respected', () => {
+  test('respectEslintDisableDirectives: false, an eslint-disable comment silences its rule once respected', async () => {
     expect.hasAssertions();
-    const run = lint({ 'src/eslint-directive.ts': ESLINT_DIRECTIVE_TEXT }, config({ respectEslintDisableDirectives: true }));
+    const run = await lint({ 'src/eslint-directive.ts': ESLINT_DIRECTIVE_TEXT }, await config({ respectEslintDisableDirectives: true }));
     expect(run.status).toBe(EXIT_CLEAN);
   });
 });

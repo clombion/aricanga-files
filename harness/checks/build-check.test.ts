@@ -9,9 +9,9 @@
 
 import { apps, checkBuild } from '#lib/build.ts';
 import { describe, expect, test } from 'vitest';
-import { inSequence } from '#lib/lists.ts';
 import { EXIT_CLEAN } from './exit-status.ts';
 import { Project } from '#lib/tools.ts';
+import { inSequence } from '#lib/lists.ts';
 
 const HARNESS_ID = 'build-check';
 

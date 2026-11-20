@@ -11,14 +11,16 @@ import { describe, expect, test } from 'vitest';
 const HARNESS_ID = 'node-floor';
 
 describe('the repository', () => {
-  test('the running Node meets the declared floor', () => {
+  test('the running Node meets the declared floor', async () => {
     expect.hasAssertions();
-    expect(meets(version(process.versions.node), repoFloor())).toBe(true);
+    const declared = await repoFloor();
+    expect(meets(version(process.versions.node), declared)).toBe(true);
   });
 
-  test('the pinned Node meets the declared floor', () => {
+  test('the pinned Node meets the declared floor', async () => {
     expect.hasAssertions();
-    expect(meets(pinned(), repoFloor())).toBe(true);
+    const [pin, declared] = await Promise.all([pinned(), repoFloor()]);
+    expect(meets(pin, declared)).toBe(true);
   });
 });
 

@@ -11,6 +11,7 @@ import { refused, revisions, updates } from '#lib/pushed.ts';
 import type { Finished } from '#lib/process.ts';
 import { Project } from '#lib/tools.ts';
 import { fromRoot } from '#lib/paths.ts';
+import { inSequence } from '#lib/lists.ts';
 
 const HARNESS_ID = 'pushed-subjects';
 
@@ -45,45 +46,51 @@ describe('the pushed-subjects rule', () => {
  *
  * @param {Project} project - The planted project.
  * @param {readonly string[]} subjects - The subjects to commit after the base.
- * @returns {readonly [string, string]} The base commit and the head.
+ * @returns {Promise<readonly [string, string]>} The base commit and the head.
  */
-function commitRange(project: Project, subjects: readonly string[]): readonly [string, string] {
-  const git = (...args: readonly string[]): Finished => project.run('git', '-c', 'user.name=plant', '-c', 'user.email=plant@example.invalid', ...args);
-  git('init', '-q', '-b', 'main');
-  git('commit', '-q', '--allow-empty', '-m', 'chore: base');
-  const base = git('rev-parse', 'HEAD').stdout.trim();
-  for (const subject of subjects) {
-    git('commit', '-q', '--allow-empty', '-m', subject);
-  }
-  return [base, git('rev-parse', 'HEAD').stdout.trim()];
+async function commitRange(project: Project, subjects: readonly string[]): Promise<readonly [string, string]> {
+  const git = async (...args: readonly string[]): Promise<Finished> => {
+    const done = await project.run('git', '-c', 'user.name=plant', '-c', 'user.email=plant@example.invalid', ...args);
+    return done;
+  };
+  await git('init', '-q', '-b', 'main');
+  await git('commit', '-q', '--allow-empty', '-m', 'chore: base');
+  const base = await git('rev-parse', 'HEAD');
+  await inSequence(subjects, async (subject) => {
+    const done = await git('commit', '-q', '--allow-empty', '-m', subject);
+    return done;
+  });
+  const head = await git('rev-parse', 'HEAD');
+  return [base.stdout.trim(), head.stdout.trim()];
 }
 
 /**
  * The pre-push script's exit status for a push of `subjects` onto a base commit.
  *
  * @param {readonly string[]} subjects - The subjects of the pushed commits.
- * @returns {number} The pre-push script's exit status for a push of `subjects` onto a base commit.
+ * @returns {Promise<number>} The pre-push script's exit status for a push of `subjects` onto a base commit.
  */
-function pushOf(subjects: readonly string[]): number {
-  const project = new Project({ linkModules: false });
+async function pushOf(subjects: readonly string[]): Promise<number> {
+  const project = await Project.create({ linkModules: false });
   try {
-    const [base, head] = commitRange(project, subjects);
-    return project.runWithInput(`refs/heads/main ${head} refs/heads/main ${base}\n`, 'node', fromRoot('harness/scripts/check-pushed.ts')).status;
+    const [base, head] = await commitRange(project, subjects);
+    const done = await project.runWithInput(`refs/heads/main ${head} refs/heads/main ${base}\n`, 'node', fromRoot('harness/scripts/check-pushed.ts'));
+    return done.status;
   } finally {
-    project.remove();
+    await project.remove();
   }
 }
 
 describe('the pre-push script', () => {
 
-  test('fails on a fold commit in the pushed range', () => {
+  test('fails on a fold commit in the pushed range', async () => {
     expect.hasAssertions();
-    expect(pushOf(['feat: one', 'fixup! feat: one'])).toBe(EXIT_FINDINGS);
+    await expect(pushOf(['feat: one', 'fixup! feat: one'])).resolves.toBe(EXIT_FINDINGS);
   });
 
-  test('passes a range of ordinary commits', () => {
+  test('passes a range of ordinary commits', async () => {
     expect.hasAssertions();
-    expect(pushOf(['feat: one', 'fix: fixup! handling'])).toBe(EXIT_CLEAN);
+    await expect(pushOf(['feat: one', 'fix: fixup! handling'])).resolves.toBe(EXIT_CLEAN);
   });
 });
 

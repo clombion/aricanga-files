@@ -160,9 +160,10 @@ function key(use: Use): string {
 }
 
 describe('the repository', () => {
-  test('no current text uses a refused term', () => {
+  test('no current text uses a refused term', async () => {
     expect.hasAssertions();
-    const found = uses(termsOf(textOf('docs/terms.toml')), currentText(), currentSpans());
+    const [text, lines, spans] = await Promise.all([textOf('docs/terms.toml'), currentText(), currentSpans()]);
+    const found = uses(termsOf(text), lines, spans);
     expect(EXEMPT.unexemptedBy(found, key)).toStrictEqual([]);
   });
 });
@@ -201,9 +202,9 @@ describe('the terms check', () => {
     expect(() => termsOf('[retired]\nsentinel = " "\n')).toThrow(/without a replacement/u);
   });
 
-  test('reads the repository terms file', () => {
+  test('reads the repository terms file', async () => {
     expect.hasAssertions();
-    const terms = termsOf(textOf('docs/terms.toml'));
+    const terms = termsOf(await textOf('docs/terms.toml'));
     expect([...terms.retired, ...terms.refused, ...terms.refusedInCode]).not.toStrictEqual([]);
   });
 });

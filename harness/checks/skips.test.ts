@@ -12,7 +12,7 @@ import { Exemptions, site } from '#lib/exemptions.ts';
 import { describe, expect, test } from 'vitest';
 import { heldFiles } from '#lib/scope.ts';
 import { skips } from './skips.scan.ts';
-import { textOf } from '#lib/source-files.ts';
+import { textsOf } from '#lib/source-files.ts';
 
 const HARNESS_ID = 'skips';
 
@@ -20,10 +20,11 @@ const HARNESS_ID = 'skips';
 const SKIPS = Exemptions.grouped({});
 
 describe('the repository', () => {
-  test('every skip is listed', () => {
+  test('every skip is listed', async () => {
     expect.hasAssertions();
-    const held = heldFiles('.test.ts', '.test.tsx', '.spec.ts');
-    const found = held.flatMap((path) => skips(path, textOf(path)));
+    const held = await heldFiles('.test.ts', '.test.tsx', '.spec.ts');
+    const texts = await textsOf(held);
+    const found = texts.flatMap(([path, text]: readonly [string, string]) => skips(path, text));
     expect(SKIPS.unexempted(found)).toStrictEqual([]);
   });
 });

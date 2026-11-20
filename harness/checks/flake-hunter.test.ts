@@ -59,18 +59,20 @@ const PLANTS: Readonly<Record<string, string>> = {
  * @returns {Promise<readonly [number, readonly number[]]>} A plain run and a hunt of one planted spec: their exit statuses.
  */
 async function plainAndHunted(file: string): Promise<readonly [number, readonly number[]]> {
-  const project = new Project();
+  const project = await Project.create();
   try {
-    project.write('vitest.config.ts', CONFIG);
-    for (const [path, text] of Object.entries(PLANTS)) {
-      project.write(path, text);
-    }
-    const plain = project.tool('vitest', 'run', '--root', project.root, '--config', 'vitest.config.ts', file);
+    await project.write('vitest.config.ts', CONFIG);
+    await Promise.all(
+      Object.entries(PLANTS).map(async ([path, text]: readonly [string, string]) => {
+        await project.write(path, text);
+      }),
+    );
+    const plain = await project.tool('vitest', 'run', '--root', project.root, '--config', 'vitest.config.ts', file);
     const options: Hunt = { config: 'vitest.config.ts', copies: COPIES, filters: [file], repeats: REPEATS, root: project.root, seed: SEED };
     const hunted = await hunt(options);
     return [plain.status, hunted.map((result) => result.status)];
   } finally {
-    project.remove();
+    await project.remove();
   }
 }
 
