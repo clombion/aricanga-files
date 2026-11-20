@@ -20,7 +20,13 @@ describe('a patch', () => {
         return value + STEP;
       },
     };
-    const restore = patch(target, 'add', (real) => (self, args): number => Number(real(self, args)) + EXTRA);
+    const restore = patch(
+      target,
+      'add',
+      (real) =>
+        (self, args): number =>
+          Number(real(self, args)) + EXTRA,
+    );
     expect(target.add(INPUT)).toBe(INPUT + STEP + EXTRA);
     restore();
     expect(target.add(INPUT)).toBe(INPUT + STEP);
