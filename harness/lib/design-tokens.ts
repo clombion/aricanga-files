@@ -6,48 +6,90 @@
  * does not read custom properties. Zero and unitless numbers are not raw.
  */
 
-import stylelint from 'stylelint';
 import type { Rule } from 'stylelint';
+import stylelint from 'stylelint';
 
-export const ruleName: string = 'harness/design-tokens';
+/** A raw value found: its kind and its text. */
+type Raw = readonly [string, string];
 
-const SIZE = /(?<![\w-])-?(\d*\.?\d+)(px|rem|em|vh|vw|vi|vb|vmin|vmax|svh|lvh|dvh|dvi|dvb|svi|svb|ch|ex|lh|cqw|cqh|cqi|cqb|pt|pc|cm|mm|in)\b/g;
-const DURATION = /(?<![\w-])(\d*\.?\d+)(ms|s)\b/g;
-const HEX = /#[\da-f]{3,8}\b/gi;
-const COLOUR_FUNCTION = /\b(rgba?|hsla?|hwb|lab|lch|oklab|oklch|color)\(/gi;
-const EASING_FUNCTION = /\b(cubic-bezier|steps)\(/gi;
-const EASING_KEYWORD = /(?<![\w-])(ease|ease-in|ease-out|ease-in-out|linear|step-start|step-end)(?![\w-])/g;
+/** How to find one kind of raw value. */
+interface Finder {
+  readonly kind: string;
+  readonly pattern: Readonly<RegExp>;
+  /** Whether a match whose number is zero is not raw. */
+  readonly zeroIsFine: boolean;
+}
+
+const ruleName = 'harness/design-tokens';
+
+const SIZE =
+  /(?<![\w-])-?(?<number>\d*\.?\d+)(?<unit>px|rem|em|vh|vw|vi|vb|vmin|vmax|svh|lvh|dvh|dvi|dvb|svi|svb|ch|ex|lh|cqw|cqh|cqi|cqb|pt|pc|cm|mm|in)\b/gu;
+const DURATION = /(?<![\w-])(?<number>\d*\.?\d+)(?<unit>ms|s)\b/gu;
+const HEX = /#[\da-f]{3,8}\b/giu;
+const COLOUR_FUNCTION = /\b(?:rgba?|hsla?|hwb|lab|lch|oklab|oklch|color)\(/giu;
+const EASING_FUNCTION = /\b(?:cubic-bezier|steps)\(/giu;
+const EASING_KEYWORD = /(?<![\w-])(?:ease|ease-in|ease-out|ease-in-out|linear|step-start|step-end)(?![\w-])/gu;
 const NAMED_COLOUR =
-  /(?<![\w-])(black|white|red|green|blue|yellow|orange|purple|pink|gray|grey|silver|maroon|olive|lime|aqua|teal|navy|fuchsia|brown|gold|indigo|violet|cyan|magenta|beige|coral|crimson|salmon|tomato|khaki|lavender|plum|orchid|tan|wheat|ivory|azure|snow|linen)(?![\w-])/gi;
-const INTEGER = /^-?\d+$/;
+  /(?<![\w-])(?:black|white|red|green|blue|yellow|orange|purple|pink|gray|grey|silver|maroon|olive|lime|aqua|teal|navy|fuchsia|brown|gold|indigo|violet|cyan|magenta|beige|coral|crimson|salmon|tomato|khaki|lavender|plum|orchid|tan|wheat|ivory|azure|snow|linen)(?![\w-])/giu;
+const INTEGER = /^-?\d+$/u;
 
-export const messages: { raw: (kind: string, value: string) => string } = stylelint.utils.ruleMessages(ruleName, {
+/** The number zero, which is never a raw value. */
+const ZERO = 0;
+
+const SIZES: Finder = { kind: 'size', pattern: SIZE, zeroIsFine: true };
+
+const TOKEN_FINDERS: readonly Finder[] = [
+  SIZES,
+  { kind: 'duration', pattern: DURATION, zeroIsFine: true },
+  { kind: 'colour', pattern: HEX, zeroIsFine: false },
+  { kind: 'colour', pattern: COLOUR_FUNCTION, zeroIsFine: false },
+  { kind: 'colour', pattern: NAMED_COLOUR, zeroIsFine: false },
+  { kind: 'easing', pattern: EASING_FUNCTION, zeroIsFine: false },
+  { kind: 'easing', pattern: EASING_KEYWORD, zeroIsFine: false },
+];
+
+const messages: { raw: (kind: string, value: string) => string } = stylelint.utils.ruleMessages(ruleName, {
   raw: (kind: string, value: string) => `raw ${kind} "${value}" outside the design tokens: read a token with var()`,
 });
 
-function matches(pattern: RegExp, value: string, kind: string, nonZero: boolean): (readonly [string, string])[] {
-  return [...value.matchAll(pattern)]
-    .filter((match) => !nonZero || Number(match[1]) !== 0)
-    .map((match) => [kind, match[0]] as const);
+/**
+ * The raw values one finder finds in a declaration's value.
+ *
+ * @param {Finder} finder - What to look for.
+ * @param {string} value - The declaration's value.
+ * @returns {Raw[]} Each raw value found, with its kind.
+ */
+function found(finder: Finder, value: string): Raw[] {
+  const raws: Raw[] = [];
+  for (const match of value.matchAll(finder.pattern)) {
+    const [text] = match;
+    if (!finder.zeroIsFine || Number(match.groups?.['number']) !== ZERO) {
+      raws.push([finder.kind, text]);
+    }
+  }
+  return raws;
 }
 
-/** The raw sizes of a declaration's value. */
-export function rawSizes(value: string): readonly (readonly [string, string])[] {
-  return matches(SIZE, value, 'size', true);
+/**
+ * The raw sizes of a declaration's value.
+ *
+ * @param {string} value - The declaration's value.
+ * @returns {readonly Raw[]} Each raw size, with its kind.
+ */
+function rawSizes(value: string): readonly Raw[] {
+  return found(SIZES, value);
 }
 
-/** Every raw design value of a custom property's value: size, duration, colour, easing or a bare integer. */
-export function rawTokenValues(value: string): readonly (readonly [string, string])[] {
-  return [
-    ...rawSizes(value),
-    ...matches(DURATION, value, 'duration', true),
-    ...matches(HEX, value, 'colour', false),
-    ...matches(COLOUR_FUNCTION, value, 'colour', false),
-    ...matches(NAMED_COLOUR, value, 'colour', false),
-    ...matches(EASING_FUNCTION, value, 'easing', false),
-    ...matches(EASING_KEYWORD, value, 'easing', false),
-    ...(INTEGER.test(value.trim()) && Number(value) !== 0 ? [['z-index', value.trim()] as const] : []),
-  ];
+/**
+ * Every raw design value of a custom property's value: size, duration, colour, easing or a bare integer.
+ *
+ * @param {string} value - The custom property's value.
+ * @returns {readonly Raw[]} Each raw value, with its kind.
+ */
+function rawTokenValues(value: string): readonly Raw[] {
+  const integer = value.trim();
+  const zIndex: readonly Raw[] = INTEGER.test(integer) && Number(integer) !== ZERO ? [['z-index', integer]] : [];
+  return [...TOKEN_FINDERS.flatMap((finder) => found(finder, value)), ...zIndex];
 }
 
 const rule: Rule = (primary) => (root, result) => {
@@ -60,8 +102,8 @@ const rule: Rule = (primary) => (root, result) => {
     if (tokenFile && custom) {
       return;
     }
-    const found = custom ? rawTokenValues(declaration.value) : rawSizes(declaration.value);
-    for (const [kind, value] of found) {
+    const raws = custom ? rawTokenValues(declaration.value) : rawSizes(declaration.value);
+    for (const [kind, value] of raws) {
       stylelint.utils.report({ message: messages.raw(kind, value), node: declaration, result, ruleName, word: value });
     }
   });
@@ -70,4 +112,7 @@ rule.ruleName = ruleName;
 rule.messages = messages;
 
 const plugin: ReturnType<typeof stylelint.createPlugin> = stylelint.createPlugin(ruleName, rule);
+
+export { messages, rawSizes, rawTokenValues, ruleName };
+// Stylelint loads a plugin module's default export.
 export default plugin;

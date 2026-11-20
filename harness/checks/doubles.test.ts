@@ -8,7 +8,7 @@
 
 import { describe, expect, test } from 'vitest';
 
-import { Scripted, Tripwire, checkTrips, drain, trip, tripped } from '../lib/doubles.ts';
+import { Scripted, TripwireError, checkTrips, drain, trip, tripped } from '../lib/doubles.ts';
 import { runPlanted } from '../lib/planted-vitest.ts';
 
 export const HARNESS_ID = 'doubles';
@@ -70,11 +70,11 @@ describe('a scripted double', () => {
         }
       });
     }).not.toThrow();
-    expect(caught).toBeInstanceOf(Tripwire);
+    expect(caught).toBeInstanceOf(TripwireError);
   });
 
   test('a recorded trip fails the check, and draining clears it', () => {
-    expect(() => trip('planted')).toThrow(Tripwire);
+    expect(() => trip('planted')).toThrow(TripwireError);
     expect(() => {
       checkTrips('after the test');
     }).toThrow('after the test: ["planted"]');

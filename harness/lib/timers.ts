@@ -9,67 +9,132 @@
  * the guarded functions back.
  */
 
+import { Slot } from './lists.ts';
 import { patch } from './patch.ts';
 
+/** A timer not yet fired or cleared, with where it was set. */
 interface Pending {
   readonly kind: 'timeout' | 'interval';
   readonly at: string;
 }
 
+/** The installed guard. */
 interface Installed {
   /** Clear every pending timer, restore the real functions, and name the timers that were pending. */
   readonly release: () => readonly string[];
 }
 
+/** A call of a replaced function with its `this` and its arguments. */
+type Call = (self: unknown, args: readonly unknown[]) => unknown;
+
+/** The stack frame of the code that set a timer: past the error, `caller`, and the guard's two wrappers. */
+const SETTER_FRAME = 4;
+
+const AT = /^at /u;
+
+/**
+ * Where the timer being set was set.
+ *
+ * @returns {string} The setter's stack frame.
+ */
 function caller(): string {
-  const line = new Error('timer').stack?.split('\n')[4] ?? '';
-  return line.trim().replace(/^at /, '');
+  const line = new Error('timer').stack?.split('\n')[SETTER_FRAME] ?? '';
+  return line.trim().replace(AT, '');
 }
 
-/** Install the guard. */
-export function install(): Installed {
-  const pending = new Map<unknown, Pending>();
-  const clears = new Map<Pending['kind'], (handle: unknown) => void>();
-  const restores = [
-    patch(globalThis, 'setTimeout', (real) => (self, [handler, ...rest]) => {
-      const at = caller();
-      const fire = (...given: unknown[]): void => {
-        pending.delete(handle);
+/** The timers the guard saw set and not yet fired or cleared, and how to clear each kind. */
+class Timers {
+  public readonly pending = new Map<unknown, Pending>();
+
+  public readonly clears = new Map<Pending['kind'], (handle: unknown) => void>();
+
+  /**
+   * A `setTimeout` replacement that records the timer until it fires or is cleared.
+   *
+   * @param {Call} real - The real `setTimeout`.
+   * @returns {Call} The replacement.
+   */
+  public timeout(real: Call): Call {
+    return (self, args) => {
+      const [handler, ...rest] = args;
+      const own = new Slot<unknown>();
+      const fire = (...given: readonly unknown[]): void => {
+        this.pending.delete(own.peek());
         if (typeof handler === 'function') {
           Reflect.apply(handler, self, given);
         }
       };
       const handle = real(self, [fire, ...rest]);
-      pending.set(handle, { at, kind: 'timeout' });
+      own.put(handle);
+      this.pending.set(handle, { at: caller(), kind: 'timeout' });
       return handle;
-    }),
-    patch(globalThis, 'setInterval', (real) => (self, args) => {
+    };
+  }
+
+  /**
+   * A `setInterval` replacement that records the timer until it is cleared.
+   *
+   * @param {Call} real - The real `setInterval`.
+   * @returns {Call} The replacement.
+   */
+  public interval(real: Call): Call {
+    return (self, args) => {
       const handle = real(self, args);
-      pending.set(handle, { at: caller(), kind: 'interval' });
+      this.pending.set(handle, { at: caller(), kind: 'interval' });
       return handle;
-    }),
-    patch(globalThis, 'clearTimeout', (real) => {
-      clears.set('timeout', (handle) => real(globalThis, [handle]));
-      return (self, args) => {
-        pending.delete(args[0]);
-        return real(self, args);
-      };
-    }),
-    patch(globalThis, 'clearInterval', (real) => {
-      clears.set('interval', (handle) => real(globalThis, [handle]));
-      return (self, args) => {
-        pending.delete(args[0]);
-        return real(self, args);
-      };
-    }),
+    };
+  }
+
+  /**
+   * A `clearTimeout` or `clearInterval` replacement that forgets the timer, keeping the real one to
+   * clear what a test leaves.
+   *
+   * @param {Pending['kind']} kind - Which kind of timer it clears.
+   * @param {Call} real - The real clearing function.
+   * @returns {Call} The replacement.
+   */
+  public clear(kind: Pending['kind'], real: Call): Call {
+    this.clears.set(kind, (handle) => {
+      real(globalThis, [handle]);
+    });
+    return (self, args) => {
+      const [handle] = args;
+      this.pending.delete(handle);
+      return real(self, args);
+    };
+  }
+
+  /**
+   * Clear every pending timer.
+   *
+   * @returns {readonly string[]} The timers that were pending, named with where they were set.
+   */
+  public clearLeft(): readonly string[] {
+    const left = [...this.pending.entries()].map(([handle, timer]: readonly [unknown, Pending]) => {
+      this.clears.get(timer.kind)?.(handle);
+      return `${timer.kind} set at ${timer.at}`;
+    });
+    this.pending.clear();
+    return left;
+  }
+}
+
+/**
+ * Install the guard.
+ *
+ * @returns {Installed} The record whose `release` clears and names what a test left.
+ */
+function install(): Installed {
+  const timers = new Timers();
+  const restores = [
+    patch(globalThis, 'setTimeout', (real) => timers.timeout(real)),
+    patch(globalThis, 'setInterval', (real) => timers.interval(real)),
+    patch(globalThis, 'clearTimeout', (real) => timers.clear('timeout', real)),
+    patch(globalThis, 'clearInterval', (real) => timers.clear('interval', real)),
   ];
   return {
     release: () => {
-      const left = [...pending.entries()].map(([handle, timer]) => {
-        clears.get(timer.kind)?.(handle);
-        return `${timer.kind} set at ${timer.at}`;
-      });
-      pending.clear();
+      const left = timers.clearLeft();
       for (const restore of restores.toReversed()) {
         restore();
       }
@@ -77,3 +142,5 @@ export function install(): Installed {
     },
   };
 }
+
+export { install };
