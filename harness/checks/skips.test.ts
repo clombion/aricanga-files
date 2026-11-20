@@ -8,7 +8,8 @@
  * title of the test the skip belongs to, or `<module>`.
  */
 
-import ts from 'typescript';
+import { type CallExpression, type Expression, type Node, type SourceFile } from 'typescript/unstable/ast';
+import { isArrowFunction, isCallExpression, isFunctionExpression, isIdentifier, isNoSubstitutionTemplateLiteral, isObjectBindingPattern, isPropertyAccessExpression, isStringLiteral } from 'typescript/unstable/ast/is';
 import { describe, expect, test } from 'vitest';
 
 import { Accepted, Exemptions, site } from '../lib/exemptions.ts';
@@ -27,7 +28,7 @@ const RUNNERS = new Accepted(['vitest', '@playwright/test']);
 const SKIPPING = new Accepted(['skip', 'skipIf', 'runIf', 'todo', 'only', 'fails', 'fixme', 'fail']);
 
 /** The local names that stand for a runner's test functions in one module. */
-function runnerNames(file: ts.SourceFile): ReadonlyMap<string, string> {
+function runnerNames(file: SourceFile): ReadonlyMap<string, string> {
   const names = new Map<string, string>();
   for (const runner of RUNNERS) {
     for (const [local, imported] of importsFrom(file, runner)) {
@@ -39,26 +40,26 @@ function runnerNames(file: ts.SourceFile): ReadonlyMap<string, string> {
   return names;
 }
 
-function titleOf(call: ts.CallExpression): string | undefined {
+function titleOf(call: CallExpression): string | undefined {
   const [first] = call.arguments;
-  return first !== undefined && (ts.isStringLiteral(first) || ts.isNoSubstitutionTemplateLiteral(first))
+  return first !== undefined && (isStringLiteral(first) || isNoSubstitutionTemplateLiteral(first))
     ? first.text
     : undefined;
 }
 
 /** The test context parameters of a test callback: its first parameter, or `skip` destructured from it. */
-function contextSkips(call: ts.CallExpression): { readonly context: Set<string>; readonly skip: Set<string> } {
+function contextSkips(call: CallExpression): { readonly context: Set<string>; readonly skip: Set<string> } {
   const context = new Set<string>();
   const skip = new Set<string>();
   for (const argument of call.arguments) {
-    if (ts.isArrowFunction(argument) || ts.isFunctionExpression(argument)) {
+    if (isArrowFunction(argument) || isFunctionExpression(argument)) {
       const parameter = argument.parameters[0]?.name;
-      if (parameter !== undefined && ts.isIdentifier(parameter)) {
+      if (parameter !== undefined && isIdentifier(parameter)) {
         context.add(parameter.text);
-      } else if (parameter !== undefined && ts.isObjectBindingPattern(parameter)) {
+      } else if (parameter !== undefined && isObjectBindingPattern(parameter)) {
         for (const element of parameter.elements) {
           const key = element.propertyName ?? element.name;
-          if (ts.isIdentifier(key) && key.text === 'skip' && ts.isIdentifier(element.name)) {
+          if (key !== undefined && element.name !== undefined && isIdentifier(key) && key.text === 'skip' && isIdentifier(element.name)) {
             skip.add(element.name.text);
           }
         }
@@ -73,17 +74,17 @@ export function skips(path: string, text: string): string[] {
   const file = parse(path, text);
   const names = runnerNames(file);
   const found = new Set<string>();
-  const rootOf = (expression: ts.Expression): string | undefined =>
-    ts.isCallExpression(expression) ? rootOf(expression.expression) : chain(expression)?.[0];
-  const isTestCall = (node: ts.Node): node is ts.CallExpression => {
-    if (!ts.isCallExpression(node)) {
+  const rootOf = (expression: Expression): string | undefined =>
+    isCallExpression(expression) ? rootOf(expression.expression) : chain(expression)?.[0];
+  const isTestCall = (node: Node): node is CallExpression => {
+    if (!isCallExpression(node)) {
       return false;
     }
     const root = rootOf(node.expression);
     return root !== undefined && names.has(root);
   };
-  const ownerOf = (node: ts.Node): string => {
-    for (let current: ts.Node | undefined = node; current !== undefined; current = current.parent) {
+  const ownerOf = (node: Node): string => {
+    for (let current: Node | undefined = node; current !== undefined; current = current.parent) {
       if (isTestCall(current)) {
         const title = titleOf(current);
         if (title !== undefined) {
@@ -94,7 +95,7 @@ export function skips(path: string, text: string): string[] {
     return '<module>';
   };
   for (const node of nodes(file)) {
-    if (ts.isPropertyAccessExpression(node) && SKIPPING.has(node.name.text)) {
+    if (isPropertyAccessExpression(node) && SKIPPING.has(node.name.text)) {
       const accessed = chain(node);
       if (accessed !== undefined && names.has(accessed[0] ?? '')) {
         found.add(site(path, ownerOf(node)));
@@ -103,7 +104,7 @@ export function skips(path: string, text: string): string[] {
     if (isTestCall(node)) {
       const { context, skip } = contextSkips(node);
       for (const inner of nodes(node)) {
-        if (!ts.isCallExpression(inner) || inner === node) {
+        if (!isCallExpression(inner) || inner === node) {
           continue;
         }
         const called = chain(inner.expression);

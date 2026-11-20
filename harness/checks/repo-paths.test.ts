@@ -7,7 +7,8 @@
  * path asks `paths.ts` (`REPO_ROOT`, `fromRoot`, `relative`).
  */
 
-import ts from 'typescript';
+import { type Identifier, SyntaxKind } from 'typescript/unstable/ast';
+import { isIdentifier, isMetaProperty, isPropertyAccessExpression, isPropertyAssignment } from 'typescript/unstable/ast/is';
 import { describe, expect, test } from 'vitest';
 
 import { Accepted, site } from '../lib/exemptions.ts';
@@ -24,11 +25,11 @@ const GLOBALS = new Accepted(['__dirname', '__filename']);
 const URL_MODULES = new Accepted(['node:url', 'url']);
 
 /** Whether an identifier names a property (`a.__dirname`, `{ __dirname: 1 }`) rather than a variable. */
-function isPropertyName(node: ts.Identifier): boolean {
+function isPropertyName(node: Identifier): boolean {
   const parent = node.parent;
   return (
-    (ts.isPropertyAccessExpression(parent) && parent.name === node) ||
-    (ts.isPropertyAssignment(parent) && parent.name === node)
+    (isPropertyAccessExpression(parent) && parent.name === node) ||
+    (isPropertyAssignment(parent) && parent.name === node)
   );
 }
 
@@ -45,13 +46,13 @@ export function locating(path: string, text: string): string[] {
   }
   for (const node of nodes(file)) {
     if (
-      ts.isPropertyAccessExpression(node) &&
-      ts.isMetaProperty(node.expression) &&
-      node.expression.keywordToken === ts.SyntaxKind.ImportKeyword &&
+      isPropertyAccessExpression(node) &&
+      isMetaProperty(node.expression) &&
+      node.expression.keywordToken === SyntaxKind.ImportKeyword &&
       META.has(node.name.text)
     ) {
       found.push(site(path, `import.meta.${node.name.text}`));
-    } else if (ts.isIdentifier(node) && GLOBALS.has(node.text) && !isPropertyName(node)) {
+    } else if (isIdentifier(node) && GLOBALS.has(node.text) && !isPropertyName(node)) {
       found.push(site(path, node.text));
     }
   }
