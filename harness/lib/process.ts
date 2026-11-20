@@ -3,6 +3,7 @@
  * three: it finished, it outlived its bound, or it could not start.
  */
 
+import type { Writable } from 'node:stream';
 import { env } from 'node:process';
 import { once } from 'node:events';
 import { spawn } from 'node:child_process';
@@ -67,15 +68,25 @@ function statusOf(closed: readonly unknown[]): number | undefined {
 }
 
 /**
- * Ignore the error a child's standard input reports when the child ended without reading it; any
- * other error still fails the run, through the child's own `error` and `close` events.
+ * Give a child its input, if it has any, and close its standard input. A child that ends without
+ * reading what it was given leaves the pipe failing (EPIPE): such a run could not be given what it
+ * reads, and counts as not started, as a synchronous run reports it.
  *
- * @param {Readonly<Error>} error - The pipe's error.
+ * @param {Readonly<Pick<Writable, 'end' | 'on'>>} stdin - The child's standard input.
+ * @param {string | undefined} input - What the child reads, if anything.
+ * @returns {{ failure?: string }} Holds the pipe's failure, once there is one.
  */
-function ignoreClosedPipe(error: Readonly<Error>): void {
-  if (!('code' in error) || error.code !== 'EPIPE') {
-    throw new Error(`a child's standard input failed: ${error.message}`, { cause: error });
+function feed(stdin: Readonly<Pick<Writable, 'end' | 'on'>>, input: string | undefined): { failure?: string } {
+  const piped: { failure?: string } = {};
+  stdin.on('error', (error: Readonly<Error>) => {
+    piped.failure = error.message;
+  });
+  if (input === undefined) {
+    stdin.end();
+  } else {
+    stdin.end(input);
   }
+  return piped;
 }
 
 /** What a closed child left: its `close` event's arguments, its standard output and its standard error. */
@@ -118,12 +129,11 @@ async function run(argv: readonly string[], options: RunOptions): Promise<Outcom
   }
   const bound = AbortSignal.timeout(options.timeoutMs);
   const child = spawn(command, args, { cwd: options.cwd, env: options.env, killSignal: 'SIGKILL', signal: bound });
-  // A child may end without reading its input: the pipe then reports EPIPE, which is no failure of the run.
-  child.stdin.on('error', ignoreClosedPipe);
-  child.stdin.end(options.input ?? '');
+  const piped = feed(child.stdin, options.input);
   const closing: Promise<Closed> = Promise.all([once(child, 'close'), text(child.stdout), text(child.stderr)]);
   const outcome = await closeOf(argv, bound, closing);
-  return outcome ?? { argv, kind: 'timed-out', timeoutMs: options.timeoutMs };
+  const finished = outcome ?? { argv, kind: 'timed-out', timeoutMs: options.timeoutMs };
+  return finished.kind === 'finished' && piped.failure !== undefined ? { argv, kind: 'not-started', reason: piped.failure } : finished;
 }
 
 /**
