@@ -5,7 +5,7 @@ import { expect, test } from 'vitest';
 import { notificationOf } from '../src/effects';
 import { chatSystem } from '../src/system';
 
-// task-017 #5/#7 — chat ink fixtures driven through the shared harness, proving
+// Chat ink fixtures driven through the shared harness, proving
 // `@narratives/foundation/testing` is consumable from a system's tests. Chat is a
 // stub, so its traces are Present-only; real physics traces land in 020–026.
 

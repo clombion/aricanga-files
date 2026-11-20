@@ -79,7 +79,7 @@ The host owns and the kernel never touches: the ink `Story` and per-conversation
 ## Determinism and purity (enforced)
 
 - Ids are seeded (`ctx.nextId`), not `Date.now`/`Math.random`. Displayed time is simulation-derived (`{ day, minute }`), formatted in `view` via `RenderContext.locale`, never frozen into state.
-- A `no-Date.now/Math.random/locale` lint runs over every system's `model` (reducer) package.
+- A lint refusing `Date.now`, `Math.random` and locale reads runs over every system's `model` (reducer) package.
 - A run-twice deep-equality invariant proves `reduce` determinism. A golden is the recorded `Input→Effect`+`state` stream (kernel-observable, never opaque ink JSON), canonical (sorted keys).
 - `Input` and `Effect` handling is exhaustive (TypeScript `never` check); a new boundary crossing fails to compile until it is a constructor.
 

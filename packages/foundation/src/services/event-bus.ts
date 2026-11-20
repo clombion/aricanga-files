@@ -1,5 +1,5 @@
 // Single event bus for cross-cutting sinks only — analytics and cross-system
-// coordination (fed by the `foundation/emit` effect). Rendering does NOT depend
+// coordination (the host feeds it through `emit`). Rendering does NOT depend
 // on the bus; a view-model derives purely from state.
 
 export interface DomainEvent {

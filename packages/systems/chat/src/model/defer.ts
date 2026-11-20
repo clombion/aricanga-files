@@ -31,7 +31,7 @@ function appendDeferred(state: ChatState, message: ChatMessageVM): ChatState {
   };
 }
 
-// The notify/defer branch (task-021). immediate-flush is checked ahead of the
+// The notify/defer branch. immediate-flush is checked ahead of the
 // plain defer gate, else an already-notified immediate in another chat would
 // wrongly defer. Deferral happens ONLY inside a different open chat; at the hub
 // and the viewed chat, messages flow to history (notify-once on the hub).
@@ -71,7 +71,7 @@ export function placeMessage(state: ChatState, message: ChatMessageVM, immediate
 
 // Open a chat: focus it, clear its notified state, and replay its deferred queue
 // into history in one shot (the stored VMs are moved — their defer-time ids are
-// preserved; no notification on replay; typing animation is task-032).
+// preserved; no notification on replay; the typing animation is #38).
 export function openChat(state: ChatState, chatId: string): ChatState {
   const queued = state.deferredMessages[chatId] ?? [];
   let next: ChatState = {

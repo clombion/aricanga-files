@@ -15,7 +15,7 @@ import { fromRoot } from './paths.ts';
 import { textOf, tracked } from './source-files.ts';
 import { bin, finished, Project } from './tools.ts';
 
-const FIXTURES_DIR = 'harness/lint-rules/fixtures/';
+export const FIXTURES_DIR = 'harness/lint-rules/fixtures/';
 
 /**
  * What a planted project copies to run the repository's oxlint configuration: the config and the
@@ -79,14 +79,14 @@ export interface Diagnostic {
 }
 
 /** Parse `oxlint --format json` output into diagnostics. */
-function diagnostics(output: string): readonly Diagnostic[] {
-  const found = object(json(output), 'oxlint output').diagnostics;
+export function diagnostics(output: string): readonly Diagnostic[] {
+  const found = object(json(output), 'oxlint output')['diagnostics'];
   if (!Array.isArray(found)) {
     throw new FixtureError('oxlint output has no diagnostics array');
   }
   return found.map((entry: unknown) => {
     const fields = object(entry, 'diagnostic');
-    return { code: String(fields.code), file: String(fields.filename), message: String(fields.message) };
+    return { code: String(fields['code']), file: String(fields['filename']), message: String(fields['message']) };
   });
 }
 

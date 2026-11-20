@@ -35,13 +35,21 @@ Each check module under `harness/checks/` declares its `HARNESS_ID`; `pnpm run f
 list.
 
 <!-- generated: checks -->
+- `boundaries` (`harness/checks/boundaries.test.ts`): The module boundaries hold under oxlint: one import that must fail and one that must pass per boundary.
 - `doc-references` (`harness/checks/doc-references.test.ts`): Every reference in current text resolves: links and anchors, backticked paths, tasks, ADRs and commands.
+- `exemption-lists` (`harness/checks/exemption-lists.test.ts`): Every literal list a check consults is an exemption declaration, and every declaration is consulted.
 - `gate` (`harness/checks/gate.test.ts`): The gate writes no file, runs only locked tools, and the git hooks run the gate's own tasks.
 - `generated-docs` (`harness/checks/generated-docs.test.ts`): Every generated block of the docs equals a fresh render, names a known generator, and every generator has a block.
 - `history-narration` (`harness/checks/history-narration.test.ts`): Current text describes the project as it is: no comment or doc narrates how it got there.
 - `one-claims` (`harness/checks/one-claims.test.ts`): Every claim of a single owner in current text is registered, and its probe holds it.
+- `project-lint-rules` (`harness/checks/project-lint-rules.test.ts`): Every project lint rule fires on its must-fire fixtures and passes its must-stay-clean ones under the repository's oxlint.
 - `pushed-subjects` (`harness/checks/pushed.test.ts`): The pre-push hook refuses a `fixup!`, `squash!` or `amend!` commit in the pushed range.
+- `repo-paths` (`harness/checks/repo-paths.test.ts`): No harness module but `harness/lib/paths.ts` computes the repository root or a path from its own location.
+- `skips` (`harness/checks/skips.test.ts`): Every skip in the tests is listed with its reason, so a test cannot stop running unnoticed.
+- `structure` (`harness/checks/structure.test.ts`): No module is both `.ts` and `.tsx`, and no build output is committed under the held roots.
+- `suppressions` (`harness/checks/suppressions.test.ts`): Every suppression names its rule, a tool that checks the file, and its reason, and each is counted.
 - `terms` (`harness/checks/terms.test.ts`): No current text uses a retired term or a refused pattern of `docs/terms.toml`.
+- `tool-exemptions` (`harness/checks/tool-exemptions.test.ts`): Every tool exemption is live: each ignore, override, include and exclude glob matches a listed file.
 <!-- end: checks -->
 
 ## doc-references: Every reference in current text resolves
@@ -121,7 +129,7 @@ writes this table from `package.json` and `pnpm-lock.yaml`.
 | `@biomejs/biome` | [biomejs/biome](https://github.com/biomejs/biome) | `pnpm-lock.yaml` | 2.6.8 |
 | `@commitlint/cli` | [conventional-changelog/commitlint](https://github.com/conventional-changelog/commitlint) | `pnpm-lock.yaml` | 21.2.4 |
 | `@commitlint/config-conventional` | [conventional-changelog/commitlint](https://github.com/conventional-changelog/commitlint) | `pnpm-lock.yaml` | 21.2.4 |
-| `@eslint/js` | [eslint/eslint](https://github.com/eslint/eslint) | `pnpm-lock.yaml` | 10.0.1 |
+| `@double-great/stylelint-a11y` | no upstream named | `pnpm-lock.yaml` | 3.8.3 |
 | `@iarna/toml` | [iarna/iarna-toml](https://github.com/iarna/iarna-toml) | `pnpm-lock.yaml` | 2.2.5 |
 | `@narratives/framework` | no upstream named | `pnpm-lock.yaml` | link:packages/framework |
 | `@narratives/test-utils` | no upstream named | `pnpm-lock.yaml` | link:packages/test-utils |
@@ -131,8 +139,6 @@ writes this table from `package.json` and `pnpm-lock.yaml`.
 | `@vitest/coverage-v8` | [vitest-dev/vitest](https://github.com/vitest-dev/vitest) | `pnpm-lock.yaml` | 5.1.1 |
 | `ai` | [vercel/ai](https://github.com/vercel/ai) | `pnpm-lock.yaml` | 7.0.177 |
 | `eslint` | [eslint/eslint](https://github.com/eslint/eslint) | `pnpm-lock.yaml` | 10.15.0 |
-| `eslint-import-resolver-typescript` | [import-js/eslint-import-resolver-typescript](https://github.com/import-js/eslint-import-resolver-typescript) | `pnpm-lock.yaml` | 4.4.5 |
-| `eslint-plugin-boundaries` | [javierbrea/eslint-plugin-boundaries](https://github.com/javierbrea/eslint-plugin-boundaries) | `pnpm-lock.yaml` | 7.4.4 |
 | `eslint-plugin-solid` | [solidjs-community/eslint-plugin-solid](https://github.com/solidjs-community/eslint-plugin-solid) | `pnpm-lock.yaml` | 0.20.0 |
 | `fast-check` | [dubzzz/fast-check](https://github.com/dubzzz/fast-check) | `pnpm-lock.yaml` | 4.10.3 |
 | `happy-dom` | [capricorn86/happy-dom](https://github.com/capricorn86/happy-dom) | `pnpm-lock.yaml` | 21.0.4 |
@@ -148,10 +154,10 @@ writes this table from `package.json` and `pnpm-lock.yaml`.
 | `sharp` | [lovell/sharp](https://github.com/lovell/sharp) | `pnpm-lock.yaml` | 0.35.5 |
 | `stylelint` | [stylelint/stylelint](https://github.com/stylelint/stylelint) | `pnpm-lock.yaml` | 17.16.0 |
 | `stylelint-config-standard` | [stylelint/stylelint-config-standard](https://github.com/stylelint/stylelint-config-standard) | `pnpm-lock.yaml` | 40.0.0 |
+| `stylelint-declaration-strict-value` | no upstream named | `pnpm-lock.yaml` | 1.12.1 |
 | `stylelint-no-unsupported-browser-features` | [RJWadley/stylelint-no-unsupported-browser-features](https://github.com/RJWadley/stylelint-no-unsupported-browser-features) | `pnpm-lock.yaml` | 8.1.2 |
 | `stylelint-plugin-logical-css` | [yuschick/stylelint-plugin-logical-css](https://github.com/yuschick/stylelint-plugin-logical-css) | `pnpm-lock.yaml` | 2.1.0 |
-| `typescript` | [microsoft/TypeScript](https://github.com/microsoft/TypeScript) | `pnpm-lock.yaml` | 6.0.3 |
-| `typescript-eslint` | [typescript-eslint/typescript-eslint](https://github.com/typescript-eslint/typescript-eslint) | `pnpm-lock.yaml` | 8.73.0 |
+| `typescript` | [microsoft/TypeScript](https://github.com/microsoft/TypeScript) | `pnpm-lock.yaml` | 7.0.2 |
 | `unified` | [unifiedjs/unified](https://github.com/unifiedjs/unified) | `pnpm-lock.yaml` | 11.0.5 |
 | `unist-util-visit` | [syntax-tree/unist-util-visit](https://github.com/syntax-tree/unist-util-visit) | `pnpm-lock.yaml` | 5.2.0 |
 | `vite` | [vitejs/vite](https://github.com/vitejs/vite) | `pnpm-lock.yaml` | 8.3.8 |

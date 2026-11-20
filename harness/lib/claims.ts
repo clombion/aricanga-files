@@ -13,7 +13,7 @@
 import { ROOTS } from './scope.ts';
 
 /** A claim of a single owner, up to the end of its clause. */
-const CLAIM =
+export const CLAIM: RegExp =
   /\b(?:the (?:one|only) (?:owner|module|place|reader|writer)|nowhere else|stated once)\b[^.;:]*/gi;
 
 /** A pattern that must match in `owner` and in no other held TypeScript file under `roots`. */
@@ -54,6 +54,16 @@ export const CLAIMS: readonly Claim[] = [
     path: 'harness/lib/paths.ts',
     clause: 'nowhere else in the harness',
     probe: probe(/\bimport\.meta\.url\b/, 'harness/lib/paths.ts', ['harness/lib/', 'harness/scripts/']),
+  },
+  {
+    path: 'harness/checks/repo-paths.test.ts',
+    clause: 'The one module allowed to compute where the repository is',
+    probe: probe(/\bimport\.meta\.url\b/, 'harness/lib/paths.ts', ['harness/lib/', 'harness/scripts/']),
+  },
+  {
+    path: 'packages/foundation/src/sim/system.ts',
+    clause: 'the one place a',
+    probe: probe(/^function reclaim\(/m, 'packages/foundation/src/sim/system.ts', ['packages/']),
   },
   {
     path: 'harness/lib/process.ts',

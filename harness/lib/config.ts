@@ -29,7 +29,7 @@ export interface Task {
 
 /** Every script of a parsed `package.json`, by name, in the file's order. */
 export function tasks(packageJson: unknown): ReadonlyMap<string, Task> {
-  const scripts = object(object(packageJson, 'package.json').scripts ?? {}, 'scripts');
+  const scripts = object(object(packageJson, 'package.json')['scripts'] ?? {}, 'scripts');
   const found = new Map<string, Task>();
   for (const [name, script] of Object.entries(scripts)) {
     if (typeof script !== 'string') {
@@ -38,6 +38,27 @@ export function tasks(packageJson: unknown): ReadonlyMap<string, Task> {
     found.set(name, { name, script, commands: script.split('&&').map((command) => command.trim()) });
   }
   return found;
+}
+
+/** A command that runs another task, capturing its name. */
+export const RUN: RegExp = /^pnpm run ([\w:.-]+)$/;
+
+/** The tasks `name` runs: itself and the tasks its commands `pnpm run`, transitively. */
+export function closure(name: string, every: ReadonlyMap<string, Task>): readonly Task[] {
+  const seen = new Map<string, Task>();
+  const pending = [name];
+  while (pending.length > 0) {
+    const current = pending.pop() ?? '';
+    const task = every.get(current);
+    if (task === undefined) {
+      throw new Error(`no task named ${current}`);
+    }
+    if (!seen.has(current)) {
+      seen.set(current, task);
+      pending.push(...task.commands.flatMap((command) => RUN.exec(command)?.slice(1, 2) ?? []));
+    }
+  }
+  return [...seen.values()];
 }
 
 /** The tasks of the repository's root `package.json`. */
@@ -57,13 +78,13 @@ export interface Hook {
 export function hooks(lefthook: unknown): readonly Hook[] {
   const found: Hook[] = [];
   for (const [hook, body] of Object.entries(object(lefthook, 'lefthook.json'))) {
-    const commands = object(object(body, hook).commands ?? {}, `${hook}.commands`);
+    const commands = object(object(body, hook)['commands'] ?? {}, `${hook}.commands`);
     for (const [id, command] of Object.entries(commands)) {
       const fields = object(command, `${hook}.${id}`);
-      if (typeof fields.run !== 'string') {
+      if (typeof fields['run'] !== 'string') {
         throw new ConfigError(`${hook}.${id}.run is not a string`);
       }
-      found.push({ hook, id, run: fields.run, useStdin: fields.use_stdin === true });
+      found.push({ hook, id, run: fields['run'], useStdin: fields['use_stdin'] === true });
     }
   }
   return found;

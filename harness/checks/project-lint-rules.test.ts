@@ -82,10 +82,10 @@ function level(setting: unknown): unknown {
 /** What breaks "the config turns on exactly the plugin's rules, as errors". */
 export function configProblems(config: unknown, rules: readonly string[]): readonly string[] {
   const fields = object(config, '.oxlintrc.json');
-  const plugins = Array.isArray(fields.jsPlugins) ? fields.jsPlugins : [];
+  const plugins = Array.isArray(fields['jsPlugins']) ? fields['jsPlugins'] : [];
   const problems = plugins.includes(PLUGIN_PATH) ? [] : [`jsPlugins does not load ${PLUGIN_PATH}`];
   const prefix = `${PLUGIN_NAME}/`;
-  const configured = Object.entries(object(fields.rules ?? {}, 'rules')).filter(([name]) => name.startsWith(prefix));
+  const configured = Object.entries(object(fields['rules'] ?? {}, 'rules')).filter(([name]) => name.startsWith(prefix));
   for (const [name, setting] of configured) {
     const rule = name.slice(prefix.length);
     const severity = level(setting);

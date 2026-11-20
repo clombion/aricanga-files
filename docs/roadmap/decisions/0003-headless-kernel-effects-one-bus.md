@@ -21,7 +21,7 @@ and DOM components. Side effects travelled over four mechanisms: two
   foundation knowing about them.
 - **One event bus, three roles:** rendering is `snapshot → view → Solid render`;
   effects are the host's to-do list; the single `EventBus` carries `DomainEvent`s
-  for analytics + cross-system coordination only (fed by `foundation/emit`).
+  for analytics + cross-system coordination only (the host feeds it through `EventBus.emit`).
 - **One snapshot** owns all save state (ink + system slice), versioned for
   migration.
 

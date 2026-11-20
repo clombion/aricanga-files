@@ -21,7 +21,7 @@ export function parseTimeOfDay(raw: string): number | null {
 
 const dayOf = (clock: number): number => Math.floor(clock / MINUTES_PER_DAY);
 
-// Advance the simulation clock for a Story step (task-023). Order: `advance_day`
+// Advance the simulation clock for a Story step. Order: `advance_day`
 // (an ink external, fires during Continue) first, resetting to the next day's
 // morning; then, for a message (non-empty text), the priority `# time:` snap →
 // `# duration:N` jump → auto-drift (+1). The clock is absolute minutes, or null

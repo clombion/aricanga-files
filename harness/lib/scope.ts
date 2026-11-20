@@ -25,6 +25,7 @@ const ROOT_FILES: readonly string[] = [
   'knip.json',
   'lefthook.json',
   '.commitlintrc.json',
+  'docs/terms.toml',
   'vitest.gate.config.ts',
   'AGENTS.md',
   'CLAUDE.md',
