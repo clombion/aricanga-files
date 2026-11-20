@@ -1,0 +1,112 @@
+// The design-for-two proof, driven through the generic runtime.
+// Lives in an experience because boundary lint only permits importing two systems
+// here. Asserts tag-OWNERSHIP routing (not foreground fallback): a chat-tagged
+// step reaches chat even when cards is foreground, and a stat-tagged step reaches
+// cards even when chat is foreground.
+
+import type { Effect, Host } from '@narratives/foundation';
+import { InkRuntime, createExperience, erase } from '@narratives/foundation';
+import { describe, expect, test } from 'vitest';
+import { cardsSystem } from '@narratives/system-cards';
+import { chatSystem } from '@narratives/system-chat';
+import { compileInk } from '@narratives/foundation/testing';
+
+/** Where the host's save store keeps a save. */
+const SAVE_KEY = 'two-vocabulary';
+
+/** What each step the story takes adds to the count. */
+const ONE_STEP = 1;
+
+/** A host and the kinds of the effects it was handed to present. */
+interface RecordingHost {
+  readonly host: Host;
+  readonly presented: readonly string[];
+}
+
+/**
+ * A host over the platform's own ports that records every effect it presents.
+ * @returns {RecordingHost} The host and what it presented.
+ */
+function recordingHost(): RecordingHost {
+  const presented: string[] = [];
+  const host: Host = {
+    // These stories fetch nothing: a data request is refused with the request as the reason.
+    fetchData: Promise.reject.bind(Promise),
+    present: (effect: Effect) => {
+      presented.push(effect.kind);
+    },
+    scheduler: {
+      schedule: (delayMs, fire) => {
+        const timer = setTimeout(fire, delayMs);
+        return (): void => {
+          clearTimeout(timer);
+        };
+      },
+    },
+    store: {
+      load: () => sessionStorage.getItem(SAVE_KEY),
+      save: (data) => {
+        sessionStorage.setItem(SAVE_KEY, data);
+      },
+    },
+  };
+  return { host, presented };
+}
+
+/**
+ * A runtime over a one-line story.
+ * @returns {InkRuntime} The runtime.
+ */
+function ink(): InkRuntime {
+  return new InkRuntime(compileInk('x\n'));
+}
+
+/**
+ * Pump the whole story.
+ * @param {object} experience The experience to step.
+ * @returns {number} How many steps advanced it.
+ */
+function drain(experience: Readonly<{ step: () => boolean }>): number {
+  let steps = 0;
+  while (experience.step()) {
+    steps += ONE_STEP;
+  }
+  return steps;
+}
+
+describe('routing by tag ownership', () => {
+  test('a speaker-tagged step routes to chat even when cards is foreground', () => {
+    expect.hasAssertions();
+    const { host, presented } = recordingHost();
+    const experience = createExperience({
+      foreground: 'cards',
+      host,
+      ink: new InkRuntime(compileInk('Hello # speaker: Pat\n')),
+      systems: [erase(cardsSystem), erase(chatSystem)],
+    });
+    drain(experience);
+    expect(presented).toContain('chat/showNotification');
+  });
+
+  test('a stat-tagged step routes to cards even when chat is foreground', () => {
+    expect.hasAssertions();
+    const { host, presented } = recordingHost();
+    const experience = createExperience({
+      foreground: 'chat',
+      host,
+      ink: new InkRuntime(compileInk('Courage up # stat: courage:+2\n')),
+      systems: [erase(chatSystem), erase(cardsSystem)],
+    });
+    drain(experience);
+    expect(presented).toContain('cards/statChanged');
+  });
+
+  test('createExperience fails loud on empty systems and unknown foreground', () => {
+    expect.hasAssertions();
+    const { host } = recordingHost();
+    expect(() => createExperience({ host, ink: ink(), systems: [] })).toThrow('at least one system');
+    expect(() => createExperience({ foreground: 'nope', host, ink: ink(), systems: [erase(chatSystem)] })).toThrow(
+      'foreground system "nope" is not registered',
+    );
+  });
+});

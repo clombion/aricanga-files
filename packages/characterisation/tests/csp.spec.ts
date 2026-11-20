@@ -1,12 +1,12 @@
 import { expect, test } from '@playwright/test';
-
 import { recorded, runFixture, servePolicy } from './_helpers';
+import type { SpecArguments } from './_helpers';
 
 // Under the experiences' policy, the style prop writes a style attribute, which every engine
 // reports as a style-src-attr violation (Firefox also drops the style); a ref writing through
 // CSSOM applies everywhere. The style prop is banned; dynamic style goes through a ref or a class.
 test.describe('CSP', () => {
-  test('the style prop violates style-src; CSSOM from a ref applies', async ({ page, browserName }) => {
+  test('the style prop violates style-src; CSSOM from a ref applies', async ({ browserName, page }: SpecArguments) => {
     await servePolicy(page, 'csp');
     const state = await runFixture(page, 'csp');
     expect(recorded(state, 'csp/violations').note).toContain('style-src-attr');

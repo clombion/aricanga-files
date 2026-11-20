@@ -1,8 +1,7 @@
-import { readFileSync, writeFileSync } from 'node:fs';
-
 import { expect, test } from '@playwright/test';
-
+import { readFile, writeFile } from 'node:fs/promises';
 import { recorded, runFixture } from './_helpers';
+import type { SpecArguments } from './_helpers';
 
 /** The regression a run may show over its project's baseline before it fails. */
 const TOLERANCE = 1.25;
@@ -12,6 +11,17 @@ interface Timing {
   readonly updates: number;
 }
 
+/** What the spec reads of its test info: where to write its output, and its project's name. */
+interface RunInfo {
+  readonly outputPath: (...pathSegments: readonly string[]) => string;
+  readonly project: Readonly<{ name: string }>;
+}
+
+/**
+ * A timing parsed from a record's note or a baseline entry.
+ * @param {unknown} value The parsed JSON.
+ * @returns {Timing} The render and update times.
+ */
 function timing(value: unknown): Timing {
   if (typeof value !== 'object' || value === null || !('render' in value) || !('updates' in value)) {
     throw new Error(`not a timing: ${JSON.stringify(value)}`);
@@ -23,8 +33,13 @@ function timing(value: unknown): Timing {
   return { render, updates };
 }
 
-function baseline(project: string): Timing {
-  const parsed: unknown = JSON.parse(readFileSync(new URL('../performance-baseline.json', import.meta.url), 'utf8'));
+/**
+ * The committed baseline of a project.
+ * @param {string} project The Playwright project's name.
+ * @returns {Promise<Timing>} Its baseline timings.
+ */
+async function baseline(project: string): Promise<Timing> {
+  const parsed: unknown = JSON.parse(await readFile(new URL('../performance-baseline.json', import.meta.url), 'utf8'));
   if (typeof parsed !== 'object' || parsed === null || !(project in parsed)) {
     throw new Error(`performance-baseline.json has no entry for ${project}: run pnpm run characterise:baseline`);
   }
@@ -35,11 +50,11 @@ function baseline(project: string): Timing {
 // after two warm-ups; a regression over 25 % against the project's committed baseline fails. Tagged
 // @performance: the gate runs it alone, on one worker, so no other spec competes for the CPU.
 test.describe('performance', () => {
-  test('1,000 messages and 100 updates stay within the baseline @performance', async ({ page }, info) => {
+  test('1,000 messages and 100 updates stay within the baseline @performance', async ({ page }: SpecArguments, info: RunInfo) => {
     const state = await runFixture(page, 'performance');
     const measured = timing(JSON.parse(recorded(state, 'performance/messages').note ?? 'null'));
-    writeFileSync(info.outputPath('performance.json'), JSON.stringify({ project: info.project.name, ...measured }));
-    const expected = baseline(info.project.name);
+    await writeFile(info.outputPath('performance.json'), JSON.stringify({ project: info.project.name, ...measured }));
+    const expected = await baseline(info.project.name);
     expect(measured.render, `render ms against ${expected.render}`).toBeLessThanOrEqual(expected.render * TOLERANCE);
     expect(measured.updates, `updates ms against ${expected.updates}`).toBeLessThanOrEqual(expected.updates * TOLERANCE);
   });

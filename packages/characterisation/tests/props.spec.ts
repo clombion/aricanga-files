@@ -1,11 +1,11 @@
-import { expect, test } from '@playwright/test';
-
 import { captureConsoleCodes, recorded, runFixture } from './_helpers';
+import { expect, test } from '@playwright/test';
+import type { SpecArguments } from './_helpers';
 
 // A single vm prop read through props stays reactive to a field change and to a new vm object; a
 // destructured vm follows field changes on a store proxy but misses a new vm, and dev warns.
 test.describe('props', () => {
-  test('only the undestructured part sees a new vm object', async ({ page }) => {
+  test('only the undestructured part sees a new vm object', async ({ page }: SpecArguments) => {
     const codes = captureConsoleCodes(page);
     const state = await runFixture(page, 'props');
     expect(recorded(state, 'props/single-vm-prop-is-reactive').note).toBe(
