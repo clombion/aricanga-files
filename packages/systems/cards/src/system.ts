@@ -52,7 +52,8 @@ function applyStat(state: CardsState, tagValue: string): ReduceResult<CardsState
   const [rawStat, rawDelta] = tagValue.split(':');
   const stat = rawStat?.trim() ?? 'unknown';
   const delta = deltaOf(rawDelta);
-  const value = (state.stats[stat] ?? NO_CHANGE) + delta;
+  // A stat is a word the story writes, so only the deck's own entry counts, never Object.prototype's.
+  const value = (Object.hasOwn(state.stats, stat) ? (state.stats[stat] ?? NO_CHANGE) : NO_CHANGE) + delta;
   const effects: Effect[] = [fx.present('cards/statChanged', { delta, stat, value })];
   return {
     effects,
