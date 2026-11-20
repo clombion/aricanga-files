@@ -19,7 +19,7 @@ class ToolError extends Error {
 }
 
 /** This process's environment without the variables that tie a child run to this one. */
-function isolatedEnv(extra: Readonly<Record<string, string>> = {}): Record<string, string> {
+export function isolatedEnv(extra: Readonly<Record<string, string>> = {}): Record<string, string> {
   const env: Record<string, string> = {};
   for (const [name, value] of Object.entries(process.env)) {
     if (value !== undefined && !name.startsWith('VITEST') && !name.startsWith('NODE_V8_COVERAGE')) {

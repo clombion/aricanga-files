@@ -40,6 +40,7 @@ list.
 - `deadcode` (`harness/checks/deadcode.test.ts`): knip, at its strictest, finds no unused file, dependency or export in production mode or default mode, and every ignore entry carries its reason.
 - `doc-references` (`harness/checks/doc-references.test.ts`): Every reference in current text resolves: links and anchors, backticked paths, tasks, ADRs and commands.
 - `exemption-lists` (`harness/checks/exemption-lists.test.ts`): Every literal list a check consults is an exemption declaration, and every declaration is consulted.
+- `flake-hunter` (`harness/checks/flake-hunter.test.ts`): The flake hunter fails a test that passes only in its usual order or only when nothing runs beside it.
 - `gate` (`harness/checks/gate.test.ts`): The gate writes no file, runs only locked tools, and the git hooks run the gate's own tasks.
 - `generated-docs` (`harness/checks/generated-docs.test.ts`): Every generated block of the docs equals a fresh render, names a known generator, and every generator has a block.
 - `history-narration` (`harness/checks/history-narration.test.ts`): Current text describes the project as it is: no comment or doc narrates how it got there.
