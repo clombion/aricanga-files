@@ -4,12 +4,50 @@ import type { Snapshot, SystemId } from '#src/sim/snapshot';
 import type { AnySystem } from '#src/sim/system';
 import type { Effect } from '#src/sim/effect';
 import type { InkRuntime } from '#src/ink/ink-runtime';
+import type { InkStep } from '#src/sim/story';
 import type { Input } from '#src/sim/input';
 import type { ReduceObserver } from '#src/sim/trace';
 import type { Router } from '#src/sim/router';
-import { assertNever } from '#src/sim/exhaustive';
 import { createTagOwnershipRouter } from '#src/sim/router';
 import { execute } from './effects';
+
+/** Where an input can go: every system, its stated target, or the system its story step routes to. */
+interface Destinations {
+  readonly all: () => readonly SystemId[];
+  readonly route: (step: InkStep) => SystemId;
+  readonly target: () => SystemId;
+}
+
+/** Each input source's recipients, taking the input of its own source. */
+type RecipientHandlers = {
+  readonly [TSource in Input<unknown>['source']]: (
+    input: Extract<Input<unknown>, { readonly source: TSource }>,
+    to: Readonly<Destinations>,
+  ) => readonly SystemId[];
+};
+
+/** Who receives each kind of input: a story step its routed system, a player or resume input its target, a lifecycle input every system. */
+const RECIPIENTS: RecipientHandlers = {
+  lifecycle: (_input, to) => to.all(),
+  player: (_input, to) => [to.target()],
+  resume: (_input, to) => [to.target()],
+  story: (input, to) => [to.route(input.step)],
+};
+
+/**
+ * The systems an input is delivered to, in order.
+ *
+ * @param {Input} input - The inbound value.
+ * @param {Destinations} to - Where it can go.
+ * @returns {readonly string[]} The ids of the systems that receive it.
+ */
+function recipientsOf<TSource extends Input<unknown>['source']>(
+  input: Extract<Input<unknown>, { readonly source: TSource }>,
+  to: Readonly<Destinations>,
+): readonly SystemId[] {
+  const handler: RecipientHandlers[TSource] = RECIPIENTS[input.source];
+  return handler(input, to);
+}
 
 /** @public */
 interface RuntimeConfig {
@@ -104,25 +142,13 @@ class Runtime {
    * @param {string} [target] - The system a player or resume input is for.
    */
   public send(input: Input<unknown>, target?: SystemId): void {
-    switch (input.source) {
-      case 'story': {
-        this.deliver(this.router.route(input.step, this.routeContext()), input);
-        break;
-      }
-      case 'player':
-      case 'resume': {
-        this.deliver(this.requireTarget(target), input);
-        break;
-      }
-      case 'lifecycle': {
-        for (const id of this.systems.keys()) {
-          this.deliver(id, input);
-        }
-        break;
-      }
-      default: {
-        assertNever(input);
-      }
+    const recipients = recipientsOf(input, {
+      all: () => [...this.systems.keys()],
+      route: (step) => this.router.route(step, this.routeContext()),
+      target: () => this.requireTarget(target),
+    });
+    for (const id of recipients) {
+      this.deliver(id, input);
     }
     this.pump();
   }
