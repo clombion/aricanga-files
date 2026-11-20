@@ -17,13 +17,13 @@ import { isPlatform, nameText, nodes, pathOf, qualifiedName, type Scan } from '.
 import { Accepted, site } from './exemptions.ts';
 
 /** A root a rule covers, and its owner there (null: no module of the root may use the API). */
-export interface Scope {
+interface Scope {
   readonly root: string;
   readonly owner: string | null;
 }
 
 /** A guarded API: the declarations that make it up, the roots it covers, and why it has an owner. */
-export interface Rule {
+interface Rule {
   readonly name: string;
   readonly names: Accepted<string>;
   readonly scopes: readonly Scope[];
