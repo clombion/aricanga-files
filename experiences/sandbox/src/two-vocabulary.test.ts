@@ -18,12 +18,12 @@ function compile(src: string): string {
 function recordingHost(): { host: Host; presented: string[] } {
   const presented: string[] = [];
   const host: Host = {
-    fetchData:  async () => Promise.resolve(null),
+    fetchData: () => {},
     present: (effect: Effect) => {
       presented.push(effect.kind);
     },
     scheduler: { schedule: () => () => {} },
-    store: { load: () => null, save: () => {} },
+    store: { load: () => undefined, save: () => {} },
   };
   return { host, presented };
 }

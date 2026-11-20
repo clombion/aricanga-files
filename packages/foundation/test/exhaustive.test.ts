@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
-import type { Lifecycle } from './input';
-import { assertNever } from './exhaustive';
+import type { Lifecycle } from '#src/sim/input';
+import { assertNever } from '#src/sim/exhaustive';
 
 /** The seed of the `init` lifecycle the tests describe. */
 const SEED = 2;
@@ -45,7 +45,7 @@ function broken(lifecycle: Lifecycle): string {
   }
 }
 
-describe(assertNever, () => {
+describe('the exhaustiveness guard', () => {
   test('an exhaustive switch over a closed union compiles and runs', () => {
     expect.hasAssertions();
     expect(describeLifecycle({ kind: 'init', seed: SEED })).toBe(`init:${SEED}`);

@@ -3,10 +3,10 @@ import type { Command } from '#src/sim/input';
 import type { Effect } from '#src/sim/effect';
 import type { ReduceResult } from '#src/sim/context';
 import type { System } from '#src/sim/system';
-import { checkDeterministic } from './property';
+import { checkDeterministic } from '#src/testing/property';
 import { erase } from '#src/sim/system';
-import { fixtureSystemErased } from './fixture-system';
-import { storyStreamArb } from './generators';
+import { fixtureSystemErased } from '#src/testing/fixture-system';
+import { storyStreamArb } from '#src/testing/generators';
 
 /** The state of a reducer that counts its calls. */
 interface Count {
@@ -39,7 +39,7 @@ function flakySystem(): System<Count, Command, Effect, Count> {
   };
 }
 
-describe(checkDeterministic, () => {
+describe('the determinism property', () => {
   test('determinism: same stream replays to an identical canonical trace (#2)', async () => {
     expect.hasAssertions();
     const result = await checkDeterministic({ systems: [fixtureSystemErased] }, storyStreamArb({ tagKeys: ['note'] }));

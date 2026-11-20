@@ -27,7 +27,6 @@
     },
     "state": {
       "busy": false,
-      "fetched": null,
       "lines": [
         "Start"
       ],
@@ -46,14 +45,12 @@
     ],
     "input": {
       "command": {
-        "kind": "present",
-        "payload": null
+        "kind": "present"
       },
       "source": "player"
     },
     "state": {
       "busy": false,
-      "fetched": null,
       "lines": [
         "Start"
       ],
@@ -75,14 +72,12 @@
     ],
     "input": {
       "command": {
-        "kind": "schedule",
-        "payload": null
+        "kind": "schedule"
       },
       "source": "player"
     },
     "state": {
       "busy": true,
-      "fetched": null,
       "lines": [
         "Start"
       ],
@@ -102,7 +97,6 @@
     },
     "state": {
       "busy": false,
-      "fetched": null,
       "lines": [
         "Start"
       ],
