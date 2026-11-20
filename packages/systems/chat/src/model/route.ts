@@ -2,7 +2,7 @@ import type { InkStep, ReduceContext } from '@narratives/foundation';
 import { type ChatMessageVM, reduceStep } from '../reduce';
 import type { ChatState } from '../state';
 
-export const DEFAULT_CHAT = 'main';
+const DEFAULT_CHAT = 'main';
 
 /** The conversation a `# chat:` tag switches to, or null if the step has none. */
 export function readChatSwitch(step: InkStep): string | null {

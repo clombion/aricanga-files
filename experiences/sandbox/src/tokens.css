@@ -1,0 +1,11 @@
+/* The sandbox's design tokens: its stylesheets read every size and colour from these. */
+
+:root {
+  --font-body: system-ui, sans-serif;
+  --text-body: 0.875rem;
+  --leading-body: 1.5;
+  --space-bubble-block: 0.5rem;
+  --space-bubble-inline: 0.75rem;
+  --radius-bubble: 0.75rem;
+  --surface-bubble: #e9e9eb;
+}

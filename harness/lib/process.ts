@@ -3,7 +3,7 @@
  * three: it finished, it outlived its bound, or it could not start.
  */
 
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 
 export interface Finished {
   readonly kind: 'finished';
@@ -43,6 +43,48 @@ export function environment(): Record<string, string> {
     }
   }
   return env;
+}
+
+/** Run one `argv` without blocking, to its end or its bound, never through a shell. */
+function start(argv: readonly string[], options: RunOptions): Promise<Outcome> {
+  const [command, ...args] = argv;
+  if (command === undefined) {
+    return Promise.resolve({ kind: 'not-started', argv, reason: 'empty argv' });
+  }
+  return new Promise((resolve) => {
+    const child = spawn(command, args, { cwd: options.cwd, env: options.env ?? process.env });
+    let stdout = '';
+    let stderr = '';
+    let timedOut = false;
+    const timer = setTimeout(() => {
+      timedOut = true;
+      child.kill('SIGKILL');
+    }, options.timeoutMs);
+    child.stdout.setEncoding('utf8').on('data', (chunk: string) => {
+      stdout += chunk;
+    });
+    child.stderr.setEncoding('utf8').on('data', (chunk: string) => {
+      stderr += chunk;
+    });
+    child.on('error', (error) => {
+      clearTimeout(timer);
+      resolve({ kind: 'not-started', argv, reason: error.message });
+    });
+    child.on('close', (status) => {
+      clearTimeout(timer);
+      resolve(
+        timedOut || status === null
+          ? { kind: 'timed-out', argv, timeoutMs: options.timeoutMs }
+          : { kind: 'finished', argv, status, stdout, stderr },
+      );
+    });
+    child.stdin.end(options.input ?? '');
+  });
+}
+
+/** Run every `argv` at once, each bounded on its own; the outcomes in the order given. */
+export function runConcurrently(argvs: readonly (readonly string[])[], options: RunOptions): Promise<Outcome[]> {
+  return Promise.all(argvs.map((argv) => start(argv, options)));
 }
 
 /** Run `argv` to its end or its bound, never through a shell. */

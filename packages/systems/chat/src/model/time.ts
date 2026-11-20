@@ -6,7 +6,7 @@ const MORNING = 9 * 60; // 09:00 — the start-of-day time an `advance_day` rese
 
 /** Parse a canonical `HH:MM [AM|PM]` tag to minute-of-day, or null if unparseable.
  * Pure — no `Date` (the reducer is clock-free; formatting is the view's job). */
-export function parseTimeOfDay(raw: string): number | null {
+function parseTimeOfDay(raw: string): number | null {
   const m = /^\s*(\d{1,2}):(\d{2})\s*(AM|PM)?\s*$/i.exec(raw);
   if (m === null) return null;
   let hour = Number(m[1]);

@@ -13,7 +13,7 @@
 import { ROOTS } from './scope.ts';
 
 /** A claim of a single owner, up to the end of its clause. */
-export const CLAIM: RegExp =
+const CLAIM: RegExp =
   /\b(?:the (?:one|only) (?:owner|module|place|reader|writer)|nowhere else|stated once)\b[^.;:]*/gi;
 
 /** A pattern that must match in `owner` and in no other held TypeScript file under `roots`. */
@@ -69,6 +69,26 @@ export const CLAIMS: readonly Claim[] = [
     path: 'harness/lib/output.ts',
     clause: "The one module of the harness's scripts that writes to the standard streams",
     probe: probe(/\bprocess\.(?:stdout|stderr)\b/, 'harness/lib/output.ts', ['harness/lib/', 'harness/scripts/']),
+  },
+  {
+    path: 'harness/lib/build.ts',
+    clause: 'The one owner of building the product from the gate',
+    probe: probe(/\bbin\('vite'\)/, 'harness/lib/build.ts', ['harness/']),
+  },
+  {
+    path: 'harness/lib/deadcode.ts',
+    clause: 'The one owner of the unused-code scan',
+    probe: probe(/\bbin\('knip'\)/, 'harness/lib/deadcode.ts', ['harness/']),
+  },
+  {
+    path: 'harness/lib/node-floor.ts',
+    clause: 'The one owner of the Node floor',
+    probe: probe(/\['engines'\]/, 'harness/lib/node-floor.ts', ['harness/']),
+  },
+  {
+    path: 'harness/lib/stylesheets.ts',
+    clause: "The one owner of the harness's stylesheet scans",
+    probe: probe(/\bstylelint\.lint\(/, 'harness/lib/stylesheets.ts', ['harness/']),
   },
   {
     path: 'harness/lib/process.ts',

@@ -30,11 +30,11 @@ import { type Outcome, run } from './process.ts';
 import { relativeTo as posixRelative } from './relative.ts';
 import { ROOTS, typescriptFiles } from './scope.ts';
 
-export const MAX_SIZE_MB = 100;
+const MAX_SIZE_MB = 100;
 /** jscpd's `--max-size` in bytes (its megabytes are MiB). */
 export const MAX_SIZE: number = MAX_SIZE_MB * 1024 * 1024;
-export const SMALL_FILE_LINES = 20;
-export const TIMEOUT_MS = 300_000;
+const SMALL_FILE_LINES = 20;
+const TIMEOUT_MS = 300_000;
 
 export const COMMON: readonly string[] = [
   '--format',
@@ -69,10 +69,10 @@ export function cloneKey(clone: Clone): string {
 }
 
 /** The clones the project accepts, each with its reason. */
-export const ALLOWED: Exemptions = Exemptions.grouped({});
+const ALLOWED: Exemptions = Exemptions.grouped({});
 
 /** The jscpd command line of one run: the run's flags, the common flags, the report folder, the roots. */
-export function command(binary: string, flags: readonly string[], roots: readonly string[], output: string): readonly string[] {
+function command(binary: string, flags: readonly string[], roots: readonly string[], output: string): readonly string[] {
   return [binary, ...flags, ...COMMON, '--output', output, ...roots];
 }
 
@@ -105,13 +105,13 @@ export function clones(runName: string, report: unknown, root: string): readonly
 }
 
 /** The files a parsed jscpd JSON report's summary lists, relative to the root. */
-export function scanned(report: unknown, root: string): ReadonlySet<string> {
+function scanned(report: unknown, root: string): ReadonlySet<string> {
   const summary = object(object(report, "jscpd's report")['summary'], 'summary');
   return new Set(list(summary['files'], 'summary files').map((entry) => relativeTo(object(entry, 'a summary file')['path'], root)));
 }
 
 /** The listed files jscpd should have scanned and did not, or cannot scan. */
-export function coverageProblems(listed: readonly string[], seen: ReadonlySet<string>, root: string): readonly string[] {
+function coverageProblems(listed: readonly string[], seen: ReadonlySet<string>, root: string): readonly string[] {
   const problems: string[] = [];
   for (const path of listed) {
     const size = statSync(join(root, path)).size;
@@ -141,7 +141,7 @@ export function noReport(outcome: Outcome, reported: boolean): string | undefine
 /** The runner jscpd is started through; the scan takes it so a check can plant an outcome. */
 export type Runner = (argv: readonly string[], cwd: string) => Outcome;
 
-export const defaultRunner: Runner = (argv, cwd) => run(argv, { timeoutMs: TIMEOUT_MS, cwd });
+const defaultRunner: Runner = (argv, cwd) => run(argv, { timeoutMs: TIMEOUT_MS, cwd });
 
 /** Run jscpd once and return its parsed report, or the reason it gave none. */
 export function reportOf(flags: readonly string[], roots: readonly string[], root: string, runner: Runner = defaultRunner): unknown {

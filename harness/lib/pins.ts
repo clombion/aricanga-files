@@ -9,6 +9,7 @@
  */
 
 import { ConfigError, json, object } from './config.ts';
+import { engineRange } from './node-floor.ts';
 import { held } from './scope.ts';
 import { textOf, tracked } from './source-files.ts';
 
@@ -75,7 +76,7 @@ const WORKSPACE = 'workspace:';
  * as the indented text pnpm writes: `importers:` → `  <importer>:` → `    <group>:` →
  * `      <name>:` → `        version: <version>(<peers>)`.
  */
-export function locked(lockText: string, importer: string): ReadonlyMap<string, string> {
+function locked(lockText: string, importer: string): ReadonlyMap<string, string> {
   const found = new Map<string, string>();
   let inImporters = false;
   let inImporter = false;
@@ -136,7 +137,7 @@ export function pinned(manifests: readonly Manifest[], lockText: string): readon
       }
     }
     if (importer === '.') {
-      found.push({ tool: 'node', where: 'package.json engines', version: strings(fields['engines'], 'engines')['node'] ?? '' });
+      found.push({ tool: 'node', where: 'package.json engines', version: engineRange(manifest) });
       const manager = typeof fields['packageManager'] === 'string' ? fields['packageManager'] : '';
       found.push({ tool: 'pnpm', where: 'package.json packageManager', version: manager.replace(/^pnpm@/, '') });
     }

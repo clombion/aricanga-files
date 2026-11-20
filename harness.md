@@ -36,18 +36,22 @@ list.
 
 <!-- generated: checks -->
 - `boundaries` (`harness/checks/boundaries.test.ts`): The module boundaries hold under oxlint: one import that must fail and one that must pass per boundary.
+- `build-check` (`harness/checks/build-check.test.ts`): The gate builds every held Vite app in check mode, and a build that fails or writes into the checkout fails.
 - `clones` (`harness/checks/clones.test.ts`): `harness/scripts/dupes.ts` finds a planted clone at its floor and past it, and fails when jscpd scans less than git lists.
 - `contract-widening` (`harness/checks/contract-widening.test.ts`): A contract union is never widened to `string`, and its words are not respelled outside its owner.
 - `coverage-floor` (`harness/checks/coverage-floor.test.ts`): The coverage floor fails an untaken branch, an uncalled function and an unrun line, on all four metrics, and its debt fails both ways.
+- `deadcode` (`harness/checks/deadcode.test.ts`): knip, at its strictest, finds no unused file, dependency or export in production mode or default mode, and every ignore entry carries its reason.
 - `doc-references` (`harness/checks/doc-references.test.ts`): Every reference in current text resolves: links and anchors, backticked paths, tasks, ADRs and commands.
 - `doubles` (`harness/checks/doubles.test.ts`): A scripted double fails its test on an unscripted call, even when the code under test catches it.
 - `exemption-lists` (`harness/checks/exemption-lists.test.ts`): Every literal list a check consults is an exemption declaration, and every declaration is consulted.
+- `flake-hunter` (`harness/checks/flake-hunter.test.ts`): The flake hunter fails a test that passes only in its usual order or only when nothing runs beside it.
 - `gate` (`harness/checks/gate.test.ts`): The gate writes no file, runs only locked tools, and the git hooks run the gate's own tasks.
 - `generated-docs` (`harness/checks/generated-docs.test.ts`): Every generated block of the docs equals a fresh render, names a known generator, and every generator has a block.
 - `history-narration` (`harness/checks/history-narration.test.ts`): Current text describes the project as it is: no comment or doc narrates how it got there.
 - `isolation` (`harness/checks/isolation.test.ts`): A test that leaves a timer pending when it ends fails, and the next test starts clean.
 - `lint-settings` (`harness/checks/lint-settings.test.ts`): oxlint, under this project's settings, fails each planted violation of a rule the harness rests on.
 - `network-guard` (`harness/checks/network-guard.test.ts`): A test that connects to, looks up or fetches a host other than this machine trips the network guard.
+- `node-floor` (`harness/checks/node-floor.test.ts`): The Node running the suite, and the pinned `.node-version`, meet the floor `engines.node` declares.
 - `one-claims` (`harness/checks/one-claims.test.ts`): Every claim of a single owner in current text is registered, and its probe holds it.
 - `owner-registry` (`harness/checks/owner-registry.test.ts`): Each guarded API is used only by its owner module; the scan is proven on planted modules.
 - `project-lint-rules` (`harness/checks/project-lint-rules.test.ts`): Every project lint rule fires on its must-fire fixtures and passes its must-stay-clean ones under the repository's oxlint.
@@ -56,6 +60,7 @@ list.
 - `scan-sets` (`harness/checks/scan-sets.test.ts`): The file listing is over its floor, and every held TypeScript file is reached by every tool's scan set.
 - `skips` (`harness/checks/skips.test.ts`): Every skip in the tests is listed with its reason, so a test cannot stop running unnoticed.
 - `structure` (`harness/checks/structure.test.ts`): No module is both `.ts` and `.tsx`, and no build output is committed under the held roots.
+- `stylesheets` (`harness/checks/stylesheets.test.ts`): Every stylesheet passes stylelint, reads raw values only through design tokens, and every class and custom property it names is used.
 - `suppressions` (`harness/checks/suppressions.test.ts`): Every suppression names its rule, a tool that checks the file, and its reason, and each is counted.
 - `terms` (`harness/checks/terms.test.ts`): No current text uses a retired term or a refused pattern of `docs/terms.toml`.
 - `tool-exemptions` (`harness/checks/tool-exemptions.test.ts`): Every tool exemption is live: each ignore, override, include and exclude glob matches a listed file.

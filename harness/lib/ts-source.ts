@@ -9,16 +9,12 @@
  */
 
 import {
-  type CallExpression,
   type CommentRange,
   type Expression,
   type Node,
   type SourceFile,
 } from 'typescript/unstable/ast';
 import {
-  isArrowFunction,
-  isCallExpression,
-  isFunctionExpression,
   isIdentifier,
   isImportDeclaration,
   isJsxExpression,
@@ -31,9 +27,9 @@ import { API } from 'typescript/unstable/sync';
 
 import { REPO_ROOT } from './paths.ts';
 
-export type { CallExpression, Expression, Node, SourceFile };
+export type { Expression, Node, SourceFile };
 
-export class ParseError extends Error {
+class ParseError extends Error {
   override readonly name = 'ParseError';
 }
 
@@ -191,14 +187,4 @@ export function chain(node: Expression): string[] | undefined {
     return head === undefined || !isIdentifier(node.name) ? undefined : [...head, node.name.text];
   }
   return undefined;
-}
-
-/** The root name of a callee, looking through curried calls such as `test.skipIf(x)(...)`. */
-export function calleeRoot(expression: Expression): string | undefined {
-  return isCallExpression(expression) ? calleeRoot(expression.expression) : chain(expression)?.[0];
-}
-
-/** Whether a node is a function literal (an arrow or a function expression). */
-export function isFunctionLiteral(node: Node): boolean {
-  return isArrowFunction(node) || isFunctionExpression(node);
 }

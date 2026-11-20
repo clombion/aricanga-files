@@ -45,7 +45,7 @@ const story = (text: string, rawTags: string[] = []): FixtureInput => ({
 // Recorded Input streams for the kernel-physics regressions. The routing scenario
 // is asserted green now; the rest carry the durable repro data, asserted green by
 // their consuming physics task.
-export const FIXTURES: Readonly<Record<string, readonly FixtureInput[]>> = {
+const FIXTURES: Readonly<Record<string, readonly FixtureInput[]>> = {
   'cross-chat-routing': [
     story('Routes to spectre', ['targetChat: spectre', 'speaker: TonyGov', 'type: received']),
   ],

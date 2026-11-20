@@ -78,31 +78,7 @@ export function record(entry: ChxRecord): void {
   paint();
 }
 
-/** Run `fn`; the record is ok when it throws (an expected refusal). */
-export function expectRefused(id: string, fn: () => void, note = 'expected a refusal'): void {
-  try {
-    fn();
-    record({ id, ok: false, threw: false, note: `did not throw: ${note}` });
-  } catch (error) {
-    record({ id, ok: true, threw: true, error: error instanceof Error ? error.message : String(error), note });
-  }
-}
-
-/** Run `fn`; the record is ok when it completes without throwing. */
-export function expectAllowed(id: string, fn: () => void, note = 'expected to be allowed'): void {
-  try {
-    fn();
-    record({ id, ok: true, threw: false, note });
-  } catch (error) {
-    record({ id, ok: false, threw: true, error: error instanceof Error ? error.message : String(error), note });
-  }
-}
-
 export function markDone(): void {
   bus().done = true;
   paint();
-}
-
-export function sawDiagnostic(code: string): boolean {
-  return bus().diagnostics.includes(code);
 }

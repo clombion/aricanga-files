@@ -12,9 +12,9 @@ import { fromRoot, REPO_ROOT } from './paths.ts';
 import { environment, type Finished, run } from './process.ts';
 
 /** The bound on one tool run from a check. */
-export const TIMEOUT_MS = 300_000;
+const TIMEOUT_MS = 300_000;
 
-export class ToolError extends Error {
+class ToolError extends Error {
   override readonly name = 'ToolError';
 }
 

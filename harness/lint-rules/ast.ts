@@ -54,7 +54,7 @@ export const OWNERS_SCHEMA: readonly unknown[] = [
   },
 ];
 
-export function isNode(value: unknown): value is Node {
+function isNode(value: unknown): value is Node {
   return typeof value === 'object' && value !== null && 'type' in value && typeof value.type === 'string';
 }
 
@@ -150,7 +150,7 @@ function globToRegExp(glob: string): RegExp {
 }
 
 /** The globs under `key` in the rule's first option object. */
-export function globs(context: Context, key: string): readonly RegExp[] {
+function globs(context: Context, key: string): readonly RegExp[] {
   const [first] = context.options;
   if (typeof first !== 'object' || first === null || !(key in first)) {
     return [];

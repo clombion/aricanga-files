@@ -18,12 +18,12 @@ import { REPO_ROOT } from './paths.ts';
 import { relativeTo } from './relative.ts';
 
 /** The floor, in percent, of every metric. */
-export const FLOOR = 100;
+const FLOOR = 100;
 
 /** Where the gate's coverage run writes its reports. */
 export const COVERAGE_DIR: string = join(tmpdir(), 'aricanga-coverage');
 
-export const METRICS = ['statements', 'branches', 'functions', 'lines'] as const;
+const METRICS = ['statements', 'branches', 'functions', 'lines'] as const;
 type Metric = (typeof METRICS)[number];
 
 /** One file's coverage: how many items of each metric it has, and how many the run reached. */

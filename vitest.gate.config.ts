@@ -18,6 +18,7 @@ const config: ViteUserConfig = defineConfig({
     hookTimeout: 30_000,
     sequence: { shuffle: true },
     expect: { requireAssertions: true },
+    setupFiles: ['./harness/lib/vitest-setup/guards.ts'],
     coverage: {
       provider: 'v8',
       reportsDirectory: join(tmpdir(), 'aricanga-coverage'),

@@ -1,0 +1,75 @@
+/**
+ * The one owner of the unused-code scan: knip, run the way the `deadcode` task runs it (production
+ * mode, then default mode, each treating a configuration hint as an error), at its strictest. Every
+ * issue type knip's schema names is an error, no file is excused from an issue type, and each entry
+ * of the remaining ignore lists is held by the harness to a reason. knip hints a stale dependency,
+ * binary or workspace ignore itself.
+ */
+
+import { readFileSync } from 'node:fs';
+
+import { json, object, repoTasks } from './config.ts';
+import { fromRoot } from './paths.ts';
+import type { Finished } from './process.ts';
+import { textOf } from './source-files.ts';
+import { bin, finished } from './tools.ts';
+
+/** The knip invocations of the `deadcode` task, as argument lists (without the binary). */
+export function deadcodeRuns(): readonly (readonly string[])[] {
+  const commands = repoTasks().get('deadcode')?.commands ?? [];
+  return commands.filter((command) => command.startsWith('knip')).map((command) => command.split(' ').slice(1));
+}
+
+/** Run knip with `args` in `cwd`. */
+export function knip(cwd: string, args: readonly string[]): Finished {
+  return finished([bin('knip'), ...args, '--no-progress'], { cwd });
+}
+
+function strings(value: unknown, what: string): readonly string[] {
+  if (!Array.isArray(value) || !value.every((item) => typeof item === 'string')) {
+    throw new Error(`${what} is not a list of strings`);
+  }
+  return value.filter((item) => typeof item === 'string');
+}
+
+/**
+ * Every ignore entry of a parsed `knip.json`, as a key: `ignoreWorkspaces:<workspace>`,
+ * `ignoreDependencies:<package>`, `ignoreBinaries:<binary>`, `ignoreFiles:<glob>` or
+ * `ignoreIssues:<glob>:<issue type>`.
+ */
+export function ignoreEntries(config: unknown): readonly string[] {
+  const fields = object(config, 'knip.json');
+  const listed = ['ignoreWorkspaces', 'ignoreDependencies', 'ignoreBinaries', 'ignoreFiles'].flatMap((field) =>
+    strings(fields[field] ?? [], field).map((entry) => `${field}:${entry}`),
+  );
+  const issues = Object.entries(object(fields['ignoreIssues'] ?? {}, 'ignoreIssues')).flatMap(([glob, types]) =>
+    strings(types, `ignoreIssues.${glob}`).map((type) => `ignoreIssues:${glob}:${type}`),
+  );
+  return [...listed, ...issues];
+}
+
+/** The ignore entries of the repository's `knip.json`. */
+export function repoIgnoreEntries(): readonly string[] {
+  return ignoreEntries(json(textOf('knip.json')));
+}
+
+/** The issue types knip's installed schema names. */
+export function issueTypes(): readonly string[] {
+  const schema = object(json(readFileSync(fromRoot('node_modules/knip/schema.json'), 'utf8')), 'knip schema');
+  const rules = object(object(schema['properties'], 'properties')['rules'], 'rules');
+  return Object.keys(object(rules['properties'], 'rules.properties'));
+}
+
+/**
+ * What keeps a parsed `knip.json` from knip's strictest setting: an issue type whose rule is not
+ * `error`, or a file excused from an issue type (`ignoreIssues`, `ignoreFiles`).
+ */
+export function strictnessProblems(config: unknown, types: readonly string[]): readonly string[] {
+  const rules = object(object(config, 'knip.json')['rules'] ?? {}, 'rules');
+  return [
+    ...types.filter((type) => rules[type] !== 'error').map((type) => `rule ${type} is not error`),
+    ...ignoreEntries(config)
+      .filter((entry) => entry.startsWith('ignoreIssues:') || entry.startsWith('ignoreFiles:'))
+      .map((entry) => `a file is excused: ${entry}`),
+  ];
+}
