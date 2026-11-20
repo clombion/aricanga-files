@@ -29,7 +29,6 @@
     "@ai-sdk/anthropic",
     "@ai-sdk/google",
     "@ai-sdk/openai",
-    "@eslint/js",
     "@narratives/framework",
     "@narratives/test-utils",
     "@viz-js/viz",

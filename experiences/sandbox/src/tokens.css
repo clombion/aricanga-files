@@ -1,4 +1,4 @@
-/* The sandbox's design tokens: the only place its raw sizes and colours are written. */
+/* The sandbox's design tokens: its stylesheets read every size and colour from these. */
 
 :root {
   --font-body: system-ui, sans-serif;

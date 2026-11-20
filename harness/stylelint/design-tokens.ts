@@ -2,13 +2,13 @@
  * The stylelint rule `harness/design-tokens`: a raw size is written only where a design token is
  * defined, a custom property declared in a `tokens.css`; and a custom property declared anywhere
  * else holds no raw size, colour, duration, easing or z-index. Raw colours, durations, timing
- * functions and z-indexes in ordinary declarations belong to `scale-unlimited/declaration-strict-value`,
- * which does not read custom properties. Zero and unitless numbers are not raw.
+ * functions and z-indexes in ordinary declarations belong to the strict-value plugin's rule, which
+ * does not read custom properties. Zero and unitless numbers are not raw.
  */
 
 import stylelint, { type Rule } from 'stylelint';
 
-export const ruleName = 'harness/design-tokens';
+export const ruleName: string = 'harness/design-tokens';
 
 const SIZE = /(?<![\w-])-?(\d*\.?\d+)(px|rem|em|vh|vw|vi|vb|vmin|vmax|svh|lvh|dvh|dvi|dvb|svi|svb|ch|ex|lh|cqw|cqh|cqi|cqb|pt|pc|cm|mm|in)\b/g;
 const DURATION = /(?<![\w-])(\d*\.?\d+)(ms|s)\b/g;
@@ -20,7 +20,7 @@ const NAMED_COLOUR =
   /(?<![\w-])(black|white|red|green|blue|yellow|orange|purple|pink|gray|grey|silver|maroon|olive|lime|aqua|teal|navy|fuchsia|brown|gold|indigo|violet|cyan|magenta|beige|coral|crimson|salmon|tomato|khaki|lavender|plum|orchid|tan|wheat|ivory|azure|snow|linen)(?![\w-])/gi;
 const INTEGER = /^-?\d+$/;
 
-export const messages = stylelint.utils.ruleMessages(ruleName, {
+export const messages: { raw: (kind: string, value: string) => string } = stylelint.utils.ruleMessages(ruleName, {
   raw: (kind: string, value: string) => `raw ${kind} "${value}" outside the design tokens: read a token with var()`,
 });
 
@@ -68,4 +68,5 @@ const rule: Rule = (primary) => (root, result) => {
 rule.ruleName = ruleName;
 rule.messages = messages;
 
-export default stylelint.createPlugin(ruleName, rule);
+const plugin: ReturnType<typeof stylelint.createPlugin> = stylelint.createPlugin(ruleName, rule);
+export default plugin;

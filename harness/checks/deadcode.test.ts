@@ -1,29 +1,37 @@
 /**
- * knip finds no unused file, dependency or export, in production mode and in default mode, and every ignore entry carries its reason.
+ * knip, at its strictest, finds no unused file, dependency or export in production mode or default mode, and every ignore entry carries its reason.
  *
  * The `deadcode` task runs knip twice, each run treating a configuration hint as an error: in
  * production mode, where only `!` entries and project files count, an export only a test reads is
- * unused; in default mode, an export nothing reads is unused. knip hints a stale dependency,
- * binary or workspace ignore, so it fails; a stale `ignoreIssues` entry it does not, so this check
- * runs knip without them and fails an entry that covers no issue. Each entry of `knip.json`'s
- * ignore lists is held here with its reason.
+ * unused; in default mode, an export nothing reads is unused. Every issue type knip's schema names
+ * is an error, and no file is excused from one. knip hints a stale dependency, binary or workspace
+ * ignore, so it fails. Each entry of `knip.json`'s ignore lists is held here with its reason.
  */
 
 import { describe, expect, test } from 'vitest';
 
-import { deadcodeRuns, ignoreEntries, knip, repoIgnoreEntries, staleIgnoreIssues } from '../lib/deadcode.ts';
 import { json } from '../lib/config.ts';
-import { textOf } from '../lib/source-files.ts';
+import {
+  deadcodeRuns,
+  ignoreEntries,
+  issueTypes,
+  knip,
+  repoIgnoreEntries,
+  strictnessProblems,
+} from '../lib/deadcode.ts';
 import { Exemptions } from '../lib/exemptions.ts';
 import { REPO_ROOT } from '../lib/paths.ts';
+import { textOf } from '../lib/source-files.ts';
 import { Project } from '../lib/tools.ts';
 
 export const HARNESS_ID = 'deadcode';
 
 const POC = 'poc: the POC reference uses it until it is deleted (#50)';
-const CORE = 'adopting: core harness modules whose exports the other check groups consume; drop the entry once they do';
 
-/** The ignore entries of knip.json, keyed as `ignoreEntries` keys them. */
+/**
+ * The ignore entries of knip.json, keyed as `ignoreEntries` keys them. Each covers something knip
+ * cannot see: code outside the harness's scope, or a package loaded by a tool rather than imported.
+ */
 const KNIP_IGNORES = Exemptions.grouped({
   'poc: the POC reference is outside the harness until it is deleted (#50)': [
     'ignoreWorkspaces:packages/framework',
@@ -45,42 +53,8 @@ const KNIP_IGNORES = Exemptions.grouped({
     'ignoreDependencies:xstate',
     'ignoreDependencies:zod',
   ],
-  'adopting: removed with the eslint boundary lint once oxlint holds the boundaries': ['ignoreDependencies:@eslint/js'],
   'run by harness/scripts/dupes.ts through tools.bin, which knip cannot see': ['ignoreDependencies:jscpd'],
   'pinned by the view-layer brief; loaded by @solidjs/vite-plugin, not imported': ['ignoreDependencies:@solidjs/compiler'],
-  'adopting: the characterisation package declares the vite its Playwright web server runs': [
-    'ignoreIssues:packages/characterisation/playwright.characterisation.config.ts:binaries',
-  ],
-  [CORE]: [
-    'ignoreIssues:harness/lib/checks.ts:files',
-    'ignoreIssues:harness/lib/config.ts:exports',
-    'ignoreIssues:harness/lib/exemptions.ts:exports',
-    'ignoreIssues:harness/lib/paths.ts:exports',
-    'ignoreIssues:harness/lib/process.ts:types',
-    'ignoreIssues:harness/lib/projects.ts:exports',
-    'ignoreIssues:harness/lib/scope.ts:exports',
-    'ignoreIssues:harness/lib/source-files.ts:exports',
-    'ignoreIssues:harness/lib/tools.ts:exports',
-  ],
-  'adopting: the characterisation fixtures of Step 1 read the result-bus helpers': [
-    'ignoreIssues:packages/characterisation/src/harness.ts:exports',
-    'ignoreIssues:packages/characterisation/tests/_helpers.ts:exports',
-  ],
-  'adopting: the chat kernel either reads these model exports or makes them module-private': [
-    'ignoreIssues:packages/systems/chat/src/model/defer.ts:exports',
-    'ignoreIssues:packages/systems/chat/src/model/read-state.ts:exports',
-    'ignoreIssues:packages/systems/chat/src/model/route.ts:exports',
-  ],
-  'adopting: parseTimeOfDay is read only by its test; the chat kernel reads it or stops exporting it': [
-    'ignoreIssues:packages/systems/chat/src/model/time.ts:exports',
-  ],
-  'adopting: ChatCommand is read only by tests; the view layer reads it when parts send chat commands': [
-    'ignoreIssues:packages/systems/chat/src/system.ts:types',
-  ],
-  'adopting: the regression ledger exports only what its test reads': [
-    'ignoreIssues:packages/systems/chat/test/regression-ledger.ts:exports',
-    'ignoreIssues:packages/systems/chat/test/regression-ledger.ts:types',
-  ],
 });
 
 const PLANT_CONFIG = {
@@ -88,8 +62,11 @@ const PLANT_CONFIG = {
   project: ['src/**/*.ts!'],
 };
 
-/** A planted package with `files` and a knip config; `use` runs on its root before it is removed. */
-function planted<T>(files: Readonly<Record<string, string>>, config: object, use: (root: string) => T): T {
+/** Run every knip invocation of the deadcode task on a planted package; their exit statuses and output. */
+function plantedRuns(
+  files: Readonly<Record<string, string>>,
+  config: object = PLANT_CONFIG,
+): readonly { status: number; output: string }[] {
   const project = new Project();
   try {
     project.write('package.json', JSON.stringify({ name: 'plant', version: '0.0.0', private: true, type: 'module' }));
@@ -97,20 +74,13 @@ function planted<T>(files: Readonly<Record<string, string>>, config: object, use
     for (const [path, text] of Object.entries(files)) {
       project.write(path, text);
     }
-    return use(project.root);
+    return deadcodeRuns().map((args) => {
+      const run = knip(project.root, args);
+      return { status: run.status, output: run.stdout + run.stderr };
+    });
   } finally {
     project.remove();
   }
-}
-
-/** Run every knip invocation of the deadcode task on a planted package; their exit statuses and output. */
-function plantedRuns(files: Readonly<Record<string, string>>, config: object = PLANT_CONFIG): readonly { status: number; output: string }[] {
-  return planted(files, config, (root) =>
-    deadcodeRuns().map((args) => {
-      const run = knip(root, args);
-      return { status: run.status, output: run.stdout + run.stderr };
-    }),
-  );
 }
 
 const CLEAN = {
@@ -139,8 +109,9 @@ describe('the repository', () => {
     expect(KNIP_IGNORES.unexempted(repoIgnoreEntries())).toEqual([]);
   });
 
-  test('every ignoreIssues entry covers an issue', () => {
-    expect(staleIgnoreIssues(REPO_ROOT, json(textOf('knip.json')))).toEqual([]);
+  test('knip.json is at the strictest: every issue type an error, no file excused', () => {
+    expect(issueTypes()).toContain('exports');
+    expect(strictnessProblems(json(textOf('knip.json')), issueTypes())).toEqual([]);
   });
 });
 
@@ -177,11 +148,20 @@ describe('the deadcode check, on a planted package', () => {
     ]);
   });
 
-  test('sees an ignoreIssues entry that covers nothing, and lets one that covers an issue through', () => {
-    const unread = { ...CLEAN, 'src/lib.ts': 'export const a = 1;\nexport const unread = 2;\n' };
-    const config = { ...PLANT_CONFIG, ignoreIssues: { 'src/lib.ts': ['exports'], 'src/index.ts': ['exports'] } };
-    expect(planted(unread, config, (root) => staleIgnoreIssues(root, config))).toEqual(['ignoreIssues:src/index.ts:exports']);
-    expect(plantedRuns(unread, config).map((run) => run.status)).toEqual([0, 0]);
+  test('refuses an issue type below error and a file excused from an issue type', () => {
+    const strict = { rules: { exports: 'error', types: 'error' } };
+    expect(strictnessProblems(strict, ['exports', 'types'])).toEqual([]);
+    expect(
+      strictnessProblems(
+        { rules: { exports: 'warn' }, ignoreIssues: { 'src/x.ts': ['exports'] }, ignoreFiles: ['src/y.ts'] },
+        ['exports', 'types'],
+      ),
+    ).toEqual([
+      'rule exports is not error',
+      'rule types is not error',
+      'a file is excused: ignoreFiles:src/y.ts',
+      'a file is excused: ignoreIssues:src/x.ts:exports',
+    ]);
   });
 
   test('keys every kind of ignore entry', () => {

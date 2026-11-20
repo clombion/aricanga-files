@@ -34,7 +34,7 @@ declare global {
 const DIAGNOSTIC = /\[([A-Z0-9_]+)\]/g;
 
 /** The `[CODE]` diagnostic codes in a console line: upper case with an underscore. */
-export function diagnosticCodes(text: string): string[] {
+function diagnosticCodes(text: string): string[] {
   return [...text.matchAll(DIAGNOSTIC)]
     .map((match) => match[1] ?? '')
     .filter((code) => code.includes('_') && code === code.toUpperCase());
@@ -78,31 +78,7 @@ export function record(entry: ChxRecord): void {
   paint();
 }
 
-/** Run `fn`; the record is ok when it throws (an expected refusal). */
-function expectRefused(id: string, fn: () => void, note = 'expected a refusal'): void {
-  try {
-    fn();
-    record({ id, ok: false, threw: false, note: `did not throw: ${note}` });
-  } catch (error) {
-    record({ id, ok: true, threw: true, error: error instanceof Error ? error.message : String(error), note });
-  }
-}
-
-/** Run `fn`; the record is ok when it completes without throwing. */
-function expectAllowed(id: string, fn: () => void, note = 'expected to be allowed'): void {
-  try {
-    fn();
-    record({ id, ok: true, threw: false, note });
-  } catch (error) {
-    record({ id, ok: false, threw: true, error: error instanceof Error ? error.message : String(error), note });
-  }
-}
-
 export function markDone(): void {
   bus().done = true;
   paint();
-}
-
-function sawDiagnostic(code: string): boolean {
-  return bus().diagnostics.includes(code);
 }

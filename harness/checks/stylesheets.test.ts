@@ -32,7 +32,7 @@ export const HARNESS_ID = 'stylesheets';
 
 /** The rules `.stylelintrc.json` turns on itself (the standard config's own are its plants' concern). */
 function configuredRules(): readonly string[] {
-  const rules = object(object(json(textOf('.stylelintrc.json')), '.stylelintrc.json').rules, 'rules');
+  const rules = object(object(json(textOf('.stylelintrc.json')), '.stylelintrc.json')['rules'], 'rules');
   return Object.entries(rules)
     .filter(([, value]) => value !== null && value !== false)
     .map(([rule]) => rule);
@@ -132,12 +132,15 @@ describe('the lint, on planted sheets', () => {
   });
 });
 
-describe('the cross-sheet scans, on planted sheets', () => {
-  const sheet = (path: string, text: string): Sheet => ({ path, line: 1, text });
+/** A planted sheet starting on the first line of its file. */
+function plantedSheet(path: string, text: string): Sheet {
+  return { path, line: 1, text };
+}
 
+describe('the cross-sheet scans, on planted sheets', () => {
   test('sees a custom property defined but never read, and one read but never defined', async () => {
-    const tokens = sheet('plant/tokens.css', ':root {\n  --gap: 8px;\n  --unread: 1px;\n}\n');
-    const theme = sheet('plant/theme.css', '.a {\n  padding: var(--gap) var(--undefined);\n}\n');
+    const tokens = plantedSheet('plant/tokens.css', ':root {\n  --gap: 8px;\n  --unread: 1px;\n}\n');
+    const theme = plantedSheet('plant/theme.css', '.a {\n  padding: var(--gap) var(--undefined);\n}\n');
     expect(await customPropertyProblems([tokens, theme], new Map([['plant/a.ts', "el.className = 'a';"]]))).toEqual([
       { path: 'plant/tokens.css', line: 0, rule: 'custom-property-unread', text: '--unread' },
       { path: '', line: 0, rule: 'custom-property-undefined', text: '--undefined' },
@@ -145,14 +148,14 @@ describe('the cross-sheet scans, on planted sheets', () => {
   });
 
   test('counts a property a module sets or reads', async () => {
-    const theme = sheet('plant/theme.css', '.a {\n  color: var(--from-module);\n}\n');
+    const theme = plantedSheet('plant/theme.css', '.a {\n  color: var(--from-module);\n}\n');
     const module = new Map([['plant/a.ts', "el.style.setProperty('--from-module', value);\nconst x = 'var(--theme)';"]]);
-    const tokens = sheet('plant/tokens.css', ':root {\n  --theme: 1px;\n}\n');
+    const tokens = plantedSheet('plant/tokens.css', ':root {\n  --theme: 1px;\n}\n');
     expect(await customPropertyProblems([theme, tokens], module)).toEqual([]);
   });
 
   test('sees a class no module names, and lets a named class through', async () => {
-    const theme = sheet('plant/theme.css', '.used, .card-unused {\n  color: var(--ink);\n}\n');
+    const theme = plantedSheet('plant/theme.css', '.used, .card-unused {\n  color: var(--ink);\n}\n');
     const modules = new Map([['plant/a.tsx', 'return <p class="used">hi</p>;']]);
     expect((await unusedClasses([theme], modules)).map((finding) => finding.text)).toEqual(['card-unused']);
   });
@@ -172,14 +175,14 @@ describe('the cross-sheet scans, on planted sheets', () => {
   });
 
   test('sees a selector written twice in one media context, and lets one per context through', async () => {
-    const twice = sheet('plant/theme.css', '.a {\n  color: var(--x);\n}\n\n.a {\n  margin: 0;\n}\n');
+    const twice = plantedSheet('plant/theme.css', '.a {\n  color: var(--x);\n}\n\n.a {\n  margin: 0;\n}\n');
     expect((await duplicateRules(twice)).map((finding) => finding.line)).toEqual([5]);
-    const media = sheet(
+    const media = plantedSheet(
       'plant/theme.css',
       '.a {\n  color: var(--x);\n}\n\n@media (width >= 40rem) {\n  .a {\n    margin: 0;\n  }\n}\n',
     );
     expect(await duplicateRules(media)).toEqual([]);
-    const nested = sheet('plant/theme.css', '@media print {\n  .a, .b {\n    margin: 0;\n  }\n\n  .b, .a {\n    color: var(--x);\n  }\n}\n');
+    const nested = plantedSheet('plant/theme.css', '@media print {\n  .a, .b {\n    margin: 0;\n  }\n\n  .b, .a {\n    color: var(--x);\n  }\n}\n');
     expect((await duplicateRules(nested)).map((finding) => finding.text)).toEqual(['@media print :: .a, .b']);
   });
 });

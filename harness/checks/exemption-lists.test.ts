@@ -72,7 +72,6 @@ const ADOPTING = new Exemptions({
   [site('harness/checks/boundaries.test.ts', 'BOUNDARY_RULES')]: 'adopting: declare it as an Accepted and ask .has',
   [site('harness/checks/gate.test.ts', 'GATE_TESTS')]: 'adopting: declare it as an Accepted of the commands check must run',
   [site('harness/lib/scope.ts', 'ROOTS')]: 'adopting: declare it as Prefixes and ask .starts',
-  [site('harness/lib/scope.ts', 'ROOT_FILES')]: 'adopting: declare it as an Accepted and ask .has',
 });
 
 /** A list the fence refuses: its module, its name and why. */

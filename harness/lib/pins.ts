@@ -2,11 +2,12 @@
  * The pinned tools: each with its upstream repository, where it is pinned, and its pin.
  *
  * The tools are the root `devDependencies`, each at the version `pnpm-lock.yaml` resolves for the
- * root importer, and Node at the floor `engines.node` declares. `UPSTREAM` names each tool's
+ * root importer, and Node at the exact version `.node-version` pins. `UPSTREAM` names each tool's
  * repository; `harness/scripts/gen-docs.ts` renders the table of `harness.md`.
  */
 
 import { json, object } from './config.ts';
+import { pinned as nodePin } from './node-floor.ts';
 import { textOf } from './source-files.ts';
 
 /** The upstream GitHub repository of every pinned tool, written as owner and repository name. */
@@ -108,7 +109,7 @@ function lockedVersions(lockText: string, importer = '.'): ReadonlyMap<string, s
   return found;
 }
 
-/** Every pin: the root dev dependencies at their locked versions, and Node's declared floor. */
+/** Every pin: the root dev dependencies at their locked versions, and the Node of `.node-version`. */
 function pinned(packageJson: unknown, lockText: string): readonly Pin[] {
   const manifest = object(packageJson, 'package.json');
   const locked = lockedVersions(lockText);
@@ -119,10 +120,7 @@ function pinned(packageJson: unknown, lockText: string): readonly Pin[] {
     }
     return { tool, where: 'pnpm-lock.yaml', version };
   });
-  const node = object(manifest['engines'] ?? {}, 'engines')['node'];
-  if (typeof node === 'string') {
-    found.push({ tool: 'node', where: 'package.json', version: node });
-  }
+  found.push({ tool: 'node', where: '.node-version', version: nodePin().join('.') });
   return found.toSorted((a, b) => a.tool.localeCompare(b.tool));
 }
 

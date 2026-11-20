@@ -36,17 +36,21 @@ list.
 
 <!-- generated: checks -->
 - `boundaries` (`harness/checks/boundaries.test.ts`): The module boundaries hold under oxlint: one import that must fail and one that must pass per boundary.
+- `build-check` (`harness/checks/build-check.test.ts`): The gate builds every held Vite app in check mode, and a build that fails or writes into the checkout fails.
+- `deadcode` (`harness/checks/deadcode.test.ts`): knip, at its strictest, finds no unused file, dependency or export in production mode or default mode, and every ignore entry carries its reason.
 - `doc-references` (`harness/checks/doc-references.test.ts`): Every reference in current text resolves: links and anchors, backticked paths, tasks, ADRs and commands.
 - `exemption-lists` (`harness/checks/exemption-lists.test.ts`): Every literal list a check consults is an exemption declaration, and every declaration is consulted.
 - `gate` (`harness/checks/gate.test.ts`): The gate writes no file, runs only locked tools, and the git hooks run the gate's own tasks.
 - `generated-docs` (`harness/checks/generated-docs.test.ts`): Every generated block of the docs equals a fresh render, names a known generator, and every generator has a block.
 - `history-narration` (`harness/checks/history-narration.test.ts`): Current text describes the project as it is: no comment or doc narrates how it got there.
+- `node-floor` (`harness/checks/node-floor.test.ts`): The Node running the suite, and the pinned `.node-version`, meet the floor `engines.node` declares.
 - `one-claims` (`harness/checks/one-claims.test.ts`): Every claim of a single owner in current text is registered, and its probe holds it.
 - `project-lint-rules` (`harness/checks/project-lint-rules.test.ts`): Every project lint rule fires on its must-fire fixtures and passes its must-stay-clean ones under the repository's oxlint.
 - `pushed-subjects` (`harness/checks/pushed.test.ts`): The pre-push hook refuses a `fixup!`, `squash!` or `amend!` commit in the pushed range.
 - `repo-paths` (`harness/checks/repo-paths.test.ts`): No harness module but `harness/lib/paths.ts` computes the repository root or a path from its own location.
 - `skips` (`harness/checks/skips.test.ts`): Every skip in the tests is listed with its reason, so a test cannot stop running unnoticed.
 - `structure` (`harness/checks/structure.test.ts`): No module is both `.ts` and `.tsx`, and no build output is committed under the held roots.
+- `stylesheets` (`harness/checks/stylesheets.test.ts`): Every stylesheet passes stylelint, reads raw values only through design tokens, and every class and custom property it names is used.
 - `suppressions` (`harness/checks/suppressions.test.ts`): Every suppression names its rule, a tool that checks the file, and its reason, and each is counted.
 - `terms` (`harness/checks/terms.test.ts`): No current text uses a retired term or a refused pattern of `docs/terms.toml`.
 - `tool-exemptions` (`harness/checks/tool-exemptions.test.ts`): Every tool exemption is live: each ignore, override, include and exclude glob matches a listed file.
@@ -146,7 +150,7 @@ writes this table from `package.json` and `pnpm-lock.yaml`.
 | `jscpd` | [kucherenko/jscpd](https://github.com/kucherenko/jscpd) | `pnpm-lock.yaml` | 5.4.2 |
 | `knip` | [webpro-nl/knip](https://github.com/webpro-nl/knip) | `pnpm-lock.yaml` | 6.44.1 |
 | `lefthook` | [evilmartians/lefthook](https://github.com/evilmartians/lefthook) | `pnpm-lock.yaml` | 2.2.2 |
-| `node` | [nodejs/node](https://github.com/nodejs/node) | `package.json` | >=22.18.0 |
+| `node` | [nodejs/node](https://github.com/nodejs/node) | `.node-version` | 22.23.5 |
 | `oxfmt` | [oxc-project/oxc](https://github.com/oxc-project/oxc) | `pnpm-lock.yaml` | 0.79.0 |
 | `oxlint` | [oxc-project/oxc](https://github.com/oxc-project/oxc) | `pnpm-lock.yaml` | 1.94.0 |
 | `oxlint-tsgolint` | [oxc-project/tsgolint](https://github.com/oxc-project/tsgolint) | `pnpm-lock.yaml` | 7.0.2007 |

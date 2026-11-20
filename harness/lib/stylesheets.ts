@@ -38,7 +38,8 @@ export interface SheetFinding {
   readonly text: string;
 }
 
-const MODULE_SUFFIXES = ['.ts', '.tsx'];
+/** The files whose `css` tagged templates are sheets. */
+const MODULES = new Prefixes(['.ts', '.tsx']);
 
 /** The harness holds planted sheets and values in its checks; the scans read the product only. */
 const PLANTS = new Prefixes(['harness/']);
@@ -79,7 +80,7 @@ export function sheetsOf(path: string, text: string): readonly Sheet[] {
 
 /** A module's text with its `css` templates blanked, so a sheet never counts as its own reader. */
 export function withoutSheets(path: string, text: string): string {
-  if (!MODULE_SUFFIXES.some((suffix) => path.endsWith(suffix))) {
+  if (!MODULES.ends(path)) {
     return text;
   }
   let blanked = text;
@@ -91,12 +92,12 @@ export function withoutSheets(path: string, text: string): string {
 
 /** Every held sheet of the product. */
 export function sheets(): readonly Sheet[] {
-  return productFiles('.css', ...MODULE_SUFFIXES).flatMap((path) => sheetsOf(path, textOf(path)));
+  return productFiles('.css', ...MODULES.values).flatMap((path) => sheetsOf(path, textOf(path)));
 }
 
 /** The product's modules and pages a class or custom property may be read from, without their sheets. */
 export function readers(): ReadonlyMap<string, string> {
-  return new Map(productFiles('.html', ...MODULE_SUFFIXES).map((path) => [path, withoutSheets(path, textOf(path))]));
+  return new Map(productFiles('.html', ...MODULES.values).map((path) => [path, withoutSheets(path, textOf(path))]));
 }
 
 /** Lint one sheet with the repository's stylelint configuration. */
@@ -141,8 +142,9 @@ export async function customPropertyProblems(
 ): Promise<readonly SheetFinding[]> {
   const defined = new Map<string, string>();
   const read = new Set<string>();
-  for (const sheet of all) {
-    (await parse(sheet.text)).walkDecls((declaration) => {
+  const roots = await Promise.all(all.map(async (sheet) => ({ sheet, root: await parse(sheet.text) })));
+  for (const { sheet, root } of roots) {
+    root.walkDecls((declaration) => {
       if (declaration.prop.startsWith('--')) {
         defined.set(declaration.prop, sheet.path);
       }
@@ -177,8 +179,9 @@ export async function unusedClasses(
   modules: ReadonlyMap<string, string>,
 ): Promise<readonly SheetFinding[]> {
   const found: SheetFinding[] = [];
-  for (const sheet of all) {
-    (await parse(sheet.text)).walkRules((rule) => {
+  const roots = await Promise.all(all.map(async (sheet) => ({ sheet, root: await parse(sheet.text) })));
+  for (const { sheet, root } of roots) {
+    root.walkRules((rule) => {
       for (const match of rule.selector.matchAll(CLASS)) {
         const name = match[1] ?? '';
         const named = new RegExp(`(?<![\\w-])${name}(?![\\w-])`);
@@ -200,7 +203,7 @@ export async function duplicateRules(sheet: Sheet): Promise<readonly SheetFindin
     const context: string[] = [];
     for (let parent = rule.parent; parent !== undefined && parent.type !== 'root'; parent = parent.parent) {
       if (parent.type === 'atrule' && 'name' in parent && 'params' in parent) {
-        context.unshift(`@${String(parent.name)} ${String(parent.params)}`);
+        context.unshift(`@${parent.name} ${parent.params}`);
       }
     }
     const selector = rule.selector

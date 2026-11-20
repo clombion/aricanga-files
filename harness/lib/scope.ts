@@ -3,6 +3,7 @@
  * until it is deleted, and every scan asks this module, never a list of its own.
  */
 
+import { Accepted } from './exemptions.ts';
 import { tracked } from './source-files.ts';
 
 /** The top-level paths whose files the harness holds. */
@@ -15,7 +16,7 @@ export const ROOTS: readonly string[] = [
 ];
 
 /** Root files the harness holds besides the roots: the configuration the gate reads. */
-const ROOT_FILES: readonly string[] = [
+const ROOT_FILES: Accepted<string> = new Accepted([
   'package.json',
   'tsconfig.json',
   'tsconfig.base.json',
@@ -31,14 +32,16 @@ const ROOT_FILES: readonly string[] = [
   'CLAUDE.md',
   'harness.md',
   'HARNESS_STATUS.md',
-];
+  '.stylelintrc.json',
+  '.node-version',
+]);
 
 /** The current text the docs checks read: the agent brief, the harness docs and the roadmap. */
 export const DOC_ROOTS: readonly string[] = ['docs/roadmap/', 'harness/', 'packages/characterisation/'];
 
 /** Whether a listed path is held by the harness. */
 export function held(path: string): boolean {
-  return ROOT_FILES.includes(path) || ROOTS.some((root) => path.startsWith(root));
+  return ROOT_FILES.has(path) || ROOTS.some((root) => path.startsWith(root));
 }
 
 /** The listed files the harness holds, optionally filtered by suffix. */

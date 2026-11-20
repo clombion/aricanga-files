@@ -3,7 +3,6 @@ import { type FixtureInput, type FixtureRun, checkInvariant, runStream } from '@
 import { forwardOnlyTime } from '@narratives/system-chat/testing';
 import * as fc from 'fast-check';
 import { expect, test } from 'vitest';
-import { parseTimeOfDay } from '../src/model/time';
 import { chatSystem } from '../src/system';
 
 interface StepOpts {
@@ -30,15 +29,18 @@ const times = (r: FixtureRun): (number | null)[] =>
 const H = (h: number, m = 0): number => h * 60 + m;
 const MINUTES_PER_DAY = 1440;
 
-test('parseTimeOfDay: AM/PM edges + 24h + malformed', () => {
-  expect(parseTimeOfDay('12:00 AM')).toBe(0);
-  expect(parseTimeOfDay('12:30 PM')).toBe(H(12, 30));
-  expect(parseTimeOfDay('11:30 PM')).toBe(H(23, 30));
-  expect(parseTimeOfDay('8:35 AM')).toBe(H(8, 35));
-  expect(parseTimeOfDay('13:00')).toBe(H(13)); // 24h, no period
-  expect(parseTimeOfDay('soon')).toBeNull();
-  expect(parseTimeOfDay('13:00 PM')).toBeNull(); // AM/PM out of 1–12
-  expect(parseTimeOfDay('9:99 AM')).toBeNull();
+test.each([
+  ['12:00 AM', 0],
+  ['12:30 PM', H(12, 30)],
+  ['11:30 PM', H(23, 30)],
+  ['8:35 AM', H(8, 35)],
+  ['13:00', H(13)], // 24h, no period
+  ['soon', null],
+  ['13:00 PM', null], // AM/PM out of 1–12
+  ['9:99 AM', null],
+])('a first # time: %s anchors the clock at %s (null: unparseable, stays unanchored)', async (raw, expected) => {
+  const r = await run([story('m', { tags: [`time: ${raw}`] })]);
+  expect(times(r)).toEqual([expected]);
 });
 
 test('# time snaps forward; a backward snap is rejected (#1, #2)', async () => {

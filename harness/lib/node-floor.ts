@@ -46,11 +46,11 @@ export function meets(found: Version, minimum: Version): boolean {
 
 /** The repository's declared floor. */
 export function repoFloor(): Version {
-  const engines = object(object(json(textOf('package.json')), 'package.json').engines ?? {}, 'engines');
-  if (typeof engines.node !== 'string') {
+  const engines = object(object(json(textOf('package.json')), 'package.json')['engines'] ?? {}, 'engines');
+  if (typeof engines['node'] !== 'string') {
     throw new FloorError('package.json declares no engines.node');
   }
-  return floor(engines.node);
+  return floor(engines['node']);
 }
 
 /** The Node version the repository pins for its tools (`.node-version`). */

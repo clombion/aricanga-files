@@ -17,7 +17,7 @@ import { textOf, tracked } from './source-files.ts';
 import { comments, parse } from './ts-source.ts';
 
 /** The history files: they record what happened, so current-text checks leave them out. */
-export const HISTORY: Prefixes = new Prefixes(['docs/roadmap/tasks/', 'CHANGELOG.md']);
+const HISTORY: Prefixes = new Prefixes(['docs/roadmap/tasks/', 'CHANGELOG.md']);
 
 /** The code files whose comments are current text, by suffix. */
 const SCRIPT = new Prefixes(['.ts', '.tsx', '.js', '.mjs', '.cjs']);
@@ -83,17 +83,17 @@ export class BlockError extends Error {
 }
 
 /** Text with its inline code spans removed. */
-export function withoutSpans(text: string): string {
+function withoutSpans(text: string): string {
   return text.replaceAll(SPAN, '');
 }
 
 /** The inline code spans of a line, trimmed. */
-export function spansOf(text: string): readonly string[] {
+function spansOf(text: string): readonly string[] {
   return [...text.matchAll(SPAN)].map((match) => (match[2] ?? '').trim());
 }
 
 /** The anchor GitHub gives a heading: lowercase, punctuation dropped, spaces as hyphens. */
-export function anchor(heading: string): string {
+function anchor(heading: string): string {
   const text = heading
     .replaceAll(SPAN, (_whole, _ticks: string, inner: string) => inner)
     .trim()
@@ -252,7 +252,7 @@ export function markdown(path: string): Doc {
 }
 
 /** Whether a listed path is a Markdown file of current text. */
-export function isCurrentMarkdown(path: string): boolean {
+function isCurrentMarkdown(path: string): boolean {
   return (
     path.endsWith('.md') && (held(path) || DOC_ROOTS.some((root) => path.startsWith(root))) && !HISTORY.starts(path)
   );
@@ -264,7 +264,7 @@ export function markdownPaths(): readonly string[] {
 }
 
 /** The (line, text) of every comment line of TypeScript or JavaScript source, read by the parser. */
-export function scriptComments(path: string, text: string): readonly (readonly [number, string])[] {
+function scriptComments(path: string, text: string): readonly (readonly [number, string])[] {
   return comments(parse(path, text)).flatMap((comment) => numbered(comment.line, comment.text));
 }
 
@@ -290,12 +290,12 @@ function cleanComment(line: string): string {
 }
 
 /** The (line, text) of every comment line of a stylesheet. */
-export function styleComments(text: string): readonly (readonly [number, string])[] {
+function styleComments(text: string): readonly (readonly [number, string])[] {
   return [...text.matchAll(CSS_COMMENT)].flatMap((match) => commentLines(text, match.index, match[0]));
 }
 
 /** The (line, text) of every full-line comment of a TOML or YAML file. */
-export function configComments(text: string): readonly (readonly [number, string])[] {
+function configComments(text: string): readonly (readonly [number, string])[] {
   return text
     .split('\n')
     .map((line, index) => [index + 1, line.trim()] as const)
@@ -305,7 +305,7 @@ export function configComments(text: string): readonly (readonly [number, string
 }
 
 /** The (line, text) of every comment line of a held code file. */
-export function codeComments(path: string, text: string): readonly (readonly [number, string])[] {
+function codeComments(path: string, text: string): readonly (readonly [number, string])[] {
   if (SCRIPT.ends(path)) {
     return scriptComments(path, text);
   }
@@ -316,7 +316,7 @@ export function codeComments(path: string, text: string): readonly (readonly [nu
 }
 
 /** The held code files whose comments are current text. */
-export function codePaths(): readonly string[] {
+function codePaths(): readonly string[] {
   return tracked().filter((path) => held(path) && (SCRIPT.ends(path) || STYLE.ends(path) || CONFIG.ends(path)));
 }
 

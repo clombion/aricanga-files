@@ -8,13 +8,13 @@ import type { FixtureInput } from '@narratives/foundation/testing';
 // is dispositioned and that each kernel-physics bug keeps its fixture alive.
 
 /** A GitHub issue of this repository, such as `#13`. */
-export type IssueRef = `#${number}`;
+type IssueRef = `#${number}`;
 
 /**
  * Where a historical bug is held. A kernel-physics bug names the open issue that turns its
  * predicate green, and none once the predicate holds; a deferred bug names the issue it waits on.
  */
-export type Disposition =
+type Disposition =
   | {
       readonly kind: 'kernel-physics';
       readonly predicate: string;
@@ -45,7 +45,7 @@ const story = (text: string, rawTags: string[] = []): FixtureInput => ({
 // Recorded Input streams for the kernel-physics regressions. The routing scenario
 // is asserted green now; the rest carry the durable repro data, asserted green by
 // their consuming physics task.
-export const FIXTURES: Readonly<Record<string, readonly FixtureInput[]>> = {
+const FIXTURES: Readonly<Record<string, readonly FixtureInput[]>> = {
   'cross-chat-routing': [
     story('Routes to spectre', ['targetChat: spectre', 'speaker: TonyGov', 'type: received']),
   ],
