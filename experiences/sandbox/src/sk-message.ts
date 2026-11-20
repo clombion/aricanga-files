@@ -1,13 +1,13 @@
-import { css, html, LitElement } from 'lit';
+import { css, type CSSResult, html, LitElement, type PropertyDeclarations, type TemplateResult } from 'lit';
 
 // Baseline Lit Web Component for the Phase 0 skeleton (replaced by a Solid part in #24).
 // No decorators — uses static `properties` so it compiles cleanly under strict
 // TypeScript with `useDefineForClassFields`, and proves the Lit + Shadow DOM
 // toolchain end to end.
 export class SkMessage extends LitElement {
-  static override properties = { text: { type: String } };
+  static override properties: PropertyDeclarations = { text: { type: String } };
 
-  static override styles = css`
+  static override styles: CSSResult = css`
     :host {
       display: block;
       font: 14px/1.4 system-ui, sans-serif;
@@ -27,7 +27,7 @@ export class SkMessage extends LitElement {
     this.text = '';
   }
 
-  override render() {
+  override render(): TemplateResult {
     return html`<p part="bubble">${this.text}</p>`;
   }
 }

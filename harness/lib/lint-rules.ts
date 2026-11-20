@@ -80,13 +80,13 @@ export interface Diagnostic {
 
 /** Parse `oxlint --format json` output into diagnostics. */
 export function diagnostics(output: string): readonly Diagnostic[] {
-  const found = object(json(output), 'oxlint output').diagnostics;
+  const found = object(json(output), 'oxlint output')['diagnostics'];
   if (!Array.isArray(found)) {
     throw new FixtureError('oxlint output has no diagnostics array');
   }
   return found.map((entry: unknown) => {
     const fields = object(entry, 'diagnostic');
-    return { code: String(fields.code), file: String(fields.filename), message: String(fields.message) };
+    return { code: String(fields['code']), file: String(fields['filename']), message: String(fields['message']) };
   });
 }
 

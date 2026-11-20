@@ -26,7 +26,7 @@ const story = (text: string, opts: StepOpts = {}): FixtureInput => ({
 const run = (inputs: FixtureInput[]): Promise<FixtureRun> =>
   runStream({ systems: [erase(chatSystem)], foreground: 'chat' }, inputs);
 const times = (r: FixtureRun): (number | null)[] =>
-  (r.viewOf(chatSystem).messages.main ?? []).map((m) => m.time);
+  (r.viewOf(chatSystem).messages['main'] ?? []).map((m) => m.time);
 const H = (h: number, m = 0): number => h * 60 + m;
 const MINUTES_PER_DAY = 1440;
 
