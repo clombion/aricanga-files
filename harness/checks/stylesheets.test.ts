@@ -277,6 +277,8 @@ describe('the class and duplicate scans, on planted sheets', () => {
       '@media print {\n  .a, .b {\n    margin: 0;\n  }\n\n  .b, .a {\n    color: var(--x);\n  }\n}\n',
     );
     await expect(textsOf(duplicateRules(nested))).resolves.toStrictEqual(['@media print :: .a, .b']);
+    const inRule = plantedSheet('plant/theme.css', '.a {\n  .b {\n    margin: 0;\n  }\n}\n');
+    await expect(duplicateRules(inRule)).resolves.toStrictEqual([]);
   });
 });
 

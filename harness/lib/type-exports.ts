@@ -23,6 +23,7 @@ import { isProduction, nodes, resolved, sourceOf } from './checker.ts';
 import { Prefixes } from './exemptions.ts';
 import type { Scan } from './checker.ts';
 import { isEmpty } from './lists.ts';
+import { present } from './present.ts';
 
 /** Modules that read the harness library's types without being production modules themselves. */
 const CHECK_ROOTS = new Prefixes(['harness/checks/']);
@@ -156,7 +157,9 @@ function unread(scan: Scan): readonly ExportedType[] {
   const read = readers(scan);
   return [...exportedTypes(scan)]
     .filter(
-      ([id, type]: readonly [number, ExportedType]) => !type.isPublic && ![...(read.get(id) ?? [])].some((path) => reads(path, type.path)),
+      ([id, type]: readonly [number, ExportedType]) =>
+        !type.isPublic &&
+        ![...present(read.get(id), `the readers of ${type.name}, its own module among them`)].some((path) => reads(path, type.path)),
     )
     .map(([, type]: readonly [number, ExportedType]) => type);
 }
