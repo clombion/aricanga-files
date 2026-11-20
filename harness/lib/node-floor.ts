@@ -44,13 +44,23 @@ export function meets(found: Version, minimum: Version): boolean {
   return true;
 }
 
+/** A manifest's `engines.node` as written, or `''` when it declares none. */
+export function engineRange(manifest: unknown): string {
+  const engines = object(object(manifest, 'package.json')['engines'] ?? {}, 'engines');
+  const node = engines['node'] ?? '';
+  if (typeof node !== 'string') {
+    throw new FloorError('engines.node is not a string');
+  }
+  return node;
+}
+
 /** The repository's declared floor. */
 export function repoFloor(): Version {
-  const engines = object(object(json(textOf('package.json')), 'package.json')['engines'] ?? {}, 'engines');
-  if (typeof engines['node'] !== 'string') {
+  const range = engineRange(json(textOf('package.json')));
+  if (range === '') {
     throw new FloorError('package.json declares no engines.node');
   }
-  return floor(engines['node']);
+  return floor(range);
 }
 
 /** The Node version the repository pins for its tools (`.node-version`). */

@@ -5,7 +5,7 @@
     "stylelint-no-unsupported-browser-features",
     "stylelint-declaration-strict-value",
     "@double-great/stylelint-a11y",
-    "./harness/stylelint/design-tokens.ts"
+    "./harness/lib/design-tokens.ts"
   ],
   "allowEmptyInput": true,
   "reportNeedlessDisables": true,

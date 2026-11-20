@@ -17,6 +17,7 @@ import {
 import {
   isIdentifier,
   isImportDeclaration,
+  isJsxExpression,
   isNamedImports,
   isPropertyAccessExpression,
   isStringLiteral,
@@ -104,6 +105,12 @@ export function comments(file: SourceFile): Comment[] {
   for (const node of [...nodes(file), file.endOfFileToken]) {
     collect(getLeadingCommentRanges(text, node.pos));
     collect(getTrailingCommentRanges(text, node.end));
+    // A JSX comment, `{/* … */}`, is an empty JSX expression: no child node carries its trivia.
+    if (isJsxExpression(node) && node.expression === undefined) {
+      const inside = text.indexOf('{', node.pos) + 1;
+      collect(getLeadingCommentRanges(text, inside));
+      collect(getTrailingCommentRanges(text, inside));
+    }
   }
   return [...seen.values()]
     .toSorted((a, b) => a.pos - b.pos)

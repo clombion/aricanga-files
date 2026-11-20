@@ -1,0 +1,10 @@
+// path: packages/systems/chat/src/view/controlled-option-fire.tsx
+export function Stuck(props: { vm: { choice: string } }) {
+  return (
+    <select>
+      <option value="b" selected={props.vm.choice === 'b'}>
+        b
+      </option>
+    </select>
+  );
+}

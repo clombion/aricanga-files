@@ -23,7 +23,7 @@ import {
   unusedClasses,
   withoutSheets,
 } from '../lib/stylesheets.ts';
-import { rawSizes, rawTokenValues } from '../stylelint/design-tokens.ts';
+import { rawSizes, rawTokenValues } from '../lib/design-tokens.ts';
 import { json, object } from '../lib/config.ts';
 import { textOf } from '../lib/source-files.ts';
 

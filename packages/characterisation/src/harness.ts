@@ -34,7 +34,7 @@ declare global {
 const DIAGNOSTIC = /\[([A-Z0-9_]+)\]/g;
 
 /** The `[CODE]` diagnostic codes in a console line: upper case with an underscore. */
-function diagnosticCodes(text: string): string[] {
+export function diagnosticCodes(text: string): string[] {
   return [...text.matchAll(DIAGNOSTIC)]
     .map((match) => match[1] ?? '')
     .filter((code) => code.includes('_') && code === code.toUpperCase());
