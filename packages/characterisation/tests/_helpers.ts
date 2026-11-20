@@ -13,6 +13,21 @@ interface SpecArguments {
   readonly browserName: string;
 }
 
+/** What a characterisation reads after its fixture ran: the result bus, the console codes, the page and the engine. */
+interface Observed {
+  /** The records the fixture wrote. */
+  readonly state: Readonly<{ records: readonly ChxRecord[] }>;
+  readonly codes: readonly string[];
+  readonly page: DrivenPage;
+  readonly browserName: string;
+}
+
+/** How a fixture page is served. */
+interface Serving {
+  /** Serve it under the experiences' content security policy. */
+  readonly underPolicy?: boolean;
+}
+
 /** How long a fixture may run before the spec gives up waiting for it. */
 const FIXTURE_TIMEOUT_MS = 15_000;
 
@@ -78,5 +93,28 @@ function recorded(state: Readonly<{ records: readonly ChxRecord[] }>, id: string
   return found;
 }
 
-export { captureConsoleCodes, recorded, runFixture, servePolicy };
+/**
+ * The body of a characterisation test: run `fixture` in a real page, its console codes captured and,
+ * when asked, under the policy, then hold the claim's observations with `check`.
+ * @param {string} fixture The fixture page that observes the surface.
+ * @param {Function} check The assertions over what the fixture observed.
+ * @param {Serving} serving How the page is served.
+ * @returns {Function} The test body.
+ */
+function characterised(
+  fixture: string,
+  check: (observed: Readonly<Observed>) => Promise<void> | void,
+  serving: Readonly<Serving> = {},
+): (args: SpecArguments) => Promise<void> {
+  return async ({ browserName, page }: SpecArguments): Promise<void> => {
+    const codes = captureConsoleCodes(page);
+    if (serving.underPolicy === true) {
+      await servePolicy(page, fixture);
+    }
+    const state = await runFixture(page, fixture);
+    await check({ browserName, codes, page, state });
+  };
+}
+
+export { characterised, recorded, runFixture };
 export type { SpecArguments };

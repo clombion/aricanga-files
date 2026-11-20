@@ -6,13 +6,10 @@
 
 import type { Effect, Host } from '@narratives/foundation';
 import { InkRuntime, createExperience, erase } from '@narratives/foundation';
+import { compileInk, heldScheduler, memoryStore } from '@narratives/foundation/testing';
 import { describe, expect, test } from 'vitest';
 import { cardsSystem } from '@narratives/system-cards';
 import { chatSystem } from '@narratives/system-chat';
-import { compileInk } from '@narratives/foundation/testing';
-
-/** Where the host's save store keeps a save. */
-const SAVE_KEY = 'two-vocabulary';
 
 /** What each step the story takes adds to the count. */
 const ONE_STEP = 1;
@@ -31,7 +28,6 @@ interface RecordingHost {
 function recordingHost(): RecordingHost {
   const presented: string[] = [];
   const timers = new Set<() => void>();
-  const saves = new Map<string, string>();
   const host: Host = {
     // These stories fetch nothing: a data request fails the test, naming the request.
     fetchData: (request) => {
@@ -40,20 +36,10 @@ function recordingHost(): RecordingHost {
     present: (effect: Effect) => {
       presented.push(effect.kind);
     },
-    scheduler: {
-      schedule: (_delayMs, fire) => {
-        timers.add(fire);
-        return (): void => {
-          timers.delete(fire);
-        };
-      },
-    },
-    store: {
-      load: () => saves.get(SAVE_KEY),
-      save: (data) => {
-        saves.set(SAVE_KEY, data);
-      },
-    },
+    scheduler: heldScheduler((fire) => {
+      timers.add(fire);
+    }),
+    store: memoryStore(),
   };
   return { host, presented };
 }

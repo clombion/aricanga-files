@@ -2,12 +2,12 @@ import type { AnySystem, System } from '#src/sim/system';
 import type { Command, Input } from '#src/sim/input';
 import type { DataRequest, Effect } from '#src/sim/effect';
 import type { Snapshot, SystemId } from '#src/sim/snapshot';
-import { Compiler } from 'inkjs/full';
+import { heldScheduler, memoryStore } from './host-ports';
 import type { Host } from '#src/host/effects';
-import { InkRuntime } from '#src/ink/ink-runtime';
 import type { ReduceRecord } from '#src/sim/trace';
 import type { RenderContext } from '#src/sim/context';
 import { Runtime } from '#src/host/runtime';
+import { storyOf } from './compile';
 import { viewOf } from '#src/sim/system';
 
 /** One input a fixture sends, with the system a player or resume input is for. */
@@ -53,16 +53,6 @@ const ROUND = 1;
 
 /** The seed a fixture runs with unless it names one, and the round a drain starts at. */
 const DEFAULT_SEED = 0;
-
-/**
- * Compile ink source to story JSON headlessly.
- *
- * @param {string} source - The ink source.
- * @returns {string} The compiled story's JSON text.
- */
-function compileInk(source: string): string {
-  return new Compiler(source).Compile().ToJson() ?? '';
-}
 
 /**
  * Answer one fetch: wait for the responder's value, then deliver it to the runtime.
@@ -179,7 +169,6 @@ async function sendAll(runtime: Readonly<Runtime>, pending: Readonly<Pending>, i
  * @returns {Host} The host.
  */
 function fixtureHost(opts: Readonly<FixtureOptions>, pending: Readonly<Pending>): Host {
-  const saved: { text: string | undefined } = { text: undefined };
   return {
     fetchData: (request, deliver) => {
       pending.track(respond(opts.fetch, request, deliver));
@@ -187,20 +176,10 @@ function fixtureHost(opts: Readonly<FixtureOptions>, pending: Readonly<Pending>)
     present: () => {
       // A fixture observes presents through the trace; the host shows nothing.
     },
-    scheduler: {
-      schedule: (_delayMs, fire) => {
-        pending.schedule(fire);
-        return () => {
-          // A fixture never cancels a timer.
-        };
-      },
-    },
-    store: {
-      load: () => saved.text,
-      save: (data) => {
-        saved.text = data;
-      },
-    },
+    scheduler: heldScheduler((fire) => {
+      pending.schedule(fire);
+    }),
+    store: memoryStore(),
   };
 }
 
@@ -218,7 +197,7 @@ async function runFixture(opts: Readonly<FixtureOptions>): Promise<FixtureRun> {
   const pending = new Pending();
   const runtime = new Runtime({
     host: fixtureHost(opts, pending),
-    ink: new InkRuntime(compileInk(opts.story)),
+    ink: storyOf(opts.story),
     observer: {
       observe: (record): void => {
         // Capture an immutable copy so a later (mis)mutating reducer can't corrupt the recorded stream.
@@ -245,5 +224,5 @@ async function runFixture(opts: Readonly<FixtureOptions>): Promise<FixtureRun> {
   };
 }
 
-export { compileInk, runFixture };
+export { runFixture };
 export type { FixtureInput, FixtureOptions, FixtureRun };

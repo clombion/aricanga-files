@@ -1,13 +1,14 @@
 import type { HCommand, HState } from '#test/h-system';
 import { describe, expect, test, vi } from 'vitest';
 import { erase, viewOf } from '#src/sim/system';
+import { heldScheduler, memoryStore } from '#src/testing/host-ports';
 import type { AnySystem } from '#src/sim/system';
 import type { Host } from '#src/host/runtime';
 import { InkRuntime } from '#src/ink/ink-runtime';
 import type { Input } from '#src/sim/input';
 import { Runtime } from '#src/host/runtime';
 import type { Snapshot } from '#src/sim/snapshot';
-import { compileInk } from '#src/testing/harness';
+import { compileInk } from '#src/testing/compile';
 import { hSystem } from '#test/h-system';
 /** A commit token the state has long moved past. */
 const STALE_TOKEN = 999;
@@ -51,7 +52,6 @@ function world(): World {
   const fires: (() => void)[] = [];
   const deliveries: ((value: unknown) => void)[] = [];
   const presented: string[] = [];
-  const saved: { text: string | undefined } = { text: undefined };
   const host: Host = {
     fetchData: (_request, deliver) => {
       deliveries.push(deliver);
@@ -62,20 +62,10 @@ function world(): World {
       }
       presented.push(effect.kind);
     },
-    scheduler: {
-      schedule: (_delayMs, fire) => {
-        fires.push(fire);
-        return () => {
-          // A test never cancels a timer.
-        };
-      },
-    },
-    store: {
-      load: () => saved.text,
-      save: (data) => {
-        saved.text = data;
-      },
-    },
+    scheduler: heldScheduler((fire) => {
+      fires.push(fire);
+    }),
+    store: memoryStore(),
   };
   const systems: readonly AnySystem[] = [erase(hSystem)];
   return { deliveries, fires, host, presented, runtime: new Runtime({ host, ink: new InkRuntime(story()), seed: 0, systems }) };

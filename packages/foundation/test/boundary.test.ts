@@ -4,7 +4,7 @@ import type { FixtureCommand } from '#src/testing/fixture-system';
 import type { Host } from '#src/host/runtime';
 import { InkRuntime } from '#src/ink/ink-runtime';
 import { Runtime } from '#src/host/runtime';
-import { compileInk } from '#src/testing/harness';
+import { compileInk } from '#src/testing/compile';
 import { throughSave } from '#src/testing/saved';
 
 /** The seed a fixture state starts from. */

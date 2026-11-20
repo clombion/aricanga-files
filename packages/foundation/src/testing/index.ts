@@ -9,9 +9,11 @@ export { FIXTURE_TAG, fixtureSystem, fixtureSystemErased, gatedFields, gatedSyst
 export type { FixtureCommand, FixtureState } from './fixture-system';
 export { inkStepArb, storyInputArb, storyStreamArb, tagArb } from './generators';
 export type { StepGenOptions } from './generators';
-export { compileInk, runFixture } from './harness';
+export { compileInk } from './compile';
+export { runFixture } from './harness';
 export type { FixtureInput, FixtureOptions, FixtureRun } from './harness';
 export { checkDeterministic, checkInvariant, runStream } from './property';
 export type { Predicate, PropertyReport, StreamOptions, Violation } from './property';
 export { canonical } from './serialize';
 export { throughSave } from './saved';
+export { heldScheduler, memoryStore } from './host-ports';
