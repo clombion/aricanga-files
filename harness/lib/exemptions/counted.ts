@@ -19,7 +19,7 @@ const ONE = 1;
 
 /** Keys a rule tolerates a fixed number of times; a count that differs either way fails. */
 class CountedExemptions {
-  public readonly entries: ReadonlyMap<string, readonly [number, string]>;
+  public readonly entries: Readonly<ReadonlyMap<string, readonly [number, string]>>;
 
   /**
    * A list of counted exemptions.

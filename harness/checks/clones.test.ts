@@ -104,7 +104,7 @@ describe('the repository', () => {
 describe('the scan', () => {
   test('fails a planted clone in both runs', () => {
     const { root, listed } = plant({ 'a/one.ts': PLANT, 'b/two.ts': PLANT.replace('first', 'second') });
-    expect(scan(root, ['a', 'b'], listed, NONE)).toEqual([
+    expect(scan({ listed, root, roots: ['a', 'b'] }, NONE)).toEqual([
       'clone (exact): a/one.ts and b/two.ts',
       'clone (cross-file): a/one.ts and b/two.ts',
     ]);
@@ -112,12 +112,12 @@ describe('the scan', () => {
 
   test('still sees the planted clone past the floor', () => {
     const { root } = plant({ 'a/one.ts': PLANT, 'a/two.ts': PLANT });
-    expect(clones('raised', reportOf(['--min-lines', '5', '--min-tokens', '70'], ['a'], root), root)).toHaveLength(1);
+    expect(clones('raised', reportOf(['--min-lines', '5', '--min-tokens', '70'], { root, roots: ['a'] }), root)).toHaveLength(1);
   });
 
   test('sees a small clone in two files in the cross-file run only', () => {
     const { root, listed } = plant({ 'a/filler.ts': FILLER, 'a/one.ts': SMALL_PLANT, 'a/sub/two.ts': SMALL_PLANT });
-    expect(scan(root, ['a'], listed, NONE)).toEqual(['clone (cross-file): a/one.ts and a/sub/two.ts']);
+    expect(scan({ listed, root, roots: ['a'] }, NONE)).toEqual(['clone (cross-file): a/one.ts and a/sub/two.ts']);
   });
 
   test('leaves a small clone inside one file to the exact run', () => {
@@ -125,30 +125,30 @@ describe('the scan', () => {
       'a/filler.ts': FILLER,
       'a/one.ts': `${SMALL_PLANT}\n${SMALL_PLANT.replace('pick', 'keep')}`,
     });
-    expect(scan(root, ['a'], listed, NONE)).toEqual([]);
+    expect(scan({ listed, root, roots: ['a'] }, NONE)).toEqual([]);
   });
 
   test('passes an allowed clone and fails a stale entry', () => {
     const { root, listed } = plant({ 'a/one.ts': PLANT, 'b/two.ts': PLANT });
-    const [exact] = clones('exact', reportOf(RUNS.exact, ['a', 'b'], root), root);
+    const [exact] = clones('exact', reportOf(RUNS.exact, { root, roots: ['a', 'b'] }), root);
     expect(exact).toBeDefined();
     const both: readonly Clone[] = exact === undefined ? [] : [exact, { ...exact, run: 'cross-file' }];
     const allowed = new Exemptions(Object.fromEntries(both.map((clone) => [cloneKey(clone), 'planted'])));
-    expect(scan(root, ['a', 'b'], listed, allowed)).toEqual([]);
+    expect(scan({ listed, root, roots: ['a', 'b'] }, allowed)).toEqual([]);
     const stale = new Exemptions({ 'exact a/gone.ts a/one.ts 000000000000': 'planted' });
-    expect(scan(root, ['a'], ['a/one.ts'], stale).at(-1)).toMatch(/^StaleExemptionError: stale exemptions/);
+    expect(scan({ listed: ['a/one.ts'], root, roots: ['a'] }, stale).at(-1)).toMatch(/^StaleExemptionError: stale exemptions/);
   });
 
   test('fails a listed file jscpd did not scan, and lets a short one through', () => {
     const short = Array.from({ length: 20 }, (_, index) => `export const short${index} = ${index};\n`).join('');
     const { root, listed } = plant({ 'a/one.ts': FILLER, 'b/long.ts': FILLER, 'b/short.ts': short });
-    expect(scan(root, ['a'], listed, NONE)).toEqual(['coverage: jscpd did not scan b/long.ts']);
+    expect(scan({ listed, root, roots: ['a'] }, NONE)).toEqual(['coverage: jscpd did not scan b/long.ts']);
   });
 
   test('fails a file over the size limit', () => {
     const { root, listed } = plant({ 'a/huge.ts': '', 'a/one.ts': FILLER });
     truncateSync(join(root, 'a', 'huge.ts'), MAX_SIZE + 1);
-    expect(scan(root, ['a'], listed, NONE)).toEqual([`coverage: a/huge.ts is over jscpd's size limit (${MAX_SIZE + 1} bytes)`]);
+    expect(scan({ listed, root, roots: ['a'] }, NONE)).toEqual([`coverage: a/huge.ts is over jscpd's size limit (${MAX_SIZE + 1} bytes)`]);
   });
 });
 
@@ -162,7 +162,7 @@ describe('a run that gives no report', () => {
     [{ argv, kind: 'finished', status: 0, stderr: '', stdout: '' } as const, 'exact: jscpd wrote no report'],
   ])('is a problem: %o', (outcome, problem) => {
     const runner: Runner = () => outcome;
-    expect(scan(tmpdir(), ['a'], [], NONE, runner)[0]).toBe(problem);
+    expect(scan({ listed: [], root: tmpdir(), roots: ['a'] }, NONE, runner)[0]).toBe(problem);
   });
 
   test('a finished run with its report is no problem', () => {

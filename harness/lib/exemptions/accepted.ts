@@ -2,7 +2,7 @@
 
 /** The values a rule defines as valid, such as exit codes or file suffixes. */
 class Accepted<Value extends string | number> {
-  public readonly values: ReadonlySet<Value>;
+  public readonly values: Readonly<ReadonlySet<Value>>;
 
   /**
    * The accepted values.

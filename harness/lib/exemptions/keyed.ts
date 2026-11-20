@@ -9,7 +9,7 @@ const NONE = 0;
 
 /** Keys a rule tolerates, each with its reason. Consulting it fails on every entry nothing matched. */
 class Exemptions {
-  public readonly entries: ReadonlyMap<string, string>;
+  public readonly entries: Readonly<ReadonlyMap<string, string>>;
 
   /**
    * A list of exemptions.

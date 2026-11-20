@@ -5,7 +5,7 @@
  * new file before it is committed. A listing below `FLOOR` files is an error, never an empty scan.
  */
 
-import { existsSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { REPO_ROOT } from './paths.ts';
 import path from 'node:path';
 import { run } from './process.ts';
@@ -85,4 +85,14 @@ function textOf(listed: string): string {
   return readFileSync(path.join(REPO_ROOT, listed), 'utf8');
 }
 
-export { FLOOR, ListingError, listing, textOf, tracked };
+/**
+ * Write a file of the repository as UTF-8: the one writer of the repository's own files, for the fixers.
+ *
+ * @param {string} listed - The file's repository-relative path.
+ * @param {string} text - Its new text.
+ */
+function writeText(listed: string, text: string): void {
+  writeFileSync(path.join(REPO_ROOT, listed), text, 'utf8');
+}
+
+export { FLOOR, ListingError, listing, textOf, tracked, writeText };

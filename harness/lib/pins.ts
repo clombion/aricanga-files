@@ -9,12 +9,25 @@
  */
 
 import { ConfigError, json, object } from './config.ts';
+import { textOf, tracked } from './source-files.ts';
 import { engineRange } from './node-floor.ts';
 import { held } from './scope.ts';
-import { textOf, tracked } from './source-files.ts';
+
+/** A pinned tool: its name, the file that pins it, and its version there. */
+interface Pin {
+  readonly tool: string;
+  readonly where: string;
+  readonly version: string;
+}
+
+/** A workspace package's manifest, keyed by its directory (`.` for the root). */
+interface Manifest {
+  readonly importer: string;
+  readonly manifest: unknown;
+}
 
 /** The upstream GitHub repository of every pinned tool, written as owner and repository name. */
-export const UPSTREAM: ReadonlyMap<string, string> = new Map([
+const UPSTREAM: ReadonlyMap<string, string> = new Map([
   ['@ai-sdk/anthropic', 'vercel/ai'],
   ['@ai-sdk/google', 'vercel/ai'],
   ['@ai-sdk/openai', 'vercel/ai'],
@@ -61,98 +74,158 @@ export const UPSTREAM: ReadonlyMap<string, string> = new Map([
   ['zod', 'colinhacks/zod'],
 ]);
 
-/** A pinned tool: its name, the file that pins it, and its version there. */
-export interface Pin {
-  readonly tool: string;
-  readonly where: string;
-  readonly version: string;
-}
-
 const LOCKFILE = 'pnpm-lock.yaml';
 const WORKSPACE = 'workspace:';
+
+/** A top-level key of the lockfile, such as `importers:`. */
+const TOP_LEVEL = /^\S/u;
+const IMPORTER_LINE = /^ {2}(?<importer>\S.*):$/u;
+const NAME_LINE = /^ {6}'?(?<name>[^':]+)'?:$/u;
+const VERSION_LINE = /^ {8}version: (?<version>[^(\s]+)/u;
+const PNPM_PREFIX = /^pnpm@/u;
+const MANIFEST_SUFFIX = /\/package\.json$/u;
+
+/** The index `findIndex` gives when nothing matches. */
+const NOT_FOUND = -1;
+
+/** The line after a header line. */
+const NEXT_LINE = 1;
+
+/** The index of a list's first item. */
+const FIRST = 0;
+
+/**
+ * The lines of a block that starts after `start` and ends before the first line `ends` holds of.
+ *
+ * @param {readonly string[]} lines - The text's lines.
+ * @param {number} start - The index of the block's header line.
+ * @param {(line: string) => boolean} ends - Whether a line ends the block.
+ * @returns {readonly string[]} The block's lines.
+ */
+function blockAfter(lines: readonly string[], start: number, ends: (line: string) => boolean): readonly string[] {
+  if (start === NOT_FOUND) {
+    return [];
+  }
+  const rest = lines.slice(start + NEXT_LINE);
+  const end = rest.findIndex((line) => ends(line));
+  return end === NOT_FOUND ? rest : rest.slice(FIRST, end);
+}
+
+/**
+ * The versions an importer's block of the lockfile lists.
+ *
+ * @param {readonly string[]} block - The block's lines.
+ * @returns {ReadonlyMap<string, string>} Each package's resolved version, by name.
+ */
+function versionsIn(block: readonly string[]): ReadonlyMap<string, string> {
+  const found = new Map<string, string>();
+  let name = '';
+  for (const line of block) {
+    name = NAME_LINE.exec(line)?.groups?.['name'] ?? name;
+    const version = VERSION_LINE.exec(line)?.groups?.['version'];
+    if (name !== '' && version !== undefined) {
+      found.set(name, version);
+    }
+  }
+  return found;
+}
 
 /**
  * The resolved versions of one importer of a pnpm lockfile, by package name. The lockfile is read
  * as the indented text pnpm writes: `importers:` → `  <importer>:` → `    <group>:` →
  * `      <name>:` → `        version: <version>(<peers>)`.
+ *
+ * @param {string} lockText - The lockfile's text.
+ * @param {string} importer - The importer, `.` for the root.
+ * @returns {ReadonlyMap<string, string>} Each package's resolved version, by name.
  */
 function locked(lockText: string, importer: string): ReadonlyMap<string, string> {
-  const found = new Map<string, string>();
-  let inImporters = false;
-  let inImporter = false;
-  let name: string | undefined;
-  for (const line of lockText.split('\n')) {
-    if (/^\S/.test(line)) {
-      inImporters = line === 'importers:';
-      inImporter = false;
-      continue;
-    }
-    const importerLine = /^ {2}(\S.*):$/.exec(line);
-    if (inImporters && importerLine !== null) {
-      inImporter = importerLine[1] === importer;
-      continue;
-    }
-    const nameLine = /^ {6}'?([^':]+)'?:$/.exec(line);
-    if (inImporter && nameLine !== null) {
-      name = nameLine[1];
-      continue;
-    }
-    const versionLine = /^ {8}version: ([^(\s]+)/.exec(line);
-    if (inImporter && name !== undefined && versionLine?.[1] !== undefined) {
-      found.set(name, versionLine[1]);
-    }
-  }
-  return found;
+  const lines = lockText.split('\n');
+  const importers = blockAfter(lines, lines.indexOf('importers:'), (line) => TOP_LEVEL.test(line));
+  const start = importers.findIndex((line) => IMPORTER_LINE.exec(line)?.groups?.['importer'] === importer);
+  return versionsIn(blockAfter(importers, start, (line) => IMPORTER_LINE.test(line)));
 }
 
+/**
+ * A manifest field's string entries, or a refusal naming the first that is not a string.
+ *
+ * @param {unknown} value - The field's value.
+ * @param {string} what - What it is, for the refusal.
+ * @returns {Readonly<Record<string, string>>} The entries.
+ */
 function strings(value: unknown, what: string): Readonly<Record<string, string>> {
-  const found: Record<string, string> = {};
-  for (const [key, entry] of Object.entries(object(value ?? {}, what))) {
-    if (typeof entry !== 'string') {
-      throw new ConfigError(`${what}.${key} is not a string: ${JSON.stringify(entry)}`);
-    }
-    found[key] = entry;
-  }
-  return found;
-}
-
-/** A workspace package's manifest, keyed by its directory (`.` for the root). */
-interface Manifest {
-  readonly importer: string;
-  readonly manifest: unknown;
-}
-
-/** Every pin of the given manifests at the versions the lockfile holds. */
-export function pinned(manifests: readonly Manifest[], lockText: string): readonly Pin[] {
-  const found: Pin[] = [];
-  for (const { importer, manifest } of manifests) {
-    const fields = object(manifest, `${importer}/package.json`);
-    const versions = locked(lockText, importer);
-    const groups = importer === '.' ? ['dependencies', 'devDependencies'] : ['devDependencies'];
-    for (const group of groups) {
-      for (const [tool, specifier] of Object.entries(strings(fields[group], `${importer} ${group}`))) {
-        if (!specifier.startsWith(WORKSPACE)) {
-          found.push({ tool, version: versions.get(tool) ?? '', where: LOCKFILE });
-        }
+  return Object.fromEntries(
+    Object.entries(object(value ?? {}, what)).map(([key, entry]: readonly [string, unknown]) => {
+      if (typeof entry !== 'string') {
+        throw new ConfigError(`${what}.${key} is not a string: ${JSON.stringify(entry)}`);
       }
-    }
-    if (importer === '.') {
-      found.push({ tool: 'node', version: engineRange(manifest), where: 'package.json engines' });
-      const manager = typeof fields['packageManager'] === 'string' ? fields['packageManager'] : '';
-      found.push({ tool: 'pnpm', version: manager.replace(/^pnpm@/, ''), where: 'package.json packageManager' });
-    }
-  }
-  const unique = new Map(found.map((pin) => [pin.tool, pin]));
-  return [...unique.values()].toSorted((a, b) => a.tool.localeCompare(b.tool));
+      return [key, entry] as const;
+    }),
+  );
 }
 
-/** Every pin of this repository: the root manifest and each held workspace package's. */
-export function pins(): readonly Pin[] {
+/**
+ * The root manifest's pins beyond its dependencies: Node's floor and pnpm's `packageManager`.
+ *
+ * @param {unknown} manifest - The root `package.json`.
+ * @returns {readonly Pin[]} The two pins.
+ */
+function rootPins(manifest: unknown): readonly Pin[] {
+  const fields = object(manifest, 'package.json');
+  const manager = typeof fields['packageManager'] === 'string' ? fields['packageManager'] : '';
+  return [
+    { tool: 'node', version: engineRange(manifest), where: 'package.json engines' },
+    { tool: 'pnpm', version: manager.replace(PNPM_PREFIX, ''), where: 'package.json packageManager' },
+  ];
+}
+
+/**
+ * The pins of one manifest at the versions the lockfile holds.
+ *
+ * @param {Manifest} entry - The manifest and its importer.
+ * @param {string} lockText - The lockfile's text.
+ * @returns {readonly Pin[]} Its pins.
+ */
+function manifestPins(entry: Manifest, lockText: string): readonly Pin[] {
+  const { importer, manifest } = entry;
+  const fields = object(manifest, `${importer}/package.json`);
+  const versions = locked(lockText, importer);
+  const groups = importer === '.' ? ['dependencies', 'devDependencies'] : ['devDependencies'];
+  const dependencies = groups.flatMap((group) =>
+    Object.entries(strings(fields[group], `${importer} ${group}`))
+      .filter(([, specifier]: readonly [string, string]) => !specifier.startsWith(WORKSPACE))
+      .map(([tool]: readonly [string, string]): Pin => ({ tool, version: versions.get(tool) ?? '', where: LOCKFILE })),
+  );
+  return importer === '.' ? [...dependencies, ...rootPins(manifest)] : dependencies;
+}
+
+/**
+ * Every pin of the given manifests at the versions the lockfile holds.
+ *
+ * @param {readonly Manifest[]} manifests - The manifests.
+ * @param {string} lockText - The lockfile's text.
+ * @returns {readonly Pin[]} The pins, one per tool, sorted by tool.
+ */
+function pinned(manifests: readonly Manifest[], lockText: string): readonly Pin[] {
+  const found = manifests.flatMap((entry) => manifestPins(entry, lockText));
+  const unique = new Map(found.map((pin) => [pin.tool, pin] as const));
+  return [...unique.values()].toSorted((first, second) => first.tool.localeCompare(second.tool));
+}
+
+/**
+ * Every pin of this repository: the root manifest and each held workspace package's.
+ *
+ * @returns {readonly Pin[]} The pins.
+ */
+function pins(): readonly Pin[] {
   const manifests = tracked()
     .filter((path) => path === 'package.json' || (held(path) && path.endsWith('/package.json')))
     .map((path) => ({
-      importer: path === 'package.json' ? '.' : path.slice(0, -'/package.json'.length),
+      importer: path === 'package.json' ? '.' : path.replace(MANIFEST_SUFFIX, ''),
       manifest: json(textOf(path)),
     }));
   return pinned(manifests, textOf(LOCKFILE));
 }
+
+export { pinned, pins, UPSTREAM };
+export type { Manifest, Pin };
