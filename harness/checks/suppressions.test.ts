@@ -19,199 +19,54 @@
  */
 
 import { Accepted, CountedExemptions, Exemptions, StaleExemptionError, site } from '#lib/exemptions.ts';
-import { body, closeSession, comments, parse } from '#lib/ts-source.ts';
+import { census, suffix } from './suppressions.census.ts';
+import { closeSession, parse } from '#lib/ts-source.ts';
 import { describe, expect, test } from 'vitest';
+import type { Census } from './suppressions.census.ts';
 import { heldFiles } from '#lib/scope.ts';
 import { textOf } from '#lib/source-files.ts';
 
 const HARNESS_ID = 'suppressions';
 
-/** Which suppressing tool checks which file suffix, as `tool:suffix`. */
-const CHECKS = new Accepted([
-  'oxlint:.ts',
-  'oxlint:.tsx',
-  'oxlint:.js',
-  'oxlint:.mjs',
-  'typescript:.ts',
-  'typescript:.tsx',
-  'biome:.css',
-  'biome:.json',
-  'stylelint:.css',
-  'coverage:.ts',
-  'coverage:.tsx',
-  'coverage:.js',
-  'coverage:.mjs',
-]);
-
 /** The held suffixes whose comments the census reads. */
 const SCANNED = new Accepted(['.ts', '.tsx', '.js', '.mjs', '.css']);
 
+/** A counted suppression's count and reason. */
+interface Counted {
+  readonly count: number;
+  readonly reason: string;
+}
+
+/**
+ * The entries of a `CountedExemptions`, from each key's count and reason.
+ *
+ * @param {Readonly<Record<string, Counted>>} entries - Each key's count and reason.
+ * @returns {Readonly<Record<string, readonly [number, string]>>} The entries as `[count, reason]`.
+ */
+function counted(entries: Readonly<Record<string, Counted>>): Readonly<Record<string, readonly [number, string]>> {
+  return Object.fromEntries(Object.entries(entries).map(([key, entry]: readonly [string, Counted]) => [key, [entry.count, entry.reason] as const]));
+}
+
 /** The suppressions the code holds, keyed by `site(path, tool:rule)`, with their counts and reasons. */
-const SUPPRESSIONS = new CountedExemptions({
-  [site('packages/foundation/src/sim/system.ts', 'oxlint:typescript/no-unsafe-type-assertion')]: [
-    2,
-    'stateOf and viewOf: the erasure owner reads a system value back after proving the owner id matches',
-  ],
-  [site('packages/foundation/src/testing/harness.ts', 'oxlint:eslint/no-await-in-loop')]: [
-    3,
-    'the fixture drain settles each pass and each input in order; the order is the trace',
-  ],
-  [site('packages/foundation/src/sim/exhaustive.test.ts', 'oxlint:typescript/switch-exhaustiveness-check')]: [
-    1,
-    'the planted non-exhaustive switch the test proves the compiler refuses',
-  ],
-  [site('packages/foundation/src/sim/exhaustive.test.ts', 'typescript:expect-error')]: [
-    1,
-    'the planted missing case: the expected error is the proof',
-  ],
-  [site('packages/characterisation/src/fixtures/adapter.tsx', 'oxlint:solid/reactivity')]: [
-    1,
-    'the read forces the planted memo whose store write the fixture records',
-  ],
-  [site('packages/characterisation/src/fixtures/ownership.tsx', 'oxlint:solid/reactivity')]: [
-    2,
-    'the planted memos created where Solid refuses a primitive; the fixture records the refusal',
-  ],
-  [site('packages/characterisation/src/fixtures/props.tsx', 'oxlint:solid/no-destructure')]: [
-    1,
-    'the planted destructured part whose staleness the fixture records',
-  ],
-  [site('packages/characterisation/src/fixtures/csp.tsx', 'oxlint:aricanga/style-prop')]: [
-    1,
-    'the planted style prop whose CSP effect the fixture records',
-  ],
-  [site('packages/foundation/src/host/runtime.test.ts', 'oxlint:typescript/unbound-method')]: [
-    1,
-    'isMockFunction inspects the function and never calls it',
-  ],
-});
+const SUPPRESSIONS = new CountedExemptions(
+  counted({
+  [site('packages/foundation/src/sim/system.ts', 'oxlint:typescript/no-unsafe-type-assertion')]: { count: 2, reason: 'stateOf and viewOf: the erasure owner reads a system value back after proving the owner id matches' },
+  [site('packages/foundation/src/testing/harness.ts', 'oxlint:eslint/no-await-in-loop')]: { count: 3, reason: 'the fixture drain settles each pass and each input in order; the order is the trace' },
+  [site('packages/foundation/src/sim/exhaustive.test.ts', 'oxlint:typescript/switch-exhaustiveness-check')]: { count: 1, reason: 'the planted non-exhaustive switch the test proves the compiler refuses' },
+  [site('packages/foundation/src/sim/exhaustive.test.ts', 'typescript:expect-error')]: { count: 1, reason: 'the planted missing case: the expected error is the proof' },
+  [site('packages/characterisation/src/fixtures/adapter.tsx', 'oxlint:solid/reactivity')]: { count: 1, reason: 'the read forces the planted memo whose store write the fixture records' },
+  [site('packages/characterisation/src/fixtures/ownership.tsx', 'oxlint:solid/reactivity')]: { count: 2, reason: 'the planted memos created where Solid refuses a primitive; the fixture records the refusal' },
+  [site('packages/characterisation/src/fixtures/props.tsx', 'oxlint:solid/no-destructure')]: { count: 1, reason: 'the planted destructured part whose staleness the fixture records' },
+  [site('packages/characterisation/src/fixtures/csp.tsx', 'oxlint:aricanga/style-prop')]: { count: 1, reason: 'the planted style prop whose CSP effect the fixture records' },
+  [site('packages/foundation/src/host/runtime.test.ts', 'oxlint:typescript/unbound-method')]: { count: 1, reason: 'isMockFunction inspects the function and never calls it' },
+  }),
+);
 
 /** Refused comments the code still holds while the census is adopted, keyed by `site(path, problem)`. */
 const ADOPTING = new Exemptions({});
 
-const RULES = String.raw`[@\w./-]+(?:\s*,\s*[@\w./-]+)*`;
-const DISABLE = /^(oxlint|eslint|stylelint)-disable(-next-line|-line)?\b(.*)$/su;
-const ENABLE = /^(oxlint|eslint|stylelint)-enable\b/u;
-const BIOME = /^biome-ignore(?:-all|-start|-end)?\b(.*)$/su;
-const EXPECT_ERROR = /^@ts-expect-error\b(.*)$/su;
-const REFUSED_TS = /^@ts-(ignore|nocheck)\b/u;
-const COVERAGE = /^(v8|c8|istanbul)\s+ignore\b/u;
-
-/** A suppression comment the census refuses. */
-interface Problem {
-  readonly path: string;
-  readonly line: number;
-  readonly problem: string;
-}
-
-/** What the census finds in one module: the refused comments and the counted sites. */
-interface Census {
-  readonly problems: readonly Problem[];
-  readonly sites: readonly string[];
-}
-
-function suffix(path: string): string {
-  return /\.[a-z]+$/u.exec(path)?.[0] ?? '';
-}
-
-/**
- * The comments of a stylesheet: every `/* … *\/` outside a quoted string.
- *
- * @param {string} text - The text.
- * @returns {{ readonly text: string; readonly line: number }[]} The comments of a stylesheet: every `/* … *\/` outside a quoted string.
- */
-function cssComments(text: string): { readonly text: string; readonly line: number }[] {
-  const found: { text: string; line: number }[] = [];
-  let index = 0;
-  let quote: string | undefined;
-  while (index < text.length) {
-    const char = text[index] ?? '';
-    if (quote !== undefined) {
-      if (char === '\\') {
-        index += 2;
-        continue;
-      }
-      if (char === quote) {
-        quote = undefined;
-      }
-      index += 1;
-    } else if (char === '"' || char === "'") {
-      quote = char;
-      index += 1;
-    } else if (text.startsWith('/*', index)) {
-      const end = text.indexOf('*/', index + 2);
-      const stop = end === -1 ? text.length : end + 2;
-      found.push({ line: text.slice(0, index).split('\n').length, text: text.slice(index, stop) });
-      index = stop;
-    } else {
-      index += 1;
-    }
-  }
-  return found;
-}
-
-function commentsOf(path: string, text: string): { readonly text: string; readonly line: number }[] {
-  return path.endsWith('.css') ? cssComments(text) : comments(parse(path, text));
-}
-
-/**
- * The census of one module: each suppression is refused or counted under `(path, tool:rule)`.
- *
- * @param {string} path - The path.
- * @param {string} text - The text.
- * @returns {Census} The census of one module: each suppression is refused or counted under `(path, tool:rule)`.
- */
-function census(path: string, text: string): Census {
-  const problems: Problem[] = [];
-  const sites: string[] = [];
-  const refuse = (line: number, problem: string): void => {
-    problems.push({ line, path, problem });
-  };
-  const count = (tool: string, rules: readonly string[], line: number): void => {
-    if (CHECKS.has(`${tool}:${suffix(path)}`)) {
-      sites.push(...rules.map((rule) => site(path, `${tool}:${rule}`)));
-    } else {
-      refuse(line, `${tool} does not check ${suffix(path)} files`);
-    }
-  };
-  for (const comment of commentsOf(path, text)) {
-    const directive = body(comment.text);
-    const disable = DISABLE.exec(directive);
-    const biome = BIOME.exec(directive);
-    const expectError = EXPECT_ERROR.exec(directive);
-    if (disable !== null) {
-      const [, tool = '', , rest = ''] = disable;
-      const named = new RegExp(`^\\s+(${RULES})\\s+--\\s+\\S`, 'u').exec(rest);
-      if (tool === 'eslint') {
-        refuse(comment.line, 'eslint-disable is not honoured: use oxlint-disable');
-      } else if (named === null) {
-        refuse(comment.line, `a ${tool}-disable names its rules and ends with -- <reason>`);
-      } else {
-        count(tool, (named[1] ?? '').split(',').map((rule) => rule.trim()), comment.line);
-      }
-    } else if (ENABLE.test(directive)) {
-      continue;
-    } else if (biome !== null) {
-      const named = /^\s+(lint\/[\w/]+)(?:\([^)]*\))?:\s*\S/u.exec(biome[1] ?? '');
-      if (named === null) {
-        refuse(comment.line, 'a biome-ignore names its lint/... rule and ends with : <reason>');
-      } else {
-        count('biome', [named[1] ?? ''], comment.line);
-      }
-    } else if (expectError !== null) {
-      if (/^\s+--\s+\S/u.test(expectError[1] ?? '')) {
-        count('typescript', ['expect-error'], comment.line);
-      } else {
-        refuse(comment.line, 'a @ts-expect-error ends with -- <reason>');
-      }
-    } else if (REFUSED_TS.test(directive)) {
-      refuse(comment.line, `${directive.split(/\s/u)[0] ?? ''} is refused: fix the type, or expect the error with its reason`);
-    } else if (COVERAGE.test(directive)) {
-      count('coverage', ['ignore'], comment.line);
-    }
-  }
-  return { problems, sites };
-}
+/** The statements a parse of a one-statement module holds. */
+const ONE_STATEMENT = 1;
 
 /**
  * The census over every held file the suppressions can sit in.
@@ -228,12 +83,14 @@ function repoCensus(): Census {
 describe('the repository', () => {
   test('every suppression names its rule, a tool that checks the file, and its reason', () => {
     expect.hasAssertions();
-    expect(ADOPTING.unexemptedBy(repoCensus().problems, (found) => site(found.path, found.problem))).toStrictEqual([]);
+    const { problems } = repoCensus();
+    expect(ADOPTING.unexemptedBy(problems, (found) => site(found.path, found.problem))).toStrictEqual([]);
   });
 
   test('every suppression is counted with its reason', () => {
     expect.hasAssertions();
-    expect(SUPPRESSIONS.mismatches(repoCensus().sites)).toStrictEqual([]);
+    const { sites } = repoCensus();
+    expect(SUPPRESSIONS.mismatches(sites)).toStrictEqual([]);
   });
 });
 
@@ -263,6 +120,9 @@ describe('the census', () => {
     expect(census('packages/plant/src/a.css', text).problems.map((found) => found.problem)).toStrictEqual([problem]);
   });
 
+});
+
+describe('the census of counted suppressions', () => {
   test('counts a suppression written as a JSX comment', () => {
     expect.hasAssertions();
     const text = [
@@ -305,9 +165,12 @@ describe('the census', () => {
     ]);
   });
 
+});
+
+describe('the census of near misses', () => {
   test.each([
     'const TEXT = "// oxlint-disable-line and // @ts-ignore inside a string";',
-    'const T = `/* @ts-nocheck */ ${1}`;',
+    ['const T = `/* @ts-nocheck */ $', '{1}`;'].join(''),
     '// a note about the oxlint-disable convention, not a directive: nothing to see',
     '/** Explains that @ts-ignore is refused here. */\nexport {};',
   ])('lets a near miss through: %j', (text) => {
@@ -325,11 +188,14 @@ describe('the census', () => {
 
   test('a counted suppression that went away, or a new one, fails', () => {
     expect.hasAssertions();
-    const counted = new CountedExemptions({ [site('a.ts', 'oxlint:no-console')]: [1, 'planted'] });
-    expect(() =>{  counted.assertExact([]); }).toThrow(StaleExemptionError);
-    expect(() =>{  counted.assertExact([site('a.ts', 'oxlint:no-console'), site('a.ts', 'oxlint:no-console')]); }).toThrow(
-      StaleExemptionError,
-    );
+    const once = new CountedExemptions(counted({ [site('a.ts', 'oxlint:no-console')]: { count: 1, reason: 'planted' } }));
+    const twice = [site('a.ts', 'oxlint:no-console'), site('a.ts', 'oxlint:no-console')];
+    expect(() => {
+      once.assertExact([]);
+    }).toThrow(StaleExemptionError);
+    expect(() => {
+      once.assertExact(twice);
+    }).toThrow(StaleExemptionError);
   });
 });
 
@@ -341,8 +207,8 @@ describe('the source reader', () => {
     expect(() => {
       closeSession();
     }).not.toThrow();
-    expect(parse('packages/plant/src/b.ts', 'export const b = 2;\n').statements).toHaveLength(1);
+    expect(parse('packages/plant/src/b.ts', 'export const b = 2;\n').statements).toHaveLength(ONE_STATEMENT);
   });
 });
 
-export { HARNESS_ID, census, cssComments };
+export { HARNESS_ID };

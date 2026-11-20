@@ -34,6 +34,10 @@ const CATEGORIES = new Accepted(['correctness', 'suspicious', 'perf', 'pedantic'
  * listed fails, and so does an entry the config does not turn off.
  */
 const TURNED_OFF = Exemptions.grouped({
+  'asks for the truthy and falsy matchers vitest/prefer-strict-boolean-matchers refuses; toBe(true) and toBe(false) stay': [
+    'vitest/prefer-to-be-falsy',
+    'vitest/prefer-to-be-truthy',
+  ],
   'bans Node builtins from browser code; the override turns it off only for the code that runs on Node': ['import/no-nodejs-modules'],
   'contradicts eslint/prefer-object-spread': ['oxc/no-rest-spread-properties'],
   'contradicts import/no-default-export, which holds every module to named exports': ['import/no-named-export', 'import/prefer-default-export'],
