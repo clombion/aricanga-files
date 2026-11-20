@@ -53,20 +53,28 @@ export function mount(files: ReadonlyMap<string, string>): () => void {
   };
 }
 
+/**
+ * Close the open session, if there is one. Idempotent: the session is forgotten before it is closed,
+ * so a second call (or the exit hook after an explicit close) finds nothing to close, and a later
+ * `api()` starts a fresh session instead of handing out a closed one.
+ */
+export function closeSession(): void {
+  const open = session;
+  session = undefined;
+  open?.close();
+}
+
 /** The process's one TypeScript API session; type-aware scans open their projects on it. */
 export function api(): API {
   if (session === undefined) {
-    const started = new API({
+    session = new API({
       cwd: REPO_ROOT,
       fs: {
         readFile: (fileName) => virtual.get(fileName),
         fileExists: (fileName) => (virtual.has(fileName) ? true : undefined),
       },
     });
-    process.once('exit', () => {
-      started.close();
-    });
-    session = started;
+    process.once('exit', closeSession);
   }
   return session;
 }
