@@ -1,26 +1,33 @@
 import type { DomainEvent } from './event-bus';
 
-// Instance-scoped services injected at the composition root (no module singletons).
-// `SaveStore` is named to avoid shadowing the DOM `Storage` global.
+/*
+ * Instance-scoped services injected at the composition root (no module singletons).
+ * `SaveStore` is named to avoid shadowing the DOM `Storage` global.
+ */
 
 /** @public */
-export interface Clock {
-  now(): number;
+interface Clock {
+  readonly now: () => number;
 }
 
-export interface SaveStore {
-  load(): string | null;
-  save(data: string): void;
+/** The host's save slot: the text it last saved, or `undefined` when nothing is saved. */
+interface SaveStore {
+  readonly load: () => string | undefined;
+  readonly save: (data: string) => void;
 }
 
 /** @public */
-export interface AnalyticsSink {
-  record(event: DomainEvent): void;
+interface AnalyticsSink {
+  readonly record: (event: DomainEvent) => void;
 }
 
-// Injected timer source (no `setTimeout` in the kernel). `schedule` returns a
-// cancel handle. A real host backs this with `setTimeout`; tests use a fake that
-// fires on demand, keeping the runtime deterministic.
-export interface Scheduler {
-  schedule(delayMs: number, fire: () => void): () => void;
+/*
+ * Injected timer source (no `setTimeout` in the kernel). `schedule` returns a
+ * cancel handle. A real host backs this with `setTimeout`; tests use a fake that
+ * fires on demand, keeping the runtime deterministic.
+ */
+interface Scheduler {
+  readonly schedule: (delayMs: number, fire: () => void) => () => void;
 }
+
+export type { AnalyticsSink, Clock, SaveStore, Scheduler };

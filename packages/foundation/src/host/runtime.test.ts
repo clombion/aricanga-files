@@ -1,14 +1,14 @@
 import { Compiler } from 'inkjs/full';
 import { beforeEach, expect, test, vi } from 'vitest';
-import { InkRuntime } from '../ink/ink-runtime';
-import type { ReduceResult } from '../sim/context';
-import { fx } from '../sim/effect';
-import type { Effect } from '../sim/effect';
-import type { Command, Input } from '../sim/input';
-import { erase, viewOf } from '../sim/system';
-import type { AnySystem, System } from '../sim/system';
-import type { SaveStore, Scheduler } from '../services/services';
-import { gatedSystem } from '../testing/fixture-system';
+import { InkRuntime } from '#src/ink/ink-runtime';
+import type { ReduceResult } from '#src/sim/context';
+import { fx } from '#src/sim/effect';
+import type { Effect } from '#src/sim/effect';
+import type { Command, Input } from '#src/sim/input';
+import { erase, viewOf } from '#src/sim/system';
+import type { AnySystem, System } from '#src/sim/system';
+import type { SaveStore, Scheduler } from '#src/services/services';
+import { gatedSystem } from '#src/testing/fixture-system';
 import { Runtime } from './runtime';
 import type { Host } from './runtime';
 

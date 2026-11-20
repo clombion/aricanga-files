@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import type { Input } from '../sim/input';
+import type { Input } from '#src/sim/input';
 import { FIXTURE_TAG, fixtureSystem, fixtureSystemErased } from './fixture-system';
 import type { FixtureCommand } from './fixture-system';
 import { runFixture } from './harness';

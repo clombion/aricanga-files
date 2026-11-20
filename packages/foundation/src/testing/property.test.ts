@@ -1,30 +1,56 @@
-import { expect, test } from 'vitest';
-import type { ReduceResult } from '../sim/context';
-import type { Effect } from '../sim/effect';
-import type { Command } from '../sim/input';
-import { erase } from '../sim/system';
-import type { System } from '../sim/system';
+import { describe, expect, test } from 'vitest';
+import type { Command } from '#src/sim/input';
+import type { Effect } from '#src/sim/effect';
+import type { ReduceResult } from '#src/sim/context';
+import type { System } from '#src/sim/system';
+import { checkDeterministic } from './property';
+import { erase } from '#src/sim/system';
 import { fixtureSystemErased } from './fixture-system';
 import { storyStreamArb } from './generators';
-import { checkDeterministic } from './property';
 
-test('determinism: same stream replays to an identical canonical trace (#2)', async () => {
-  const result = await checkDeterministic({ systems: [fixtureSystemErased] }, storyStreamArb({ tagKeys: ['note'] }));
-  expect(result.failed, result.message).toBe(false);
-});
+/** The state of a reducer that counts its calls. */
+interface Count {
+  readonly calls: number;
+}
 
-test('the determinism property rejects a nondeterministic reducer (#2)', async () => {
-  // A reducer whose output depends on hidden mutable state, not (state,input,ctx) —
-  // run-twice diverges, so the property must fail (shrinking to a minimal stream).
-  let hidden = 0;
-  const flaky: System<{ n: number }, Command, Effect, { n: number }> = {
+/** The count before any call. */
+const NO_CALLS = 0;
+
+/** Each call adds one. */
+const ONE_CALL = 1;
+
+/**
+ * A system whose reducer reads hidden mutable state, not (state, input, ctx): run twice, it diverges.
+ *
+ * @returns {System} The system.
+ */
+function flakySystem(): System<Count, Command, Effect, Count> {
+  const hidden = { calls: NO_CALLS };
+  return {
     id: 'flaky',
-    init: () => ({ n: 0 }),
-    reduce: (): ReduceResult<{ n: number }> => ({ state: { n: hidden++ }, effects: [] }),
+    init: () => ({ calls: NO_CALLS }),
+    reduce: (): ReduceResult<Count> => {
+      hidden.calls += ONE_CALL;
+      return { effects: [], state: { calls: hidden.calls } };
+    },
     status: () => 'free',
     tags: ['note'],
     view: (state) => state,
   };
-  const result = await checkDeterministic({ systems: [erase(flaky)] }, storyStreamArb({ tagKeys: ['note'] }));
-  expect(result.failed, 'a reducer reading hidden state must fail the determinism property').toBe(true);
+}
+
+describe(checkDeterministic, () => {
+  test('determinism: same stream replays to an identical canonical trace (#2)', async () => {
+    expect.hasAssertions();
+    const result = await checkDeterministic({ systems: [fixtureSystemErased] }, storyStreamArb({ tagKeys: ['note'] }));
+    expect({ failed: result.failed }, result.message).toStrictEqual({ failed: false });
+  });
+
+  test('the determinism property rejects a nondeterministic reducer (#2)', async () => {
+    expect.hasAssertions();
+    const result = await checkDeterministic({ systems: [erase(flakySystem())] }, storyStreamArb({ tagKeys: ['note'] }));
+    expect({ failed: result.failed }, 'a reducer reading hidden state must fail the determinism property').toStrictEqual({
+      failed: true,
+    });
+  });
 });

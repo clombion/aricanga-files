@@ -1,95 +1,99 @@
+import type { Choice, ExternalCall, InkStatus, InkStep, Tag } from '#src/sim/story';
 import { Story } from 'inkjs';
-import { parseTag } from '../sim/story';
-import type { Choice, ExternalCall, InkStatus, InkStep, Tag } from '../sim/story';
+import { parseTag } from '#src/sim/story';
 
-// Host-owned wrapper over inkjs — the single inkjs touchpoint (ADR-0007). The
-// runtime owns this; the kernel never reads ink. `name`/`data` are resolved into
-// the line text host-side (via injected fixtures); the four drain-class externals
-// are captured into `InkStep.externalCalls`, and `request_data` flips the step to
-// `await-data` so the pump suspends until `Resume(DataArrived)`.
-/** @public */
-export type NameResolver = (id: string) => string;
-/** @public */
-export type DataResolver = (key: string) => string;
+/*
+ * Host-owned wrapper over inkjs — the single inkjs touchpoint (ADR-0007). The
+ * runtime owns this; the kernel never reads ink. `name`/`data` are resolved into
+ * the line text host-side (via injected fixtures); the four drain-class externals
+ * are captured into `InkStep.externalCalls`, and `request_data` flips the step to
+ * `await-data` so the pump suspends until `Resume(DataArrived)`.
+ */
 
 /** @public */
-export interface InkFixtures {
+type NameResolver = (id: string) => string;
+
+/** @public */
+type DataResolver = (key: string) => string;
+
+/** @public */
+interface InkFixtures {
   readonly name?: NameResolver;
   readonly data?: DataResolver;
 }
 
-/** An ink value as text: ink passes externals strings, numbers and booleans, never objects. */
+/**
+ * An ink value as text: ink passes externals strings, numbers and booleans, never objects.
+ *
+ * @param {unknown} value - The value ink passed.
+ * @returns {string} The value as text.
+ */
 function inkText(value: unknown): string {
-  if (typeof value === 'string') {return value;}
-  if (typeof value === 'number' || typeof value === 'boolean') {return `${value}`;}
+  if (typeof value === 'string') {
+    return value;
+  }
+  if (typeof value === 'number' || typeof value === 'boolean') {
+    return `${value}`;
+  }
   throw new TypeError(`ink passed an external a ${typeof value}, not a primitive`);
 }
 
-/** An ink value as a number. */
+/**
+ * An ink value as a number.
+ *
+ * @param {unknown} value - The value ink passed.
+ * @returns {number} The value as a number.
+ */
 function inkNumber(value: unknown): number {
   return typeof value === 'number' ? value : Number(inkText(value));
+}
+
+/**
+ * Parse each raw ink tag.
+ *
+ * @param {readonly string[]} raw - The tags as ink gives them.
+ * @returns {readonly Tag[]} The parsed tags.
+ */
+function parseTags(raw: readonly string[]): readonly Tag[] {
+  return raw.map((tag) => parseTag(tag));
 }
 
 /** The ink externals the runtime binds: the two lookups and every external call it drains. */
 type InkExternal = 'name' | 'data' | ExternalCall['fn'];
 
-export class InkRuntime {
+/** An external's handler: ink hands it its arguments untyped, so it takes `unknown` and converts. */
+type ExternalHandler = (...args: readonly unknown[]) => unknown;
+
+/** The ink story a step's lines, tags, choices and externals are read from. */
+class InkRuntime {
   private readonly story: Story;
   private drained: ExternalCall[] = [];
   private awaitingData = false;
 
-  constructor(storyJson: string, fixtures: InkFixtures = {}) {
+  public constructor(storyJson: string, fixtures: Readonly<InkFixtures> = {}) {
     this.story = new Story(storyJson);
     this.bindExternals(fixtures);
   }
 
-  private bindExternals(fixtures: InkFixtures): void {
-    // ink hands an external its arguments untyped, so each handler takes `unknown` and converts.
-    const bind = (name: InkExternal, fn: (...args: unknown[]) => unknown): void => {
-      // A story that doesn't declare the external simply never calls it; binding
-      // an undeclared name is harmless. Guard so a missing declaration can't throw.
-      try {
-        this.story.BindExternalFunction(name, fn, false);
-      } catch {
-        // not declared in this story — nothing to bind
-      }
-    };
-
-    const resolveName: NameResolver = fixtures.name ?? ((id) => id);
-    const resolveData: DataResolver = fixtures.data ?? ((key) => key);
-    bind('name', (id) => resolveName(inkText(id)));
-    bind('data', (key) => resolveData(inkText(key)));
-
-    bind('delay_next', (seconds) => {
-      this.drained.push({ fn: 'delay_next', seconds: inkNumber(seconds) });
-    });
-    bind('play_sound', (sound) => {
-      this.drained.push({ fn: 'play_sound', sound: inkText(sound) });
-    });
-    bind('advance_day', () => {
-      this.drained.push({ fn: 'advance_day' });
-    });
-    bind('request_data', (source, query, params) => {
-      const call: ExternalCall =
-        params === undefined
-          ? { fn: 'request_data', query: inkText(query), source: inkText(source) }
-          : { fn: 'request_data', params: inkText(params), query: inkText(query), source: inkText(source) };
-      this.drained.push(call);
-      this.awaitingData = true;
-      return '';
-    });
-  }
-
-  canContinue(): boolean {
+  /**
+   * Whether ink has another line to continue to.
+   *
+   * @returns {boolean} Whether `continue` can advance.
+   */
+  public canContinue(): boolean {
     return this.story.canContinue;
   }
 
-  /** Advance one line and drain the side-channel into an InkStep. */
-  continue(): InkStep {
+  /**
+   * Advance one line and drain the side-channel into an InkStep.
+   *
+   * @returns {InkStep} The line, its tags, the choices offered, the externals called and the status.
+   */
+  public continue(): InkStep {
     this.drained = [];
     this.awaitingData = false;
     const text = (this.story.Continue() ?? '').trim();
-    const tags: readonly Tag[] = (this.story.currentTags ?? []).map(parseTag);
+    const tags = parseTags(this.story.currentTags ?? []);
     const status = this.computeStatus();
     return {
       choices: status === 'await-choice' ? this.currentChoices() : [],
@@ -100,30 +104,89 @@ export class InkRuntime {
     };
   }
 
-  private computeStatus(): InkStatus {
-    if (this.awaitingData) {return 'await-data';}
-    if (this.story.canContinue) {return 'continue';}
-    if (this.story.currentChoices.length > 0) {return 'await-choice';}
-    return 'end';
-  }
-
-  private currentChoices(): readonly Choice[] {
-    return this.story.currentChoices.map((c) => ({
-      index: c.index ?? 0,
-      tags: (c.tags ?? []).map(parseTag),
-      text: c.text ?? '',
-    }));
-  }
-
-  choose(index: number): void {
+  /**
+   * Take the choice at `index`.
+   *
+   * @param {number} index - The index ink gave the choice.
+   */
+  public choose(index: number): void {
     this.story.ChooseChoiceIndex(index);
   }
 
-  toJson(): string {
+  /**
+   * The story's state as ink serialises it.
+   *
+   * @returns {string} The state's JSON text.
+   */
+  public toJson(): string {
     return this.story.state.ToJson();
   }
 
-  loadJson(json: string): void {
+  /**
+   * Restore a state `toJson` gave.
+   *
+   * @param {string} json - The state's JSON text.
+   */
+  public loadJson(json: string): void {
     this.story.state.LoadJson(json);
   }
+
+  private bindExternals(fixtures: Readonly<InkFixtures>): void {
+    const resolveName: NameResolver = fixtures.name ?? ((id) => id);
+    const resolveData: DataResolver = fixtures.data ?? ((key) => key);
+    this.bind('name', (id) => resolveName(inkText(id)));
+    this.bind('data', (key) => resolveData(inkText(key)));
+    this.bind('delay_next', (seconds) => {
+      this.drained.push({ fn: 'delay_next', seconds: inkNumber(seconds) });
+    });
+    this.bind('play_sound', (sound) => {
+      this.drained.push({ fn: 'play_sound', sound: inkText(sound) });
+    });
+    this.bind('advance_day', () => {
+      this.drained.push({ fn: 'advance_day' });
+    });
+    this.bind('request_data', (source, query, params) => {
+      const call: ExternalCall =
+        params === undefined
+          ? { fn: 'request_data', query: inkText(query), source: inkText(source) }
+          : { fn: 'request_data', params: inkText(params), query: inkText(query), source: inkText(source) };
+      this.drained.push(call);
+      this.awaitingData = true;
+      return '';
+    });
+  }
+
+  private bind(name: InkExternal, handler: ExternalHandler): void {
+    /*
+     * A story that doesn't declare the external simply never calls it; binding
+     * an undeclared name is harmless. Guard so a missing declaration can't throw.
+     */
+    try {
+      this.story.BindExternalFunction(name, handler, false);
+    } catch {
+      // Not declared in this story — nothing to bind.
+    }
+  }
+
+  private computeStatus(): InkStatus {
+    if (this.awaitingData) {
+      return 'await-data';
+    }
+    if (this.story.canContinue) {
+      return 'continue';
+    }
+    const [offered] = this.story.currentChoices;
+    return offered === undefined ? 'end' : 'await-choice';
+  }
+
+  private currentChoices(): readonly Choice[] {
+    const choices: Choice[] = [];
+    for (const choice of this.story.currentChoices) {
+      choices.push({ index: choice.index, tags: parseTags(choice.tags ?? []), text: choice.text });
+    }
+    return choices;
+  }
 }
+
+export { InkRuntime };
+export type { DataResolver, InkFixtures, NameResolver };
