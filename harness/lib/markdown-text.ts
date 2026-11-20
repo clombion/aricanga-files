@@ -1,4 +1,6 @@
-/** The line-level grammar of the Markdown the docs checks read: fences, code spans, links, headings, table rows and block markers. */
+/** The line-level grammar of the Markdown the docs checks read: fences, code spans, links, headings and block markers. */
+
+import { present } from './present.ts';
 
 /** One line of current text, with its code spans removed. */
 interface Prose {
@@ -61,8 +63,6 @@ const HEADING = /^(?<hashes>#{1,6})\s+(?<text>.*?)\s*#*\s*$/u;
 const BLOCK_START = /^<!-- generated: (?<name>[\w-]+) -->$/u;
 const BLOCK_END = /^<!-- end: (?<name>[\w-]+) -->$/u;
 const NOT_ANCHOR = /[^\p{L}\p{N}_\- ]/gu;
-const OUTER_PIPES = /^\||\|$/gu;
-const DELIMITER_CELL = /^:?-+:?$/u;
 
 /** The number of a doc's first line. */
 const FIRST_LINE = 1;
@@ -86,7 +86,7 @@ function withoutSpans(text: string): string {
 function spansOf(text: string): readonly string[] {
   const spans: string[] = [];
   for (const match of text.matchAll(SPAN)) {
-    spans.push((match.groups?.['inner'] ?? '').trim());
+    spans.push(present(match.groups?.['inner'], "a code span's text").trim());
   }
   return spans;
 }
@@ -100,7 +100,7 @@ function spansOf(text: string): readonly string[] {
 function linkTargets(text: string): readonly string[] {
   const targets: string[] = [];
   for (const match of text.matchAll(LINK)) {
-    targets.push(match.groups?.['target'] ?? '');
+    targets.push(present(match.groups?.['target'], "a link's target"));
   }
   return targets;
 }
@@ -114,7 +114,9 @@ function linkTargets(text: string): readonly string[] {
 function headingOf(numbered: Numbered): readonly Heading[] {
   const [line, text] = numbered;
   const groups = HEADING.exec(text)?.groups;
-  return groups === undefined ? [] : [{ level: (groups['hashes'] ?? '').length, line, text: groups['text'] ?? '' }];
+  return groups === undefined
+    ? []
+    : [{ level: present(groups['hashes'], "a heading's hashes").length, line, text: present(groups['text'], "a heading's text") }];
 }
 
 /**
@@ -136,7 +138,9 @@ function anchor(heading: string): string {
  */
 function fenceMarker(line: string): FenceMarker | undefined {
   const groups = FENCE.exec(line)?.groups;
-  return groups === undefined ? undefined : { info: (groups['info'] ?? '').trim(), marker: groups['marker'] ?? '' };
+  return groups === undefined
+    ? undefined
+    : { info: present(groups['info'], "a fence's info string").trim(), marker: present(groups['marker'], "a fence's marker") };
 }
 
 /**
@@ -174,20 +178,6 @@ function fenceLines(lines: readonly string[]): ReadonlySet<number> {
 }
 
 /**
- * The cells of a pipe-table row, or nothing for its delimiter row.
- *
- * @param {string} row - The row, trimmed.
- * @returns {readonly string[] | undefined} Its cells, trimmed, or undefined for the delimiter row.
- */
-function cellsOf(row: string): readonly string[] | undefined {
-  const cells = row
-    .replaceAll(OUTER_PIPES, '')
-    .split('|')
-    .map((cell) => cell.trim());
-  return cells.every((cell) => DELIMITER_CELL.test(cell)) ? undefined : cells;
-}
-
-/**
  * The generated-block markers of a line.
  *
  * @param {string} line - The line, trimmed.
@@ -197,5 +187,5 @@ function blockMarkers(line: string): Readonly<{ start: string | undefined; end: 
   return { end: BLOCK_END.exec(line)?.groups?.['name'], start: BLOCK_START.exec(line)?.groups?.['name'] };
 }
 
-export { anchor, blockMarkers, cellsOf, fenceLines, fenceMarker, FIRST_LINE, headingOf, linkTargets, spansOf, withoutSpans };
+export { anchor, blockMarkers, fenceLines, fenceMarker, FIRST_LINE, headingOf, linkTargets, spansOf, withoutSpans };
 export type { Block, Fence, Heading, Link, Numbered, Prose, Span };
