@@ -1,7 +1,7 @@
 # Testing strategy
 
 > Adopts the multi-axis test taxonomy and a test-first (TDD) workflow for the
-> rebuild. See [ADR-0006](decisions/0006-tdd-and-test-taxonomy.md).
+> rebuild. See [ADR-0006](decisions/0006-test-first-and-correctness-harness.md).
 
 ## Why it fits
 
@@ -42,7 +42,7 @@ test). The phase's integrating-proof task is the phase's acceptance test.
 |---|---|---|---|---|
 | Foundation contracts (P1) | constraint (+ light behaviour) | static / unit | compile, example | type-checker + two stubs are the test |
 | Kernel physics (P2) | behaviour | unit | property, example, golden | invariants from `simulation-physics`; BUG-HISTORY → regression |
-| View (P3) | behaviour, non-functional | component, e2e | example, snapshot, a11y | happy-dom + axe-core |
+| View (P3) | behaviour, non-functional | component, e2e | example, characterisation, a11y, performance | Playwright in Chromium, Firefox and WebKit + `@axe-core/playwright` |
 | Build / config (P4) | constraint | boundary | contract, smoke | the Zod schema is the contract |
 | Experiences (P5–P6) | behaviour | e2e | acceptance, example | + "zero foundation edits" architecture test |
 | Cross-cutting (P0+) | guard, non-functional, meta | varies | smoke, tripwire, mutation, fuzz | mutation on kernel; fuzz on tag/ink parsing |
@@ -57,8 +57,8 @@ the most expensive meta checks run on demand (before a release, or when reworkin
 the kernel), not on a schedule.
 
 - **local** (pre-commit / pre-push; see task-005): unit/example, architecture/boundary, snapshot, tripwire, capped property, compile.
-- **PR** (CI on every pull request — the merge gate; see task-006): integration, contract, a11y, e2e, full property, acceptance, golden replay.
-- **on-demand** (pre-release / manual `workflow_dispatch`): mutation, fuzz, performance, deep property / deep e2e.
+- **PR** (CI on every pull request — the merge gate; see task-006): integration, contract, a11y, e2e, full property, acceptance, golden replay, the Solid characterisation suite and the view performance budget (fails on a regression over 25 %).
+- **on-demand** (pre-release / manual `workflow_dispatch`): mutation, fuzz, deep property / deep e2e.
 
 ## How tasks tag tests
 

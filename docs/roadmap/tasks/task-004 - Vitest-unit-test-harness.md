@@ -14,13 +14,13 @@ parent_task_id:
 ## Description
 
 Configure Vitest for two test modes: headless unit tests (kernel/foundation
-logic in Node) and component tests (Lit elements in happy-dom), with workspace
+logic in Node) and component tests (custom elements in happy-dom), with workspace
 package resolution.
 
 ## Acceptance Criteria
 
 - [ ] #1 `vitest run` executes a passing example unit test against a foundation module
-- [ ] #2 A component test renders a Lit element in happy-dom and asserts shadow-DOM content
+- [ ] #2 A component test renders a custom element in happy-dom and asserts shadow-DOM content
 - [ ] #3 Tests resolve workspace package imports without manual path hacks
 - [ ] #4 `vitest run` is non-interactive and exits non-zero on failure (CI-ready)
 

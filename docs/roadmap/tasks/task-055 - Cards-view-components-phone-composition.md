@@ -13,7 +13,7 @@ parent_task_id:
 
 ## Description
 
-Lit card components rendering the cards `ViewModel`, composed inside the **same
+Solid card parts rendering the cards `ViewModel`, composed inside the **same
 `systems/phone` chrome** used by the chat phone experience — the recombination
 that proves the phone shell is vocabulary-agnostic.
 

@@ -6,7 +6,7 @@ assignee: []
 created_date: 2026-06-16
 updated_date: 2026-06-16
 labels: [chat, phone, ui, testing, phase-3]
-milestone: "Phase 3 — Chat + phone view layer (Lit)"
+milestone: "Phase 3 — Chat + phone view layer (Solid)"
 dependencies: [task-030, task-031, task-032, task-033, task-034, task-035, task-036, task-037, task-038]
 parent_task_id:
 ---
@@ -14,8 +14,8 @@ parent_task_id:
 ## Description
 
 The Phase 3 integrating proof: Aricanga runs end-to-end on the new stack — phone +
-chat composed — at behavioural parity with the POC reference. Retires the "Lit
-view-models can't reproduce the UI/a11y" risk.
+chat composed — at behavioural parity with the POC reference. Retires the "a Solid
+view over the kernel's snapshots can't reproduce the UI/a11y" risk.
 
 ## Acceptance Criteria
 

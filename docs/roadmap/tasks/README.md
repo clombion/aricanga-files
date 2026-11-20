@@ -15,11 +15,11 @@ Every task carries a `## Tests` section tagging its tests by the
 |----|-------|--------|------------|
 | task-001 | Monorepo and TypeScript project-reference scaffolding | Done | — |
 | task-002 | Vite build and dev pipeline | Done | 001 |
-| task-003 | Lit component baseline | Done | 001, 002 |
+| task-003 | Solid component baseline (Phase 3, Step 3) | To Do | 063, 064 |
 | task-004 | Vitest unit-test harness | Done | 001 |
 | task-005 | Module boundary lint | Done | 001 |
 | task-006 | CI workflow (typecheck, lint, test, build) | Done | 001, 002, 004, 005 |
-| task-007 | Walking skeleton — ink → kernel stub → Lit render | Done | 001–006 |
+| task-007 | Walking skeleton — ink → kernel stub → render | Done | 001–006 |
 
 Suggested order: **001 → (002, 004, 005 in parallel) → 003 → 006 → 007**.
 task-007 is the integrating proof for the phase.
@@ -71,16 +71,20 @@ Suggested order: **040 → 041 → 062 → 017 → 018 → 019 → 020 → 021 �
 task-040/041 establish the generic algebra + runtime, task-062 migrates the
 merged Phase 1 foundation onto them, and task-027 is the phase proof.
 
-## Phase 3 — Chat + phone view layer (Lit)
+## Phase 3 — Chat + phone view layer (Solid)
 
-Epic: [`../phase-3-view-layer.md`](../phase-3-view-layer.md). TDD-led: backbone +
-a11y harness first, then components (axe baked into each), then the a11y sweep and
-the Aricanga parity proof.
+Epic: [`../phase-3-view-layer.md`](../phase-3-view-layer.md). Gated: the
+correctness harness and toolchain, then the Solid characterisation suite (ADR-0009),
+then the view layer — adapter + a11y harness first, then parts (axe in each), then
+the a11y sweep and the Aricanga parity proof.
 
 | ID | Title | Status | Depends on |
 |----|-------|--------|------------|
-| task-028 | View-model contracts and UI host render loop | To Do | 003, 011, 012 |
-| task-029 | Component and a11y test harness | To Do | 004, 028 |
+| task-064 | Correctness harness and view toolchain | In Progress | — |
+| task-063 | Solid runtime characterisation suite | In Progress | 064 |
+| task-003 | Solid component baseline | To Do | 063, 064 |
+| task-028 | View-model contracts and snapshot adapter | To Do | 003, 011, 012 |
+| task-029 | Component and a11y test harness | To Do | 063, 028 |
 | task-030 | chat-thread and message rendering | To Do | 028, 029 |
 | task-031 | Rich message bubbles | To Do | 030 |
 | task-032 | Receipts, typing, and choice buttons | To Do | 030 |
@@ -92,7 +96,7 @@ the Aricanga parity proof.
 | task-038 | Accessibility acceptance sweep | To Do | 030–037 |
 | task-039 | Aricanga view parity (phase proof) | To Do | 030–038 |
 
-Suggested order: **028 → 029 → 030 → (031, 032, 033, 034, 035) → 036 → 037 → 038 → 039**.
+Suggested order: **064 → 063 → 003 → 028 → 029 → 030 → (031, 032, 033, 034, 035) → 036 → 037 → 038 → 039**.
 task-039 is the integrating proof for the phase.
 
 ## Phase 4 — Build pipeline & config

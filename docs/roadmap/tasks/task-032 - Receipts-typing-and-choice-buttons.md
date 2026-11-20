@@ -6,7 +6,7 @@ assignee: []
 created_date: 2026-06-16
 updated_date: 2026-06-16
 labels: [chat, ui, phase-3]
-milestone: "Phase 3 — Chat + phone view layer (Lit)"
+milestone: "Phase 3 — Chat + phone view layer (Solid)"
 dependencies: [task-030]
 parent_task_id:
 ---

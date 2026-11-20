@@ -5,18 +5,18 @@
 
 ## Risk retired
 
-The new stack (TypeScript + Vite + Lit + Vitest + boundary lint) doesn't hang
+The new stack (TypeScript + Vite + Vitest + boundary lint) doesn't hang
 together.
 
 ## Goal
 
 Stand up the monorepo shape (foundation / systems / experiences) with the full
-toolchain, threading one trivial ink story → kernel stub → one Lit component end
+toolchain, threading one trivial ink story → kernel stub → one view component end
 to end.
 
 ## Proof / Definition of Done
 
-A single message renders through the full TS+Lit pipeline; boundary lint and CI
+A single message renders through the full TypeScript pipeline; boundary lint and CI
 are green.
 
 ## Subtasks
@@ -25,11 +25,11 @@ See [`tasks/`](tasks/README.md) for the full task files with acceptance criteria
 
 - [x] task-001 — Monorepo and TypeScript project-reference scaffolding
 - [x] task-002 — Vite build and dev pipeline
-- [x] task-003 — Lit component baseline
+- [ ] task-003 — Solid component baseline (delivered in Phase 3, Step 3)
 - [x] task-004 — Vitest unit-test harness
 - [x] task-005 — Module boundary lint
 - [x] task-006 — CI workflow (typecheck, lint, test, build)
-- [x] task-007 — Walking skeleton — ink → kernel stub → Lit render
+- [x] task-007 — Walking skeleton — ink → kernel stub → render
 
 ## Non-goals
 

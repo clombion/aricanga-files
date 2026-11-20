@@ -13,7 +13,7 @@ parent_task_id:
 
 ## Description
 
-Desktop-shaped Lit components that render the chat `ViewModel` — a multi-pane
+Desktop-shaped Solid parts that render the chat `ViewModel` — a multi-pane
 desktop chat layout (chat list + thread) — proving the view layer consumes the
 same pure `view(state, renderContext) → viewModel` output as the phone, only with
 different chrome.

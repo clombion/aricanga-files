@@ -1,6 +1,6 @@
 ---
 id: task-007
-title: Walking skeleton — ink to kernel stub to Lit render
+title: Walking skeleton — ink to kernel stub to render
 status: Done
 assignee: []
 created_date: 2026-06-16
@@ -15,7 +15,7 @@ parent_task_id:
 
 Thread the whole pipeline end to end with throwaway stubs: a one-line ink story
 compiled to JSON, loaded by an InkRuntime wrapper, passed through a stub
-`reduce` (passthrough), and rendered by one Lit component. This is Phase 0's
+`reduce` (passthrough), and rendered by one view component. This is Phase 0's
 integrating proof — it retires the "does the stack hang together" risk. The
 kernel stub is deliberately trivial; real contracts arrive in Phase 1.
 
@@ -23,7 +23,7 @@ kernel stub is deliberately trivial; real contracts arrive in Phase 1.
 
 - [ ] #1 A trivial `.ink` story compiles to JSON as part of the build
 - [ ] #2 The app loads the story, advances it, and a single message string flows through a stub `reduce(state, chunk)` into a view-model
-- [ ] #3 A Lit component renders that message text in the browser
+- [ ] #3 A view component renders that message text in the browser
 - [ ] #4 The whole thread runs under `vite dev` and is covered by one end-to-end smoke test
 - [ ] #5 Typecheck, boundary lint, and CI are all green with the skeleton in place
 
@@ -40,14 +40,14 @@ kernel stub is deliberately trivial; real contracts arrive in Phase 1.
 
 ## Implementation Plan
 
-Minimal InkRuntime wrapper over inkjs; passthrough `reduce`; one Lit component;
+Minimal InkRuntime wrapper over inkjs; passthrough `reduce`; one view component;
 a Playwright or Vitest smoke test asserting the rendered text.
 
 ## Implementation Notes
 
 Thread: `story.ink` → a Vite ink plugin compiles it to `public/story.json` on both
 dev and build (AC #1) → foundation `InkRuntime` (the single inkjs touchpoint;
-`StoryChunk = { text, tags }`) → system-chat stub `reduceChunk` → Lit
+`StoryChunk = { text, tags }`) → system-chat stub `reduceChunk` → view
 `<sk-message>` render.
 
 Spike discovery (the "discover" open question): real inkjs shape — `Compiler` from

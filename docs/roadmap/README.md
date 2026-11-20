@@ -26,7 +26,7 @@ kill one named risk and has a concrete proof it's dead before the next begins.
 ## Target architecture (north star)
 
 A **headless, deterministic simulation kernel** with a **thin reactive view
-layer** (Lit), **one event/effect backbone**, **real TypeScript types**, and a
+layer** (Solid 2.0), **one event/effect backbone**, **real TypeScript types**, and a
 **composition root** instead of global singletons.
 
 ```
@@ -54,7 +54,7 @@ experiences/
 | 0 | [Walking skeleton & toolchain](phase-0-skeleton.md) | The new stack doesn't hang together |
 | 1 | [Foundation contracts](phase-1-foundation.md) | The foundation is secretly chat-shaped |
 | 2 | [Chat simulation kernel (headless)](phase-2-kernel.md) | Can't reproduce the physics as pure logic |
-| 3 | [Chat + phone view layer (Lit)](phase-3-view-layer.md) | Lit view-models can't reproduce UI + a11y |
+| 3 | [Chat + phone view layer (Solid)](phase-3-view-layer.md) | A Solid view over the kernel's snapshots can't reproduce UI + a11y |
 | 4 | [Typed build pipeline & config schema](phase-4-build-pipeline.md) | The 60-linter governance pile doesn't collapse |
 | 5 | [Experience: desktop chat](phase-5-desktop-chat.md) | Chat isn't truly separable from phone |
 | 6 | [Experience: cards-on-phone](phase-6-cards-on-phone.md) | The foundation isn't genuinely vocabulary-agnostic |
@@ -94,5 +94,5 @@ markdown convention (format only — no CLI or tooling). See
   the multi-axis taxonomy in [`testing-strategy.md`](testing-strategy.md). We work
   **test-first** (TDD): an AC is Done when its tagged test is green (ADR-0006).
 - **Decisions:** architectural calls (greenfield rebuild, risk-ordering,
-  TypeScript + Lit, design-for-two, the two seam experiences) are recorded as
+  TypeScript + Solid, design-for-two, the two seam experiences) are recorded as
   short ADR-style files in `docs/roadmap/decisions/`.

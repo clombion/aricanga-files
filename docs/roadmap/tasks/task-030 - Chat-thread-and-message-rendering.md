@@ -6,7 +6,7 @@ assignee: []
 created_date: 2026-06-16
 updated_date: 2026-06-16
 labels: [chat, ui, phase-3]
-milestone: "Phase 3 — Chat + phone view layer (Lit)"
+milestone: "Phase 3 — Chat + phone view layer (Solid)"
 dependencies: [task-028, task-029]
 parent_task_id:
 ---
@@ -33,7 +33,7 @@ date and unread separators, and the display-only "Now" timestamp override.
 
 ## Implementation Plan
 
-`packages/systems/chat/view/chat-thread.ts` (Lit), pure over the thread VM.
+`packages/systems/chat/view/chat-thread.tsx` (a Solid part), pure over the thread VM.
 
 ## Implementation Notes
 
