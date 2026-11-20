@@ -3,22 +3,14 @@
  * what `flush()` does inside an effect callback and inside `onSettled`.
  */
 
-import { render } from '@solidjs/web';
 import { createEffect, createRoot, createSignal, createStore, flush, onSettled } from 'solid-js';
 
 import { markDone, record } from '../harness';
-
-const settle = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0));
-
-function errorText(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
+import { errorText, mount, settle } from '../support';
 
 export async function run(): Promise<void> {
   const [store, setStore] = createStore({ text: 'short' });
-  const host = document.createElement('div');
-  document.body.append(host);
-  const dispose = render(() => <p id="measured">{store.text}</p>, host);
+  const { host, dispose } = mount('div', () => <p id="measured">{store.text}</p>);
   flush();
 
   setStore((draft) => {
@@ -35,7 +27,6 @@ export async function run(): Promise<void> {
     note: `before flush: ${beforeFlush ?? ''}; after flush: ${afterFlush ?? ''}; width ${width}`,
   });
   dispose();
-  host.remove();
 
   let effectError: string | undefined;
   const [tick, setTick] = createSignal(0);
@@ -64,9 +55,7 @@ export async function run(): Promise<void> {
   });
 
   let settledError: string | undefined;
-  const settledHost = document.createElement('div');
-  document.body.append(settledHost);
-  const disposeSettled = render(() => {
+  const { dispose: disposeSettled } = mount('div', () => {
     onSettled(() => {
       try {
         flush();
@@ -75,7 +64,7 @@ export async function run(): Promise<void> {
       }
     });
     return <p>settled</p>;
-  }, settledHost);
+  });
   flush();
   await settle();
   record({
@@ -85,7 +74,6 @@ export async function run(): Promise<void> {
     note: settledError === undefined ? 'flush() in onSettled returned' : `refused: ${settledError}`,
   });
   disposeSettled();
-  settledHost.remove();
 
   markDone();
 }

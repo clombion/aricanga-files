@@ -8,11 +8,7 @@ import { render } from '@solidjs/web';
 import { createStore, flush, For, reconcile } from 'solid-js';
 
 import { markDone, record } from '../harness';
-
-interface Message {
-  readonly id: string;
-  readonly text: string;
-}
+import type { Message } from '../support';
 
 const MESSAGES = 1000;
 const UPDATES = 100;

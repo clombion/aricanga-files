@@ -7,20 +7,10 @@ import { render } from '@solidjs/web';
 import { createMemo, createRoot, createStore, flush, For, reconcile } from 'solid-js';
 
 import { markDone, record } from '../harness';
-
-interface Message {
-  readonly id: string;
-  readonly text: string;
-}
+import { errorText, type Message, mount, settle } from '../support';
 
 interface Snapshot {
   readonly messages: readonly Message[];
-}
-
-const settle = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0));
-
-function errorText(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
 }
 
 export async function run(): Promise<void> {
@@ -31,16 +21,11 @@ export async function run(): Promise<void> {
     });
   };
 
-  const host = document.createElement('div');
-  document.body.append(host);
-  const dispose = render(
-    () => (
-      <ul>
-        <For each={store.messages}>{(message) => <li data-id={message.id}>{message.text}</li>}</For>
-      </ul>
-    ),
-    host,
-  );
+  const { host, dispose } = mount('div', () => (
+    <ul>
+      <For each={store.messages}>{(message) => <li data-id={message.id}>{message.text}</li>}</For>
+    </ul>
+  ));
 
   apply({ messages: [{ id: 'a', text: 'one' }, { id: 'b', text: 'two' }, { id: 'c', text: 'three' }] });
   flush();
@@ -71,7 +56,6 @@ export async function run(): Promise<void> {
     note: `after a timer apply: ${host.textContent ?? ''}`,
   });
   dispose();
-  host.remove();
 
   let bodyError: string | undefined;
   const bodyHost = document.createElement('div');

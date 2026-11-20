@@ -1,6 +1,7 @@
 import { render } from '@solidjs/web';
 import { onSettled } from 'solid-js';
 import { markDone, record } from '../harness';
+import { settle } from '../support';
 
 // Proves the brief's mounting contract: one Solid root per experience, mounted
 // into the custom element's shadow root in connectedCallback, disposed in
@@ -34,8 +35,6 @@ class ChxHost extends HTMLElement {
   }
 }
 customElements.define('chx-host', ChxHost);
-
-const settle = () => new Promise((r) => setTimeout(r, 0));
 
 export async function run(): Promise<void> {
   const app = document.getElementById('app');
