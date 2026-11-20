@@ -35,10 +35,11 @@ interface Finding {
 /**
  * The root `package.json` `imports` patterns, each with its target.
  *
- * @returns {readonly (readonly [string, string])[]} Each pattern and its target.
+ * @returns {Promise<readonly (readonly [string, string])[]>} Each pattern and its target.
  */
-function subpathPatterns(): readonly (readonly [string, string])[] {
-  const manifest = object(json(textOf('package.json')), 'package.json');
+async function subpathPatterns(): Promise<readonly (readonly [string, string])[]> {
+  const text = await textOf('package.json');
+  const manifest = object(json(text), 'package.json');
   const imports = object(manifest['imports'] ?? {}, 'imports');
   return Object.entries(imports).flatMap(([pattern, target]: readonly [string, unknown]) => (typeof target === 'string' ? [[pattern, target] as const] : []));
 }
@@ -47,10 +48,11 @@ function subpathPatterns(): readonly (readonly [string, string])[] {
  * The repository path a subpath import names, through the root `package.json` `imports`.
  *
  * @param {string} specifier - A `#…` specifier.
+ * @param {readonly (readonly [string, string])[]} patterns - The `imports` patterns, each with its target.
  * @returns {string | undefined} The path it maps to, or `undefined` when no pattern maps it.
  */
-function subpathTarget(specifier: string): string | undefined {
-  for (const [pattern, target] of subpathPatterns()) {
+function subpathTarget(specifier: string, patterns: readonly (readonly [string, string])[]): string | undefined {
+  for (const [pattern, target] of patterns) {
     const prefix = pattern.replace(/\*$/u, '');
     if (pattern.endsWith('*') && specifier.startsWith(prefix)) {
       return normalize(target.replace(/\*$/u, specifier.slice(prefix.length)));
@@ -64,12 +66,13 @@ function subpathTarget(specifier: string): string | undefined {
  *
  * @param {string} path - The importing module.
  * @param {string} target - The imported module.
+ * @param {readonly (readonly [string, string])[]} patterns - The `imports` patterns, each with its target.
  * @returns {(specifier: string) => boolean} A test of a specifier.
  */
-function namesModule(path: string, target: string): (specifier: string) => boolean {
+function namesModule(path: string, target: string, patterns: readonly (readonly [string, string])[]): (specifier: string) => boolean {
   return (specifier) => {
     if (specifier.startsWith('#')) {
-      return subpathTarget(specifier) === target;
+      return subpathTarget(specifier, patterns) === target;
     }
     return specifier.startsWith('.') && normalize(join(dirname(path), specifier)) === target;
   };
@@ -94,9 +97,10 @@ function isConsulted(name: string, kind: string, users: readonly SourceFile[]): 
  *
  * @param {string} path - The module's path.
  * @param {ReadonlyMap<string, SourceFile>} files - Every parsed module, by path.
+ * @param {readonly (readonly [string, string])[]} patterns - The root `imports` patterns, each with its target.
  * @returns {readonly Finding[]} The module's findings.
  */
-function moduleFindings(path: string, files: ReadonlyMap<string, SourceFile>): readonly Finding[] {
+function moduleFindings(path: string, files: ReadonlyMap<string, SourceFile>, patterns: readonly (readonly [string, string])[]): readonly Finding[] {
   const file = files.get(path);
   if (file === undefined) {
     return [];
@@ -108,7 +112,7 @@ function moduleFindings(path: string, files: ReadonlyMap<string, SourceFile>): r
     if (kind === undefined) {
       return isLiteral(value) && listed.has(name) ? [{ name, path, problem: UNDECLARED }] : [];
     }
-    const users = [file, ...importers.filter(([otherPath, other]) => importsFrom(other, namesModule(otherPath, path)).has(name)).map(([, other]) => other)];
+    const users = [file, ...importers.filter(([otherPath, other]) => importsFrom(other, namesModule(otherPath, path, patterns)).has(name)).map(([, other]) => other)];
     return isConsulted(name, kind, users) ? [] : [{ name, path, problem: UNCONSULTED }];
   });
 }
@@ -117,11 +121,12 @@ function moduleFindings(path: string, files: ReadonlyMap<string, SourceFile>): r
  * The fence's findings over `{path: source}` of harness modules.
  *
  * @param {Readonly<Record<string, string>>} modules - Each module's source, by path.
- * @returns {readonly Finding[]} Every module's findings.
+ * @returns {Promise<readonly Finding[]>} Every module's findings.
  */
-function findings(modules: Readonly<Record<string, string>>): readonly Finding[] {
+async function findings(modules: Readonly<Record<string, string>>): Promise<readonly Finding[]> {
+  const patterns = await subpathPatterns();
   const files = new Map(Object.entries(modules).map(([path, text]: readonly [string, string]) => [path, parse(path, text)] as const));
-  return [...files.keys()].flatMap((path) => moduleFindings(path, files));
+  return [...files.keys()].flatMap((path) => moduleFindings(path, files, patterns));
 }
 
 export type { Finding };

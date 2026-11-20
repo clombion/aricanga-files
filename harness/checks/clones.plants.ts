@@ -9,7 +9,6 @@ import type { Runner } from '#lib/dupes.ts';
 import { main } from '#lib/dupes.ts';
 import { tmpdir } from 'node:os';
 import { typescriptFiles } from '#lib/scope.ts';
-import { writeFile } from 'node:fs/promises';
 
 /** The planted roots not yet removed. */
 const roots = new Set<string>();
@@ -92,9 +91,9 @@ function failingRunner(argv: readonly string[]): Outcome {
  * Run the script's `main` and collect what it writes.
  *
  * @param {Runner} [runner] - The runner standing in for jscpd, or the real one.
- * @returns {{ readonly status: number; readonly out: readonly string[]; readonly errors: readonly string[] }} Its exit status and output.
+ * @returns {Promise<{ readonly status: number; readonly out: readonly string[]; readonly errors: readonly string[] >}} Its exit status and output.
  */
-function runMain(runner?: Runner): { readonly status: number; readonly out: readonly string[]; readonly errors: readonly string[] } {
+async function runMain(runner?: Runner): Promise<{ readonly status: number; readonly out: readonly string[]; readonly errors: readonly string[] }> {
   const out: string[] = [];
   const errors: string[] = [];
   const streams = {
@@ -105,7 +104,7 @@ function runMain(runner?: Runner): { readonly status: number; readonly out: read
       out.push(text);
     },
   };
-  const status = runner === undefined ? main(streams) : main(streams, runner);
+  const status = await (runner === undefined ? main(streams) : main(streams, runner));
   return { errors, out, status };
 }
 

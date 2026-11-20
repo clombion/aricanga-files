@@ -18,10 +18,11 @@ function manifest(version: string): string {
 /**
  * The lock-check task's command, split into its arguments.
  *
- * @returns {readonly string[]} The command's arguments.
+ * @returns {Promise<readonly string[]>} The command's arguments.
  */
-function lockCheckArguments(): readonly string[] {
-  const [command = ''] = repoTasks().get(LOCK_CHECK)?.commands ?? [];
+async function lockCheckArguments(): Promise<readonly string[]> {
+  const tasks = await repoTasks();
+  const [command = ''] = tasks.get(LOCK_CHECK)?.commands ?? [];
   return command.split(' ');
 }
 
@@ -31,18 +32,18 @@ function lockCheckArguments(): readonly string[] {
  *
  * @param {string} written - The version the lockfile is written for.
  * @param {string} current - The version the manifest then pins.
- * @returns {{ readonly status: number; readonly outdated: boolean }} The run's exit status and whether pnpm called the lockfile outdated.
+ * @returns {Promise<{ readonly status: number; readonly outdated: boolean >}} The run's exit status and whether pnpm called the lockfile outdated.
  */
-function lockCheckAfter(written: string, current: string): { readonly status: number; readonly outdated: boolean } {
-  const project = new Project({ linkModules: false });
+async function lockCheckAfter(written: string, current: string): Promise<{ readonly status: number; readonly outdated: boolean }> {
+  const project = await Project.create({ linkModules: false });
   try {
-    project.write('package.json', manifest(written));
-    project.run('pnpm', 'install', '--lockfile-only', '--ignore-scripts');
-    project.write('package.json', manifest(current));
-    const done = project.run(...lockCheckArguments());
+    await project.write('package.json', manifest(written));
+    await project.run('pnpm', 'install', '--lockfile-only', '--ignore-scripts');
+    await project.write('package.json', manifest(current));
+    const done = await project.run(...(await lockCheckArguments()));
     return { outdated: done.stdout.includes('ERR_PNPM_OUTDATED_LOCKFILE'), status: done.status };
   } finally {
-    project.remove();
+    await project.remove();
   }
 }
 

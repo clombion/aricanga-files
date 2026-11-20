@@ -2,7 +2,7 @@
 
 import { Project, finished } from '#lib/tools.ts';
 import { REPO_ROOT, fromRoot } from '#lib/paths.ts';
-import { textOf, tracked } from '#lib/source-files.ts';
+import { textsOf, tracked } from '#lib/source-files.ts';
 import { dirname } from 'node:path/posix';
 import { gateCoverage } from './gate-config.ts';
 import { isTestInfrastructure } from '#lib/checker.ts';
@@ -36,10 +36,10 @@ function lines(stdout: string): readonly string[] {
 /**
  * The files oxlint lints in the checkout, from its own listing.
  *
- * @returns {ReadonlySet<string>} The files oxlint lints.
+ * @returns {Promise<ReadonlySet<string>>} The files oxlint lints.
  */
-function oxlintFiles(): ReadonlySet<string> {
-  const done = finished([fromRoot('node_modules', '.bin', 'oxlint'), '--debug=files'], { cwd: REPO_ROOT });
+async function oxlintFiles(): Promise<ReadonlySet<string>> {
+  const done = await finished([fromRoot('node_modules', '.bin', 'oxlint'), '--debug=files'], { cwd: REPO_ROOT });
   return new Set(lines(done.stdout));
 }
 
@@ -47,18 +47,23 @@ function oxlintFiles(): ReadonlySet<string> {
  * The files oxfmt formats: every held file planted unformatted in a copy of the checkout's config.
  *
  * @param {readonly string[]} files - The held files.
- * @returns {ReadonlySet<string>} The files oxfmt would change.
+ * @returns {Promise<ReadonlySet<string>>} The files oxfmt would change.
  */
-function oxfmtFiles(files: readonly string[]): ReadonlySet<string> {
-  const ignores = ['.gitignore', '.prettierignore', '.oxfmtrc.json'].filter((path) => tracked().includes(path));
-  const project = new Project({ copies: ignores });
+async function oxfmtFiles(files: readonly string[]): Promise<ReadonlySet<string>> {
+  const listed = await tracked();
+  const ignores = ['.gitignore', '.prettierignore', '.oxfmtrc.json'].filter((path) => listed.includes(path));
+  const project = await Project.create({ copies: ignores });
   try {
-    for (const path of files) {
-      project.write(path, textOf(path) + UNFORMATTED);
-    }
-    return new Set(lines(project.tool('oxfmt', '--list-different').stdout));
+    const texts = await textsOf(files);
+    await Promise.all(
+      texts.map(async ([path, text]: readonly [string, string]) => {
+        await project.write(path, text + UNFORMATTED);
+      }),
+    );
+    const done = await project.tool('oxfmt', '--list-different');
+    return new Set(lines(done.stdout));
   } finally {
-    project.remove();
+    await project.remove();
   }
 }
 
@@ -78,16 +83,18 @@ function projectDirectory(project: string): string {
  * directory. A package's source a dependent project resolves through the package's exports is
  * listed there too, but held by its own package.
  *
- * @returns {ReadonlyMap<string, ReadonlySet<string>>} Each project's held files, by project.
+ * @returns {Promise<ReadonlyMap<string, ReadonlySet<string>>>} Each project's held files, by project.
  */
-function projectMembers(): ReadonlyMap<string, ReadonlySet<string>> {
-  return new Map(
-    projects().map((project) => {
-      const done = finished([fromRoot('node_modules', '.bin', 'tsc'), '--listFilesOnly', '-p', project], { cwd: REPO_ROOT });
+async function projectMembers(): Promise<ReadonlyMap<string, ReadonlySet<string>>> {
+  const all = await projects();
+  const members = await Promise.all(
+    all.map(async (project) => {
+      const done = await finished([fromRoot('node_modules', '.bin', 'tsc'), '--listFilesOnly', '-p', project], { cwd: REPO_ROOT });
       const listed = lines(done.stdout).map((path) => relativeTo(REPO_ROOT, path));
-      return [project, new Set(listed.filter((path) => path.startsWith(projectDirectory(project))))];
+      return [project, new Set(listed.filter((path) => path.startsWith(projectDirectory(project))))] as const;
     }),
   );
+  return new Map(members);
 }
 
 /**

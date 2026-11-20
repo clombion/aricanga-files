@@ -5,7 +5,7 @@
 
 import { REPO_ROOT, fromRoot } from '#lib/paths.ts';
 import { json, object } from '#lib/config.ts';
-import { textOf, tracked } from '#lib/source-files.ts';
+import { textsOf, tracked } from '#lib/source-files.ts';
 import { Prefixes } from '#lib/exemptions.ts';
 import type { Resolver } from './doc-references.resolve.ts';
 import type { Span } from '#lib/docs.ts';
@@ -23,13 +23,14 @@ const PLANTS = new Prefixes(['harness/checks/']);
 /**
  * The listed workspace packages: their names and folders.
  *
- * @returns {readonly (readonly [string, string])[]} Each package's name and folder.
+ * @returns {Promise<readonly (readonly [string, string])[]>} Each package's name and folder.
  */
-function workspaces(): readonly (readonly [string, string])[] {
-  return tracked()
-    .filter((path) => path.endsWith('package.json') && !path.includes('node_modules/'))
-    .flatMap((path) => {
-      const { name } = object(json(textOf(path)), path);
+async function workspaces(): Promise<readonly (readonly [string, string])[]> {
+  const listed = await tracked();
+  const texts = await textsOf(listed.filter((path) => path.endsWith('package.json') && !path.includes('node_modules/')));
+  return texts
+    .flatMap(([path, text]: readonly [string, string]) => {
+      const { name } = object(json(text), path);
       return typeof name === 'string' ? [[name, dirname(path)] as const] : [];
     });
 }
@@ -62,7 +63,7 @@ async function installedOnDisk(path: string): Promise<boolean> {
     return true;
   }
   const inner = path.replace(/^node_modules\//u, '');
-  const known = workspaces();
+  const known = await workspaces();
   if (known.some(([name]) => inner === name || inner.startsWith(`${name}/`))) {
     return true;
   }
@@ -107,12 +108,14 @@ async function installedPaths(spans: readonly Span[], resolver: Omit<Resolver, '
 /**
  * Every string value quoted in held TypeScript, JavaScript and JSON outside the checks.
  *
- * @returns {ReadonlySet<string>} The quoted values.
+ * @returns {Promise<ReadonlySet<string>>} The quoted values.
  */
-function quotedValues(): ReadonlySet<string> {
+async function quotedValues(): Promise<ReadonlySet<string>> {
   const found = new Set<string>();
-  for (const path of heldFiles('.ts', '.tsx', '.js', '.mjs', '.json').filter((held) => !PLANTS.starts(held))) {
-    for (const match of textOf(path).matchAll(QUOTED)) {
+  const files = await heldFiles('.ts', '.tsx', '.js', '.mjs', '.json');
+  const texts = await textsOf(files.filter((held) => !PLANTS.starts(held)));
+  for (const [, text] of texts) {
+    for (const match of text.matchAll(QUOTED)) {
       found.add(match.groups?.['value'] ?? '');
     }
   }
@@ -122,10 +125,10 @@ function quotedValues(): ReadonlySet<string> {
 /**
  * The rule ids the locked oxlint knows, each a plugin and a rule joined by a slash (`node/no-process-env`), read from its own listing.
  *
- * @returns {ReadonlySet<string>} The rule ids.
+ * @returns {Promise<ReadonlySet<string>>} The rule ids.
  */
-function oxlintRuleIds(): ReadonlySet<string> {
-  const done = finished([fromRoot('node_modules', '.bin', 'oxlint'), '--rules', '--format=json'], { cwd: REPO_ROOT });
+async function oxlintRuleIds(): Promise<ReadonlySet<string>> {
+  const done = await finished([fromRoot('node_modules', '.bin', 'oxlint'), '--rules', '--format=json'], { cwd: REPO_ROOT });
   const listed: unknown = json(done.stdout);
   const rules: readonly unknown[] = Array.isArray(listed) ? listed : [];
   return new Set(
