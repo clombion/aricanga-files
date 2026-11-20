@@ -1,7 +1,8 @@
 name: rebuild-ci
 
-# CI for the greenfield rebuild stack. The POC has its own deploy.yml.
-# Solo dev: the pull request is the gate — no nightly schedule (ADR-0006).
+# CI for the rebuild. The POC has its own deploy.yml.
+# The gate is `pnpm run check`, the same command the pre-push hook runs (AGENTS.md), so CI and a
+# local push cannot disagree. Solo dev: the pull request is the gate, no nightly schedule (ADR-0006).
 on:
   push:
     branches:
@@ -9,32 +10,29 @@ on:
       - 'feat/**'
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
-  rebuild:
+  check:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - uses: pnpm/action-setup@v4
-        with:
-          version: 10
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version-file: .node-version
           cache: pnpm
 
       - name: Install
         run: pnpm install --frozen-lockfile
 
-      - name: Typecheck (tsc -b)
-        run: pnpm run typecheck
+      - name: Install the browsers the characterisation suite drives
+        run: pnpm exec playwright install --with-deps chromium firefox webkit
 
-      - name: Boundary lint
-        run: pnpm run lint:boundaries
-
-      - name: Unit + component tests
-        run: pnpm run test:rebuild
-
-      - name: Build sandbox
-        run: pnpm exec vite build experiences/sandbox
+      - name: Gate
+        run: pnpm run check

@@ -138,5 +138,6 @@
     "#checks/*": "./harness/checks/*",
     "#lint-rules/*": "./harness/lint-rules/*",
     "#scripts/*": "./harness/scripts/*"
-  }
+  },
+  "packageManager": "pnpm@10.28.0"
 }
