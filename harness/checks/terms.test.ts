@@ -39,7 +39,7 @@ interface Terms {
 
 function strings(table: unknown, what: string): ReadonlyMap<string, string> {
   return new Map(
-    Object.entries(object(table ?? {}, what)).map(([name, value]) => {
+    Object.entries(object(table ?? {}, what)).map(([name, value]: readonly [string, unknown]) => {
       if (typeof value !== 'string') {
         throw new TypeError(`${what}.${name} is not a string`);
       }
@@ -57,7 +57,9 @@ function strings(table: unknown, what: string): ReadonlyMap<string, string> {
 function termsOf(text: string): Terms {
   const data = object(parseToml(text), 'terms');
   const retired = strings(data['retired'], 'retired');
-  const blank = [...retired].filter(([, replacement]) => replacement.trim() === '').map(([term]) => term);
+  const blank = [...retired]
+    .filter(([, replacement]: readonly [string, string]) => replacement.trim() === '')
+    .map(([term]: readonly [string, string]) => term);
   if (blank.some(Boolean)) {
     throw new TypeError(`retired terms without a replacement: ${JSON.stringify(blank)}`);
   }
@@ -89,14 +91,13 @@ interface Use {
 }
 
 /**
- * Every use of current text that the terms file refuses.
+ * Every use of a retired term in current prose.
  *
  * @param {Terms} terms - The terms.
  * @param {readonly Prose[]} prose - The prose.
- * @param {readonly Span[]} spans - The spans.
- * @returns {Use[]} Every use of current text that the terms file refuses.
+ * @returns {Use[]} Each use, with the term's replacement.
  */
-function uses(terms: Terms, prose: readonly Prose[], spans: readonly Span[]): Use[] {
+function retiredUses(terms: Terms, prose: readonly Prose[]): Use[] {
   const found: Use[] = [];
   for (const [term, replacement] of terms.retired) {
     const pattern = new RegExp(String.raw`\b${escaped(term)}\b`, 'iu');
@@ -106,21 +107,46 @@ function uses(terms: Terms, prose: readonly Prose[], spans: readonly Span[]): Us
         .map((line) => ({ line: line.line, path: line.path, term, why: `use ${replacement}` })),
     );
   }
+  return found;
+}
+
+/**
+ * Every match of a refused pattern: in prose and code spans, and, for a pattern refused in code only, outside Markdown.
+ *
+ * @param {Terms} terms - The terms.
+ * @param {readonly Prose[]} prose - The prose.
+ * @param {readonly Span[]} spans - The code spans.
+ * @returns {Use[]} Each match, with why the pattern is refused.
+ */
+function refusedUses(terms: Terms, prose: readonly Prose[], spans: readonly Span[]): Use[] {
   const refusals = [
-    ...[...terms.refused].map(([pattern, why]) => [pattern, why, [...prose, ...spans]] as const),
+    ...[...terms.refused].map(([pattern, why]: readonly [string, string]) => [pattern, why, [...prose, ...spans]] as const),
     ...[...terms.refusedInCode].map(
-      ([pattern, why]) => [pattern, why, [...prose, ...spans].filter((line) => !MARKDOWN.ends(line.path))] as const,
+      ([pattern, why]: readonly [string, string]) => [pattern, why, [...prose, ...spans].filter((line) => !MARKDOWN.ends(line.path))] as const,
     ),
   ];
+  const found: Use[] = [];
   for (const [pattern, why, lines] of refusals) {
     const regex = new RegExp(pattern, 'gu');
-    found.push(
-      ...lines.flatMap((line) =>
-        [...line.text.matchAll(regex)].map(([term]) => ({ line: line.line, path: line.path, term, why })),
-      ),
-    );
+    for (const line of lines) {
+      for (const [term] of line.text.matchAll(regex)) {
+        found.push({ line: line.line, path: line.path, term, why });
+      }
+    }
   }
   return found;
+}
+
+/**
+ * Every use of current text that the terms file refuses.
+ *
+ * @param {Terms} terms - The terms.
+ * @param {readonly Prose[]} prose - The prose.
+ * @param {readonly Span[]} spans - The spans.
+ * @returns {Use[]} Every use of current text that the terms file refuses.
+ */
+function uses(terms: Terms, prose: readonly Prose[], spans: readonly Span[]): Use[] {
+  return [...retiredUses(terms, prose), ...refusedUses(terms, prose, spans)];
 }
 
 /**

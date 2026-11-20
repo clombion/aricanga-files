@@ -11,6 +11,7 @@ import type { Claim, Probe } from '#lib/claims.ts';
 import { Doc, currentText } from '#lib/docs.ts';
 import { Exemptions, StaleExemptionError, site } from '#lib/exemptions.ts';
 import { describe, expect, test } from 'vitest';
+import type { DeepReadonly } from './readonly.ts';
 import type { Prose } from '#lib/docs.ts';
 import { textOf } from '#lib/source-files.ts';
 import { typescriptFiles } from '#lib/scope.ts';
@@ -28,14 +29,24 @@ function foundClaims(lines: readonly Prose[]): string[] {
 }
 
 /**
+ * A pattern as `String` writes a regular expression: its source between slashes, then its flags.
+ *
+ * @param {Readonly<RegExp>} pattern - The pattern.
+ * @returns {string} The pattern's literal text.
+ */
+function patternText(pattern: Readonly<RegExp>): string {
+  return `/${pattern.source}/${pattern.flags}`;
+}
+
+/**
  * The claims as an exemption list: an entry whose clause is gone from its file is stale.
  *
  * @param {readonly Claim[]} claims - The claims.
  * @returns {Exemptions} The claims as an exemption list: an entry whose clause is gone from its file is stale.
  */
-function registry(claims: readonly Claim[]): Exemptions {
+function registry(claims: readonly DeepReadonly<Claim>[]): Exemptions {
   return new Exemptions(
-    Object.fromEntries(claims.map((claim) => [site(claim.path, claim.clause), `held by ${String(claim.probe.pattern)}`])),
+    Object.fromEntries(claims.map((claim: DeepReadonly<Claim>) => [site(claim.path, claim.clause), `held by ${patternText(claim.probe.pattern)}`])),
   );
 }
 
@@ -46,17 +57,17 @@ function registry(claims: readonly Claim[]): Exemptions {
  * @param {ReadonlyMap<string, string>} texts - The texts.
  * @returns {string[]} What breaks a probe: no match in its owner, or a match outside it.
  */
-function probeProblems(probe: Probe, texts: ReadonlyMap<string, string>): string[] {
+function probeProblems(probe: DeepReadonly<Probe>, texts: ReadonlyMap<string, string>): string[] {
   const matched = [...texts]
-    .filter(([path, text]) => probe.roots.some((root) => path.startsWith(root)) && probe.pattern.test(text))
-    .map(([path]) => path)
+    .filter(([path, text]: readonly [string, string]) => probe.roots.some((root) => path.startsWith(root)) && probe.pattern.test(text))
+    .map(([path]: readonly [string, string]) => path)
     .toSorted();
   const problems = matched.includes(probe.owner)
     ? []
-    : [`${String(probe.pattern)} does not match in its owner ${probe.owner}`];
+    : [`${patternText(probe.pattern)} does not match in its owner ${probe.owner}`];
   return [
     ...problems,
-    ...matched.filter((path) => path !== probe.owner).map((path) => `${String(probe.pattern)} matches outside its owner, in ${path}`),
+    ...matched.filter((path) => path !== probe.owner).map((path) => `${patternText(probe.pattern)} matches outside its owner, in ${path}`),
   ];
 }
 
@@ -76,7 +87,7 @@ describe('the repository', () => {
     expect(registry(CLAIMS).unexempted(found)).toStrictEqual([]);
   });
 
-  test.each(CLAIMS.map((claim) => [`${claim.path}: ${claim.clause}`, claim] as const))('the claim %s holds', (_label, claim) => {
+  test.each(CLAIMS.map((claim: DeepReadonly<Claim>) => [`${claim.path}: ${claim.clause}`, claim] as const))('the claim %s holds', (_label: string, claim: DeepReadonly<Claim>) => {
     expect.hasAssertions();
     expect(probeProblems(claim.probe, sources())).toStrictEqual([]);
   });
