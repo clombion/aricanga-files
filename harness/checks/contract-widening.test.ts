@@ -3,24 +3,19 @@
  *
  * The contracts are derived from the kernel's exported unions (harness/lib/contracts.ts). A
  * contract-typed value whose contextual type is `string` (a declaration, an argument, a return, a
- * property) is widened; `as string` asserts it away. A contract's word written as a bare string,
- * neither contextually typed by its union nor compared with a value of it, is respelled.
+ * property) is widened; `as string` asserts it away. In a module that reaches the contract's package,
+ * a contract's word written as a bare string, neither contextually typed by its union nor compared
+ * with a value of it (by `===`, `case`, or an expectation on it), is respelled; the module owning a
+ * contract may spell its words.
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 
 import { openScan, type Scan, scannedFiles, sourceOf } from '../lib/checker.ts';
 import { type Contract, contracts, type ContractSite, respellings, widenings } from '../lib/contracts.ts';
-import { Accepted, CountedExemptions, site } from '../lib/exemptions.ts';
+import { Accepted } from '../lib/exemptions.ts';
 
 export const HARNESS_ID = 'contract-widening';
-
-const DEBT = new CountedExemptions({
-  [site('packages/foundation/src/ink/ink-runtime.ts', "respelled ExternalCall['fn']")]: [
-    4,
-    "adopting: InkRuntime binds each ink external by a bare name; type bind's name as ExternalCall['fn']",
-  ],
-});
 
 /** The closed sets of ADR-0007 the derivation must see, or the check holds nothing. */
 const ALGEBRA = new Accepted(["Input['source']", 'EffectFamily', "Resume['kind']", "Lifecycle['kind']", 'KernelStatus']);
@@ -39,8 +34,8 @@ const PLANTS: readonly (readonly [string, ContractSite['form'], string])[] = [
 ];
 
 const RESPELLED: readonly (readonly [string, string])[] = [
-  ['packages/systems/__respell_0.ts', "export const w = 'on';\n"],
-  ['experiences/sandbox/__respell_1.ts', "export function g(s: string): boolean {\n  return s === 'off';\n}\n"],
+  ['packages/systems/__respell_0.ts', `${IMPORT}export const w = 'on';\n`],
+  ['packages/systems/__respell_1.ts', `${IMPORT}export function g(s: string): boolean {\n  return s === 'off';\n}\n`],
   ['packages/foundation/src/__respell_2.ts', "export function h(s: string): number {\n  switch (s) {\n    case 'ping':\n      return 1;\n  }\n  return 0;\n}\n"],
 ];
 
@@ -49,17 +44,21 @@ const NEAR_MISSES: readonly (readonly [string, string])[] = [
   ['packages/systems/__miss_compared.ts', `${IMPORT}${PICK}export const on = m === 'off';\nexport function s(): number {\n  switch (m) {\n    case 'on':\n      return 1;\n    default:\n      return 0;\n  }\n}\n`],
   ['packages/systems/__miss_template.ts', `${IMPORT}${PICK}export const label = \`mode \${m}\`;\n`],
   ['packages/systems/__miss_generic.ts', `${IMPORT}${PICK}function id<T extends string>(value: T): T {\n  return value;\n}\nexport const same = id(m);\n`],
-  ['harness/lib/__miss_uncovered.ts', "export const word = 'on';\n"],
+  ['packages/systems/__miss_unreached.ts', "export const word = 'on';\n"],
+  ['packages/systems/__miss_expectation.ts', `${IMPORT}${PICK}declare function expect(value: unknown): { toBe(expected: unknown): void; toEqual(expected: unknown): void };\nexpect(m).toBe('on');\nexpect({ x }).toEqual({ x: { tag: 'ping' } });\n`],
 ];
 
-const plants: Record<string, string> = {
-  [OWNER]: "export type Mode = 'on' | 'off';\nexport type Msg = { readonly tag: 'ping' } | { readonly tag: 'pong'; readonly n: number };\nexport const DEFAULT = 'on';\n",
-};
+const plants = new Map<string, string>([
+  [
+    OWNER,
+    "export type Mode = 'on' | 'off';\nexport type Msg = { readonly tag: 'ping' } | { readonly tag: 'pong'; readonly n: number };\nexport const DEFAULT = 'on';\n",
+  ],
+]);
 PLANTS.forEach(([body], index) => {
-  plants[`packages/systems/__widen_${index}.ts`] = `${IMPORT}${PICK}${body}`;
+  plants.set(`packages/systems/__widen_${index}.ts`, `${IMPORT}${PICK}${body}`);
 });
 for (const [path, text] of [...RESPELLED, ...NEAR_MISSES]) {
-  plants[path] = text;
+  plants.set(path, text);
 }
 
 let plantedScan: Scan;
@@ -67,7 +66,7 @@ let repoScan: Scan;
 let planted: readonly Contract[];
 
 beforeAll(() => {
-  plantedScan = openScan(Object.keys(plants), plants);
+  plantedScan = openScan([...plants.keys()], Object.fromEntries(plants));
   repoScan = openScan(scannedFiles());
   planted = contracts(plantedScan, [OWNER]);
 }, 120_000);
@@ -84,14 +83,14 @@ function lost(scan: Scan, known: readonly Contract[], path: string): ContractSit
 
 describe('the repository', () => {
   test('the derivation sees the algebra', () => {
-    const names = contracts(repoScan, scannedFiles()).map((contract) => contract.name);
-    expect([...ALGEBRA].filter((name) => !names.includes(name))).toEqual([]);
+    const names = new Set(contracts(repoScan, scannedFiles()).map((contract) => contract.name));
+    expect([...ALGEBRA].filter((name) => !names.has(name))).toEqual([]);
   });
 
   test('no contract is widened or respelled', () => {
     const known = contracts(repoScan, scannedFiles());
     const found = scannedFiles().flatMap((path) => lost(repoScan, known, path));
-    expect(DEBT.mismatches(found.map((entry) => site(entry.path, `${entry.form} ${entry.contract}`)))).toEqual([]);
+    expect(found).toEqual([]);
   });
 });
 

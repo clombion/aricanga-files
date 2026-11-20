@@ -11,18 +11,10 @@
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 
 import { openScan, type Scan, scannedFiles, sourceOf } from '../lib/checker.ts';
-import { Exemptions, site } from '../lib/exemptions.ts';
 import { keyOf, ownerUses, RULES, type Site, sites } from '../lib/owners.ts';
 import { tracked } from '../lib/source-files.ts';
 
 export const HARNESS_ID = 'owner-registry';
-
-const EXEMPT = Exemptions.grouped({
-  'adopting: the sandbox reports a failed boot through the console; it becomes a Present effect of the host shell (task #28)':
-    [site('experiences/sandbox/src/main.ts', 'standard-streams')],
-  'adopting: tools.isolatedEnv reads process.env; move the read into harness/lib/process.ts, the settings owner':
-    [site('harness/lib/tools.ts', 'settings')],
-});
 
 /** One plant per rule and call form: [rule, source]. */
 const FORMS: readonly (readonly [string, string])[] = [
@@ -69,17 +61,17 @@ const FORMS: readonly (readonly [string, string])[] = [
 ];
 
 /** One canonical use per rule, planted in every root the rule covers. */
-const CANONICAL: Readonly<Record<string, string>> = {
-  'process-start': "import { spawn } from 'node:child_process';\nspawn('x');\n",
-  clock: 'Date.now();\n',
-  random: 'Math.random();\n',
-  'standard-streams': "console.log('x');\n",
-  'json-parse': "JSON.parse('1');\n",
-  network: "void fetch('x');\n",
-  timers: 'setTimeout(() => undefined, 1);\n',
-  storage: "localStorage.getItem('a');\n",
-  settings: 'export const x = process.env.X;\n',
-};
+const CANONICAL: readonly (readonly [string, string])[] = [
+  ['process-start', "import { spawn } from 'node:child_process';\nspawn('x');\n"],
+  ['clock', 'Date.now();\n'],
+  ['random', 'Math.random();\n'],
+  ['standard-streams', "console.log('x');\n"],
+  ['json-parse', "JSON.parse('1');\n"],
+  ['network', "void fetch('x');\n"],
+  ['timers', 'setTimeout(() => undefined, 1);\n'],
+  ['storage', "localStorage.getItem('a');\n"],
+  ['settings', 'export const x = process.env.X;\n'],
+];
 
 const NEAR_MISSES: readonly (readonly [string, string])[] = [
   ['packages/foundation/src/__miss_type.ts', "import type { ChildProcess } from 'node:child_process';\nexport let child: ChildProcess | undefined;\nexport let store: Storage | undefined;\n"],
@@ -90,31 +82,33 @@ const NEAR_MISSES: readonly (readonly [string, string])[] = [
   ['utils/__miss_uncovered.ts', 'Math.random();\n'],
 ];
 
-const plants: Record<string, string> = {};
+const plants = new Map<string, string>();
 const expected: Site[] = [];
 FORMS.forEach(([rule, text], index) => {
   const path = `packages/foundation/src/__form_${index}.ts`;
-  plants[path] = text;
+  plants.set(path, text);
   expected.push({ path, rule });
 });
 for (const rule of RULES) {
-  for (const scope of rule.scopes) {
-    const path = `${scope.root}__root_${rule.name}.ts`;
-    plants[path] = CANONICAL[rule.name] ?? '';
-    expected.push({ path, rule: rule.name });
+  for (const [name, text] of CANONICAL) {
+    for (const scope of name === rule.name ? rule.scopes : []) {
+      const path = `${scope.root}__root_${rule.name}.ts`;
+      plants.set(path, text);
+      expected.push({ path, rule: rule.name });
+    }
   }
 }
-plants['packages/systems/chat/test/__in_a_test.test.ts'] = 'Math.random();\n';
+plants.set('packages/systems/chat/test/__in_a_test.test.ts', 'Math.random();\n');
 expected.push({ path: 'packages/systems/chat/test/__in_a_test.test.ts', rule: 'random' });
 for (const [path, text] of NEAR_MISSES) {
-  plants[path] = text;
+  plants.set(path, text);
 }
 
 let plantedScan: Scan;
 let repoScan: Scan;
 
 beforeAll(() => {
-  plantedScan = openScan(Object.keys(plants), plants);
+  plantedScan = openScan([...plants.keys()], Object.fromEntries(plants));
   repoScan = openScan(scannedFiles());
 }, 120_000);
 
@@ -129,7 +123,7 @@ function sitesIn(scan: Scan, paths: readonly string[]): Site[] {
 
 describe('the repository', () => {
   test('no guarded API is used outside its owner', () => {
-    expect(EXEMPT.unexemptedBy(sitesIn(repoScan, scannedFiles()), keyOf)).toEqual([]);
+    expect(sitesIn(repoScan, scannedFiles())).toEqual([]);
   });
 
   test.each(RULES.flatMap((rule) => rule.scopes.flatMap((scope) => (scope.owner === null ? [] : [[rule.name, scope.owner] as const]))))(
@@ -144,7 +138,8 @@ describe('the repository', () => {
 
 describe('the scan', () => {
   test('sees each planted call form and each planted root', () => {
-    const planted = Object.keys(plants).filter((path) => /__(form|root|in_a_test)/.test(path));
+    expect(CANONICAL.map(([name]) => name).toSorted()).toEqual(RULES.map((rule) => rule.name).toSorted());
+    const planted = [...plants.keys()].filter((path) => /__(form|root|in_a_test)/.test(path));
     const found = sitesIn(plantedScan, planted).map(keyOf).toSorted();
     expect(found).toEqual(expected.map(keyOf).toSorted());
   });

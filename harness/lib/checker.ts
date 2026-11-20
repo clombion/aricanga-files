@@ -15,6 +15,7 @@ import * as ast from 'typescript/unstable/ast';
 import type { Checker, Program, Symbol as TsSymbol } from 'typescript/unstable/sync';
 import { SymbolFlags } from 'typescript/unstable/sync';
 
+import { Prefixes } from './exemptions.ts';
 import { REPO_ROOT, relative } from './paths.ts';
 import { typescriptFiles } from './scope.ts';
 import { api, mount, nodes } from './ts-source.ts';
@@ -36,13 +37,18 @@ const OPTIONS = {
   allowImportingTsExtensions: true,
 } as const;
 
+/** Test infrastructure packages: they exist only to test, so every module of theirs is test support. */
+const TEST_PACKAGES = new Prefixes(['packages/characterisation/']);
+
 /**
- * A module that ships: not a Vitest test, a Playwright spec, or test support under a `test/`,
- * `tests/` or `testing/` directory. Every rule holds both kinds; the distinction only says who
- * counts as a reader of a production module's exports.
+ * A module that ships: not a Vitest test, a Playwright spec, test support under a `test/`, `tests/`
+ * or `testing/` directory, or a module of a test infrastructure package. Every rule holds both
+ * kinds; the distinction only says who counts as a reader of a production module's exports.
  */
 export function isProduction(path: string): boolean {
-  return !/\.(test|spec)\.tsx?$/.test(path) && !/(^|\/)(test|tests|testing)\//.test(path);
+  return (
+    !/\.(test|spec)\.tsx?$/.test(path) && !/(^|\/)(test|tests|testing)\//.test(path) && !TEST_PACKAGES.starts(path)
+  );
 }
 
 /** Every held TypeScript module but declaration files: what a repository scan covers. */

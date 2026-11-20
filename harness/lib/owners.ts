@@ -1,8 +1,8 @@
 /**
- * The owner registry: for each guarded API, the one module per root allowed to use it.
+ * The owner registry: for each guarded API, which module of each root may use it.
  *
  * A `Rule` names the qualified names of the declarations that make up an API and, for each root it
- * covers, that root's owner: the one module allowed to use it there, or null when no module may.
+ * covers, that root's owner (the module allowed to use it there), or null when no module may.
  * The scan asks TypeScript's checker what each name resolves to, so an aliased import, a destructured
  * binding, a `globalThis.` or `window.` chain and an element access all resolve to the declaration
  * they stand for. It matches uses, never imports or types: importing a type to annotate with it is
@@ -78,8 +78,12 @@ export const RULES: readonly Rule[] = [
   {
     name: 'json-parse',
     names: new Accepted(['JSON.parse']),
-    scopes: [...nobody(...KERNEL, 'experiences/sandbox/'), { root: 'harness/', owner: 'harness/lib/config.ts' }],
-    why: "one typed boundary narrows JSON's untyped values",
+    scopes: [
+      { root: 'packages/foundation/', owner: 'packages/foundation/src/host/codec.ts' },
+      ...nobody('packages/systems/', 'experiences/sandbox/'),
+      { root: 'harness/', owner: 'harness/lib/config.ts' },
+    ],
+    why: "one typed boundary narrows JSON's untyped values: the snapshot codec, the harness's config reader",
   },
   {
     name: 'network',
@@ -124,12 +128,8 @@ export const RULES: readonly Rule[] = [
     name: 'settings',
     names: new Accepted(['NodeJS.Process.env']),
     scopes: [
-      ...nobody(...KERNEL, 'experiences/sandbox/'),
+      ...nobody(...KERNEL, 'experiences/sandbox/', 'packages/characterisation/'),
       { root: 'harness/', owner: 'harness/lib/process.ts' },
-      {
-        root: 'packages/characterisation/',
-        owner: 'packages/characterisation/playwright.characterisation.config.ts',
-      },
     ],
     why: 'every setting is read once, in one module',
   },

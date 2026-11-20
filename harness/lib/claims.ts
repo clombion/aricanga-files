@@ -13,7 +13,7 @@
 import { ROOTS } from './scope.ts';
 
 /** A claim of a single owner, up to the end of its clause. */
-export const CLAIM =
+export const CLAIM: RegExp =
   /\b(?:the (?:one|only) (?:owner|module|place|reader|writer)|nowhere else|stated once)\b[^.;:]*/gi;
 
 /** A pattern that must match in `owner` and in no other held TypeScript file under `roots`. */
@@ -54,6 +54,25 @@ export const CLAIMS: readonly Claim[] = [
     path: 'harness/lib/paths.ts',
     clause: 'nowhere else in the harness',
     probe: probe(/\bimport\.meta\.url\b/, 'harness/lib/paths.ts', ['harness/lib/', 'harness/scripts/']),
+  },
+  {
+    path: 'harness/checks/repo-paths.test.ts',
+    clause: 'The one module allowed to compute where the repository is',
+    probe: probe(/\bimport\.meta\.url\b/, 'harness/lib/paths.ts', ['harness/lib/', 'harness/scripts/']),
+  },
+  {
+    path: 'packages/foundation/src/sim/system.ts',
+    clause: 'the one place a',
+    probe: probe(/typescript\/no-unsafe-type-assertion/, 'packages/foundation/src/sim/system.ts', [
+      'packages/foundation/',
+      'packages/systems/',
+      'experiences/sandbox/',
+    ]),
+  },
+  {
+    path: 'harness/lib/output.ts',
+    clause: "The one module of the harness's scripts that writes to the standard streams",
+    probe: probe(/\bprocess\.(?:stdout|stderr)\b/, 'harness/lib/output.ts', ['harness/lib/', 'harness/scripts/']),
   },
   {
     path: 'harness/lib/process.ts',

@@ -13,10 +13,10 @@ import { type Checker, type Type, TypeFlags } from 'typescript/unstable/sync';
 
 import { nameText, nodes, pathOf, type Scan, sourceOf, textOfNode } from './checker.ts';
 import { relative as relativeTo } from './paths.ts';
-import { Prefixes } from './exemptions.ts';
+import { Accepted, Prefixes } from './exemptions.ts';
 
 /** The roots whose exported unions are contracts: the kernel's packages. */
-export const CONTRACT_ROOTS = new Prefixes(['packages/foundation/src/', 'packages/systems/']);
+export const CONTRACT_ROOTS: Prefixes = new Prefixes(['packages/foundation/src/', 'packages/systems/']);
 
 /** A closed union: the module that owns it, its package, its name, and its words. */
 export interface Contract {
@@ -47,7 +47,7 @@ function isExported(declaration: ast.TypeAliasDeclaration): boolean {
 function stringLiterals(type: Type): readonly string[] | undefined {
   const members = type.isUnionType() ? (type.getTypes() ?? []) : [type];
   return members.every((member) => member.isStringLiteralType())
-    ? members.map((member) => String(member.isStringLiteralType() ? member.value : ''))
+    ? members.map((member) => (member.isStringLiteralType() ? member.value : ''))
     : undefined;
 }
 
@@ -79,7 +79,7 @@ export function contracts(scan: Scan, paths: readonly string[]): readonly Contra
         const discriminant = members.map((member) => {
           const own = checker.getPropertyOfType(member, property.name);
           const ownType = own === undefined ? undefined : checker.getTypeOfSymbol(own);
-          return ownType?.isStringLiteralType() === true ? String(ownType.value) : undefined;
+          return ownType?.isStringLiteralType() === true ? ownType.value : undefined;
         });
         if (discriminant.every((word) => word !== undefined)) {
           found.push({
@@ -166,7 +166,7 @@ function holds(checker: Checker, type: Type | undefined, word: string, depth = 0
   );
 }
 
-const COMPARISONS = new Set([
+const COMPARISONS = new Accepted([
   ast.SyntaxKind.EqualsEqualsEqualsToken,
   ast.SyntaxKind.ExclamationEqualsEqualsToken,
   ast.SyntaxKind.EqualsEqualsToken,

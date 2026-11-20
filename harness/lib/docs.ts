@@ -12,14 +12,13 @@
  * HTML other than the block markers, or a table cell holding an escaped pipe.
  */
 
-import ts from 'typescript';
-
 import { Prefixes } from './exemptions.ts';
 import { DOC_ROOTS, held } from './scope.ts';
 import { textOf, tracked } from './source-files.ts';
+import { comments, parse } from './ts-source.ts';
 
 /** The history files: they record what happened, so current-text checks leave them out. */
-export const HISTORY = new Prefixes(['docs/roadmap/tasks/', 'CHANGELOG.md']);
+export const HISTORY: Prefixes = new Prefixes(['docs/roadmap/tasks/', 'CHANGELOG.md']);
 
 /** The code files whose comments are current text, by suffix. */
 const SCRIPT = new Prefixes(['.ts', '.tsx', '.js', '.mjs', '.cjs']);
@@ -50,7 +49,7 @@ export interface Span {
 }
 
 /** A fenced code block: its info string and its lines. */
-export interface Fence {
+interface Fence {
   readonly path: string;
   readonly line: number;
   readonly info: string;
@@ -65,7 +64,7 @@ export interface Link {
 }
 
 /** A Markdown heading. */
-export interface Heading {
+interface Heading {
   readonly line: number;
   readonly level: number;
   readonly text: string;
@@ -267,23 +266,12 @@ export function markdownPaths(): readonly string[] {
 
 /** The (line, text) of every comment line of TypeScript or JavaScript source, read by the parser. */
 export function scriptComments(path: string, text: string): readonly (readonly [number, string])[] {
-  const kind = path.endsWith('.tsx') ? ts.ScriptKind.TSX : ts.ScriptKind.TS;
-  const source = ts.createSourceFile(path, text, ts.ScriptTarget.Latest, true, kind);
-  const ranges = new Map<number, ts.CommentRange>();
-  const visit = (node: ts.Node): void => {
-    for (const range of [
-      ...(ts.getLeadingCommentRanges(text, node.getFullStart()) ?? []),
-      ...(ts.getTrailingCommentRanges(text, node.end) ?? []),
-    ]) {
-      ranges.set(range.pos, range);
-    }
-    node.forEachChild(visit);
-  };
-  visit(source);
-  visit(source.endOfFileToken);
-  return [...ranges.values()]
-    .toSorted((a, b) => a.pos - b.pos)
-    .flatMap((range) => commentLines(text, range.pos, text.slice(range.pos, range.end)));
+  return comments(parse(path, text)).flatMap((comment) =>
+    comment.text
+      .split('\n')
+      .map((line, offset) => [comment.line + offset, cleanComment(line)] as const)
+      .filter(([, line]) => line !== ''),
+  );
 }
 
 function commentLines(text: string, pos: number, comment: string): readonly (readonly [number, string])[] {
