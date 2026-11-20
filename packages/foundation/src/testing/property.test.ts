@@ -20,7 +20,7 @@ test('the determinism property rejects a nondeterministic reducer (#2)', async (
     id: 'flaky',
     tags: ['note'],
     init: () => ({ n: 0 }),
-    reduce: (): ReduceResult<{ n: number }, Effect> => ({ state: { n: hidden++ }, effects: [] }),
+    reduce: (): ReduceResult<{ n: number }> => ({ state: { n: hidden++ }, effects: [] }),
     status: () => 'free',
     view: (state) => state,
   };

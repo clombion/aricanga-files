@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { Compiler } from 'inkjs/full';
 import { expect, test } from 'vitest';
 import { run } from './main';
+import { SkMessage } from './sk-message';
 
 // End-to-end smoke for the walking skeleton (task-007 AC #2, #3): ink compiles,
 // flows through the stub reduce, and renders as a Lit component in the DOM.
@@ -16,7 +17,8 @@ test('walking skeleton: ink → reduce → Lit render', async () => {
 
   const el = host.querySelector('sk-message');
   expect(el).toBeTruthy(); // AC #3 component rendered
-  await (el as unknown as { updateComplete: Promise<boolean> }).updateComplete;
+  expect(el).toBeInstanceOf(SkMessage);
+  if (el instanceof SkMessage) await el.updateComplete;
   expect(el?.shadowRoot?.textContent).toContain('walking skeleton'); // text flowed through
   expect(el?.shadowRoot?.textContent).toContain('Skeleton:'); // AC #2 speaker tag parsed by reduce
 });

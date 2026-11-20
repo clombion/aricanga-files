@@ -218,14 +218,17 @@ describe('the hook check', () => {
   });
 });
 
+/** A planted manifest pinning one dependency at `version`. */
+function manifest(version: string): string {
+  return JSON.stringify({ name: 'plant', version: '0.0.0', private: true, devDependencies: { 'smol-toml': version } });
+}
+
 describe('the lock check', () => {
   test('refuses a lockfile older than package.json', () => {
     const lockCheck = repoTasks().get(LOCK_CHECK)?.commands[0]?.split(' ') ?? [];
     expect(lockCheck).toEqual(['pnpm', 'install', '--frozen-lockfile', '--lockfile-only']);
     const project = new Project({ linkModules: false });
     try {
-      const manifest = (version: string): string =>
-        JSON.stringify({ name: 'plant', version: '0.0.0', private: true, devDependencies: { 'smol-toml': version } });
       project.write('package.json', manifest('1.9.1'));
       expect(project.run('pnpm', 'install', '--lockfile-only', '--ignore-scripts').status).toBe(0);
       expect(project.run(...lockCheck).status).toBe(0);

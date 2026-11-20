@@ -34,23 +34,25 @@ describe('the pushed-subjects rule', () => {
   });
 });
 
-describe('the pre-push script', () => {
-  function pushOf(subjects: readonly string[]): number {
-    const project = new Project({ linkModules: false });
-    try {
-      const git = (...args: string[]) => project.run('git', '-c', 'user.name=plant', '-c', 'user.email=plant@example.invalid', ...args);
-      git('init', '-q', '-b', 'main');
-      git('commit', '-q', '--allow-empty', '-m', 'chore: base');
-      const base = git('rev-parse', 'HEAD').stdout.trim();
-      for (const subject of subjects) {
-        git('commit', '-q', '--allow-empty', '-m', subject);
-      }
-      const head = git('rev-parse', 'HEAD').stdout.trim();
-      return project.runWithInput(`refs/heads/main ${head} refs/heads/main ${base}\n`, 'node', fromRoot('harness/scripts/check-pushed.ts')).status;
-    } finally {
-      project.remove();
+/** The pre-push script's exit status for a push of `subjects` onto a base commit. */
+function pushOf(subjects: readonly string[]): number {
+  const project = new Project({ linkModules: false });
+  try {
+    const git = (...args: string[]) => project.run('git', '-c', 'user.name=plant', '-c', 'user.email=plant@example.invalid', ...args);
+    git('init', '-q', '-b', 'main');
+    git('commit', '-q', '--allow-empty', '-m', 'chore: base');
+    const base = git('rev-parse', 'HEAD').stdout.trim();
+    for (const subject of subjects) {
+      git('commit', '-q', '--allow-empty', '-m', subject);
     }
+    const head = git('rev-parse', 'HEAD').stdout.trim();
+    return project.runWithInput(`refs/heads/main ${head} refs/heads/main ${base}\n`, 'node', fromRoot('harness/scripts/check-pushed.ts')).status;
+  } finally {
+    project.remove();
   }
+}
+
+describe('the pre-push script', () => {
 
   test('fails on a fold commit in the pushed range', () => {
     expect(pushOf(['feat: one', 'fixup! feat: one'])).toBe(1);

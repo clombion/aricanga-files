@@ -19,17 +19,20 @@ test('an exhaustive switch over a closed union compiles and runs', () => {
   expect(describeLifecycle({ kind: 'reset' })).toBe('reset');
 });
 
-test('a non-exhaustive switch fails to compile (proven by @ts-expect-error)', () => {
-  function broken(l: Lifecycle): string {
-    switch (l.kind) {
-      case 'init':
-        return `init:${l.seed}`;
-      // 'reset' deliberately unhandled — `l` is still inhabited in `default`.
-      default:
-        // @ts-expect-error - `l` is `{kind:'reset'}` here, not `never`
-        return assertNever(l);
-    }
+// Planted: a switch missing a case, so `@ts-expect-error` proves the compiler refuses it.
+function broken(l: Lifecycle): string {
+  // oxlint-disable-next-line typescript/switch-exhaustiveness-check -- the planted missing case this test proves the compiler refuses
+  switch (l.kind) {
+    case 'init':
+      return `init:${l.seed}`;
+    // 'reset' deliberately unhandled — `l` is still inhabited in `default`.
+    default:
+      // @ts-expect-error -- `l` is `{kind:'reset'}` here, not `never`
+      return assertNever(l);
   }
+}
+
+test('a non-exhaustive switch fails to compile (proven by @ts-expect-error)', () => {
   // The typed `init` path still works; the missed case is a compile-time error
   // (the @ts-expect-error above turns into a failure if exhaustiveness is added).
   expect(broken({ kind: 'init', seed: 2 })).toBe('init:2');

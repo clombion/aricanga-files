@@ -31,7 +31,8 @@
     "templates/**",
     "docs/**",
     "**/dist/**",
-    "**/vendor/**"
+    "**/vendor/**",
+    "vite.config.js"
   ],
   "rules": {
     "solid/jsx-no-duplicate-props": "error",
@@ -99,7 +100,13 @@
     "eslint/eqeqeq": "error",
     "import/no-cycle": "error",
     "vitest/no-focused-tests": "error",
-    "vitest/no-disabled-tests": "error"
+    "vitest/no-disabled-tests": "error",
+    "vitest/valid-expect": [
+      "error",
+      {
+        "maxArgs": 2
+      }
+    ]
   },
   "overrides": [
     {
@@ -114,6 +121,8 @@
               {
                 "group": [
                   "@narratives/*",
+                  "!@narratives/foundation",
+                  "!@narratives/foundation/*",
                   "sandbox",
                   "**/systems/**",
                   "**/experiences/**"

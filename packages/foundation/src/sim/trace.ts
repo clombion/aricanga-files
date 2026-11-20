@@ -1,5 +1,5 @@
 import type { Effect } from './effect';
-import type { Command, Input } from './input';
+import type { Input } from './input';
 import type { SystemId } from './snapshot';
 
 // One reduction, as the kernel observes it — the unit of the `Input→Effect`+`state`
@@ -7,7 +7,7 @@ import type { SystemId } from './snapshot';
 // reduce boundary. Treated as immutable; an observer that retains it should copy.
 export interface ReduceRecord {
   readonly systemId: SystemId;
-  readonly input: Input<unknown, Command>;
+  readonly input: Input<unknown>;
   readonly effects: readonly Effect[];
   readonly state: unknown;
 }

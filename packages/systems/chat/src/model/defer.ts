@@ -1,4 +1,5 @@
-import { type Effect, type InkStep, fx } from '@narratives/foundation';
+import type { Effect, InkStep } from '@narratives/foundation';
+import { showNotification } from '../effects';
 import type { ChatMessageVM } from '../reduce';
 import type { ChatState } from '../state';
 import { appendMessage } from './route';
@@ -62,7 +63,7 @@ export function placeMessage(state: ChatState, message: ChatMessageVM, immediate
         : { ...next.lastReadMessageId, [chatId]: state.messageHistory[chatId]?.at(-1)?.id ?? null };
     return {
       state: { ...next, notifiedChatIds: [...next.notifiedChatIds, chatId], lastReadMessageId },
-      effects: [fx.present('chat/showNotification', { chatId, preview: message.text })],
+      effects: [showNotification({ chatId, preview: message.text })],
     };
   }
   return { state: next, effects: [] };

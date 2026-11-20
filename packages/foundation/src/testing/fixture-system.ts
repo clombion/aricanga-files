@@ -1,5 +1,6 @@
 import type { ReduceResult } from '../sim/context';
 import { type Effect, fx } from '../sim/effect';
+import { assertNever } from '../sim/exhaustive';
 import type { Command } from '../sim/input';
 import { type System, erase } from '../sim/system';
 import type { AnySystem } from '../sim/system';
@@ -29,7 +30,7 @@ export const fixtureSystem: System<FixtureState, FixtureCommand, Effect, Fixture
   id: 'fixture',
   tags: [FIXTURE_TAG],
   init: () => ({ lines: [], busy: false, token: 1, fetched: null, saved: false }),
-  reduce(state, input): ReduceResult<FixtureState, Effect> {
+  reduce(state, input): ReduceResult<FixtureState> {
     switch (input.source) {
       case 'story': {
         const lines = [...state.lines, input.step.text];
@@ -65,8 +66,11 @@ export const fixtureSystem: System<FixtureState, FixtureCommand, Effect, Fixture
               : { state, effects: [] };
           case 'data-arrived':
             return { state: { ...state, fetched: input.resume.value }, effects: [] };
-          default:
+          case 'story-loaded':
+          case 'restored':
             return { state, effects: [] };
+          default:
+            return assertNever(input.resume);
         }
       case 'lifecycle':
         return { state, effects: [] };

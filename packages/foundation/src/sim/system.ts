@@ -39,9 +39,9 @@ export interface AnySystem {
   init(seed: number): unknown;
   reduce(
     state: unknown,
-    input: Input<unknown, Command>,
+    input: Input<unknown>,
     ctx: ReduceContext,
-  ): ReduceResult<unknown, Effect>;
+  ): ReduceResult<unknown>;
   status(state: unknown): KernelStatus;
   view(state: unknown, render: RenderContext): unknown;
 }
@@ -50,5 +50,41 @@ export interface AnySystem {
 export function erase<TState, TCommand extends Command, TEffect extends Effect, TViewModel>(
   system: System<TState, TCommand, TEffect, TViewModel>,
 ): AnySystem {
-  return system as unknown as AnySystem;
+  return system;
+}
+
+/** A value the runtime registry holds for one system: its state or its view, with the owner's id. */
+export interface Owned {
+  readonly systemId: SystemId;
+  readonly value: unknown;
+}
+
+/**
+ * Read back a value the erased registry holds, typed by the system that produced it: the one place a
+ * system's state or view regains its type. The registry stores each system's values under its id and
+ * hands them only to that system, so a matching id is the proof; a mismatch throws.
+ */
+function reclaim(system: { readonly id: SystemId }, owned: Owned): unknown {
+  if (owned.systemId !== system.id) {
+    throw new Error(`a value of system "${owned.systemId}" was read back as system "${system.id}"`);
+  }
+  return owned.value;
+}
+
+/** A system's state, read back from the registry or a trace record. */
+export function stateOf<TState, TCommand extends Command, TEffect extends Effect, TViewModel>(
+  system: System<TState, TCommand, TEffect, TViewModel>,
+  owned: Owned,
+): TState {
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- reclaim proved the ids match, so the state is this system's own
+  return reclaim(system, owned) as TState;
+}
+
+/** A system's view-model, read back from the registry. */
+export function viewOf<TState, TCommand extends Command, TEffect extends Effect, TViewModel>(
+  system: System<TState, TCommand, TEffect, TViewModel>,
+  owned: Owned,
+): TViewModel {
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- reclaim proved the ids match, so the view is this system's own
+  return reclaim(system, owned) as TViewModel;
 }
