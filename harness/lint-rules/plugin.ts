@@ -4,45 +4,15 @@
  * (`harness/checks/project-lint-rules.test.ts`).
  */
 
-import type { Rule } from './ast.ts';
-import { autofocus } from './rules/autofocus.ts';
-import { controlled } from './rules/controlled.ts';
-import { env } from './rules/env.ts';
-import { flags } from './rules/flags.ts';
-import { json } from './rules/json.ts';
-import { labels } from './rules/labels.ts';
-import { legacy } from './rules/legacy.ts';
-import { mechanics } from './rules/mechanics.ts';
-import { mirrors } from './rules/mirrors.ts';
-import { promises } from './rules/promises.ts';
-import { statics } from './rules/statics.ts';
-import { storeOwner } from './rules/store-owner.ts';
-import { styleProp } from './rules/style-prop.ts';
-import { syncParts } from './rules/sync-parts.ts';
-import { viewImports } from './rules/view-imports.ts';
-import { vmProp } from './rules/vm-prop.ts';
+import { JSX_RULES } from '#lint-rules/rules/jsx-rules.ts';
+import { MODULE_RULES } from '#lint-rules/rules/module-rules.ts';
+import type { Rule } from '#lint-rules/ast.ts';
 
 /** The plugin's name: its rules are `aricanga/<rule>` in the config. */
-export const PLUGIN_NAME = 'aricanga';
+const PLUGIN_NAME = 'aricanga';
 
-export const RULES: Readonly<Record<string, Rule>> = {
-  autofocus,
-  controlled,
-  env,
-  flags,
-  json,
-  labels,
-  legacy,
-  mechanics,
-  mirrors,
-  promises,
-  statics,
-  'store-owner': storeOwner,
-  'style-prop': styleProp,
-  'sync-parts': syncParts,
-  'view-imports': viewImports,
-  'vm-prop': vmProp,
-};
+/** Every project rule, by the name the config turns it on under. */
+const RULES: Readonly<Record<string, Rule>> = { ...JSX_RULES, ...MODULE_RULES };
 
 /** The plugin oxlint loads: its name and its rules. */
 interface Plugin {
@@ -52,4 +22,5 @@ interface Plugin {
 
 const plugin: Plugin = { meta: { name: PLUGIN_NAME }, rules: RULES };
 
+export { PLUGIN_NAME, RULES };
 export default plugin;

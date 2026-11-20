@@ -1,4 +1,4 @@
 // path: packages/foundation/src/mechanics-fire.ts
 import { createSignal } from 'solid-js';
 
-export const counter = (): ReturnType<typeof createSignal<number>> => createSignal(0);
+export const counter = (): ReturnType<typeof createSignal<string>> => createSignal('');

@@ -7,7 +7,7 @@ import type { PlaywrightTestConfig } from '@playwright/test';
 const PORT = 8100;
 
 const config: PlaywrightTestConfig = defineConfig({
-  expect: { timeout: 5_000 },
+  expect: { timeout: 5000 },
   forbidOnly: true,
   fullyParallel: true,
   outputDir: '.output/results',
@@ -18,7 +18,7 @@ const config: PlaywrightTestConfig = defineConfig({
     { name: 'mobile-chrome', use: { ...devices['Pixel 7'] } },
     { name: 'mobile-safari', use: { ...devices['iPhone 14'] } },
   ],
-  reporter: [['list'], ['html', { outputFolder: '.output/report', open: 'never' }]],
+  reporter: [['list'], ['html', { open: 'never', outputFolder: '.output/report' }]],
   retries: 0,
   testDir: './tests',
   testMatch: '**/*.spec.ts',

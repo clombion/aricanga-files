@@ -1,7 +1,8 @@
 // path: packages/systems/chat/src/view/mirrors-fire.tsx
 import { createEffect, createSignal } from 'solid-js';
+import type { JSX } from 'solid-js';
 
-export function Title(props: { vm: { title: string } }) {
+export function Title(props: { readonly vm: { readonly title: string } }): JSX.Element {
   const [shown, setShown] = createSignal('');
   createEffect(
     () => props.vm.title,

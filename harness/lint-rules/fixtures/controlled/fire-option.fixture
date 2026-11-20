@@ -1,5 +1,7 @@
 // path: packages/systems/chat/src/view/controlled-option-fire.tsx
-export function Stuck(props: { vm: { choice: string } }) {
+import type { JSX } from 'solid-js';
+
+export function Stuck(props: { readonly vm: { readonly choice: string } }): JSX.Element {
   return (
     <select>
       <option value="b" selected={props.vm.choice === 'b'}>

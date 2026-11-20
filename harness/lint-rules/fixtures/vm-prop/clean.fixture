@@ -1,12 +1,18 @@
 // path: packages/systems/chat/src/view/vm-prop-clean.tsx
-export function Bubble(props: { vm: { text: string } }) {
+import type { JSX } from 'solid-js';
+
+const MINUTES_PER_HOUR = 60;
+
+function Bubble(props: { readonly vm: { readonly text: string } }): JSX.Element {
   return <p>{props.vm.text}</p>;
 }
 
-export const Divider = () => <hr />;
+const Divider = (): JSX.Element => <hr />;
 
 function formatTime(minutes: number): string {
-  return `${Math.floor(minutes / 60)}:${minutes % 60}`;
+  return `${Math.floor(minutes / MINUTES_PER_HOUR)}:${minutes % MINUTES_PER_HOUR}`;
 }
 
-export const Stamp = (props: { vm: { minutes: number } }) => <time>{formatTime(props.vm.minutes)}</time>;
+const Stamp = (props: { readonly vm: { readonly minutes: number } }): JSX.Element => <time>{formatTime(props.vm.minutes)}</time>;
+
+export { Bubble, Divider, Stamp };

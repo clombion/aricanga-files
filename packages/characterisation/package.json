@@ -4,6 +4,9 @@
   "private": true,
   "type": "module",
   "description": "Step 1 of Phase 3: real-browser characterisation of Solid 2.0 runtime behaviour against the pinned versions. Each [verify]/[known] claim from the Solid-2.0 view-layer brief is a test here, run in Chromium, Firefox and WebKit.",
+  "imports": {
+    "#src/*": "./src/*.ts"
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",

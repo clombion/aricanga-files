@@ -1,7 +1,10 @@
 /** No `this` in a static member: it names the class, which a subclass or a detached call changes. */
 
-import { child, flag, problemMeta } from '../ast.ts';
-import type { Node, Rule } from '../ast.ts';
+import type { Node, Rule } from '#lint-rules/ast.ts';
+import { child, flag, problemMeta } from '#lint-rules/ast.ts';
+
+/** The index `at` reads the innermost `this` context from. */
+const INNERMOST = -1;
 
 export const statics: Rule = {
   create(context) {
@@ -15,16 +18,16 @@ export const statics: Rule = {
       stack.push(staticFunctions.has(node));
     };
     return {
+      FunctionDeclaration: enterFunction,
+      'FunctionDeclaration:exit': leave,
+      FunctionExpression: enterFunction,
+      'FunctionExpression:exit': leave,
       MethodDefinition(node) {
         const value = child(node, 'value');
         if (flag(node, 'static') && value !== undefined) {
           staticFunctions.add(value);
         }
       },
-      FunctionExpression: enterFunction,
-      'FunctionExpression:exit': leave,
-      FunctionDeclaration: enterFunction,
-      'FunctionDeclaration:exit': leave,
       PropertyDefinition(node) {
         stack.push(flag(node, 'static'));
       },
@@ -34,7 +37,7 @@ export const statics: Rule = {
       },
       'StaticBlock:exit': leave,
       ThisExpression(node) {
-        if (stack.at(-1) === true) {
+        if (stack.at(INNERMOST) === true) {
           context.report({ message: 'no this in a static member: name the class', node });
         }
       },

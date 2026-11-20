@@ -1,39 +1,73 @@
 import type { InkStep, ReduceContext } from '@narratives/foundation';
-import { reduceStep } from '../reduce';
-import type { ChatMessageVM } from '../reduce';
-import type { ChatState } from '../state';
+import type { ChatMessageVM } from '#src/reduce';
+import type { ChatState } from '#src/state';
+import { reduceStep } from '#src/reduce';
 
 const DEFAULT_CHAT = 'main';
 
-/** The conversation a `# chat:` tag switches to, or null if the step has none. */
-export function readChatSwitch(step: InkStep): string | null {
-  return step.tags.find((t) => t.key === 'chat')?.value ?? null;
+/** The id source a message is stamped from: the reduce context's allocator. */
+interface IdSource {
+  readonly nextId: ReduceContext['nextId'];
 }
 
-// Resolve a message's owning chat: an explicit `# targetChat` overrides the
-// conversation context (`activeChat`), which falls back to the default chat. A
-// pure function of the step + the current context — the routing decision the
-// `routingOwnership` invariant checks.
-export function resolveChatId(step: InkStep, activeChat: string | null): string {
-  const target = step.tags.find((t) => t.key === 'targetChat')?.value;
+/** Where a message is placed: its owning chat, the id source, and the clock when it arrived. */
+interface Placement {
+  readonly chatId: string;
+  readonly ids: IdSource;
+  readonly time: number | undefined;
+}
+
+/**
+ * The conversation a `# chat:` tag switches to.
+ *
+ * @param {InkStep} step - The ink step.
+ * @returns {string | undefined} The tag's chat, or undefined if the step has none.
+ */
+function readChatSwitch(step: InkStep): string | undefined {
+  return step.tags.find((tag) => tag.key === 'chat')?.value;
+}
+
+/**
+ * Resolve a message's owning chat: an explicit `# targetChat` overrides the conversation context
+ * (`activeChat`), which falls back to the default chat. A pure function of the step and the
+ * current context: the routing decision the `routingOwnership` invariant checks.
+ *
+ * @param {InkStep} step - The ink step a message comes from.
+ * @param {string | undefined} activeChat - The conversation the story is in, if any.
+ * @returns {string} The chat that owns the message.
+ */
+function resolveChatId(step: InkStep, activeChat: string | undefined): string {
+  const target = step.tags.find((tag) => tag.key === 'targetChat')?.value;
   return target ?? activeChat ?? DEFAULT_CHAT;
 }
 
-/** Build a message view-model, stamping identity (id + owning chatId) and time. */
-export function buildMessage(
-  step: InkStep,
-  chatId: string,
-  ctx: ReduceContext,
-  time: number | null,
-): ChatMessageVM {
-  return { chatId, id: ctx.nextId(), time, ...reduceStep(step) };
+/**
+ * Build a message view-model, stamping identity (id and owning chatId) and time.
+ *
+ * @param {InkStep} step - The ink step a message comes from.
+ * @param {Placement} placement - Its owning chat, the id source, and the clock.
+ * @returns {ChatMessageVM} The message, timed when the clock is anchored.
+ */
+function buildMessage(step: InkStep, placement: Placement): ChatMessageVM {
+  const { chatId, ids, time } = placement;
+  const fields = { chatId, id: ids.nextId(), ...reduceStep(step) };
+  return time === undefined ? fields : { ...fields, time };
 }
 
-// Append a message to its owning chat's history (immutably).
-export function appendMessage(state: ChatState, message: ChatMessageVM): ChatState {
+/**
+ * Append a message to its owning chat's history, immutably.
+ *
+ * @param {ChatState} state - The chat slice.
+ * @param {ChatMessageVM} message - The message to append.
+ * @returns {ChatState} The slice with the message at the end of its chat's history.
+ */
+function appendMessage(state: ChatState, message: ChatMessageVM): ChatState {
   const prev = state.messageHistory[message.chatId] ?? [];
   return {
     ...state,
     messageHistory: { ...state.messageHistory, [message.chatId]: [...prev, message] },
   };
 }
+
+export { appendMessage, buildMessage, readChatSwitch, resolveChatId };
+export type { IdSource };

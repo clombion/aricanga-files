@@ -1,12 +1,12 @@
 /**
  * The characterisation result bus: fixtures write to it and the Playwright specs read it back.
  * Results land in three places, so a spec asserts whichever is most robust for the behaviour:
- *   1. `window.chxResults`: structured records, read through `page.evaluate`;
+ *   1. `globalThis.chxResults`: structured records, read through `page.evaluate`;
  *   2. a `<pre id="results">`: a JSON mirror in the DOM;
  *   3. the console: Solid's own `[CODE]` diagnostics, also captured by Playwright.
  */
 
-export interface ChxRecord {
+interface ChxRecord {
   readonly id: string;
   /** Whether the behaviour matched the expectation the fixture encodes. */
   readonly ok: boolean;
@@ -18,7 +18,7 @@ export interface ChxRecord {
   readonly note?: string;
 }
 
-export interface ChxState {
+interface ChxState {
   readonly records: ChxRecord[];
   /** Diagnostic `[CODE]` strings seen by the in-page console hook. */
   readonly diagnostics: string[];
@@ -26,59 +26,79 @@ export interface ChxState {
 }
 
 declare global {
-  interface Window {
-    chxResults?: ChxState;
-  }
+  var chxResults: ChxState | undefined;
 }
 
-const DIAGNOSTIC = /\[([A-Z0-9_]+)\]/g;
+const DIAGNOSTIC = /\[(?<code>[A-Z0-9_]+)\]/gu;
 
-/** The `[CODE]` diagnostic codes in a console line: upper case with an underscore. */
-export function diagnosticCodes(text: string): string[] {
-  return [...text.matchAll(DIAGNOSTIC)]
-    .map((match) => match[1] ?? '')
-    .filter((code) => code.includes('_') && code === code.toUpperCase());
+/** The indentation of the DOM mirror's JSON. */
+const MIRROR_INDENT = 2;
+
+/**
+ * The `[CODE]` diagnostic codes in a console line: upper case with an underscore.
+ * @param {string} text A console line.
+ * @returns {string[]} The codes it holds, in order.
+ */
+function diagnosticCodes(text: string): string[] {
+  const codes: string[] = [];
+  for (const match of text.matchAll(DIAGNOSTIC)) {
+    const code = match.groups?.['code'] ?? '';
+    if (code.includes('_') && code === code.toUpperCase()) {
+      codes.push(code);
+    }
+  }
+  return codes;
 }
 
 // Solid's dev build prints `[CODE] message`. The codes are captured in the page as well as by
 // Playwright's console listener, so a fixture can assert on them synchronously.
-function hookConsole(state: ChxState): void {
+function hookConsole(seen: (codes: readonly string[]) => void): void {
   for (const level of ['error', 'warn', 'log'] as const) {
     const original = console[level].bind(console);
-    console[level] = (...args: unknown[]) => {
-      state.diagnostics.push(...diagnosticCodes(args.map(String).join(' ')));
+    console[level] = (...args: readonly unknown[]): void => {
+      seen(diagnosticCodes(args.map(String).join(' ')));
       original(...args);
     };
   }
 }
 
 function bus(): ChxState {
-  if (window.chxResults === undefined) {
+  if (globalThis.chxResults === undefined) {
     const state: ChxState = { diagnostics: [], done: false, records: [] };
-    window.chxResults = state;
-    hookConsole(state);
+    globalThis.chxResults = state;
+    hookConsole((codes) => {
+      state.diagnostics.push(...codes);
+    });
     return state;
   }
-  return window.chxResults;
+  return globalThis.chxResults;
 }
 
 function paint(): void {
   const state = bus();
-  let pre = document.querySelector('#results');
-  if (pre === null) {
-    pre = document.createElement('pre');
+  const existing = document.querySelector('#results');
+  const pre = existing ?? document.createElement('pre');
+  if (existing === null) {
     pre.id = 'results';
     document.body.append(pre);
   }
-  pre.textContent = JSON.stringify(state, null, 2);
+  pre.textContent = JSON.stringify(state, undefined, MIRROR_INDENT);
 }
 
-export function record(entry: ChxRecord): void {
+/**
+ * Record one observation on the bus and mirror it into the DOM.
+ * @param {ChxRecord} entry The observation.
+ */
+function record(entry: ChxRecord): void {
   bus().records.push(entry);
   paint();
 }
 
-export function markDone(): void {
+/** Mark the fixture finished: the specs wait for this. */
+function markDone(): void {
   bus().done = true;
   paint();
 }
+
+export { diagnosticCodes, markDone, record };
+export type { ChxRecord, ChxState };

@@ -1,20 +1,16 @@
-// @narratives/foundation/testing — the kernel test harness. Drives any
-// system over an ink fixture through the real runtime, captures the reduce trace
-// via the runtime's observer port, and serializes a canonical golden. Imports no
-// concrete system; reusable by chat and cards tests.
+/*
+ * `@narratives/foundation/testing` — the kernel test harness. Drives any
+ * system over an ink fixture through the real runtime, captures the reduce trace
+ * via the runtime's observer port, and serializes a canonical golden. Imports no
+ * concrete system; reusable by chat and cards tests.
+ */
 
-export { runFixture, compileInk } from './harness';
-export type { FixtureOptions, FixtureInput, FixtureRun } from './harness';
-export { canonical } from './serialize';
-export { tagArb, inkStepArb, storyInputArb, storyStreamArb } from './generators';
+export { FIXTURE_TAG, fixtureSystem, fixtureSystemErased, gatedSystem } from './fixture-system';
+export type { FixtureCommand, FixtureState } from './fixture-system';
+export { inkStepArb, storyInputArb, storyStreamArb, tagArb } from './generators';
 export type { StepGenOptions } from './generators';
-export { runStream, checkDeterministic, checkInvariant } from './property';
-export type { PropertyReport } from './property';
-export type { Violation, Predicate, StreamOptions } from './property';
-export {
-  fixtureSystem,
-  fixtureSystemErased,
-  FIXTURE_TAG,
-  gatedSystem,
-} from './fixture-system';
-export type { FixtureState, FixtureCommand } from './fixture-system';
+export { compileInk, runFixture } from './harness';
+export type { FixtureInput, FixtureOptions, FixtureRun } from './harness';
+export { checkDeterministic, checkInvariant, runStream } from './property';
+export type { Predicate, PropertyReport, StreamOptions, Violation } from './property';
+export { canonical } from './serialize';

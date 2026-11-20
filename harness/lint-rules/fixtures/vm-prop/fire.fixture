@@ -1,4 +1,6 @@
 // path: packages/systems/chat/src/view/vm-prop-fire.tsx
-export function Bubble(props: { vm: { text: string }; tone: string }) {
+import type { JSX } from 'solid-js';
+
+export function Bubble(props: { readonly vm: { readonly text: string }; readonly tone: string }): JSX.Element {
   return <p class={props.tone}>{props.vm.text}</p>;
 }

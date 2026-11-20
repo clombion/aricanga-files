@@ -4,37 +4,43 @@
  * rules read nodes through these guards instead of casts.
  */
 
-import { relative, sep } from 'node:path';
+import path from 'node:path';
 
 /** An ESTree node as oxlint hands it to a visitor. */
-export interface Node {
+interface Node {
   readonly type: string;
   readonly [key: string]: unknown;
 }
 
+/** What a rule reports: a message on a node. */
 interface Report {
   readonly message: string;
   readonly node: Node;
 }
 
 /** The parts of oxlint's rule context the project rules read. */
-export interface Context {
+interface Context {
   readonly filename: string;
   readonly cwd: string;
   readonly options: readonly unknown[];
-  report(this: void, report: Report): void;
+  readonly report: (report: Report) => void;
 }
 
-export type Visitor = Record<string, (node: Node) => void>;
+/** A rule's visitor: a handler per node type (or `<type>:exit`). */
+type Visitor = Readonly<Record<string, (node: Node) => void>>;
 
-export interface Rule {
+/** A project lint rule as oxlint loads it. */
+interface Rule {
   readonly meta: {
     readonly type: 'problem';
     readonly docs: { readonly description: string };
     readonly schema: readonly unknown[];
   };
-  create(context: Context): Visitor;
+  readonly create: (context: Context) => Visitor;
 }
+
+/** A test of a file path, compiled from a glob. */
+type FileTest = (file: string) => boolean;
 
 /** The options schema every path-scoped rule accepts: globs of the files it does not hold. */
 const IGNORE_SCHEMA: readonly unknown[] = [
@@ -46,7 +52,7 @@ const IGNORE_SCHEMA: readonly unknown[] = [
 ];
 
 /** The options schema of a rule with owners: globs of the files allowed what the rule refuses. */
-export const OWNERS_SCHEMA: readonly unknown[] = [
+const OWNERS_SCHEMA: readonly unknown[] = [
   {
     additionalProperties: false,
     properties: { owners: { items: { type: 'string' }, type: 'array' } },
@@ -54,35 +60,64 @@ export const OWNERS_SCHEMA: readonly unknown[] = [
   },
 ];
 
+/**
+ * Whether a value is an ESTree node.
+ * @param {unknown} value - The value to test.
+ * @returns {boolean} Whether it is an object with a string `type`.
+ */
 function isNode(value: unknown): value is Node {
   return typeof value === 'object' && value !== null && 'type' in value && typeof value.type === 'string';
 }
 
-/** The child node under `key`, if it is a node. */
-export function child(node: Node, key: string): Node | undefined {
+/**
+ * The child node under `key`, if it is a node.
+ * @param {Node} node - The parent node.
+ * @param {string} key - The field holding the child.
+ * @returns {Node | undefined} The child, or undefined when the field holds no node.
+ */
+function child(node: Node, key: string): Node | undefined {
   const value = node[key];
   return isNode(value) ? value : undefined;
 }
 
-/** The child nodes under `key`, if it is an array. */
-export function children(node: Node, key: string): readonly Node[] {
+/**
+ * The child nodes under `key`, if it is an array.
+ * @param {Node} node - The parent node.
+ * @param {string} key - The field holding the children.
+ * @returns {readonly Node[]} The nodes of the array, or none when the field is no array.
+ */
+function children(node: Node, key: string): readonly Node[] {
   const value = node[key];
-  return Array.isArray(value) ? value.filter(isNode) : [];
+  return Array.isArray(value) ? value.filter((entry) => isNode(entry)) : [];
 }
 
-/** The string under `key`, if it is one. */
-export function text(node: Node, key: string): string | undefined {
+/**
+ * The string under `key`, if it is one.
+ * @param {Node} node - The node to read.
+ * @param {string} key - The field holding the string.
+ * @returns {string | undefined} The string, or undefined when the field holds none.
+ */
+function text(node: Node, key: string): string | undefined {
   const value = node[key];
   return typeof value === 'string' ? value : undefined;
 }
 
-/** The boolean under `key`; absent reads as false. */
-export function flag(node: Node, key: string): boolean {
+/**
+ * The boolean under `key`; absent reads as false.
+ * @param {Node} node - The node to read.
+ * @param {string} key - The field holding the boolean.
+ * @returns {boolean} Whether the field holds `true`.
+ */
+function flag(node: Node, key: string): boolean {
   return node[key] === true;
 }
 
-/** The name of an `Identifier`, `JSXIdentifier` or `PrivateIdentifier`, or of a string literal. */
-export function nameOf(node: Node | undefined): string | undefined {
+/**
+ * The name of an `Identifier`, `JSXIdentifier` or `PrivateIdentifier`, or of a string literal.
+ * @param {Node | undefined} node - The node to name.
+ * @returns {string | undefined} Its name, or undefined when it has none.
+ */
+function nameOf(node: Node | undefined): string | undefined {
   if (node === undefined) {
     return undefined;
   }
@@ -92,8 +127,12 @@ export function nameOf(node: Node | undefined): string | undefined {
   return text(node, 'name');
 }
 
-/** The property name a member expression reads, when it is static (`a.b` or `a['b']`). */
-export function memberName(node: Node): string | undefined {
+/**
+ * The property name a member expression reads, when it is static (`a.b` or `a['b']`).
+ * @param {Node} node - The node to read.
+ * @returns {string | undefined} The property name, or undefined for any other node or a computed key.
+ */
+function memberName(node: Node): string | undefined {
   if (node.type !== 'MemberExpression') {
     return undefined;
   }
@@ -104,96 +143,109 @@ export function memberName(node: Node): string | undefined {
   return nameOf(property);
 }
 
-/** The module a module-level import, re-export or dynamic import names. */
-export function moduleSource(node: Node): string | undefined {
+/**
+ * The module a module-level import, re-export or dynamic import names.
+ * @param {Node} node - The import, export or import expression.
+ * @returns {string | undefined} The module specifier, or undefined when it is not a literal.
+ */
+function moduleSource(node: Node): string | undefined {
   const source = child(node, 'source');
   return source?.type === 'Literal' ? text(source, 'value') : undefined;
 }
 
-/** The JSX attributes of an opening element, by name (`on:input` keeps its namespace). */
-export function jsxAttributes(opening: Node): ReadonlyMap<string, Node> {
-  const found = new Map<string, Node>();
-  for (const attribute of children(opening, 'attributes')) {
-    if (attribute.type !== 'JSXAttribute') {
-      continue;
-    }
-    const name = child(attribute, 'name');
-    if (name?.type === 'JSXNamespacedName') {
-      found.set(`${nameOf(child(name, 'namespace')) ?? ''}:${nameOf(child(name, 'name')) ?? ''}`, attribute);
-    } else {
-      const plain = nameOf(name);
-      if (plain !== undefined) {
-        found.set(plain, attribute);
-      }
-    }
-  }
-  return found;
+/**
+ * The file being linted, relative to the directory oxlint runs in, in POSIX form.
+ * @param {Context} context - The rule's context.
+ * @returns {string} The linted file's relative POSIX path.
+ */
+function relativeFile(context: Context): string {
+  return path.relative(context.cwd, context.filename).split(path.sep).join('/');
 }
 
-/** The tag name of a JSX opening element (`div`, `Loading`); a member tag reads as undefined. */
-export function jsxName(opening: Node): string | undefined {
-  const name = child(opening, 'name');
-  return name?.type === 'JSXIdentifier' ? text(name, 'name') : undefined;
-}
-
-/** The file being linted, relative to the directory oxlint runs in, in POSIX form. */
-export function relativeFile(context: Context): string {
-  return relative(context.cwd, context.filename).split(sep).join('/');
-}
-
-function globToRegExp(glob: string): RegExp {
+/**
+ * A glob compiled to a test of a POSIX path: `**` crosses folders, `*` stays within one.
+ * @param {string} glob - The glob.
+ * @returns {FileTest} Whether a path matches the whole glob.
+ */
+function globTest(glob: string): FileTest {
   const pattern = glob
     .split('**')
-    .map((part) => part.replaceAll(/[.+^${}()|[\]\\]/g, String.raw`\$&`).replaceAll('*', '[^/]*'))
+    .map((part) => part.replaceAll(/[.+^${}()|[\]\\]/gu, String.raw`\$&`).replaceAll('*', '[^/]*'))
     .join('.*');
-  return new RegExp(`^${pattern}$`);
+  const compiled = new RegExp(`^${pattern}$`, 'u');
+  return (file) => compiled.test(file);
 }
 
-/** The globs under `key` in the rule's first option object. */
-function globs(context: Context, key: string): readonly RegExp[] {
+/**
+ * The globs under `key` in the rule's first option object.
+ * @param {Context} context - The rule's context.
+ * @param {string} key - The option holding the globs.
+ * @returns {readonly FileTest[]} The compiled globs, or none when the option is absent.
+ */
+function globs(context: Context, key: string): readonly FileTest[] {
   const [first] = context.options;
   if (typeof first !== 'object' || first === null || !(key in first)) {
     return [];
   }
-  const value: unknown = Object.entries(first).find(([name]) => name === key)?.[1];
-  return Array.isArray(value) ? value.filter((entry) => typeof entry === 'string').map(globToRegExp) : [];
+  const value: unknown = Reflect.get(first, key);
+  return Array.isArray(value) ? value.filter((entry) => typeof entry === 'string').map((glob) => globTest(glob)) : [];
 }
 
-/** Whether the linted file matches one of the globs under `key`. */
-export function matches(context: Context, key: string): boolean {
+/**
+ * Whether the linted file matches one of the globs under `key`.
+ * @param {Context} context - The rule's context.
+ * @param {string} key - The option holding the globs.
+ * @returns {boolean} Whether one glob matches the linted file.
+ */
+function matches(context: Context, key: string): boolean {
   const file = relativeFile(context);
-  return globs(context, key).some((glob) => glob.test(file));
+  return globs(context, key).some((test) => test(file));
 }
 
-/** Whether the linted file is a `.tsx` module the rule holds (not under its `ignore` globs). */
+/**
+ * Whether the linted file is a `.tsx` module the rule holds (not under its `ignore` globs).
+ * @param {Context} context - The rule's context.
+ * @returns {boolean} Whether the rule applies to the linted file.
+ */
 function heldComponentFile(context: Context): boolean {
   return context.filename.endsWith('.tsx') && !matches(context, 'ignore');
 }
 
-/** A rule's meta: every project rule reports a problem. */
-export function problemMeta(description: string, schema: readonly unknown[] = []): Rule['meta'] {
+/**
+ * A rule's meta: every project rule reports a problem.
+ * @param {string} description - The rule's one-line description.
+ * @param {readonly unknown[]} schema - The rule's options schema.
+ * @returns {Rule['meta']} The meta oxlint reads.
+ */
+function problemMeta(description: string, schema: readonly unknown[] = []): Rule['meta'] {
   return { docs: { description }, schema, type: 'problem' };
 }
 
-/** A rule that holds component modules only: `.tsx` files outside its `ignore` globs. */
-export function componentRule(description: string, create: (context: Context) => Visitor): Rule {
+/**
+ * A rule that holds component modules only: `.tsx` files outside its `ignore` globs.
+ * @param {string} description - The rule's one-line description.
+ * @param {Rule['create']} create - The visitor for a held file.
+ * @returns {Rule} The rule.
+ */
+function componentRule(description: string, create: Rule['create']): Rule {
   return {
     create: (context) => (heldComponentFile(context) ? create(context) : {}),
     meta: problemMeta(description, IGNORE_SCHEMA),
   };
 }
 
-/** A rule refusing every JSX attribute whose name `refused` holds. */
-export function attributeRule(description: string, refused: (name: string) => boolean, message: string): Rule {
-  return {
-    create: (context) => ({
-      JSXAttribute(node) {
-        const name = nameOf(child(node, 'name'));
-        if (name !== undefined && refused(name)) {
-          context.report({ message, node });
-        }
-      },
-    }),
-    meta: problemMeta(description),
-  };
-}
+export type { Context, Node, Rule, Visitor };
+export {
+  child,
+  children,
+  componentRule,
+  flag,
+  matches,
+  memberName,
+  moduleSource,
+  nameOf,
+  OWNERS_SCHEMA,
+  problemMeta,
+  relativeFile,
+  text,
+};

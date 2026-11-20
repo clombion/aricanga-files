@@ -1,35 +1,65 @@
-// Sandbox experience — the Phase 0 walking skeleton.
+// Sandbox experience: the Phase 0 walking skeleton.
 // Thread: ink (compiled to story.json by the Vite ink plugin) → InkRuntime →
 // stub reduce (system-chat) → Lit <sk-message> render. Real contracts/physics
 // arrive in Phases 1–2; the real Aricanga experience is ported in Phase 3.
 
+import { SkMessage, defineSkMessage } from './sk-message';
 import { InkRuntime } from '@narratives/foundation';
 import { reduceStep } from '@narratives/system-chat';
-import { SkMessage } from './sk-message';
 
-/** Run the full thread into `host`: load story → reduce each step → render. */
-export async function run(host: HTMLElement, storyJson: string): Promise<void> {
+/** Where the experience renders: it replaces the host's children. */
+type Host = Readonly<Pick<HTMLElement, 'append' | 'replaceChildren'>>;
+
+/**
+ * The message elements of a story: one per step that carries text.
+ * @param {string} storyJson The compiled story.
+ * @returns {SkMessage[]} The elements, in story order.
+ */
+function messagesOf(storyJson: string): SkMessage[] {
   const runtime = new InkRuntime(storyJson);
-  host.replaceChildren();
+  const elements: SkMessage[] = [];
   while (runtime.canContinue()) {
     const step = runtime.continue();
-    if (!step.text) {continue;}
-    const vm = reduceStep(step);
-    const el = new SkMessage();
-    el.text = vm.speaker ? `${vm.speaker}: ${vm.text}` : vm.text;
-    host.append(el);
+    if (step.text !== '') {
+      const vm = reduceStep(step);
+      const element = new SkMessage();
+      element.text = vm.speaker === '' ? vm.text : `${vm.speaker}: ${vm.text}`;
+      elements.push(element);
+    }
+  }
+  return elements;
+}
+
+/**
+ * Run the full thread into `host`: load story → reduce each step → render.
+ * @param {Host} host Where to render.
+ * @param {string} storyJson The compiled story.
+ */
+function run(host: Host, storyJson: string): void {
+  defineSkMessage();
+  host.replaceChildren(...messagesOf(storyJson));
+}
+
+/**
+ * Fetch the story and run it into `host`, showing the failure there when it cannot.
+ * @param {Host} host Where to render.
+ * @returns {Promise<void>} Resolves once the story ran or its failure is shown.
+ */
+async function boot(host: Host): Promise<void> {
+  try {
+    const response = await fetch('/story.json');
+    run(host, await response.text());
+  } catch (error) {
+    // The failure is shown where the experience would have rendered.
+    host.replaceChildren(`walking skeleton failed: ${error instanceof Error ? error.message : 'unknown error'}`);
   }
 }
 
 if (typeof document !== 'undefined') {
-  const host = document.querySelector<HTMLElement>('#app');
-  if (host) {
-    void fetch('/story.json')
-      .then( async (r) => r.text())
-      .then( async (json) => run(host, json))
-      .catch((error: unknown) => {
-        // The failure is shown where the experience would have rendered.
-        host.textContent = `walking skeleton failed: ${error instanceof Error ? error.message : 'unknown error'}`;
-      });
+  const app = document.querySelector<HTMLElement>('#app');
+  if (app !== null) {
+    await boot(app);
   }
 }
+
+export { run };

@@ -1,54 +1,75 @@
-import type { FixtureRun } from '@narratives/foundation/testing';
+import { describe, expect, test } from 'vitest';
+import { messagesOf, open, run, story, textsOf } from '#test/support';
+import type { ChatRun } from '#test/support';
+import type { Effect } from '@narratives/foundation';
+import { notificationOf } from '#src/effects';
 import { notifyOnce } from '@narratives/system-chat/testing';
-import { expect, test } from 'vitest';
-import { notificationOf } from '../src/effects';
-import { messagesOf as history, open, run, story } from './support';
 
-const notifications = (r: FixtureRun, chatId: string): number =>
-  r.effects.filter((e) => notificationOf(e)?.chatId === chatId).length;
+/** A chat notified once in an epoch. */
+const ONCE = 1;
 
-test('notify-once: a background chat notifies once, not for subsequent messages (#2)', async () => {
-  const r = await run([story('First', ['targetChat: maria']), story('Second', ['targetChat: maria'])]);
-  expect(notifications(r, 'maria')).toBe(1);
-  expect(notifyOnce(r)).toBeNull();
+/**
+ * The notifications a run emitted for a chat.
+ *
+ * @param {ChatRun} result - The completed run.
+ * @param {string} chatId - The chat.
+ * @returns {readonly Effect[]} Its notification effects, in order.
+ */
+function notifications(result: ChatRun, chatId: string): readonly Effect[] {
+  return result.effects.filter((effect) => notificationOf(effect)?.chatId === chatId);
+}
+
+describe('notifications', () => {
+  test('notify-once: a background chat notifies once, not for subsequent messages (#2)', async () => {
+    expect.hasAssertions();
+    const result = await run([story('First', ['targetChat: maria']), story('Second', ['targetChat: maria'])]);
+    expect(notifications(result, 'maria')).toHaveLength(ONCE);
+    expect(notifyOnce(result)).toBeUndefined();
+  });
+
+  test('no notification fires for the currently-viewed chat (#3)', async () => {
+    expect.hasAssertions();
+    const result = await run([open('pat'), story('You are here', ['targetChat: pat'])]);
+    expect(notifications(result, 'pat')).toStrictEqual([]);
+    expect(textsOf(result, 'pat')).toStrictEqual(['You are here']);
+  });
 });
 
-test('a message for a different OPEN chat defers after the first notification (#1)', async () => {
-  const r = await run([
-    open('pat'),
-    story('Hi from Maria', ['targetChat: maria']), // first → history + notify
-    story('And another', ['targetChat: maria']), // already-notified, in pat → defer
-  ]);
-  expect(history(r, 'maria').map((m) => m.text)).toEqual(['Hi from Maria']);
-  expect(notifications(r, 'maria')).toBe(1);
-});
+describe('the deferred queue', () => {
+  test('a message for a different OPEN chat defers after the first notification (#1)', async () => {
+    expect.hasAssertions();
+    const result = await run([
+      open('pat'),
+      // The first goes to history and notifies.
+      story('Hi from Maria', ['targetChat: maria']),
+      // Already notified, and pat is open: deferred.
+      story('And another', ['targetChat: maria']),
+    ]);
+    expect(textsOf(result, 'maria')).toStrictEqual(['Hi from Maria']);
+    expect(notifications(result, 'maria')).toHaveLength(ONCE);
+  });
 
-test('opening a chat replays its deferred queue into history in order (#4)', async () => {
-  const r = await run([
-    open('pat'),
-    story('One', ['targetChat: maria']),
-    story('Two', ['targetChat: maria']),
-    story('Three', ['targetChat: maria']),
-    open('maria'),
-  ]);
-  expect(history(r, 'maria').map((m) => m.text)).toEqual(['One', 'Two', 'Three']);
-  const ids = history(r, 'maria').map((m) => m.id);
-  expect(new Set(ids).size).toBe(3); // ids preserved + distinct (moved, not rebuilt)
-});
+  test('opening a chat replays its deferred queue into history in order (#4)', async () => {
+    expect.hasAssertions();
+    const texts = ['One', 'Two', 'Three'];
+    const result = await run([open('pat'), ...texts.map((text) => story(text, ['targetChat: maria'])), open('maria')]);
+    expect(textsOf(result, 'maria')).toStrictEqual(texts);
+    // The ids are kept and distinct: the queued messages are moved, not rebuilt.
+    expect(new Set(messagesOf(result, 'maria').map((message) => message.id)).size).toBe(texts.length);
+  });
 
-test('no notification fires for the currently-viewed chat (#3)', async () => {
-  const r = await run([open('pat'), story('You are here', ['targetChat: pat'])]);
-  expect(notifications(r, 'pat')).toBe(0);
-  expect(history(r, 'pat').map((m) => m.text)).toEqual(['You are here']);
-});
-
-test('# immediate bypasses the queue and flushes existing deferred into history (#5)', async () => {
-  const r = await run([
-    open('pat'),
-    story('Queued 1', ['targetChat: maria']), // notify + history
-    story('Queued 2', ['targetChat: maria']), // defer
-    story('Urgent', ['targetChat: maria', 'immediate']), // flush + append, no defer
-  ]);
-  expect(history(r, 'maria').map((m) => m.text)).toEqual(['Queued 1', 'Queued 2', 'Urgent']);
-  expect(notifyOnce(r)).toBeNull();
+  test('# immediate bypasses the queue and flushes existing deferred into history (#5)', async () => {
+    expect.hasAssertions();
+    const result = await run([
+      open('pat'),
+      // Notifies, and goes to history.
+      story('Queued 1', ['targetChat: maria']),
+      // Deferred.
+      story('Queued 2', ['targetChat: maria']),
+      // Flushes the queue and appends, never deferred.
+      story('Urgent', ['targetChat: maria', 'immediate']),
+    ]);
+    expect(textsOf(result, 'maria')).toStrictEqual(['Queued 1', 'Queued 2', 'Urgent']);
+    expect(notifyOnce(result)).toBeUndefined();
+  });
 });

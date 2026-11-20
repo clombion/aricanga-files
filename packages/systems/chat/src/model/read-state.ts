@@ -1,29 +1,49 @@
-import type { ChatState } from '../state';
-import { closeChat, openChat } from './defer';
+import { closeChat, openChat, viewedChatId } from '#src/model/defer';
+import type { ChatState } from '#src/state';
 
-// Advance the read cursor for a chat you're leaving to its last message. A no-op
-// on an empty chat — never write `null` on leave (under this encoding `null` means
-// before-all/top, and the cursor must never un-read).
+/** The index `Array.prototype.at` reads the last element at. */
+const LAST = -1;
+
+/**
+ * Advance the read cursor of a chat the player is leaving to its last message. A no-op on an empty
+ * chat: leaving never moves a cursor to the top, since the cursor must never un-read.
+ *
+ * @param {ChatState} state - The chat slice.
+ * @param {string} chatId - The chat being left.
+ * @returns {ChatState} The slice with the chat read to its end.
+ */
 function markRead(state: ChatState, chatId: string): ChatState {
-  const last = (state.messageHistory[chatId] ?? []).at(-1);
-  if (last === undefined) {return state;}
-  return { ...state, lastReadMessageId: { ...state.lastReadMessageId, [chatId]: last.id } };
+  const last = state.messageHistory[chatId]?.at(LAST);
+  if (last === undefined) {
+    return state;
+  }
+  return { ...state, lastReadMessageId: { ...state.lastReadMessageId, [chatId]: { at: 'after', messageId: last.id } } };
 }
 
-const focusedChat = (state: ChatState): string | undefined =>
-  state.currentView.type === 'chat' ? state.currentView.chatId : undefined;
-
-// Open a chat: on chat-to-chat navigation, mark the chat you're leaving read first
-// (the cursor is not written for the chat being opened), then focus + clear-notified
-// + replay (the `openChat` of the defer branch).
-export function openWithReadState(state: ChatState, chatId: string): ChatState {
-  const prev = focusedChat(state);
+/**
+ * Open a chat: on chat-to-chat navigation, mark the chat being left read first (the cursor of the
+ * chat being opened is not written), then focus, clear-notified and replay (the defer branch's
+ * `openChat`).
+ *
+ * @param {ChatState} state - The chat slice.
+ * @param {string} chatId - The chat to open.
+ * @returns {ChatState} The slice viewing the chat.
+ */
+function openWithReadState(state: ChatState, chatId: string): ChatState {
+  const prev = viewedChatId(state);
   const left = prev !== undefined && prev !== chatId ? markRead(state, prev) : state;
   return openChat(left, chatId);
 }
 
-// Close: mark the current chat read, then return to the hub.
-export function closeWithReadState(state: ChatState): ChatState {
-  const prev = focusedChat(state);
+/**
+ * Close: mark the open chat read, then return to the hub.
+ *
+ * @param {ChatState} state - The chat slice.
+ * @returns {ChatState} The slice viewing the hub.
+ */
+function closeWithReadState(state: ChatState): ChatState {
+  const prev = viewedChatId(state);
   return closeChat(prev === undefined ? state : markRead(state, prev));
 }
+
+export { closeWithReadState, openWithReadState };

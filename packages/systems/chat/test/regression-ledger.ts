@@ -1,6 +1,3 @@
-import type { FixtureInput } from '@narratives/foundation/testing';
-
-import { story } from './support';
 
 // The BUG-HISTORY disposition audit. Every historical bug stays dead
 // either by construction (the pure synchronous reducer removes its mechanism) or
@@ -36,36 +33,7 @@ interface LedgerEntry {
   readonly rationale: string;
 }
 
-// Recorded Input streams for the kernel-physics regressions. The routing scenario
-// is asserted green now; the rest carry the durable repro data, asserted green by
-// their consuming physics task.
-const FIXTURES: Readonly<Record<string, readonly FixtureInput[]>> = {
-  'cross-chat-routing': [
-    story('Routes to spectre', ['targetChat: spectre', 'speaker: TonyGov', 'type: received']),
-  ],
-  'duplicate-notifications': [
-    story('First from Maria', ['targetChat: maria', 'speaker: Maria', 'type: received']),
-    story('Second from Maria', ['targetChat: maria', 'speaker: Maria', 'type: received']),
-  ],
-  'receipt-auto-upgrade': [
-    story('My question', ['type: sent', 'receipt: delivered']),
-    story('Their reply', ['type: received', 'speaker: Pat']),
-  ],
-  'typing-null-chatid': [
-    story('Pat replies from the background', ['targetChat: pat', 'speaker: Pat', 'type: received']),
-  ],
-};
-
-/** The recorded stream of a named regression; an unknown name fails the test that asked for it. */
-export function fixture(name: string): readonly FixtureInput[] {
-  const found = FIXTURES[name];
-  if (found === undefined) {
-    throw new Error(`no regression fixture named ${JSON.stringify(name)}`);
-  }
-  return found;
-}
-
-export const LEDGER: readonly LedgerEntry[] = [
+const LEDGER: readonly LedgerEntry[] = [
   // --- legacy date-based entries (19, frozen) ---
   {
     disposition: { fixture: 'cross-chat-routing', kind: 'kernel-physics', predicate: 'routingOwnership' },
@@ -294,3 +262,6 @@ export const LEDGER: readonly LedgerEntry[] = [
     summary: 'Duplicate glossary transitions from stacked shadowRoot listeners.',
   },
 ];
+
+export { LEDGER };
+export type { Disposition };

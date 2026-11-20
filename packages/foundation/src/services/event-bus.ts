@@ -1,40 +1,55 @@
-// Single event bus for cross-cutting sinks only — analytics and cross-system
-// coordination (the host feeds it through `emit`). Rendering does NOT depend
-// on the bus; a view-model derives purely from state.
+/*
+ * Single event bus for cross-cutting sinks only — analytics and cross-system
+ * coordination (the host feeds it through `emit`). Rendering does NOT depend
+ * on the bus; a view-model derives purely from state.
+ */
 
-export interface DomainEvent {
+/** A cross-cutting event: its type and whatever fields the emitter attaches. */
+interface DomainEvent {
   readonly type: string;
   readonly [key: string]: unknown;
 }
 
 /** @public */
-export type Unsubscribe = () => void;
+type Unsubscribe = () => void;
+
+/** A handler the bus calls with each event of the type it subscribed to. */
+type Handler = (event: DomainEvent) => void;
 
 /** @public */
-export interface EventBus {
-  emit(event: DomainEvent): void;
-  on(type: string, handler: (event: DomainEvent) => void): Unsubscribe;
+interface EventBus {
+  readonly emit: (event: DomainEvent) => void;
+  readonly on: (type: string, handler: Handler) => Unsubscribe;
 }
 
-export function createEventBus(): EventBus {
-  const handlers = new Map<string, Set<(event: DomainEvent) => void>>();
+/**
+ * A bus that delivers each emitted event to the handlers subscribed to its type.
+ *
+ * @returns {EventBus} A new, empty bus.
+ */
+function createEventBus(): EventBus {
+  const handlers = new Map<string, Set<Handler>>();
   return {
-    emit(event) {
-      const set = handlers.get(event.type);
-      if (set === undefined) {return;}
-      // A snapshot: a handler may unsubscribe while the event is being delivered.
-      for (const handler of [...set]) {handler(event);}
-    },
-    on(type, handler) {
-      let set = handlers.get(type);
-      if (set === undefined) {
-        set = new Set();
-        handlers.set(type, set);
+    emit: (event) => {
+      const subscribed = handlers.get(event.type);
+      if (subscribed === undefined) {
+        return;
       }
-      set.add(handler);
+      // A snapshot: a handler may unsubscribe while the event is being delivered.
+      for (const handler of new Set(subscribed)) {
+        handler(event);
+      }
+    },
+    on: (type, handler) => {
+      const subscribed = handlers.get(type) ?? new Set<Handler>();
+      subscribed.add(handler);
+      handlers.set(type, subscribed);
       return () => {
         handlers.get(type)?.delete(handler);
       };
     },
   };
 }
+
+export { createEventBus };
+export type { DomainEvent, EventBus, Unsubscribe };
