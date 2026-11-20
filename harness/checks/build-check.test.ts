@@ -9,6 +9,7 @@
 
 import { apps, checkBuild } from '#lib/build.ts';
 import { describe, expect, test } from 'vitest';
+import { EXIT_CLEAN } from './exit-status.ts';
 import { Project } from '#lib/tools.ts';
 
 const HARNESS_ID = 'build-check';
@@ -43,7 +44,7 @@ describe('the repository', () => {
     expect.hasAssertions();
     expect(apps()).toStrictEqual(['experiences/sandbox', 'packages/characterisation']);
     const results = apps().map((app) => checkBuild(app));
-    expect(results.filter((result) => result.status !== 0).map((result) => result.output)).toStrictEqual([]);
+    expect(results.filter((result) => result.status !== EXIT_CLEAN).map((result) => result.output)).toStrictEqual([]);
     expect(results.flatMap((result) => result.written)).toStrictEqual([]);
   });
 });
@@ -52,19 +53,19 @@ describe('the build check', () => {
   test('fails a planted broken import', () => {
     expect.hasAssertions();
     const result = plantedBuild("import { gone } from './missing';\nexport const x = gone;\n", QUIET_CONFIG);
-    expect(result.status).not.toBe(0);
+    expect(result.status).not.toBe(EXIT_CLEAN);
   });
 
   test('passes a planted clean module', () => {
     expect.hasAssertions();
     const result = plantedBuild('export const x = 1;\n', QUIET_CONFIG);
-    expect([result.status, result.written]).toStrictEqual([0, []]);
+    expect([result.status, result.written]).toStrictEqual([EXIT_CLEAN, []]);
   });
 
   test('sees a build that writes into its checkout', () => {
     expect.hasAssertions();
     const result = plantedBuild('export const x = 1;\n', WRITING_CONFIG);
-    expect([result.status, result.written]).toStrictEqual([0, ['app/made.json']]);
+    expect([result.status, result.written]).toStrictEqual([EXIT_CLEAN, ['app/made.json']]);
   });
 });
 

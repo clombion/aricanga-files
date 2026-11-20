@@ -13,7 +13,9 @@ import { heldFiles } from '#lib/scope.ts';
 
 const HARNESS_ID = 'structure';
 
-const BUILD_DIRECTORIES = /(^|\/)(dist|coverage|\.output|node_modules)\//u;
+const BUILD_DIRECTORIES = /(?:^|\/)(?:dist|coverage|\.output|node_modules)\//u;
+/** A stem held as more than one kind of module. */
+const ONE_KIND = 1;
 const BUILD_FILES = new Prefixes(['.tsbuildinfo']);
 const MODULE = /\.tsx?$/u;
 
@@ -30,7 +32,7 @@ function doubleModules(paths: readonly string[]): string[] {
     stems.set(stem, (stems.get(stem) ?? new Set()).add(path.endsWith('.tsx') ? '.tsx' : '.ts'));
   }
   return [...stems]
-    .filter(([, kinds]) => kinds.size > 1)
+    .filter(([, kinds]) => kinds.size > ONE_KIND)
     .map(([stem]) => stem)
     .toSorted();
 }

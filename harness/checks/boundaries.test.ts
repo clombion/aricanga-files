@@ -11,10 +11,15 @@
 import { describe, expect, test } from 'vitest';
 import { json, object } from '#lib/config.ts';
 import { textOf, tracked } from '#lib/source-files.ts';
+import { EXIT_FINDINGS } from './exit-status.ts';
 import { OXLINT_CONFIG_FILES } from '#lib/lint-rules.ts';
 import { Project } from '#lib/tools.ts';
 
 const HARNESS_ID = 'boundaries';
+
+const SYSTEM_MANIFEST = /^packages\/systems\/(?<name>[^/]+)\/package\.json$/u;
+/** The boundary rules are only proven with more than one system. */
+const ONE_SYSTEM = 1;
 
 interface Fixture {
   readonly path: string;
@@ -60,7 +65,7 @@ function verdicts(fixtures: readonly Fixture[]): ReadonlyMap<string, boolean> {
       'all',
       ...fixtures.map((fixture) => fixture.path),
     );
-    if (outcome.status > 1 || outcome.stderr.trim() !== '') {
+    if (outcome.status > EXIT_FINDINGS || outcome.stderr.trim() !== '') {
       throw new Error(`oxlint did not lint the fixtures: ${outcome.status} ${outcome.stderr}`);
     }
     return new Map(
@@ -82,7 +87,18 @@ function verdicts(fixtures: readonly Fixture[]): ReadonlyMap<string, boolean> {
  * @returns {readonly string[]} The system packages of the listing.
  */
 function systems(): readonly string[] {
-  return [...new Set(tracked().flatMap((path) => /^packages\/systems\/([^/]+)\/package\.json$/u.exec(path)?.slice(1) ?? []))];
+  return [...new Set(tracked().flatMap((path) => SYSTEM_MANIFEST.exec(path)?.groups?.['name'] ?? []))];
+}
+
+/**
+ * The file globs of every override of the repository's oxlint config.
+ *
+ * @returns {readonly unknown[]} The globs.
+ */
+function overrideGlobs(): readonly unknown[] {
+  const { overrides } = object(json(textOf('.oxlintrc.json')), '.oxlintrc.json');
+  const entries: readonly unknown[] = Array.isArray(overrides) ? overrides : [];
+  return entries.flatMap((entry) => object(entry, 'override')['files']);
 }
 
 describe('the boundary lint', () => {
@@ -96,10 +112,9 @@ describe('the boundary lint', () => {
 
   test('every system package has its own import override', () => {
     expect.hasAssertions();
-    const {overrides} = object(json(textOf('.oxlintrc.json')), '.oxlintrc.json');
-    const globs = Array.isArray(overrides) ? overrides.flatMap((entry) => object(entry, 'override')['files']) : [];
+    const globs = overrideGlobs();
     expect(systems().filter((name) => !globs.includes(`packages/systems/${name}/**`))).toStrictEqual([]);
-    expect(systems().length).toBeGreaterThan(1);
+    expect(systems().length).toBeGreaterThan(ONE_SYSTEM);
   });
 });
 

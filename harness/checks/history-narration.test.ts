@@ -32,13 +32,9 @@ const EXEMPT = Exemptions.grouped({});
 function narration(lines: readonly Prose[]): string[] {
   const found = new Set<string>();
   for (const line of lines) {
-    for (const match of line.text.matchAll(NARRATION)) {
-      found.add(site(line.path, match[0]));
-    }
-    if (!MARKDOWN.ends(line.path)) {
-      for (const match of line.text.matchAll(ISO_DATE)) {
-        found.add(site(line.path, match[0]));
-      }
+    const dates = MARKDOWN.ends(line.path) ? [] : [...line.text.matchAll(ISO_DATE)];
+    for (const [phrase] of [...line.text.matchAll(NARRATION), ...dates]) {
+      found.add(site(line.path, phrase));
     }
   }
   return [...found].toSorted();
@@ -47,7 +43,8 @@ function narration(lines: readonly Prose[]): string[] {
 describe('the repository', () => {
   test('no current text narrates history', () => {
     expect.hasAssertions();
-    expect(EXEMPT.unexempted(narration(currentText()))).toStrictEqual([]);
+    const found = narration(currentText());
+    expect(EXEMPT.unexempted(found)).toStrictEqual([]);
   });
 });
 
