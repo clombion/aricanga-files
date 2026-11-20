@@ -10,7 +10,7 @@
 
 import { Project, bin, finished } from './tools.ts';
 import { json, object } from './config.ts';
-import { textOf, tracked } from './source-files.ts';
+import { textsOf, tracked } from './source-files.ts';
 
 import { FixtureError } from './fixture-error.ts';
 import { fromRoot } from './paths.ts';
@@ -90,21 +90,22 @@ function parseFixture(file: string, text: string): Fixture {
 /**
  * Every listed fixture.
  *
- * @returns {readonly Fixture[]} The fixtures.
+ * @returns {Promise<readonly Fixture[]>} The fixtures.
  */
-function fixtures(): readonly Fixture[] {
-  return tracked()
-    .filter((file) => file.startsWith(FIXTURES_DIR))
-    .map((file) => parseFixture(file, textOf(file)));
+async function fixtures(): Promise<readonly Fixture[]> {
+  const listed = await tracked();
+  const texts = await textsOf(listed.filter((file) => file.startsWith(FIXTURES_DIR)));
+  return texts.map(([file, text]: readonly [string, string]) => parseFixture(file, text));
 }
 
 /**
  * The rule folders under the fixtures directory, whatever their files are named.
  *
- * @returns {readonly string[]} The folders, sorted.
+ * @returns {Promise<readonly string[]>} The folders, sorted.
  */
-function fixtureFolders(): readonly string[] {
-  const folders = tracked()
+async function fixtureFolders(): Promise<readonly string[]> {
+  const listed = await tracked();
+  const folders = listed
     .filter((file) => file.startsWith(FIXTURES_DIR))
     .map((file) => {
       const [folder = ''] = file.slice(FIXTURES_DIR.length).split('/');
@@ -147,10 +148,10 @@ function refuseDuplicates(paths: readonly string[]): void {
  *
  * @param {Readonly<Project>} project - The planted project.
  * @param {readonly string[]} paths - Where the fixtures are planted.
- * @returns {readonly Diagnostic[]} The diagnostics, with paths relative to the project.
+ * @returns {Promise<readonly Diagnostic[]>} The diagnostics, with paths relative to the project.
  */
-function lintPlanted(project: Readonly<Project>, paths: readonly string[]): readonly Diagnostic[] {
-  const outcome = finished([bin('oxlint'), '--format', 'json', ...paths], { cwd: project.root });
+async function lintPlanted(project: Readonly<Project>, paths: readonly string[]): Promise<readonly Diagnostic[]> {
+  const outcome = await finished([bin('oxlint'), '--format', 'json', ...paths], { cwd: project.root });
   if (outcome.stdout.trim() === '') {
     throw new FixtureError(`oxlint wrote no report: ${outcome.stderr}`);
   }
@@ -165,20 +166,23 @@ function lintPlanted(project: Readonly<Project>, paths: readonly string[]): read
  * Lint the given fixtures under the repository's oxlint configuration, in one run.
  *
  * @param {readonly Fixture[]} planted - The fixtures.
- * @returns {readonly Diagnostic[]} The diagnostics.
+ * @returns {Promise<readonly Diagnostic[]>} The diagnostics.
  */
-function lintFixtures(planted: readonly Fixture[]): readonly Diagnostic[] {
+async function lintFixtures(planted: readonly Fixture[]): Promise<readonly Diagnostic[]> {
   const paths = planted.map((fixture) => fixture.path);
   refuseDuplicates(paths);
-  const project = new Project({ copies: [...OXLINT_CONFIG_FILES, 'tsconfig.base.json'] });
+  const project = await Project.create({ copies: [...OXLINT_CONFIG_FILES, 'tsconfig.base.json'] });
   try {
-    project.write('tsconfig.json', PLANTED_TSCONFIG);
-    for (const fixture of planted) {
-      project.write(fixture.path, fixture.source);
-    }
-    return lintPlanted(project, paths);
+    await project.write('tsconfig.json', PLANTED_TSCONFIG);
+    await Promise.all(
+      planted.map(async (fixture) => {
+        await project.write(fixture.path, fixture.source);
+      }),
+    );
+    const found = await lintPlanted(project, paths);
+    return found;
   } finally {
-    project.remove();
+    await project.remove();
   }
 }
 

@@ -79,10 +79,11 @@ function engineRange(manifest: unknown): string {
 /**
  * The repository's declared floor.
  *
- * @returns {Version} The floor `engines.node` states.
+ * @returns {Promise<Version>} The floor `engines.node` states.
  */
-function repoFloor(): Version {
-  const range = engineRange(json(textOf('package.json')));
+async function repoFloor(): Promise<Version> {
+  const text = await textOf('package.json');
+  const range = engineRange(json(text));
   if (range === '') {
     throw new FloorError('package.json declares no engines.node');
   }
@@ -92,10 +93,11 @@ function repoFloor(): Version {
 /**
  * The Node version the repository pins for its tools (`.node-version`).
  *
- * @returns {Version} The pinned version.
+ * @returns {Promise<Version>} The pinned version.
  */
-function pinned(): Version {
-  return version(textOf('.node-version'));
+async function pinned(): Promise<Version> {
+  const text = await textOf('.node-version');
+  return version(text);
 }
 
 export { engineRange, floor, FloorError, meets, pinned, repoFloor, version };

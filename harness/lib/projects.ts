@@ -12,10 +12,11 @@ const PROJECT = /(?:^|\/)tsconfig(?:\.[a-z]+)?\.json$/u;
 /**
  * Every held TypeScript project file.
  *
- * @returns {readonly string[]} The held `tsconfig*.json` paths but the shared base.
+ * @returns {Promise<readonly string[]>} The held `tsconfig*.json` paths but the shared base.
  */
-function projects(): readonly string[] {
-  return heldFiles('.json').filter((path) => PROJECT.test(path) && path !== BASE);
+async function projects(): Promise<readonly string[]> {
+  const files = await heldFiles('.json');
+  return files.filter((path) => PROJECT.test(path) && path !== BASE);
 }
 
 export { projects };

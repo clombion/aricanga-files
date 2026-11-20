@@ -78,10 +78,11 @@ function isProduction(file: string): boolean {
 /**
  * Every held TypeScript module but declaration files: what a repository scan covers.
  *
- * @returns {readonly string[]} The scanned modules.
+ * @returns {Promise<readonly string[]>} The scanned modules.
  */
-function scannedFiles(): readonly string[] {
-  return typescriptFiles().filter((file) => !file.endsWith('.d.ts'));
+async function scannedFiles(): Promise<readonly string[]> {
+  const files = await typescriptFiles();
+  return files.filter((file) => !file.endsWith('.d.ts'));
 }
 
 /**

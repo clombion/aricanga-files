@@ -271,10 +271,11 @@ function floorProblems(files: readonly FileCoverage[], debt: Readonly<CountedExe
  * The gate's coverage report, parsed.
  *
  * @param {string} directory - Where the run wrote its reports.
- * @returns {unknown} The parsed report.
+ * @returns {Promise<unknown>} The parsed report.
  */
-function gateReport(directory: string = COVERAGE_DIR): unknown {
-  return json(textAt(path.join(directory, 'coverage-final.json')));
+async function gateReport(directory: string = COVERAGE_DIR): Promise<unknown> {
+  const text = await textAt(path.join(directory, 'coverage-final.json'));
+  return json(text);
 }
 
 /**
@@ -283,10 +284,11 @@ function gateReport(directory: string = COVERAGE_DIR): unknown {
  * @param {(text: string) => void} err - Where problems are written.
  * @param {Readonly<CountedExemptions>} debt - The shortfall the project carries.
  * @param {string} directory - Where the run wrote its reports.
- * @returns {number} The exit status.
+ * @returns {Promise<number>} The exit status.
  */
-function main(err: (text: string) => void, debt: Readonly<CountedExemptions>, directory: string): number {
-  const problems = floorProblems(fileCoverage(gateReport(directory)), debt);
+async function main(err: (text: string) => void, debt: Readonly<CountedExemptions>, directory: string): Promise<number> {
+  const report = await gateReport(directory);
+  const problems = floorProblems(fileCoverage(report), debt);
   for (const problem of problems) {
     err(`${problem}\n`);
   }

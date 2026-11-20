@@ -124,6 +124,22 @@ async function textOf(listed: string): Promise<string> {
 }
 
 /**
+ * Each listed file with its text, read concurrently, in the order given.
+ *
+ * @param {readonly string[]} listed - The files' repository-relative paths.
+ * @returns {Promise<readonly (readonly [string, string])[]>} Each path with its text.
+ */
+async function textsOf(listed: readonly string[]): Promise<readonly (readonly [string, string])[]> {
+  const texts = await Promise.all(
+    listed.map(async (file) => {
+      const text = await textOf(file);
+      return [file, text] as const;
+    }),
+  );
+  return texts;
+}
+
+/**
  * The text of a file outside the listing, such as a tool's report under the system's temporary directory.
  *
  * @param {string} absolute - The file's absolute path.
@@ -145,4 +161,4 @@ async function writeText(listed: string, text: string): Promise<void> {
   await writeFile(path.join(REPO_ROOT, listed), text, 'utf8');
 }
 
-export { FLOOR, isFile, ListingError, listing, textAt, textOf, tracked, writeText };
+export { FLOOR, isFile, ListingError, listing, textAt, textOf, textsOf, tracked, writeText };

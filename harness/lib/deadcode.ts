@@ -20,10 +20,11 @@ const AFTER_BINARY = 1;
 /**
  * The knip invocations of the `deadcode` task.
  *
- * @returns {readonly (readonly string[])[]} Each invocation's arguments, without the binary.
+ * @returns {Promise<readonly (readonly string[])[]>} Each invocation's arguments, without the binary.
  */
-function deadcodeRuns(): readonly (readonly string[])[] {
-  const commands = repoTasks().get('deadcode')?.commands ?? [];
+async function deadcodeRuns(): Promise<readonly (readonly string[])[]> {
+  const tasks = await repoTasks();
+  const commands = tasks.get('deadcode')?.commands ?? [];
   return commands.filter((command) => command.startsWith('knip')).map((command) => command.split(' ').slice(AFTER_BINARY));
 }
 
@@ -32,10 +33,11 @@ function deadcodeRuns(): readonly (readonly string[])[] {
  *
  * @param {string} cwd - Where knip runs.
  * @param {readonly string[]} args - Its arguments.
- * @returns {Finished} The finished run.
+ * @returns {Promise<Finished>} The finished run.
  */
-function knip(cwd: string, args: readonly string[]): Finished {
-  return finished([bin('knip'), ...args, '--no-progress'], { cwd });
+async function knip(cwd: string, args: readonly string[]): Promise<Finished> {
+  const done = await finished([bin('knip'), ...args, '--no-progress'], { cwd });
+  return done;
 }
 
 /**
@@ -73,19 +75,20 @@ function ignoreEntries(config: unknown): readonly string[] {
 /**
  * The ignore entries of the repository's `knip.json`.
  *
- * @returns {readonly string[]} The entries' keys.
+ * @returns {Promise<readonly string[]>} The entries' keys.
  */
-function repoIgnoreEntries(): readonly string[] {
-  return ignoreEntries(json(textOf('knip.json')));
+async function repoIgnoreEntries(): Promise<readonly string[]> {
+  const text = await textOf('knip.json');
+  return ignoreEntries(json(text));
 }
 
 /**
  * The issue types knip's installed schema names.
  *
- * @returns {readonly string[]} The issue types.
+ * @returns {Promise<readonly string[]>} The issue types.
  */
-function issueTypes(): readonly string[] {
-  const text = textOf('node_modules/knip/schema.json');
+async function issueTypes(): Promise<readonly string[]> {
+  const text = await textOf('node_modules/knip/schema.json');
   const schema = object(json(text), 'knip schema');
   const rules = object(object(schema['properties'], 'properties')['rules'], 'rules');
   return Object.keys(object(rules['properties'], 'rules.properties'));

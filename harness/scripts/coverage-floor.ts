@@ -3,4 +3,4 @@
 import { COVERAGE_DIR, DEBT, main } from '#lib/coverage.ts';
 import { err } from '#lib/output.ts';
 
-process.exitCode = main(err, DEBT, COVERAGE_DIR);
+process.exitCode = await main(err, DEBT, COVERAGE_DIR);
