@@ -8,7 +8,7 @@ TypeScript checked by the harness's own project. Every rule is on as an error, a
 | Rule | Holds |
 |---|---|
 | `aricanga/autofocus` | No autofocus or autoFocus attribute; move focus on navigation instead. |
-| `aricanga/controlled` | value/checked/selected only on an element that handles its change. |
+| `aricanga/controlled` | A bound value/checked/selected only on an element that handles its change. |
 | `aricanga/env` | No process.env read outside the settings owners (the `owners` globs). |
 | `aricanga/flags` | No loading/error signal in a component; read the state from the view-model. |
 | `aricanga/json` | Import JSON with { type: 'json' }. |

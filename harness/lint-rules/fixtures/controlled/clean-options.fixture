@@ -1,0 +1,15 @@
+// path: packages/systems/chat/src/view/controlled-options.tsx
+export function Picker(props: { vm: { choice: string; pick: (choice: string) => void } }) {
+  return (
+    <select onChange={(event) => props.vm.pick(event.currentTarget.value)}>
+      <option value="a">a</option>
+      <option value="b" selected={props.vm.choice === 'b'}>
+        b
+      </option>
+    </select>
+  );
+}
+
+export function Seeded() {
+  return <input value="seed" />;
+}

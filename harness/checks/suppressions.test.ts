@@ -63,6 +63,22 @@ const SUPPRESSIONS = new CountedExemptions({
     1,
     'the planted missing case: the expected error is the proof',
   ],
+  [site('packages/characterisation/src/fixtures/adapter.tsx', 'oxlint:solid/reactivity')]: [
+    1,
+    'the read forces the planted memo whose store write the fixture records',
+  ],
+  [site('packages/characterisation/src/fixtures/ownership.tsx', 'oxlint:solid/reactivity')]: [
+    2,
+    'the planted memos created where Solid refuses a primitive; the fixture records the refusal',
+  ],
+  [site('packages/characterisation/src/fixtures/props.tsx', 'oxlint:solid/no-destructure')]: [
+    1,
+    'the planted destructured part whose staleness the fixture records',
+  ],
+  [site('packages/characterisation/src/fixtures/csp.tsx', 'oxlint:aricanga/style-prop')]: [
+    1,
+    'the planted style prop whose CSP effect the fixture records',
+  ],
   [site('packages/foundation/src/host/runtime.test.ts', 'oxlint:typescript/unbound-method')]: [
     1,
     'isMockFunction inspects the function and never calls it',
@@ -225,6 +241,21 @@ describe('the census', () => {
     ['/* oxlint-disable no-console -- why */\na { color: red; }', 'oxlint does not check .css files'],
   ])('refuses %j in a stylesheet', (text, problem) => {
     expect(census('packages/plant/src/a.css', text).problems.map((found) => found.problem)).toEqual([problem]);
+  });
+
+  test('counts a suppression written as a JSX comment', () => {
+    const text = [
+      'export const view = (',
+      '  <p>',
+      '    {/* oxlint-disable-next-line aricanga/style-prop -- the planted JSX comment */}',
+      '    <span style={{ color: "red" }} />',
+      '  </p>',
+      ');',
+    ].join('\n');
+    expect(census('packages/plant/src/a.tsx', text)).toEqual({
+      problems: [],
+      sites: [site('packages/plant/src/a.tsx', 'oxlint:aricanga/style-prop')],
+    });
   });
 
   test('counts each reasoned suppression under its tool and rule', () => {
