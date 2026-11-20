@@ -1,144 +1,156 @@
 /**
- * The one owner of the TypeScript program the harness's type-aware scans read.
+ * The one owner of the TypeScript programs the harness's type-aware scans read.
  *
- * A scan asks what each name resolves to through TypeScript's own checker, so an alias, a
- * destructured binding or a property chain resolves to the declaration it stands for. The program
- * covers the held production modules (not the tests). A planted program holds in-memory sources at
- * paths under the repository root, so its imports, `lib` and `@types` resolve as the repository's do.
+ * A scan asks TypeScript 7's own checker (`typescript/unstable/sync`, served by `tsgo`) what each name
+ * resolves to, so an alias, a destructured binding or a property chain resolves to the declaration it
+ * stands for. The repository scan covers the held production modules (not tests or specs). A planted
+ * scan holds in-memory sources at paths under the repository root, served through the API's virtual
+ * file system, so its imports, `lib` and `@types` resolve exactly as the repository's do.
  */
 
 import { join } from 'node:path';
 
-import ts from 'typescript';
+import * as ast from 'typescript/unstable/ast';
+import { API, type Checker, type Program, type Symbol as TsSymbol, SymbolFlags } from 'typescript/unstable/sync';
 
 import { REPO_ROOT, relative } from './paths.ts';
 import { typescriptFiles } from './scope.ts';
 import { textOf } from './source-files.ts';
 
-/** The options of the scan program: the shared base's strictness, every lib a held module reads. */
-export const OPTIONS: ts.CompilerOptions = {
-  target: ts.ScriptTarget.ES2022,
-  module: ts.ModuleKind.ESNext,
-  moduleResolution: ts.ModuleResolutionKind.Bundler,
-  lib: ['lib.es2023.d.ts', 'lib.dom.d.ts', 'lib.dom.iterable.d.ts'],
+/** The compiler options of a scan: the shared base's strictness, every lib a held module reads. */
+export const OPTIONS = {
+  target: 'es2022',
+  module: 'esnext',
+  moduleResolution: 'bundler',
+  lib: ['es2023', 'dom', 'dom.iterable'],
   types: ['node', 'vite/client'],
-  jsx: ts.JsxEmit.Preserve,
+  jsx: 'preserve',
   jsxImportSource: '@solidjs/web',
   strict: true,
   noEmit: true,
   skipLibCheck: true,
   allowImportingTsExtensions: true,
-  allowJs: false,
-};
+} as const;
+
+/** The virtual project file a scan opens; it never exists on disk. */
+const CONFIG = join(REPO_ROOT, '.harness-scan', 'tsconfig.json');
 
 /** A held module that ships: TypeScript, not a Vitest test or a Playwright spec. */
 export function isProduction(path: string): boolean {
   return /\.tsx?$/.test(path) && !/\.(test|spec)\.tsx?$/.test(path) && !path.endsWith('.d.ts');
 }
 
-/** The held production modules the repository program covers. */
+/** The held production modules the repository scan covers. */
 export function productionFiles(): readonly string[] {
   return typescriptFiles().filter(isProduction);
 }
 
-/** A program and its checker, with the repository-relative paths it was asked to cover. */
+/** An open program and its checker over repository-relative paths. Close it when done. */
 export interface Scan {
-  readonly program: ts.Program;
-  readonly checker: ts.TypeChecker;
+  readonly program: Program;
+  readonly checker: Checker;
   readonly paths: readonly string[];
+  readonly close: () => void;
+}
+
+/**
+ * A scan over `paths`. `sources` ({path: text}) overlay the real files: a planted path need not exist
+ * on disk, and a real path read from `sources` sees the overlay's text.
+ */
+export function openScan(paths: readonly string[], sources: Readonly<Record<string, string>> = {}): Scan {
+  const files = new Map<string, string>(Object.entries(sources).map(([path, text]) => [join(REPO_ROOT, path), text]));
+  files.set(CONFIG, JSON.stringify({ compilerOptions: OPTIONS, files: paths.map((path) => join(REPO_ROOT, path)) }));
+  const api = new API({
+    cwd: REPO_ROOT,
+    fs: {
+      readFile: (name) => files.get(name),
+      fileExists: (name) => (files.has(name) ? true : undefined),
+    },
+  });
+  const project = api.updateSnapshot({ openProjects: [CONFIG] }).getProject(CONFIG);
+  if (project === undefined) {
+    api.close();
+    throw new Error('the scan project did not open');
+  }
+  return { program: project.program, checker: project.checker, paths, close: () => api.close() };
+}
+
+/** A scan over in-memory sources only ({path: text}, paths relative to the root). */
+export function planted(sources: Readonly<Record<string, string>>): Scan {
+  return openScan(Object.keys(sources), sources);
+}
+
+/** A scan over every held production module. */
+export function repositoryScan(): Scan {
+  const paths = productionFiles();
+  return openScan(paths, Object.fromEntries(paths.map((path) => [path, textOf(path)])));
 }
 
 /** The source file of a covered path. */
-export function sourceOf(scan: Scan, path: string): ts.SourceFile {
+export function sourceOf(scan: Scan, path: string): ast.SourceFile {
   const file = scan.program.getSourceFile(join(REPO_ROOT, path));
   if (file === undefined) {
-    throw new Error(`the scan program does not cover ${path}`);
+    throw new Error(`the scan does not cover ${path}`);
   }
   return file;
 }
 
-/** A program over `sources` ({path: text}, paths relative to the root), with the real files behind them. */
-export function planted(sources: Readonly<Record<string, string>>): Scan {
-  const virtual = new Map(Object.entries(sources).map(([path, text]) => [join(REPO_ROOT, path), text]));
-  const host = ts.createCompilerHost(OPTIONS, true);
-  const realFileExists = host.fileExists.bind(host);
-  const realReadFile = host.readFile.bind(host);
-  const realGetSourceFile = host.getSourceFile.bind(host);
-  host.fileExists = (name) => virtual.has(name) || realFileExists(name);
-  host.readFile = (name) => virtual.get(name) ?? realReadFile(name);
-  host.getSourceFile = (name, language, onError, create) => {
-    const text = virtual.get(name);
-    return text === undefined
-      ? realGetSourceFile(name, language, onError, create)
-      : ts.createSourceFile(name, text, language, true);
-  };
-  const program = ts.createProgram({ rootNames: [...virtual.keys()], options: OPTIONS, host });
-  return { program, checker: program.getTypeChecker(), paths: Object.keys(sources) };
-}
-
-let repository: Scan | undefined;
-
-/** The program over every held production module, built once per run. */
-export function repositoryScan(): Scan {
-  repository ??= planted(Object.fromEntries(productionFiles().map((path) => [path, textOf(path)])));
-  return repository;
-}
-
 /** The repository-relative path of a source file. */
-export function pathOf(file: ts.SourceFile): string {
+export function pathOf(file: ast.SourceFile): string {
   return relative(file.fileName);
 }
 
 /** Every node of a source file, depth first. */
-export function nodes(file: ts.SourceFile): ts.Node[] {
-  const found: ts.Node[] = [];
-  const visit = (node: ts.Node): void => {
+export function nodes(file: ast.SourceFile): ast.Node[] {
+  const found: ast.Node[] = [];
+  const visit = (node: ast.Node): void => {
     found.push(node);
-    ts.forEachChild(node, visit);
+    node.forEachChild(visit);
   };
   visit(file);
   return found;
 }
 
+/** The source text of a node, without its leading trivia. */
+export function textOfNode(node: ast.Node): string {
+  const file = node.getSourceFile();
+  return file.text.slice(node.getStart(file), node.getEnd());
+}
+
 /** The symbol a name stands for, through import and export aliases. */
-export function resolved(checker: ts.TypeChecker, symbol: ts.Symbol | undefined): ts.Symbol | undefined {
-  if (symbol !== undefined && (symbol.flags & ts.SymbolFlags.Alias) !== 0) {
+export function resolved(checker: Checker, symbol: TsSymbol | undefined): TsSymbol | undefined {
+  if (symbol !== undefined && (symbol.flags & SymbolFlags.Alias) !== 0) {
     return checker.getAliasedSymbol(symbol);
   }
   return symbol;
 }
 
 /**
- * The qualified name of a declaration a symbol resolves to: `Math.random`, `DateConstructor.now`,
- * `"child_process".spawn`. A symbol declared in several places (a global declared by both the DOM
- * and Node's types) has several names, one per declaration's container.
+ * The qualified name of the declaration a symbol resolves to, through its parents:
+ * `Math.random`, `DateConstructor.now`, `child_process.spawn`, `NodeJS.Process.env`. A module's quotes
+ * and `node:` prefix are dropped, and so is Node's `__global` wrapper.
  */
-export function qualifiedNames(checker: ts.TypeChecker, symbol: ts.Symbol | undefined): readonly string[] {
+export function qualifiedName(checker: Checker, symbol: TsSymbol | undefined): string | undefined {
   const target = resolved(checker, symbol);
   if (target === undefined) {
-    return [];
+    return undefined;
   }
-  const names = new Set<string>([checker.getFullyQualifiedName(target)]);
-  for (const declaration of target.declarations ?? []) {
-    const parent = declaration.parent;
-    const container =
-      ts.isInterfaceDeclaration(parent) || ts.isClassDeclaration(parent) || ts.isModuleBlock(parent)
-        ? parent
-        : ts.isTypeLiteralNode(parent) && ts.isVariableDeclaration(parent.parent)
-          ? parent.parent
-          : undefined;
-    const containerName =
-      container !== undefined && 'name' in container && container.name !== undefined
-        ? container.name.getText()
-        : undefined;
-    names.add(containerName === undefined ? target.name : `${containerName}.${target.name}`);
+  const names: string[] = [];
+  for (let current: TsSymbol | undefined = target; current !== undefined; current = current.getParent()) {
+    names.unshift(current.name.replace(/^"(?:node:)?([^"]+)"$/, '$1'));
   }
-  return [...names];
+  return names.filter((name) => name !== '__global').join('.');
 }
 
-/** The text of a property name, or undefined for a computed one. */
-export function propertyName(name: ts.PropertyName | ts.BindingName): string | undefined {
-  if (ts.isIdentifier(name) || ts.isStringLiteral(name) || ts.isPrivateIdentifier(name)) {
+/** Whether a symbol is declared by the platform: a `lib` file or an installed package's types. */
+export function isPlatform(checker: Checker, symbol: TsSymbol | undefined): boolean {
+  const declarations = resolved(checker, symbol)?.declarations ?? [];
+  return declarations.length > 0 && declarations.every((declaration) => declaration.path.includes('/node_modules/'));
+}
+
+/** The text of a property or binding name, or undefined for a computed one. */
+export function nameText(name: ast.Node | undefined): string | undefined {
+  if (name !== undefined && (ast.isIdentifier(name) || ast.isStringLiteral(name) || ast.isPrivateIdentifier(name))) {
     return name.text;
   }
   return undefined;

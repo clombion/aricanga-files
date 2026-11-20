@@ -10,9 +10,10 @@
  * callable passed in from outside the covered roots.
  */
 
-import ts from 'typescript';
+import * as ast from 'typescript/unstable/ast';
+import type { Symbol as TsSymbol } from 'typescript/unstable/sync';
 
-import { type Scan, nodes, pathOf, propertyName, qualifiedNames, resolved } from './checker.ts';
+import { isPlatform, nameText, nodes, pathOf, qualifiedName, type Scan } from './checker.ts';
 import { Accepted, site } from './exemptions.ts';
 
 /** A root a rule covers, and its owner there (null: no module of the root may use the API). */
@@ -46,7 +47,7 @@ export const RULES: readonly Rule[] = [
   },
   {
     name: 'clock',
-    names: new Accepted(['DateConstructor.now', 'new Date()', 'Date()', 'Performance.now', 'Process.hrtime']),
+    names: new Accepted(['DateConstructor.now', 'new Date()', 'Date()', 'Performance.now', 'NodeJS.Process.hrtime']),
     scopes: nobody(...KERNEL, 'experiences/sandbox/', 'harness/'),
     why: 'time is simulation-derived: the kernel reads it from its input, a host from its injected clock',
   },
@@ -66,7 +67,7 @@ export const RULES: readonly Rule[] = [
   },
   {
     name: 'standard-streams',
-    names: new Accepted(['console', 'Process.stdout', 'Process.stderr']),
+    names: new Accepted(['console', 'NodeJS.Process.stdout', 'NodeJS.Process.stderr']),
     scopes: [
       ...nobody(...KERNEL, 'experiences/sandbox/'),
       { root: 'harness/', owner: 'harness/lib/output.ts' },
@@ -121,7 +122,7 @@ export const RULES: readonly Rule[] = [
   },
   {
     name: 'settings',
-    names: new Accepted(['Process.env']),
+    names: new Accepted(['NodeJS.Process.env']),
     scopes: [
       ...nobody(...KERNEL, 'experiences/sandbox/'),
       { root: 'harness/', owner: 'harness/lib/process.ts' },
@@ -145,93 +146,75 @@ export function keyOf(found: Site): string {
   return site(found.path, found.rule);
 }
 
-/** Strip a `node:` module prefix and the quotes around a module name: `"node:fs".x` reads `fs.x`. */
-function normalised(name: string): string {
-  return name.replace(/^"(?:node:)?([^"]+)"\./, '$1.').replace(/^global\.NodeJS\./, '');
-}
-
-function inTypeOrImport(node: ts.Node): boolean {
-  for (let current: ts.Node | undefined = node; current !== undefined; current = current.parent) {
+function inTypeOrImport(node: ast.Node): boolean {
+  for (let current: ast.Node | undefined = node; current !== undefined; current = current.parent) {
     if (
-      ts.isTypeNode(current) ||
-      ts.isImportDeclaration(current) ||
-      ts.isExportDeclaration(current) ||
-      ts.isImportEqualsDeclaration(current) ||
-      ts.isTypeAliasDeclaration(current) ||
-      ts.isInterfaceDeclaration(current) ||
-      ts.isHeritageClause(current)
+      ast.isTypeNode(current) ||
+      ast.isImportDeclaration(current) ||
+      ast.isExportDeclaration(current) ||
+      ast.isImportEqualsDeclaration(current) ||
+      ast.isTypeAliasDeclaration(current) ||
+      ast.isInterfaceDeclaration(current) ||
+      ast.isHeritageClause(current)
     ) {
       return true;
     }
-    if (ts.isStatement(current) || ts.isSourceFile(current)) {
+    if (ast.isSourceFile(current)) {
       return false;
     }
   }
   return false;
 }
 
-/** Whether a node is the name a declaration introduces, not a read of one. */
-function declares(node: ts.Identifier): boolean {
+/** Whether an identifier is the name a declaration introduces, or a property name read elsewhere. */
+function declaresOrNames(node: ast.Identifier): boolean {
   const parent = node.parent;
-  return (
-    ((ts.isVariableDeclaration(parent) ||
-      ts.isFunctionDeclaration(parent) ||
-      ts.isClassDeclaration(parent) ||
-      ts.isParameter(parent) ||
-      ts.isPropertyAssignment(parent) ||
-      ts.isPropertyDeclaration(parent) ||
-      ts.isMethodDeclaration(parent) ||
-      ts.isBindingElement(parent)) &&
-      parent.name === node) ||
-    (ts.isPropertyAccessExpression(parent) && parent.name === node)
-  );
+  const named =
+    ast.isVariableDeclaration(parent) ||
+    ast.isFunctionDeclaration(parent) ||
+    ast.isClassDeclaration(parent) ||
+    ast.isParameterDeclaration(parent) ||
+    ast.isPropertyAssignment(parent) ||
+    ast.isPropertyDeclaration(parent) ||
+    ast.isMethodDeclaration(parent) ||
+    ast.isBindingElement(parent) ||
+    ast.isPropertyAccessExpression(parent);
+  return named && 'name' in parent && parent.name === node;
 }
 
-/**
- * Whether a symbol is declared by the platform (a `lib` file or a package's types), so a module's
- * own `fetch` or `now` never reads as the platform's.
- */
-function platform(scan: Scan, symbol: ts.Symbol | undefined): boolean {
-  const declarations = resolved(scan.checker, symbol)?.declarations ?? [];
-  return (
-    declarations.length > 0 &&
-    declarations.every((declaration) => {
-      const file = declaration.getSourceFile();
-      return scan.program.isSourceFileDefaultLibrary(file) || file.fileName.includes('/node_modules/');
-    })
-  );
-}
-
-/** The qualified names every runtime use in a file resolves to. */
-export function uses(scan: Scan, file: ts.SourceFile): readonly string[] {
+/** The qualified names every runtime use of a platform API in a file resolves to. */
+export function uses(scan: Scan, file: ast.SourceFile): readonly string[] {
   const { checker } = scan;
   const found: string[] = [];
-  const add = (symbol: ts.Symbol | undefined): void => {
-    if (platform(scan, symbol)) {
-      found.push(...qualifiedNames(checker, symbol).map(normalised));
+  const add = (symbol: TsSymbol | undefined): void => {
+    const name = isPlatform(checker, symbol) ? qualifiedName(checker, symbol) : undefined;
+    if (name !== undefined) {
+      found.push(name);
     }
+  };
+  const isDate = (expression: ast.Node): boolean => {
+    const symbol = checker.getSymbolAtLocation(expression);
+    return isPlatform(checker, symbol) && qualifiedName(checker, symbol) === 'Date';
   };
   for (const node of nodes(file)) {
     if (inTypeOrImport(node)) {
       continue;
     }
-    if (ts.isNewExpression(node) && (node.arguments?.length ?? 0) === 0) {
-      if (qualifiedNames(checker, checker.getSymbolAtLocation(node.expression)).includes('Date')) {
-        found.push('new Date()');
-      }
-    } else if (ts.isCallExpression(node) && qualifiedNames(checker, checker.getSymbolAtLocation(node.expression)).includes('Date')) {
+    if (ast.isNewExpression(node) && (node.arguments?.length ?? 0) === 0 && isDate(node.expression)) {
+      found.push('new Date()');
+    } else if (ast.isCallExpression(node) && isDate(node.expression)) {
       found.push('Date()');
     }
-    if (ts.isPropertyAccessExpression(node)) {
+    if (ast.isPropertyAccessExpression(node)) {
       add(checker.getSymbolAtLocation(node.name));
-    } else if (ts.isElementAccessExpression(node) && ts.isStringLiteralLike(node.argumentExpression)) {
-      add(checker.getPropertyOfType(checker.getTypeAtLocation(node.expression), node.argumentExpression.text));
-    } else if (ts.isBindingElement(node) && ts.isObjectBindingPattern(node.parent)) {
-      const name = propertyName(node.propertyName ?? node.name);
-      if (name !== undefined) {
-        add(checker.getPropertyOfType(checker.getTypeAtLocation(node.parent), name));
-      }
-    } else if (ts.isIdentifier(node) && !declares(node)) {
+    } else if (ast.isElementAccessExpression(node) && ast.isStringLiteral(node.argumentExpression)) {
+      const type = checker.getTypeAtLocation(node.expression);
+      add(type === undefined ? undefined : checker.getPropertyOfType(type, node.argumentExpression.text));
+    } else if (ast.isBindingElement(node) && ast.isObjectBindingPattern(node.parent)) {
+      const name = nameText(node.propertyName ?? node.name);
+      const type = checker.getTypeAtLocation(node.parent);
+      add(name === undefined || type === undefined ? undefined : checker.getPropertyOfType(type, name));
+    } else if (ast.isIdentifier(node) && !declaresOrNames(node)) {
       add(checker.getSymbolAtLocation(node));
     }
   }
@@ -243,7 +226,7 @@ function breaks(rule: Rule, found: readonly string[]): boolean {
 }
 
 /** The guarded uses in a covered file that its rules do not allow there. */
-export function sites(scan: Scan, file: ts.SourceFile): readonly Site[] {
+export function sites(scan: Scan, file: ast.SourceFile): readonly Site[] {
   const path = pathOf(file);
   const found = uses(scan, file);
   return RULES.filter((rule) => {
@@ -253,6 +236,6 @@ export function sites(scan: Scan, file: ts.SourceFile): readonly Site[] {
 }
 
 /** Whether a module uses the rule's API: an owner that does not is stale. */
-export function ownerUses(scan: Scan, file: ts.SourceFile, rule: Rule): boolean {
+export function ownerUses(scan: Scan, file: ast.SourceFile, rule: Rule): boolean {
   return breaks(rule, uses(scan, file));
 }
