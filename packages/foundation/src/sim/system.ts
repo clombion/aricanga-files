@@ -1,7 +1,8 @@
-import type { Command, Input } from './input';
+import type { Command, Input, Resume } from './input';
 import type { KernelStatus, ReduceContext, ReduceResult, RenderContext } from './context';
 import type { Effect } from './effect';
 import type { SystemId } from './snapshot';
+import { assertNever } from './exhaustive';
 
 /*
  * The contract every system implements so foundation stays vocabulary-agnostic
@@ -24,34 +25,34 @@ interface System<TState, TCommand extends Command, TEffect extends Effect, TView
   /** Pure: what the system is waiting for. */
   readonly status: (state: TState) => KernelStatus;
   readonly view: (state: TState, render: RenderContext) => TViewModel;
+  /**
+   * Parse an inbound player command: one of this system's own commands, or refused with an
+   * `InputRefusedError` naming the value and the system. The one way a command reaches `reduce`.
+   */
+  readonly parseCommand: (value: unknown) => TCommand;
+  /**
+   * Parse a state read back from a save or a `restored` resume: this system's state, or refused
+   * with an `InputRefusedError`. The one way a state from outside reaches the registry.
+   */
+  readonly parseState: (value: unknown) => TState;
 }
 
 /*
  * State-erased view of a system for the runtime registry. A concrete
  * `System<…>` can't be stored as `System<unknown, …>` (reduce is contravariant
- * in state), so the registry holds this erased shape. Its functions are method
- * signatures, which TypeScript compares bivariantly: that is what lets `erase`
- * hold a concrete system without a cast.
+ * in state and command), so the registry holds this erased shape, built by
+ * `erase` from closures over the concrete system: a command or a restored state
+ * from outside is parsed by the system itself, and a state the registry holds
+ * goes back to its system through the owner proof of `stateOf`.
  */
 interface AnySystem {
   readonly id: SystemId;
   readonly tags: readonly string[];
-  init(seed: number): unknown;
-  reduce(state: unknown, input: Input<unknown>, ctx: ReduceContext): ReduceResult<unknown>;
-  status(state: unknown): KernelStatus;
-  view(state: unknown, render: RenderContext): unknown;
-}
-
-/**
- * Erase a concrete system's generics for storage in the runtime registry.
- *
- * @param {System} system - The concrete system.
- * @returns {AnySystem} The same system, held by the registry's erased shape.
- */
-function erase<TState, TCommand extends Command, TEffect extends Effect, TViewModel>(
-  system: Readonly<System<TState, TCommand, TEffect, TViewModel>>,
-): AnySystem {
-  return system;
+  readonly init: (seed: number) => unknown;
+  readonly reduce: (state: unknown, input: Input<unknown>, ctx: ReduceContext) => ReduceResult<unknown>;
+  readonly status: (state: unknown) => KernelStatus;
+  readonly view: (state: unknown, render: RenderContext) => unknown;
+  readonly parseState: (value: unknown) => unknown;
 }
 
 /**
@@ -108,6 +109,71 @@ function viewOf<TState, TCommand extends Command, TEffect extends Effect, TViewM
 ): TViewModel {
   // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- reclaim proved the ids match, so the view is this system's own
   return reclaim(system.id, owned) as TViewModel;
+}
+
+/**
+ * A resume as the system receives it: a restored state is parsed by the system, every other resume
+ * carries no state of the system's and passes as it is.
+ *
+ * @param {System} system - The system the resume is for.
+ * @param {Resume} resume - The resume from the runtime.
+ * @returns {Resume} The resume typed by the system's state.
+ */
+function resumeOf<TState, TCommand extends Command, TEffect extends Effect, TViewModel>(
+  system: Readonly<System<TState, TCommand, TEffect, TViewModel>>,
+  resume: Readonly<Resume<unknown>>,
+): Resume<TState> {
+  return resume.kind === 'restored' ? { kind: 'restored', state: system.parseState(resume.state) } : resume;
+}
+
+/**
+ * An input as the system receives it: a player command is parsed by the system, a resume through
+ * `resumeOf`, and a story step or a lifecycle input carries nothing of the system's own.
+ *
+ * @param {System} system - The system the input is for.
+ * @param {Input} input - The input from the runtime.
+ * @returns {Input} The input typed by the system's state and commands.
+ */
+function inputOf<TState, TCommand extends Command, TEffect extends Effect, TViewModel>(
+  system: Readonly<System<TState, TCommand, TEffect, TViewModel>>,
+  input: Readonly<Input<unknown>>,
+): Input<TState, TCommand> {
+  switch (input.source) {
+    case 'story':
+    case 'lifecycle': {
+      return input;
+    }
+    case 'player': {
+      return { command: system.parseCommand(input.command), source: 'player' };
+    }
+    case 'resume': {
+      return { resume: resumeOf(system, input.resume), source: 'resume' };
+    }
+    default: {
+      return assertNever(input);
+    }
+  }
+}
+
+/**
+ * Erase a concrete system's generics for storage in the runtime registry.
+ *
+ * @param {System} system - The concrete system.
+ * @returns {AnySystem} The system's functions over the registry's untyped values.
+ */
+function erase<TState, TCommand extends Command, TEffect extends Effect, TViewModel>(
+  system: Readonly<System<TState, TCommand, TEffect, TViewModel>>,
+): AnySystem {
+  const own = (state: unknown): TState => stateOf(system, { systemId: system.id, value: state });
+  return {
+    id: system.id,
+    init: (seed) => system.init(seed),
+    parseState: (value) => system.parseState(value),
+    reduce: (state, input, ctx) => system.reduce(own(state), inputOf(system, input), ctx),
+    status: (state) => system.status(own(state)),
+    tags: system.tags,
+    view: (state, render) => system.view(own(state), render),
+  };
 }
 
 export { erase, stateOf, viewOf };

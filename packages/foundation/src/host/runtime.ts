@@ -161,7 +161,8 @@ class Runtime {
   }
 
   /**
-   * Restore a snapshot: ink, the id allocator, and the state of each registered system it holds.
+   * Restore a snapshot: ink, the id allocator, and the state of each registered system it holds,
+   * each parsed by its system.
    *
    * @param {Snapshot} snap - The snapshot.
    */
@@ -170,8 +171,9 @@ class Runtime {
     this.idSeq = snap.idSeq;
     this.ink.loadJson(snap.ink);
     for (const [id, state] of Object.entries(snap.state)) {
-      if (this.systems.has(id)) {
-        this.states.set(id, state);
+      const system = this.systems.get(id);
+      if (system !== undefined) {
+        this.states.set(id, system.parseState(state));
       }
     }
   }

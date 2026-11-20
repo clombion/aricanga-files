@@ -1,7 +1,9 @@
 import type { AnySystem, System } from '#src/sim/system';
 import type { Command, Input } from '#src/sim/input';
 import type { ReduceContext, ReduceResult } from '#src/sim/context';
+import { commandOf, readerOf } from '#src/sim/parse';
 import type { Effect } from '#src/sim/effect';
+import type { Reader } from '#src/sim/parse';
 import { assertNever } from '#src/sim/exhaustive';
 import { erase } from '#src/sim/system';
 import { fx } from '#src/sim/effect';
@@ -77,11 +79,31 @@ function reduceResume<TState extends Gated>(state: TState, input: Input<TState>)
 /** The inputs a fixture system shapes itself: its story lines and player commands. */
 type OwnInput<TState, TCommand extends Command> = Extract<Input<TState, TCommand>, { readonly source: 'story' | 'player' }>;
 
-/** A fixture system's identity: its id, the tags it claims and its initial state. */
-interface Identity<TState> {
+/**
+ * A fixture system's identity: its id, the tags it claims, its initial state, and the parsers of its
+ * commands and of a restored state.
+ */
+interface Identity<TState, TCommand extends Command> {
   readonly id: string;
   readonly tags: readonly string[];
   readonly init: (seed: number) => TState;
+  readonly parseCommand: (value: unknown) => TCommand;
+  readonly parseState: (value: unknown) => TState;
+}
+
+/**
+ * The commit-gate fields of a restored fixture state, read from its object.
+ *
+ * @param {Reader} read - The system's readers.
+ * @param {Readonly<Record<string, unknown>>} state - The restored state's fields.
+ * @returns {Gated} The gate and the fetched data.
+ */
+function gatedFields(read: Readonly<Reader>, state: Readonly<Record<string, unknown>>): Gated {
+  return {
+    busy: read.boolean(state['busy'], 'busy'),
+    fetched: state['fetched'],
+    token: read.number(state['token'], 'token'),
+  };
 }
 
 /**
@@ -93,7 +115,7 @@ interface Identity<TState> {
  * @returns {System} The fixture system.
  */
 function gatedSystem<TState extends Gated, TCommand extends Command>(
-  identity: Readonly<Identity<TState>>,
+  identity: Readonly<Identity<TState, TCommand>>,
   own: (state: TState, input: OwnInput<TState, TCommand>, ctx: ReduceContext) => ReduceResult<TState>,
 ): System<TState, TCommand, Effect, TState> {
   return {
@@ -135,10 +157,51 @@ function reduceCommand(state: FixtureState, command: FixtureCommand): ReduceResu
   }
 }
 
+/** The fixture system's id. */
+const FIXTURE_ID = 'fixture';
+
+/** The fixture system's readers. */
+const READ = readerOf(FIXTURE_ID);
+
+/** The fixture system's command kinds. */
+const FIXTURE_KINDS: readonly FixtureCommand['kind'][] = ['schedule', 'fetch', 'present', 'persist', 'choose'];
+
+/**
+ * Parse a command for the fixture system.
+ *
+ * @param {unknown} value - The inbound value.
+ * @returns {FixtureCommand} One of the fixture system's commands; any other value is refused.
+ */
+function parseFixtureCommand(value: unknown): FixtureCommand {
+  const command = commandOf(READ, value, FIXTURE_KINDS);
+  if (command.kind === 'choose') {
+    return { kind: 'choose', payload: { index: READ.number(READ.object(command.payload, 'the choose payload')['index'], 'index') } };
+  }
+  READ.absent(command.payload, `the ${command.kind} payload`);
+  return { kind: command.kind, payload: undefined };
+}
+
+/**
+ * Parse a restored fixture state.
+ *
+ * @param {unknown} value - The restored value.
+ * @returns {FixtureState} The fixture system's state; any other value is refused.
+ */
+function parseFixtureState(value: unknown): FixtureState {
+  const state = READ.object(value, 'a state');
+  return {
+    ...gatedFields(READ, state),
+    lines: READ.list(state['lines'], 'lines', READ.string),
+    saved: READ.boolean(state['saved'], 'saved'),
+  };
+}
+
 const fixtureSystem: System<FixtureState, FixtureCommand, Effect, FixtureState> = gatedSystem<FixtureState, FixtureCommand>(
   {
-    id: 'fixture',
+    id: FIXTURE_ID,
     init: () => ({ busy: false, fetched: undefined, lines: [], saved: false, token: FIRST_TOKEN }),
+    parseCommand: parseFixtureCommand,
+    parseState: parseFixtureState,
     tags: [FIXTURE_TAG],
   },
   (state, input): ReduceResult<FixtureState> => {
@@ -157,5 +220,5 @@ const fixtureSystem: System<FixtureState, FixtureCommand, Effect, FixtureState> 
 /** The fixture system, erased for the runtime registry. */
 const fixtureSystemErased: AnySystem = erase(fixtureSystem);
 
-export { FIXTURE_TAG, fixtureSystem, fixtureSystemErased, gatedSystem };
+export { FIXTURE_TAG, fixtureSystem, fixtureSystemErased, gatedFields, gatedSystem };
 export type { FixtureCommand, FixtureState };
