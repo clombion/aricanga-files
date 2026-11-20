@@ -83,7 +83,6 @@
         ]
       }
     ],
-    "aricanga/promises": "error",
     "aricanga/statics": "error",
     "aricanga/store-owner": [
       "error",

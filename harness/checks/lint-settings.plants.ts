@@ -64,6 +64,10 @@ const PLANTS: Readonly<Record<string, readonly [string, readonly string[]]>> = {
   ],
   'src/ts-expect-bare.ts': ['// @ts-expect-error\nexport const value: string = true;\n', ['typescript(ban-ts-comment)']],
   'src/ts-ignore.ts': ["// @ts-ignore\nexport const value = 'a';\n", ['typescript(ban-ts-comment)', 'typescript(prefer-ts-expect-error)']],
+  'src/two-argument-then.ts': [
+    'const FALLBACK = 0;\n\nexport async function settle(pending: Readonly<Promise<number>>): Promise<number> {\n  const settled = await pending.then(\n    (value) => value,\n    () => FALLBACK,\n  );\n  return settled;\n}\n',
+    ['promise(prefer-catch)'],
+  ],
   'src/type-import.ts': [
     "import { Shape } from './types';\n\nexport const shape: Shape = { kind: 'a' };\n",
     ['typescript(consistent-type-imports)'],

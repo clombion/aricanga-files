@@ -23,7 +23,6 @@ ones, and `closed.ts` the readers the closed-set rules share; `rules/jsx-rules.t
 | `aricanga/mechanics` | No solid-js or @solidjs/* import under packages/foundation or a system model. |
 | `aricanga/mirrors` | No effect whose only work is calling a setter; derive the value. |
 | `aricanga/own-keys` | A record keyed by story words is read through its own entries: Object.hasOwn, never in or a defaulted read. |
-| `aricanga/promises` | No two-argument .then; chain .catch, or await in a try. |
 | `aricanga/statics` | No this inside a static method, static field or static block; name the class. |
 | `aricanga/store-owner` | createStore and reconcile only in the snapshot adapter (the `owners` globs). |
 | `aricanga/style-prop` | No style prop in JSX; set dynamic values with a class or a ref. |
@@ -56,8 +55,10 @@ the repository's own tools never lint or compile a must-fire case.
 - jsx-a11y's `label-has-associated-control` knows only `htmlFor` and has no option for Solid's
   `for`, and its `no-autofocus` sees only `autoFocus`; `labels` and `autofocus` take their place.
 - kiz-radar's `thens` (no `.then` in components) is part of `sync-parts`.
+- A two-argument `.then`, whose rejection handler misses errors thrown in the first, is
+  `promise/prefer-catch`'s, proven by a `lint-settings` plant.
 - Some must-fire cases are also refused by a shipped rule, and their fixtures show both:
-  `node/no-process-env` (a `process.env` read), `promise/prefer-catch` (a two-argument `.then`),
+  `node/no-process-env` (a `process.env` read),
   `promise/prefer-await-to-then` and `solid/reactivity` (promise work in a part),
   `solid/no-react-specific-props` (`htmlFor`) and `solid/no-destructure` (destructured props).
 - closedworld's shape rules: `total-reads` and `own-keys` are here, and the `declared-sets` check

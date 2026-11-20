@@ -44,7 +44,6 @@ const UNREACHED = Exemptions.grouped({
       'harness/lint-rules/rules/mechanics.ts: coverage',
       'harness/lint-rules/rules/mirrors.ts: coverage',
       'harness/lint-rules/rules/module-rules.ts: coverage',
-      'harness/lint-rules/rules/promises.ts: coverage',
       'harness/lint-rules/rules/statics.ts: coverage',
       'harness/lint-rules/rules/store-owner.ts: coverage',
       'harness/lint-rules/rules/style-prop.ts: coverage',
