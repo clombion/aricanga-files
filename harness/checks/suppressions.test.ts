@@ -23,6 +23,7 @@ import { census, suffix } from './suppressions.census.ts';
 import { closeSession, parse } from '#lib/ts-source.ts';
 import { describe, expect, test } from 'vitest';
 import type { Census } from './suppressions.census.ts';
+import { counted } from './counted.ts';
 import { heldFiles } from '#lib/scope.ts';
 import { textOf } from '#lib/source-files.ts';
 
@@ -30,22 +31,6 @@ const HARNESS_ID = 'suppressions';
 
 /** The held suffixes whose comments the census reads. */
 const SCANNED = new Accepted(['.ts', '.tsx', '.js', '.mjs', '.css']);
-
-/** A counted suppression's count and reason. */
-interface Counted {
-  readonly count: number;
-  readonly reason: string;
-}
-
-/**
- * The entries of a `CountedExemptions`, from each key's count and reason.
- *
- * @param {Readonly<Record<string, Counted>>} entries - Each key's count and reason.
- * @returns {Readonly<Record<string, readonly [number, string]>>} The entries as `[count, reason]`.
- */
-function counted(entries: Readonly<Record<string, Counted>>): Readonly<Record<string, readonly [number, string]>> {
-  return Object.fromEntries(Object.entries(entries).map(([key, entry]: readonly [string, Counted]) => [key, [entry.count, entry.reason] as const]));
-}
 
 /** The suppressions the code holds, keyed by `site(path, tool:rule)`, with their counts and reasons. */
 const SUPPRESSIONS = new CountedExemptions(

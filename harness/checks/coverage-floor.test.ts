@@ -10,12 +10,13 @@
 
 import { COVERAGE_DIR, DEBT, fileCoverage, floorProblems, gateReport, main, shortfalls } from '#lib/coverage.ts';
 import { CountedExemptions, site } from '#lib/exemptions.ts';
+import { EXIT_CLEAN, EXIT_FINDINGS } from './exit-status.ts';
 import { describe, expect, test } from 'vitest';
 import type { FileCoverage } from '#lib/coverage.ts';
 import { Project } from '#lib/tools.ts';
-import gate from '../../vitest.gate.config.ts';
-import { join } from 'node:path';
-import { object } from '#lib/config.ts';
+import { counted } from './counted.ts';
+import { gateCoverage } from './gate-config.ts';
+import { join } from 'node:path/posix';
 import { tracked } from '#lib/source-files.ts';
 
 const HARNESS_ID = 'coverage-floor';
@@ -51,7 +52,7 @@ function planted(tests: string): readonly FileCoverage[] {
     project.write('src/uncalled.ts', UNCALLED);
     project.write('tests/plant.test.ts', tests);
     const done = project.tool('vitest', 'run', '--coverage');
-    expect(done.status, done.stdout + done.stderr).toBe(0);
+    expect(done.status, done.stdout + done.stderr).toBe(EXIT_CLEAN);
     return fileCoverage(gateReport(join(project.root, 'coverage')), project.root);
   } finally {
     project.remove();
@@ -59,6 +60,65 @@ function planted(tests: string): readonly FileCoverage[] {
 }
 
 const NONE = new CountedExemptions({});
+/** Lower floors, as a percentage of a file's items. */
+const HALF_FLOOR = 50;
+const THREE_QUARTER_FLOOR = 75;
+/** The problems the script writes for the planted shortfall: its statements and its lines. */
+const PLANTED_PROBLEMS = 2;
+/** The debt the debt tests register. */
+const DEBT_OF_A = new CountedExemptions(
+  counted({
+    [site('src/a.ts', 'lines')]: { count: 1, reason: 'planted' },
+    [site('src/a.ts', 'statements')]: { count: 2, reason: 'planted' },
+  }),
+);
+
+/**
+ * The file a debt key names.
+ *
+ * @param {string} key - A `site(path, metric)` key.
+ * @returns {string} Its path.
+ */
+function fileOf(key: string): string {
+  const [path = key] = key.split(' :: ');
+  return path;
+}
+
+/**
+ * The script's exit status and output on a report written into a fresh folder.
+ *
+ * @param {(root: string) => unknown} report - The report, from the folder's path.
+ * @returns {readonly [number, readonly string[]]} The exit status and each problem written.
+ */
+function runScript(report: (root: string) => unknown): readonly [number, readonly string[]] {
+  const project = new Project({ linkModules: false });
+  try {
+    project.write('coverage-final.json', JSON.stringify(report(project.root)));
+    const errors: string[] = [];
+    const status = main((text) => {
+      errors.push(text);
+    }, NONE, project.root);
+    return [status, errors];
+  } finally {
+    project.remove();
+  }
+}
+
+/**
+ * An Istanbul report of one file with one unrun statement; its keys are the format's (`s`, `b`, `f`).
+ *
+ * @param {string} root - The folder the report's file sits in.
+ * @returns {unknown} The report.
+ */
+function unrunStatement(root: string): unknown {
+  const entry = Object.fromEntries([
+    ['b', {}],
+    ['f', {}],
+    ['s', { '0': 0 }],
+    ['statementMap', { '0': { start: { line: 1 } } }],
+  ]);
+  return { [join(root, 'src/a.ts')]: entry };
+}
 
 /**
  * The files a debt names that the listing does not hold.
@@ -68,7 +128,7 @@ const NONE = new CountedExemptions({});
  */
 function unlisted(debt: CountedExemptions): readonly string[] {
   const files = new Set(tracked());
-  return [...debt.entries.keys()].map((key) => key.split(' :: ')[0] ?? key).filter((path) => !files.has(path));
+  return [...debt.entries.keys()].map((key) => fileOf(key)).filter((path) => !files.has(path));
 }
 
 describe('the floor', () => {
@@ -109,31 +169,23 @@ describe('the debt', () => {
 
   test('passes its exact shortfall', () => {
     expect.hasAssertions();
-    const debt = new CountedExemptions({
-      [site('src/a.ts', 'statements')]: [2, 'planted'],
-      [site('src/a.ts', 'lines')]: [1, 'planted'],
-    });
-    expect(floorProblems([file], debt)).toStrictEqual([]);
+    expect(floorProblems([file], DEBT_OF_A)).toStrictEqual([]);
   });
 
   test('fails once the gap closes, and once it grows', () => {
     expect.hasAssertions();
     const closed = { ...file, covered: { ...file.covered, statements: 3 } };
-    const debt = new CountedExemptions({
-      [site('src/a.ts', 'statements')]: [2, 'planted'],
-      [site('src/a.ts', 'lines')]: [1, 'planted'],
-    });
-    expect(floorProblems([closed], debt)).toStrictEqual([
+    expect(floorProblems([closed], DEBT_OF_A)).toStrictEqual([
       'src/a.ts :: statements: 1 items under the floor, but 2 registered: lower the debt',
     ]);
     const grown = { ...file, covered: { ...file.covered, branches: 1 } };
-    expect(floorProblems([grown], debt)).toStrictEqual(['src/a.ts :: branches: 1 items under the 100 % floor, 0 registered']);
+    expect(floorProblems([grown], DEBT_OF_A)).toStrictEqual(['src/a.ts :: branches: 1 items under the 100 % floor, 0 registered']);
   });
 
   test('a lower floor is a fraction of the items', () => {
     expect.hasAssertions();
-    expect(shortfalls([file], 50)).toStrictEqual([]);
-    expect(shortfalls([file], 75)).toStrictEqual([site('src/a.ts', 'statements')]);
+    expect(shortfalls([file], HALF_FLOOR)).toStrictEqual([]);
+    expect(shortfalls([file], THREE_QUARTER_FLOOR)).toStrictEqual([site('src/a.ts', 'statements')]);
   });
 
   test('names only files the listing holds', () => {
@@ -143,40 +195,22 @@ describe('the debt', () => {
 });
 
 describe('the gate', () => {
-  test('writes the Istanbul JSON report the script reads, outside the checkout', () => {
+  test('writes the Istanbul JSON report the script reads, outside the checkout', async () => {
     expect.hasAssertions();
-    const coverage = object(object(object(gate, 'vitest.gate.config.ts')['test'] ?? {}, 'test')['coverage'] ?? {}, 'coverage');
-    const reporters = Array.isArray(coverage['reporter']) ? coverage['reporter'] : [];
-    expect([coverage['reportsDirectory'], reporters.includes('json')]).toStrictEqual([COVERAGE_DIR, true]);
+    const coverage = await gateCoverage();
+    expect(coverage['reportsDirectory']).toBe(COVERAGE_DIR);
+    expect(coverage['reporter']).toContain('json');
   });
 
   test('the script exits 0 on a report with no shortfall', () => {
     expect.hasAssertions();
-    const project = new Project({ linkModules: false });
-    try {
-      project.write('coverage-final.json', JSON.stringify({}));
-      const errors: string[] = [];
-      expect([main((text) => errors.push(text), NONE, project.root), errors]).toStrictEqual([0, []]);
-    } finally {
-      project.remove();
-    }
+    expect(runScript(() => ({}))).toStrictEqual([EXIT_CLEAN, []]);
   });
 
   test('the script exits 1 on a report with a shortfall and writes each problem', () => {
     expect.hasAssertions();
-    const project = new Project({ linkModules: false });
-    try {
-      project.write(
-        'coverage-final.json',
-        JSON.stringify({
-          [join(project.root, 'src/a.ts')]: { b: {}, f: {}, s: { '0': 0 }, statementMap: { '0': { start: { line: 1 } } } },
-        }),
-      );
-      const errors: string[] = [];
-      expect([main((text) => errors.push(text), NONE, project.root), errors.length]).toStrictEqual([1, 2]);
-    } finally {
-      project.remove();
-    }
+    const [status, errors] = runScript(unrunStatement);
+    expect([status, errors.length]).toStrictEqual([EXIT_FINDINGS, PLANTED_PROBLEMS]);
   });
 });
 
