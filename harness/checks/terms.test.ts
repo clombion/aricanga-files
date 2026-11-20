@@ -7,12 +7,12 @@
  * term that replaced it.
  */
 
-import * as TOML from '@iarna/toml';
 import { Exemptions, Prefixes, site } from '#lib/exemptions.ts';
 import type { Prose, Span } from '#lib/docs.ts';
 import { currentSpans, currentText } from '#lib/docs.ts';
 import { describe, expect, test } from 'vitest';
 import { object } from '#lib/config.ts';
+import { parse as parseToml } from '@iarna/toml';
 import { textOf } from '#lib/source-files.ts';
 
 const HARNESS_ID = 'terms';
@@ -55,10 +55,10 @@ function strings(table: unknown, what: string): ReadonlyMap<string, string> {
  * @returns {Terms} Read a parsed terms file, refusing a retired term without its replacement.
  */
 function termsOf(text: string): Terms {
-  const data = object(TOML.parse(text), 'terms');
+  const data = object(parseToml(text), 'terms');
   const retired = strings(data['retired'], 'retired');
   const blank = [...retired].filter(([, replacement]) => replacement.trim() === '').map(([term]) => term);
-  if (blank.length > 0) {
+  if (blank.some(Boolean)) {
     throw new TypeError(`retired terms without a replacement: ${JSON.stringify(blank)}`);
   }
   return {
@@ -66,6 +66,16 @@ function termsOf(text: string): Terms {
     refusedInCode: strings(data['refused-in-code'], 'refused-in-code'),
     retired,
   };
+}
+
+/**
+ * A term as a literal regular-expression source.
+ *
+ * @param {string} term - The term.
+ * @returns {string} A term as a literal regular-expression source.
+ */
+function escaped(term: string): string {
+  return term.replaceAll(/[.*+?^${}()|[\]\\]/gu, String.raw`\$&`);
 }
 
 /** A use of current text the terms file refuses. */
@@ -106,7 +116,7 @@ function uses(terms: Terms, prose: readonly Prose[], spans: readonly Span[]): Us
     const regex = new RegExp(pattern, 'gu');
     found.push(
       ...lines.flatMap((line) =>
-        [...line.text.matchAll(regex)].map((match) => ({ line: line.line, path: line.path, term: match[0], why })),
+        [...line.text.matchAll(regex)].map(([term]) => ({ line: line.line, path: line.path, term, why })),
       ),
     );
   }
@@ -114,15 +124,11 @@ function uses(terms: Terms, prose: readonly Prose[], spans: readonly Span[]): Us
 }
 
 /**
- * A term as a literal regular-expression source.
+ * A use's exemption key.
  *
- * @param {string} term - The term.
- * @returns {string} A term as a literal regular-expression source.
+ * @param {Use} use - A refused use.
+ * @returns {string} Its `site(path, term)` key.
  */
-function escaped(term: string): string {
-  return term.replaceAll(/[.*+?^${}()|[\]\\]/gu, String.raw`\$&`);
-}
-
 function key(use: Use): string {
   return site(use.path, use.term);
 }
@@ -172,7 +178,7 @@ describe('the terms check', () => {
   test('reads the repository terms file', () => {
     expect.hasAssertions();
     const terms = termsOf(textOf('docs/terms.toml'));
-    expect(terms.retired.size + terms.refused.size + terms.refusedInCode.size).toBeGreaterThan(0);
+    expect([...terms.retired, ...terms.refused, ...terms.refusedInCode]).not.toStrictEqual([]);
   });
 });
 

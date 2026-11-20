@@ -5,14 +5,18 @@
  * fails on a fold commit in the range, and lets a subject that only mentions a fixup through.
  */
 
+import { EXIT_CLEAN, EXIT_FINDINGS } from './exit-status.ts';
 import { describe, expect, test } from 'vitest';
 import { refused, revisions, updates } from '#lib/pushed.ts';
+import type { Finished } from '#lib/process.ts';
 import { Project } from '#lib/tools.ts';
 import { fromRoot } from '#lib/paths.ts';
 
 const HARNESS_ID = 'pushed-subjects';
 
-const ZEROS = '0'.repeat(40);
+/** The width of a full SHA-1 object name. */
+const SHA_LENGTH = 40;
+const ZEROS = '0'.repeat(SHA_LENGTH);
 
 describe('the pushed-subjects rule', () => {
   test.each(['fixup! parse the tag', 'squash! parse the tag', 'amend! parse the tag'])('refuses %s', (subject) => {
@@ -32,9 +36,27 @@ describe('the pushed-subjects rule', () => {
       { localSha: 'aaa', remoteSha: 'bbb' },
       { localSha: 'ddd', remoteSha: ZEROS },
     ]);
-    expect(parsed.map(revisions)).toStrictEqual([['bbb..aaa'], ['ddd', '--not', '--remotes']]);
+    expect(parsed.map((update) => revisions(update))).toStrictEqual([['bbb..aaa'], ['ddd', '--not', '--remotes']]);
   });
 });
+
+/**
+ * Commit a base and then `subjects` in a fresh repository.
+ *
+ * @param {Project} project - The planted project.
+ * @param {readonly string[]} subjects - The subjects to commit after the base.
+ * @returns {readonly [string, string]} The base commit and the head.
+ */
+function commitRange(project: Project, subjects: readonly string[]): readonly [string, string] {
+  const git = (...args: readonly string[]): Finished => project.run('git', '-c', 'user.name=plant', '-c', 'user.email=plant@example.invalid', ...args);
+  git('init', '-q', '-b', 'main');
+  git('commit', '-q', '--allow-empty', '-m', 'chore: base');
+  const base = git('rev-parse', 'HEAD').stdout.trim();
+  for (const subject of subjects) {
+    git('commit', '-q', '--allow-empty', '-m', subject);
+  }
+  return [base, git('rev-parse', 'HEAD').stdout.trim()];
+}
 
 /**
  * The pre-push script's exit status for a push of `subjects` onto a base commit.
@@ -45,14 +67,7 @@ describe('the pushed-subjects rule', () => {
 function pushOf(subjects: readonly string[]): number {
   const project = new Project({ linkModules: false });
   try {
-    const git = (...args: string[]) => project.run('git', '-c', 'user.name=plant', '-c', 'user.email=plant@example.invalid', ...args);
-    git('init', '-q', '-b', 'main');
-    git('commit', '-q', '--allow-empty', '-m', 'chore: base');
-    const base = git('rev-parse', 'HEAD').stdout.trim();
-    for (const subject of subjects) {
-      git('commit', '-q', '--allow-empty', '-m', subject);
-    }
-    const head = git('rev-parse', 'HEAD').stdout.trim();
+    const [base, head] = commitRange(project, subjects);
     return project.runWithInput(`refs/heads/main ${head} refs/heads/main ${base}\n`, 'node', fromRoot('harness/scripts/check-pushed.ts')).status;
   } finally {
     project.remove();
@@ -63,12 +78,12 @@ describe('the pre-push script', () => {
 
   test('fails on a fold commit in the pushed range', () => {
     expect.hasAssertions();
-    expect(pushOf(['feat: one', 'fixup! feat: one'])).toBe(1);
+    expect(pushOf(['feat: one', 'fixup! feat: one'])).toBe(EXIT_FINDINGS);
   });
 
   test('passes a range of ordinary commits', () => {
     expect.hasAssertions();
-    expect(pushOf(['feat: one', 'fix: fixup! handling'])).toBe(0);
+    expect(pushOf(['feat: one', 'fix: fixup! handling'])).toBe(EXIT_CLEAN);
   });
 });
 
