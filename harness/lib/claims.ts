@@ -118,6 +118,11 @@ const CLAIMS: readonly Claim[] = [
     path: 'harness/lib/process.ts',
     probe: probe(/^import .* from 'node:child_process';$/mu, 'harness/lib/process.ts'),
   },
+  {
+    clause: "the one writer of the repository's own files, for the fixers",
+    path: 'harness/lib/source-files.ts',
+    probe: probe(/\bwrite\w*\((?:path\.join\(REPO_ROOT|fromRoot\()/u, 'harness/lib/source-files.ts', ['harness/']),
+  },
 ];
 
 export { CLAIMS, clauses };

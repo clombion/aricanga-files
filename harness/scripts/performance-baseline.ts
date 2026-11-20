@@ -6,10 +6,11 @@
 
 import { REPO_ROOT, fromRoot } from '#lib/paths.ts';
 import { bin, finished } from '#lib/tools.ts';
-import { readFile, readdir, writeFile } from 'node:fs/promises';
+import { readFile, readdir } from 'node:fs/promises';
 import { json } from '#lib/config.ts';
 import { out } from '#lib/output.ts';
 import path from 'node:path';
+import { writeText } from '#lib/source-files.ts';
 
 /** One project's timings, in milliseconds. */
 interface Timing {
@@ -125,7 +126,7 @@ async function main(): Promise<void> {
   const sorted = Object.fromEntries(
     [...baseline].toSorted(([left]: readonly [string, Timing], [right]: readonly [string, Timing]) => left.localeCompare(right)),
   );
-  await writeFile(fromRoot('packages/characterisation/performance-baseline.json'), `${JSON.stringify(sorted, undefined, INDENT)}\n`);
+  writeText('packages/characterisation/performance-baseline.json', `${JSON.stringify(sorted, undefined, INDENT)}\n`);
   out(`baseline written for ${Object.keys(sorted).join(', ')}\n`);
 }
 

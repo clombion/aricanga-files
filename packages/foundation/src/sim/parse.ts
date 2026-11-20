@@ -15,7 +15,12 @@ class InputRefusedError extends Error {
 /** A function turning one untyped entry into a typed one; `at` names where the entry sits. */
 type Item<TValue> = (entry: unknown, at: string) => TValue;
 
-/** The readers one system parses with, each refusing in that system's name. */
+/**
+ * The readers one system parses with, each refusing in that system's name: what `readerOf` hands a
+ * system author, who names it when passing the readers to a helper of their own.
+ *
+ * @public
+ */
 interface Reader {
   /** Refuse a value, naming what was expected and the value. */
   readonly refuse: (what: string, value: unknown) => never;

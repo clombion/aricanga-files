@@ -61,7 +61,7 @@ function outcomesOf(reportText: string): ReadonlyMap<string, Outcome> {
 /**
  * Run planted spec files.
  *
- * @param {Readonly<Record<string, string>>} specs - Each planted spec's text, by its path under `planted/`.
+ * @param {Readonly<Record<string, string>>} specs - Each planted spec's text, by its path under the planted project's root.
  * @returns {ReadonlyMap<string, Outcome>} Each test's outcome, by its full name.
  */
 function runPlanted(specs: Readonly<Record<string, string>>): ReadonlyMap<string, Outcome> {
