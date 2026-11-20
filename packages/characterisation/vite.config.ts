@@ -1,5 +1,5 @@
-import { defineConfig } from 'vite';
 import type { UserConfig } from 'vite';
+import { defineConfig } from 'vite';
 import solid from '@solidjs/vite-plugin';
 
 // Dev-mode Solid build so the runtime's structured diagnostics ([CODE] message)

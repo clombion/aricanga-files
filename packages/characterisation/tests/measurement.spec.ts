@@ -1,11 +1,11 @@
-import { expect, test } from '@playwright/test';
-
 import { captureConsoleCodes, recorded, runFixture } from './_helpers';
+import { expect, test } from '@playwright/test';
+import type { SpecArguments } from './_helpers';
 
 // Reads lag writes until flush(); after it, layout sees the new snapshot. flush() in an effect
 // callback is a no-op that warns; in onSettled it throws.
 test.describe('measurement', () => {
-  test('apply, flush, then measure; flush in an effect is a no-op, in onSettled it throws', async ({ page }) => {
+  test('apply, flush, then measure; flush in an effect is a no-op, in onSettled it throws', async ({ page }: SpecArguments) => {
     const codes = captureConsoleCodes(page);
     const state = await runFixture(page, 'measurement');
     expect(recorded(state, 'measurement/apply-flush-layout').ok).toBe(true);

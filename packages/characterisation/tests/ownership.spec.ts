@@ -1,11 +1,11 @@
-import { expect, test } from '@playwright/test';
-
 import { captureConsoleCodes, recorded, runFixture } from './_helpers';
+import { expect, test } from '@playwright/test';
+import type { SpecArguments } from './_helpers';
 
 // The mounting seam runs unowned, and Solid refuses any primitive created in an effect's apply
 // phase, including a root detached with runWithOwner(null).
 test.describe('ownership', () => {
-  test('connectedCallback is unowned; primitives in an effect callback are refused', async ({ page }) => {
+  test('connectedCallback is unowned; primitives in an effect callback are refused', async ({ page }: SpecArguments) => {
     const codes = captureConsoleCodes(page);
     const state = await runFixture(page, 'ownership');
     expect(recorded(state, 'ownership/connected-callback-unowned').ok).toBe(true);

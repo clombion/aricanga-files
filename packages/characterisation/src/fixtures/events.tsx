@@ -3,28 +3,42 @@
  * non-bubbling dispatch is recorded for whether it reaches the delegated handler.
  */
 
-import { render } from '@solidjs/web';
+import { markDone, record } from '#src/harness';
 import { createSignal } from 'solid-js';
+import { render } from '@solidjs/web';
 
-import { markDone, record } from '../harness';
+/** The count before any click. */
+const NO_CLICKS = 0;
 
+/** What one click adds. */
+const ONE_CLICK = 1;
+
+/** A custom element rendering one delegated-click button into its shadow root. */
 class EventsHost extends HTMLElement {
-  readonly clicks: () => number;
+  public readonly clicks: () => number;
   private readonly setClicks: (next: number) => void;
-  private dispose: (() => void) | undefined;
+  private dispose: (() => void) | undefined = undefined;
 
-  constructor() {
+  public constructor() {
     super();
-    const [clicks, setClicks] = createSignal(0);
+    const [clicks, setClicks] = createSignal(NO_CLICKS);
     this.clicks = clicks;
-    this.setClicks = setClicks;
+    this.setClicks = (next: number): void => {
+      setClicks(next);
+    };
   }
 
-  connectedCallback(): void {
+  public connectedCallback(): void {
     const root = this.attachShadow({ mode: 'open' });
     this.dispose = render(
       () => (
-        <button type="button" id="delegated" onClick={() =>{  this.setClicks(this.clicks() + 1); }}>
+        <button
+          type="button"
+          id="delegated"
+          onClick={() => {
+            this.setClicks(this.clicks() + ONE_CLICK);
+          }}
+        >
           clicked {this.clicks()}
         </button>
       ),
@@ -32,13 +46,14 @@ class EventsHost extends HTMLElement {
     );
   }
 
-  disconnectedCallback(): void {
+  public disconnectedCallback(): void {
     this.dispose?.();
   }
 }
-customElements.define('chx-events-host', EventsHost);
 
-export function run(): void {
+/** Mount the element, dispatch a non-bubbling synthetic click, and record what the button shows. */
+function run(): void {
+  customElements.define('chx-events-host', EventsHost);
   const host = new EventsHost();
   host.id = 'events-host';
   document.body.append(host);
@@ -54,3 +69,5 @@ export function run(): void {
     markDone();
   });
 }
+
+export { run };

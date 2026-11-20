@@ -1,40 +1,62 @@
-import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
+import type { Connect, Plugin } from 'vite';
 import { Compiler } from 'inkjs/full';
+import type { ServerResponse } from 'node:http';
 import { defineConfig } from 'vite';
-import type { Plugin } from 'vite';
+import { fileURLToPath } from 'node:url';
+import { readFile } from 'node:fs/promises';
 
-const fromHere = (p: string) => fileURLToPath(new URL(p, import.meta.url));
+/** What the middleware writes the story through. */
+type StoryResponse = Readonly<Pick<ServerResponse, 'end' | 'setHeader'>>;
 
-/** story.ink compiled to the JSON the runtime loads. */
-function compiledStory(): string {
-  return new Compiler(readFileSync(fromHere('story.ink'), 'utf8')).Compile().ToJson() ?? '';
+/** What the plugin registers its middleware on. */
+type Server = Readonly<{ middlewares: Readonly<Pick<Connect.Server, 'use'>> }>;
+
+/**
+ * A path beside this config.
+ * @param {string} path The path, relative to this file.
+ * @returns {string} The absolute path.
+ */
+function fromHere(path: string): string {
+  return fileURLToPath(new URL(path, import.meta.url));
 }
 
-// Compile story.ink to /story.json: emitted into the bundle on build, served from memory in dev,
-// so neither writes into the checkout.
-function compileInk(): Plugin {
+/**
+ * `story.ink` compiled to the JSON the runtime loads.
+ * @returns {Promise<string>} The story JSON.
+ */
+async function compiledStory(): Promise<string> {
+  const source = await readFile(fromHere('story.ink'), 'utf8');
+  return new Compiler(source).Compile().ToJson() ?? '';
+}
+
+/**
+ * Serve `/story.json` from memory in dev and emit it into the bundle on build, so neither writes into
+ * the checkout. The story is compiled when the config loads: an edit to story.ink takes a restart.
+ * @param {string} story The compiled story.
+ * @returns {Plugin} The plugin.
+ */
+function compileInk(story: string): Plugin {
   return {
-    configureServer(server) {
-      server.middlewares.use('/story.json', (_request, response) => {
+    configureServer(server: Server) {
+      server.middlewares.use('/story.json', (_request: unknown, response: StoryResponse) => {
         response.setHeader('Content-Type', 'application/json');
-        response.end(compiledStory());
+        response.end(story);
       });
     },
     generateBundle() {
-      this.emitFile({ type: 'asset', fileName: 'story.json', source: compiledStory() });
+      this.emitFile({ fileName: 'story.json', source: story, type: 'asset' });
     },
     name: 'compile-ink',
   };
 }
 
-export default defineConfig({
+export default defineConfig(async () => ({
   build: { emptyOutDir: true, outDir: 'build' },
-  plugins: [compileInk()],
+  plugins: [compileInk(await compiledStory())],
   resolve: {
     alias: {
       '@narratives/foundation': fromHere('../../packages/foundation/src/index.ts'),
       '@narratives/system-chat': fromHere('../../packages/systems/chat/src/index.ts'),
     },
   },
-});
+}));
