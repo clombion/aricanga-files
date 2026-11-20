@@ -46,13 +46,31 @@ const CHECKS = new Accepted([
 const SCANNED = new Accepted(['.ts', '.tsx', '.js', '.mjs', '.css']);
 
 /** The suppressions the code holds, keyed by `site(path, tool:rule)`, with their counts and reasons. */
-const SUPPRESSIONS = new CountedExemptions({});
+const SUPPRESSIONS = new CountedExemptions({
+  [site('packages/foundation/src/sim/system.ts', 'oxlint:typescript/no-unsafe-type-assertion')]: [
+    2,
+    'stateOf and viewOf: the erasure owner reads a system value back after proving the owner id matches',
+  ],
+  [site('packages/foundation/src/testing/harness.ts', 'oxlint:eslint/no-await-in-loop')]: [
+    3,
+    'the fixture drain settles each pass and each input in order; the order is the trace',
+  ],
+  [site('packages/foundation/src/sim/exhaustive.test.ts', 'oxlint:typescript/switch-exhaustiveness-check')]: [
+    1,
+    'the planted non-exhaustive switch the test proves the compiler refuses',
+  ],
+  [site('packages/foundation/src/sim/exhaustive.test.ts', 'typescript:expect-error')]: [
+    1,
+    'the planted missing case: the expected error is the proof',
+  ],
+  [site('packages/foundation/src/host/runtime.test.ts', 'oxlint:typescript/unbound-method')]: [
+    1,
+    'isMockFunction inspects the function and never calls it',
+  ],
+});
 
 /** Refused comments the code still holds while the census is adopted, keyed by `site(path, problem)`. */
-const ADOPTING = new Exemptions({
-  [site('packages/foundation/src/sim/exhaustive.test.ts', 'a @ts-expect-error ends with -- <reason>')]:
-    'adopting: write the planted switch reason after ` -- ` and count it as typescript:expect-error',
-});
+const ADOPTING = new Exemptions({});
 
 const RULES = String.raw`[@\w./-]+(?:\s*,\s*[@\w./-]+)*`;
 const DISABLE = /^(oxlint|eslint|stylelint)-disable(-next-line|-line)?\b(.*)$/s;
