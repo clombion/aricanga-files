@@ -109,36 +109,36 @@ describe('the scan of a clone', () => {
   test('fails a planted clone in both runs', async () => {
     expect.hasAssertions();
     const { root, listed } = await plant({ 'a/one.ts': PLANT, 'b/two.ts': PLANT.replace('first', 'second') });
-    expect(scan(root, ['a', 'b'], listed, NONE)).toStrictEqual(['clone (exact): a/one.ts and b/two.ts', 'clone (cross-file): a/one.ts and b/two.ts']);
+    expect(scan({ listed, root, roots: ['a', 'b'] }, NONE)).toStrictEqual(['clone (exact): a/one.ts and b/two.ts', 'clone (cross-file): a/one.ts and b/two.ts']);
   });
 
   test('still sees the planted clone past the floor', async () => {
     expect.hasAssertions();
     const { root } = await plant({ 'a/one.ts': PLANT, 'a/two.ts': PLANT });
-    expect(clones('raised', reportOf(['--min-lines', '5', '--min-tokens', '70'], ['a'], root), root)).toHaveLength(ONE_CLONE);
+    expect(clones('raised', reportOf(['--min-lines', '5', '--min-tokens', '70'], { root, roots: ['a'] }), root)).toHaveLength(ONE_CLONE);
   });
 
   test('sees a small clone in two files in the cross-file run only', async () => {
     expect.hasAssertions();
     const { root, listed } = await plant({ 'a/filler.ts': FILLER, 'a/one.ts': SMALL_PLANT, 'a/sub/two.ts': SMALL_PLANT });
-    expect(scan(root, ['a'], listed, NONE)).toStrictEqual(['clone (cross-file): a/one.ts and a/sub/two.ts']);
+    expect(scan({ listed, root, roots: ['a'] }, NONE)).toStrictEqual(['clone (cross-file): a/one.ts and a/sub/two.ts']);
   });
 
   test('leaves a small clone inside one file to the exact run', async () => {
     expect.hasAssertions();
     const { root, listed } = await plant({ 'a/filler.ts': FILLER, 'a/one.ts': `${SMALL_PLANT}\n${SMALL_PLANT.replace('pick', 'keep')}` });
-    expect(scan(root, ['a'], listed, NONE)).toStrictEqual([]);
+    expect(scan({ listed, root, roots: ['a'] }, NONE)).toStrictEqual([]);
   });
 
   test('passes an allowed clone and fails a stale entry', async () => {
     expect.hasAssertions();
     const { root, listed } = await plant({ 'a/one.ts': PLANT, 'b/two.ts': PLANT });
-    const [exact] = clones('exact', reportOf(RUNS.exact, ['a', 'b'], root), root);
+    const [exact] = clones('exact', reportOf(RUNS.exact, { root, roots: ['a', 'b'] }), root);
     expect(exact).toBeDefined();
     const allowed = new Exemptions(Object.fromEntries(bothRuns(exact).map((clone) => [cloneKey(clone), 'planted'])));
-    expect(scan(root, ['a', 'b'], listed, allowed)).toStrictEqual([]);
+    expect(scan({ listed, root, roots: ['a', 'b'] }, allowed)).toStrictEqual([]);
     const stale = new Exemptions({ 'exact a/gone.ts a/one.ts 000000000000': 'planted' });
-    expect(lastOf(scan(root, ['a'], ['a/one.ts'], stale))).toMatch(/^StaleExemptionError: stale exemptions/u);
+    expect(lastOf(scan({ listed: ['a/one.ts'], root, roots: ['a'] }, stale))).toMatch(/^StaleExemptionError: stale exemptions/u);
   });
 });
 
@@ -151,14 +151,14 @@ describe('the scan of what jscpd reads', () => {
     expect.hasAssertions();
     const short = Array.from({ length: SHORT_LINES }, (_value, index) => `export const short${index} = ${index};\n`).join('');
     const { root, listed } = await plant({ 'a/one.ts': FILLER, 'b/long.ts': FILLER, 'b/short.ts': short });
-    expect(scan(root, ['a'], listed, NONE)).toStrictEqual(['coverage: jscpd did not scan b/long.ts']);
+    expect(scan({ listed, root, roots: ['a'] }, NONE)).toStrictEqual(['coverage: jscpd did not scan b/long.ts']);
   });
 
   test('fails a file over the size limit', async () => {
     expect.hasAssertions();
     const { root, listed } = await plant({ 'a/huge.ts': '', 'a/one.ts': FILLER });
     await growTo(root, 'a/huge.ts', MAX_SIZE + OVER_LIMIT);
-    expect(scan(root, ['a'], listed, NONE)).toStrictEqual([`coverage: a/huge.ts is over jscpd's size limit (${MAX_SIZE + OVER_LIMIT} bytes)`]);
+    expect(scan({ listed, root, roots: ['a'] }, NONE)).toStrictEqual([`coverage: a/huge.ts is over jscpd's size limit (${MAX_SIZE + OVER_LIMIT} bytes)`]);
   });
 });
 
@@ -173,7 +173,7 @@ describe('a run that gives no report', () => {
   ])('is a problem: %o', (outcome: Outcome, problem) => {
     expect.hasAssertions();
     const runner: Runner = () => outcome;
-    const [first] = scan(tmpdir(), ['a'], [], NONE, runner);
+    const [first] = scan({ listed: [], root: tmpdir(), roots: ['a'] }, NONE, runner);
     expect(first).toBe(problem);
   });
 

@@ -14,7 +14,6 @@ import { EXIT_CLEAN, EXIT_FINDINGS } from './exit-status.ts';
 import { describe, expect, test } from 'vitest';
 import type { FileCoverage } from '#lib/coverage.ts';
 import { Project } from '#lib/tools.ts';
-import { counted } from './counted.ts';
 import { gateCoverage } from './gate-config.ts';
 import { join } from 'node:path/posix';
 import { tracked } from '#lib/source-files.ts';
@@ -67,10 +66,10 @@ const THREE_QUARTER_FLOOR = 75;
 const PLANTED_PROBLEMS = 2;
 /** The debt the debt tests register. */
 const DEBT_OF_A = new CountedExemptions(
-  counted({
+  {
     [site('src/a.ts', 'lines')]: { count: 1, reason: 'planted' },
     [site('src/a.ts', 'statements')]: { count: 2, reason: 'planted' },
-  }),
+  },
 );
 
 /**

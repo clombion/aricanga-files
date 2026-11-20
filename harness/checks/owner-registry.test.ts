@@ -140,7 +140,7 @@ function sitesIn(scanOf: () => Scan, paths: readonly string[]): Site[] {
 
 /** Each owned scope, as the rule's name, its owner module and the rule. */
 const OWNED = RULES.flatMap((rule) =>
-  rule.scopes.flatMap((scope) => (scope.owner === null ? [] : [[rule.name, scope.owner, rule] as const])),
+  rule.scopes.flatMap((scope) => (scope.owner === undefined ? [] : [[rule.name, scope.owner, rule] as const])),
 );
 
 describe('the repository', () => {

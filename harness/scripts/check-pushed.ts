@@ -3,17 +3,27 @@
  * the repository it runs in, the one git invoked the hook for.
  */
 
-import { readFileSync } from 'node:fs';
+import { complain, exitCode } from '#lib/output.ts';
+import { refused, revisions, updates } from '#lib/pushed.ts';
+import { finished } from '#lib/tools.ts';
+import { isEmpty } from '#lib/lists.ts';
+import { text } from 'node:stream/consumers';
 
-import { complain } from '../lib/output.ts';
-import { refused, revisions, updates } from '../lib/pushed.ts';
-import { finished } from '../lib/tools.ts';
+/**
+ * The refused commits among the pushed ranges.
+ *
+ * @param {string} pushed - The lines git hands the pre-push hook on standard input.
+ * @returns {readonly string[]} The subjects of the refused commits.
+ */
+function refusedIn(pushed: string): readonly string[] {
+  return updates(pushed).flatMap((update) => {
+    const log = finished(['git', 'log', '--format=%s', ...revisions(update)], { cwd: process.cwd() });
+    return refused(log.stdout.split('\n').filter((subject) => subject !== ''));
+  });
+}
 
-const found = updates(readFileSync(0, 'utf8')).flatMap((update) => {
-  const log = finished(['git', 'log', '--format=%s', ...revisions(update)], { cwd: process.cwd() });
-  return refused(log.stdout.split('\n').filter((subject) => subject !== ''));
-});
-if (found.length > 0) {
+const found = refusedIn(await text(process.stdin));
+if (!isEmpty(found)) {
   complain(`fold these commits before pushing:\n${found.join('\n')}`);
 }
-process.exitCode = found.length === 0 ? 0 : 1;
+process.exitCode = exitCode(isEmpty(found));

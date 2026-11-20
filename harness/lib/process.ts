@@ -4,8 +4,12 @@
  */
 
 import { spawn, spawnSync } from 'node:child_process';
+import { env } from 'node:process';
+import { once } from 'node:events';
+import { text } from 'node:stream/consumers';
 
-export interface Finished {
+/** A run that ended on its own, with its status and its output. */
+interface Finished {
   readonly kind: 'finished';
   readonly argv: readonly string[];
   readonly status: number;
@@ -13,20 +17,24 @@ export interface Finished {
   readonly stderr: string;
 }
 
+/** A run killed at its bound. */
 interface TimedOut {
   readonly kind: 'timed-out';
   readonly argv: readonly string[];
   readonly timeoutMs: number;
 }
 
+/** A run that could not start. */
 interface NotStarted {
   readonly kind: 'not-started';
   readonly argv: readonly string[];
   readonly reason: string;
 }
 
-export type Outcome = Finished | TimedOut | NotStarted;
+/** How a run ended. */
+type Outcome = Finished | TimedOut | NotStarted;
 
+/** Where a run starts, its bound, and what it reads. */
 interface RunOptions {
   readonly timeoutMs: number;
   readonly cwd: string;
@@ -34,61 +42,108 @@ interface RunOptions {
   readonly input?: string;
 }
 
-/** This process's environment: the one read of `process.env` in the harness. */
-export function environment(): Record<string, string> {
-  const env: Record<string, string> = {};
-  for (const [name, value] of Object.entries(process.env)) {
-    if (value !== undefined) {
-      env[name] = value;
-    }
-  }
-  return env;
+/** The bytes in a mebibyte. */
+const BYTES_PER_MIB = 1_048_576;
+
+/** The most output a synchronous run keeps, in mebibytes. */
+const MAX_OUTPUT_MIB = 256;
+
+const MAX_OUTPUT_BYTES = MAX_OUTPUT_MIB * BYTES_PER_MIB;
+
+/**
+ * This process's environment: the one read of `process.env` in the harness.
+ *
+ * @returns {Record<string, string>} Each set variable, by name.
+ */
+function environment(): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(env).flatMap(([name, value]: readonly [string, string | undefined]) =>
+      value === undefined ? [] : [[name, value]],
+    ),
+  );
 }
 
-/** Run one `argv` without blocking, to its end or its bound, never through a shell. */
- async function start(argv: readonly string[], options: RunOptions): Promise<Outcome> {
+/**
+ * The status a closed child process reported: its exit code, or undefined when a signal ended it.
+ *
+ * @param {readonly unknown[]} closed - The arguments of the child's `close` event.
+ * @returns {number | undefined} The exit code, or undefined.
+ */
+function statusOf(closed: readonly unknown[]): number | undefined {
+  const [status] = closed;
+  return typeof status === 'number' ? status : undefined;
+}
+
+/** What a closed child left: its `close` event's arguments, its standard output and its standard error. */
+type Closed = readonly [readonly unknown[], string, string];
+
+/**
+ * Wait for a started child to close.
+ *
+ * @param {readonly string[]} argv - The command and its arguments.
+ * @param {Readonly<AbortSignal>} bound - The signal that kills the child at its bound.
+ * @param {Readonly<Promise<Closed>>} closing - Settles when the child closed and its output was read.
+ * @returns {Promise<Outcome | undefined>} How it ended, or undefined if it outlived its bound.
+ */
+async function closeOf(
+  argv: readonly string[],
+  bound: Readonly<AbortSignal>,
+  closing: Readonly<Promise<Closed>>,
+): Promise<Outcome | undefined> {
+  try {
+    const [closed, stdout, stderr] = await closing;
+    const status = statusOf(closed);
+    return bound.aborted || status === undefined ? undefined : { argv, kind: 'finished', status, stderr, stdout };
+  } catch (error: unknown) {
+    return bound.aborted ? undefined : { argv, kind: 'not-started', reason: error instanceof Error ? error.message : String(error) };
+  }
+}
+
+/**
+ * Run one `argv` without blocking, to its end or its bound, never through a shell.
+ *
+ * @param {readonly string[]} argv - The command and its arguments.
+ * @param {RunOptions} options - Where it runs, its bound and what it reads.
+ * @returns {Promise<Outcome>} How it ended.
+ */
+async function start(argv: readonly string[], options: RunOptions): Promise<Outcome> {
   const [command, ...args] = argv;
   if (command === undefined) {
-    return Promise.resolve({ argv, kind: 'not-started', reason: 'empty argv' });
+    return { argv, kind: 'not-started', reason: 'empty argv' };
   }
-  return new Promise((resolve) => {
-    const child = spawn(command, args, { cwd: options.cwd, env: options.env ?? process.env });
-    let stdout = '';
-    let stderr = '';
-    let timedOut = false;
-    const timer = setTimeout(() => {
-      timedOut = true;
-      child.kill('SIGKILL');
-    }, options.timeoutMs);
-    child.stdout.setEncoding('utf8').on('data', (chunk: string) => {
-      stdout += chunk;
-    });
-    child.stderr.setEncoding('utf8').on('data', (chunk: string) => {
-      stderr += chunk;
-    });
-    child.on('error', (error) => {
-      clearTimeout(timer);
-      resolve({ argv, kind: 'not-started', reason: error.message });
-    });
-    child.on('close', (status) => {
-      clearTimeout(timer);
-      resolve(
-        timedOut || status === null
-          ? { argv, kind: 'timed-out', timeoutMs: options.timeoutMs }
-          : { argv, kind: 'finished', status, stderr, stdout },
-      );
-    });
-    child.stdin.end(options.input ?? '');
-  });
+  const bound = AbortSignal.timeout(options.timeoutMs);
+  const child = spawn(command, args, { cwd: options.cwd, env: options.env, killSignal: 'SIGKILL', signal: bound });
+  child.stdin.end(options.input ?? '');
+  const closing: Promise<Closed> = Promise.all([once(child, 'close'), text(child.stdout), text(child.stderr)]);
+  const outcome = await closeOf(argv, bound, closing);
+  return outcome ?? { argv, kind: 'timed-out', timeoutMs: options.timeoutMs };
 }
 
-/** Run every `argv` at once, each bounded on its own; the outcomes in the order given. */
-export async function runConcurrently(argvs: readonly (readonly string[])[], options: RunOptions): Promise<Outcome[]> {
-  return Promise.all(argvs.map( async (argv) => start(argv, options)));
+/**
+ * Run every `argv` at once, each bounded on its own.
+ *
+ * @param {readonly (readonly string[])[]} argvs - The commands and their arguments.
+ * @param {RunOptions} options - Where they run, each one's bound and what they read.
+ * @returns {Promise<Outcome[]>} How each ended, in the order given.
+ */
+async function runConcurrently(argvs: readonly (readonly string[])[], options: RunOptions): Promise<Outcome[]> {
+  const outcomes = await Promise.all(
+    argvs.map(async (argv) => {
+      const outcome = await start(argv, options);
+      return outcome;
+    }),
+  );
+  return outcomes;
 }
 
-/** Run `argv` to its end or its bound, never through a shell. */
-export function run(argv: readonly string[], options: RunOptions): Outcome {
+/**
+ * Run `argv` to its end or its bound, never through a shell.
+ *
+ * @param {readonly string[]} argv - The command and its arguments.
+ * @param {RunOptions} options - Where it runs, its bound and what it reads.
+ * @returns {Outcome} How it ended.
+ */
+function run(argv: readonly string[], options: RunOptions): Outcome {
   const [command, ...args] = argv;
   if (command === undefined) {
     return { argv, kind: 'not-started', reason: 'empty argv' };
@@ -96,20 +151,22 @@ export function run(argv: readonly string[], options: RunOptions): Outcome {
   const result = spawnSync(command, args, {
     cwd: options.cwd,
     encoding: 'utf8',
-    env: options.env ?? environment(),
+    env: options.env,
     input: options.input,
     killSignal: 'SIGKILL',
-    maxBuffer: 256 * 1024 * 1024,
+    maxBuffer: MAX_OUTPUT_BYTES,
     timeout: options.timeoutMs,
   });
+  const timedOut: TimedOut = { argv, kind: 'timed-out', timeoutMs: options.timeoutMs };
   if (result.error !== undefined) {
-    if ('code' in result.error && result.error.code === 'ETIMEDOUT') {
-      return { argv, kind: 'timed-out', timeoutMs: options.timeoutMs };
-    }
-    return { argv, kind: 'not-started', reason: result.error.message };
+    return 'code' in result.error && result.error.code === 'ETIMEDOUT'
+      ? timedOut
+      : { argv, kind: 'not-started', reason: result.error.message };
   }
-  if (result.status === null) {
-    return { argv, kind: 'timed-out', timeoutMs: options.timeoutMs };
-  }
-  return { argv, kind: 'finished', status: result.status, stderr: result.stderr, stdout: result.stdout };
+  return result.status === null
+    ? timedOut
+    : { argv, kind: 'finished', status: result.status, stderr: result.stderr, stdout: result.stdout };
 }
+
+export { environment, run, runConcurrently };
+export type { Finished, Outcome };

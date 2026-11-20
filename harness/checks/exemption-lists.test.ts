@@ -113,7 +113,7 @@ describe('the fence', () => {
   test.each([
     "const NAME = new Exemptions({ a: 'why' });",
     "const NAME = Exemptions.grouped({ why: ['a'] });\nexport const size = NAME.entries.size;",
-    "const NAME = new CountedExemptions({ a: [1, 'why'] });",
+    "const NAME = new CountedExemptions({ a: { count: 1, reason: 'why' } });",
     "const NAME = new Accepted(['a']);",
     "const NAME = new Prefixes(['a']);",
   ])('sees a declaration nothing consults: %j', (source) => {

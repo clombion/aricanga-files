@@ -7,7 +7,15 @@ import { heldFiles } from './scope.ts';
 
 const BASE = 'tsconfig.base.json';
 
-/** Every held TypeScript project file. */
-export function projects(): readonly string[] {
-  return heldFiles('.json').filter((path) => /(^|\/)tsconfig(\.[a-z]+)?\.json$/.test(path) && path !== BASE);
+const PROJECT = /(?:^|\/)tsconfig(?:\.[a-z]+)?\.json$/u;
+
+/**
+ * Every held TypeScript project file.
+ *
+ * @returns {readonly string[]} The held `tsconfig*.json` paths but the shared base.
+ */
+function projects(): readonly string[] {
+  return heldFiles('.json').filter((path) => PROJECT.test(path) && path !== BASE);
 }
+
+export { projects };

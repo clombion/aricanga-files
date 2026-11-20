@@ -18,175 +18,20 @@
  * fragment's hash, with its reason; an entry that matches no clone fails the run.
  */
 
-import { createHash } from 'node:crypto';
-import { existsSync, mkdtempSync, readFileSync, rmSync, statSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-
-import { json, object } from './config.ts';
-import { Exemptions } from './exemptions.ts';
-import { REPO_ROOT, fromRoot } from './paths.ts';
-import { run } from './process.ts';
-import type { Outcome } from './process.ts';
-import { relativeTo as posixRelative } from './relative.ts';
+import { EXIT_FAILURE, EXIT_SUCCESS } from './output.ts';
+import { MAX_SIZE, RUNS, reportOf } from './dupes-run.ts';
 import { ROOTS, typescriptFiles } from './scope.ts';
+import type { Runner, Target } from './dupes-run.ts';
+import { cloneKey, clones, scanned } from './dupes-report.ts';
+import { readFileSync, statSync } from 'node:fs';
+import type { Clone } from './dupes-report.ts';
+import { Exemptions } from './exemptions.ts';
+import { REPO_ROOT } from './paths.ts';
+import { isEmpty } from './lists.ts';
+import path from 'node:path';
 
-const MAX_SIZE_MB = 100;
-/** jscpd's `--max-size` in bytes (its megabytes are MiB). */
-export const MAX_SIZE: number = MAX_SIZE_MB * 1024 * 1024;
-const SMALL_FILE_LINES = 20;
-const TIMEOUT_MS = 300_000;
-
-export const COMMON: readonly string[] = [
-  '--format',
-  'typescript,tsx',
-  '--max-size',
-  `${MAX_SIZE_MB}mb`,
-  '--absolute',
-  '--fail-on-empty',
-  '--reporters',
-  'json',
-  '--summary',
-  '--summary-top',
-  '1000000',
-  '--no-colors',
-];
-
-export const RUNS: Readonly<Record<'exact' | 'cross-file', readonly string[]>> = {
-  'cross-file': ['--min-lines', '5', '--min-tokens', '30'],
-  exact: ['--min-lines', '5', '--min-tokens', '50'],
-};
-
-/** A clone jscpd found: the run, the two files (relative to the root, sorted) and the fragment's hash. */
-export interface Clone {
-  readonly run: string;
-  readonly first: string;
-  readonly second: string;
-  readonly fragment: string;
-}
-
-export function cloneKey(clone: Clone): string {
-  return `${clone.run} ${clone.first} ${clone.second} ${clone.fragment}`;
-}
-
-/** The clones the project accepts, each with its reason. */
-const ALLOWED: Exemptions = Exemptions.grouped({});
-
-/** The jscpd command line of one run: the run's flags, the common flags, the report folder, the roots. */
-function command(binary: string, flags: readonly string[], roots: readonly string[], output: string): readonly string[] {
-  return [binary, ...flags, ...COMMON, '--output', output, ...roots];
-}
-
-function list(value: unknown, what: string): readonly unknown[] {
-  if (!Array.isArray(value)) {
-    throw new TypeError(`jscpd's report holds ${JSON.stringify(value)} where the ${what} list belongs`);
-  }
-  return value;
-}
-
-function relativeTo(name: unknown, root: string): string {
-  return posixRelative(root, String(name));
-}
-
-/** The clones of a parsed jscpd JSON report; the cross-file run keeps the pairs in two files. */
-export function clones(runName: string, report: unknown, root: string): readonly Clone[] {
-  const found: Clone[] = [];
-  for (const entry of list(object(report, "jscpd's report")['duplicates'], 'duplicates')) {
-    const fields = object(entry, 'a duplicate');
-    const first = relativeTo(object(fields['firstFile'], 'firstFile')['name'], root);
-    const second = relativeTo(object(fields['secondFile'], 'secondFile')['name'], root);
-    if (runName === 'cross-file' && first === second) {
-      continue;
-    }
-    const fragment = createHash('sha256').update(String(fields['fragment'])).digest('hex').slice(0, 12);
-    const [low = first, high = second] = [first, second].toSorted();
-    found.push({ first: low, fragment, run: runName, second: high });
-  }
-  return found;
-}
-
-/** The files a parsed jscpd JSON report's summary lists, relative to the root. */
-function scanned(report: unknown, root: string): ReadonlySet<string> {
-  const summary = object(object(report, "jscpd's report")['summary'], 'summary');
-  return new Set(list(summary['files'], 'summary files').map((entry) => relativeTo(object(entry, 'a summary file')['path'], root)));
-}
-
-/** The listed files jscpd should have scanned and did not, or cannot scan. */
-function coverageProblems(listed: readonly string[], seen: ReadonlySet<string>, root: string): readonly string[] {
-  const problems: string[] = [];
-  for (const path of listed) {
-    const {size} = statSync(join(root, path));
-    if (size > MAX_SIZE) {
-      problems.push(`coverage: ${path} is over jscpd's size limit (${size} bytes)`);
-    } else if (!seen.has(path) && readFileSync(join(root, path), 'utf8').split('\n').length - 1 > SMALL_FILE_LINES) {
-      problems.push(`coverage: jscpd did not scan ${path}`);
-    }
-  }
-  return problems;
-}
-
-/** What a run that gave no report says. */
-export function noReport(outcome: Outcome, reported: boolean): string | undefined {
-  if (outcome.kind === 'timed-out') {
-    return `jscpd ran past ${outcome.timeoutMs} ms`;
-  }
-  if (outcome.kind === 'not-started') {
-    return `jscpd could not start (${outcome.reason}): run \`pnpm install\``;
-  }
-  if (outcome.status !== 0) {
-    return `jscpd exited ${outcome.status}: ${outcome.stdout}${outcome.stderr}`;
-  }
-  return reported ? undefined : 'jscpd wrote no report';
-}
-
-/** The runner jscpd is started through; the scan takes it so a check can plant an outcome. */
-export type Runner = (argv: readonly string[], cwd: string) => Outcome;
-
-const defaultRunner: Runner = (argv, cwd) => run(argv, { cwd, timeoutMs: TIMEOUT_MS });
-
-/** Run jscpd once and return its parsed report, or the reason it gave none. */
-export function reportOf(flags: readonly string[], roots: readonly string[], root: string, runner: Runner = defaultRunner): unknown {
-  const folder = mkdtempSync(join(tmpdir(), 'jscpd-'));
-  try {
-    const outcome = runner(command(fromRoot('node_modules', '.bin', 'jscpd'), flags, roots, folder), root);
-    const report = join(folder, 'jscpd-report.json');
-    const problem = noReport(outcome, existsSync(report));
-    return problem ?? json(readFileSync(report, 'utf8'));
-  } finally {
-    rmSync(folder, { force: true, recursive: true });
-  }
-}
-
-/** Every problem of the runs: clones not allowed, stale entries, a coverage gap, a run with no report. */
-export function scan(
-  root: string,
-  roots: readonly string[],
-  listed: readonly string[],
-  allowed: Exemptions,
-  runner: Runner = defaultRunner,
-): readonly string[] {
-  const problems: string[] = [];
-  const found: Clone[] = [];
-  for (const [runName, flags] of Object.entries(RUNS)) {
-    const report = reportOf(flags, roots, root, runner);
-    if (typeof report === 'string') {
-      problems.push(`${runName}: ${report}`);
-      continue;
-    }
-    found.push(...clones(runName, report, root));
-    if (runName === 'exact') {
-      problems.push(...coverageProblems(listed, scanned(report, root), root));
-    }
-  }
-  try {
-    problems.push(
-      ...allowed.unexemptedBy(found, cloneKey).map((clone) => `clone (${clone.run}): ${clone.first} and ${clone.second}`),
-    );
-  } catch (error) {
-    problems.push(String(error));
-  }
-  return problems;
-}
+/** The order the runs report in: the exact run first. */
+const RUN_ORDER = ['exact', 'cross-file'] as const;
 
 /** The output streams `main` writes to; a check passes its own. */
 interface Streams {
@@ -194,17 +39,110 @@ interface Streams {
   readonly err: (text: string) => void;
 }
 
-/** Scan the held TypeScript (the roots, and held files outside them); return the exit status. */
-export function main(streams: Streams, runner: Runner = defaultRunner): number {
+
+const SMALL_FILE_LINES = 20;
+
+/** The line count of a text past the empty string after its last newline. */
+const TRAILING_LINE = 1;
+
+const TRAILING_SLASH = /\/$/u;
+
+
+/** The clones the project accepts, each with its reason. */
+const ALLOWED: Exemptions = Exemptions.grouped({});
+
+/**
+ * Why jscpd should have scanned a listed file and did not, or cannot scan it.
+ *
+ * @param {string} listed - The file, relative to the root.
+ * @param {Readonly<ReadonlySet<string>>} seen - The files jscpd scanned.
+ * @param {string} root - The root.
+ * @returns {string | undefined} The problem, or undefined.
+ */
+function coverageProblem(listed: string, seen: Readonly<ReadonlySet<string>>, root: string): string | undefined {
+  const full = path.join(root, listed);
+  const { size } = statSync(full);
+  if (size > MAX_SIZE) {
+    return `coverage: ${listed} is over jscpd's size limit (${size} bytes)`;
+  }
+  const lines = readFileSync(full, 'utf8').split('\n').length - TRAILING_LINE;
+  return !seen.has(listed) && lines > SMALL_FILE_LINES ? `coverage: jscpd did not scan ${listed}` : undefined;
+}
+
+/**
+ * The problems and clones of one run.
+ *
+ * @param {readonly [string, readonly string[]]} named - The run's name and flags.
+ * @param {Target} target - What the scan covers.
+ * @param {Runner | undefined} runner - How jscpd is started; the repository's process owner when undefined.
+ * @returns {readonly [readonly string[], readonly Clone[]]} The run's problems and its clones.
+ */
+function runOnce(named: readonly [string, readonly string[]], target: Target, runner: Runner | undefined): readonly [readonly string[], readonly Clone[]] {
+  const [runName, flags] = named;
+  const report = reportOf(flags, target, runner);
+  if (typeof report === 'string') {
+    return [[`${runName}: ${report}`], []];
+  }
+  const coverage =
+    runName === 'exact'
+      ? target.listed.flatMap((listed) => coverageProblem(listed, scanned(report, target.root), target.root) ?? [])
+      : [];
+  return [coverage, clones(runName, report, target.root)];
+}
+
+/**
+ * The clones no entry allows, as problems; a stale entry is a problem too.
+ *
+ * @param {readonly Clone[]} found - The clones found.
+ * @param {Readonly<Exemptions>} allowed - The clones the project accepts.
+ * @returns {readonly string[]} The problems.
+ */
+function cloneProblems(found: readonly Clone[], allowed: Readonly<Exemptions>): readonly string[] {
+  try {
+    return allowed.unexemptedBy(found, cloneKey).map((clone) => `clone (${clone.run}): ${clone.first} and ${clone.second}`);
+  } catch (error: unknown) {
+    return [String(error)];
+  }
+}
+
+/**
+ * Every problem of the runs: clones not allowed, stale entries, a coverage gap, a run with no report.
+ *
+ * @param {Target} target - What the scan covers.
+ * @param {Readonly<Exemptions>} allowed - The clones the project accepts.
+ * @param {Runner | undefined} runner - How jscpd is started; the repository's process owner when undefined.
+ * @returns {readonly string[]} The problems.
+ */
+function scan(target: Target, allowed: Readonly<Exemptions>, runner?: Runner): readonly string[] {
+  const runs = RUN_ORDER.map((name) => runOnce([name, RUNS[name]], target, runner));
+  const problems = runs.flatMap(([runProblems]: readonly [readonly string[], readonly Clone[]]) => runProblems);
+  return [...problems, ...cloneProblems(runs.flatMap(([, found]: readonly [readonly string[], readonly Clone[]]) => found), allowed)];
+}
+
+/**
+ * Scan the held TypeScript (the roots, and held files outside them).
+ *
+ * @param {Streams} streams - Where the result and the problems are written.
+ * @param {Runner | undefined} runner - How jscpd is started; the repository's process owner when undefined.
+ * @returns {number} The exit status.
+ */
+function main(streams: Streams, runner?: Runner): number {
   const listed = typescriptFiles();
-  const directories = ROOTS.map((root) => root.replace(/\/$/, ''));
-  const rootFiles = listed.filter((path) => !ROOTS.some((root) => path.startsWith(root)));
-  const problems = scan(REPO_ROOT, [...directories, ...rootFiles], listed, ALLOWED, runner);
+  const directories = ROOTS.map((root) => root.replace(TRAILING_SLASH, ''));
+  const rootFiles = listed.filter((file) => !ROOTS.some((root) => file.startsWith(root)));
+  const problems = scan({ listed, root: REPO_ROOT, roots: [...directories, ...rootFiles] }, ALLOWED, runner);
   for (const problem of problems) {
     streams.err(`${problem}\n`);
   }
-  if (problems.length === 0) {
+  if (isEmpty(problems)) {
     streams.out(`no copied code in the ${listed.length} held TypeScript files\n`);
+    return EXIT_SUCCESS;
   }
-  return problems.length === 0 ? 0 : 1;
+  return EXIT_FAILURE;
 }
+
+export { cloneKey, clones, noReport } from './dupes-report.ts';
+export type { Clone } from './dupes-report.ts';
+export { COMMON, MAX_SIZE, reportOf, RUNS } from './dupes-run.ts';
+export type { Runner } from './dupes-run.ts';
+export { main, scan };

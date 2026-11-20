@@ -4,10 +4,11 @@
  */
 
 import { Accepted } from './exemptions.ts';
+import { isEmpty } from './lists.ts';
 import { tracked } from './source-files.ts';
 
 /** The top-level paths whose files the harness holds. */
-export const ROOTS: readonly string[] = [
+const ROOTS: readonly string[] = [
   'packages/foundation/',
   'packages/systems/',
   'packages/characterisation/',
@@ -37,19 +38,37 @@ const ROOT_FILES = new Accepted<string>([
 ]);
 
 /** The current text the docs checks read: the agent brief, the harness docs and the roadmap. */
-export const DOC_ROOTS: readonly string[] = ['docs/roadmap/', 'harness/', 'packages/characterisation/'];
+const DOC_ROOTS: readonly string[] = ['docs/roadmap/', 'harness/', 'packages/characterisation/'];
 
-/** Whether a listed path is held by the harness. */
-export function held(path: string): boolean {
+/**
+ * Whether a listed path is held by the harness.
+ *
+ * @param {string} path - A repository-relative path.
+ * @returns {boolean} Whether the harness holds it.
+ */
+function held(path: string): boolean {
   return ROOT_FILES.has(path) || ROOTS.some((root) => path.startsWith(root));
 }
 
-/** The listed files the harness holds, optionally filtered by suffix. */
-export function heldFiles(...suffixes: string[]): readonly string[] {
-  return tracked().filter((path) => held(path) && (suffixes.length === 0 || suffixes.some((s) => path.endsWith(s))));
+/**
+ * The listed files the harness holds, optionally filtered by suffix.
+ *
+ * @param {readonly string[]} suffixes - The suffixes to keep; none keeps every file.
+ * @returns {readonly string[]} The held files.
+ */
+function heldFiles(...suffixes: readonly string[]): readonly string[] {
+  return tracked().filter(
+    (path) => held(path) && (isEmpty(suffixes) || suffixes.some((suffix) => path.endsWith(suffix))),
+  );
 }
 
-/** The held TypeScript sources (`.ts`, `.tsx`). */
-export function typescriptFiles(): readonly string[] {
+/**
+ * The held TypeScript sources.
+ *
+ * @returns {readonly string[]} The held `.ts` and `.tsx` files.
+ */
+function typescriptFiles(): readonly string[] {
   return heldFiles('.ts', '.tsx');
 }
+
+export { DOC_ROOTS, held, heldFiles, ROOTS, typescriptFiles };

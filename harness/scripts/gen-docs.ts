@@ -3,11 +3,21 @@
  * nothing, and exit 1 on a stale block or an unknown block name.
  */
 
-import { run } from '../lib/generated.ts';
-import { complain } from '../lib/output.ts';
+import { complain, exitCode } from '#lib/output.ts';
+import { isEmpty } from '#lib/lists.ts';
+import { run } from '#lib/generated.ts';
 
-const left = run(process.argv.includes('--check'));
-for (const problem of left) {
-  complain(`${problem.path}:${problem.line}: ${problem.message}`);
+/**
+ * Write or compare the generated blocks, complaining of each one left stale.
+ *
+ * @returns {number} The script's exit code.
+ */
+function main(): number {
+  const left = run(process.argv.includes('--check'));
+  for (const problem of left) {
+    complain(`${problem.path}:${problem.line}: ${problem.message}`);
+  }
+  return exitCode(isEmpty(left));
 }
-process.exitCode = left.length === 0 ? 0 : 1;
+
+process.exitCode = main();

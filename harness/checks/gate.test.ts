@@ -13,7 +13,7 @@
 import { EXIT_CLEAN, EXIT_FINDINGS } from './exit-status.ts';
 import type { Hook, Task } from '#lib/config.ts';
 import { LOCK_CHECK, lockCheckAfter, lockCheckArguments } from './gate.lock.ts';
-import { RUN, closure, hooks, repoHooks, repoTasks, tasks } from '#lib/config.ts';
+import { closure, hooks, repoHooks, repoTasks, runsTask, tasks } from '#lib/config.ts';
 import { describe, expect, test } from 'vitest';
 import { Accepted } from '#lib/exemptions.ts';
 
@@ -53,7 +53,7 @@ function taskProblems(task: Task): readonly string[] {
     }
   }
   const [first] = task.commands;
-  const runsATool = task.commands.some((command) => !RUN.test(command));
+  const runsATool = task.commands.some((command) => !runsTask(command));
   if (runsATool && task.name !== LOCK_CHECK && first !== `pnpm run ${LOCK_CHECK}`) {
     problems.push(`${task.name}: runs a tool but does not start with ${LOCK_CHECK}`);
   }

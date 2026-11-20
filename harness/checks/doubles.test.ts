@@ -6,7 +6,7 @@
  * test of the file. A scripted call, and the test after a clean one, pass.
  */
 
-import { Scripted, Tripwire, checkTrips, drain, trip, tripped } from '#lib/doubles.ts';
+import { Scripted, TripwireError, checkTrips, drain, trip, tripped } from '#lib/doubles.ts';
 import { describe, expect, test } from 'vitest';
 import { runPlanted } from '#lib/planted-vitest.ts';
 
@@ -74,12 +74,12 @@ describe('a scripted double', () => {
         }
       });
     }).not.toThrow();
-    expect(outcome.caught).toBeInstanceOf(Tripwire);
+    expect(outcome.caught).toBeInstanceOf(TripwireError);
   });
 
   test('a recorded trip fails the check, and draining clears it', () => {
     expect.hasAssertions();
-    expect(() => trip('planted')).toThrow(Tripwire);
+    expect(() => trip('planted')).toThrow(TripwireError);
     expect(() => {
       checkTrips('after the test');
     }).toThrow('after the test: ["planted"]');

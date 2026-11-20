@@ -23,7 +23,6 @@ import { census, suffix } from './suppressions.census.ts';
 import { closeSession, parse } from '#lib/ts-source.ts';
 import { describe, expect, test } from 'vitest';
 import type { Census } from './suppressions.census.ts';
-import { counted } from './counted.ts';
 import { heldFiles } from '#lib/scope.ts';
 import { textOf } from '#lib/source-files.ts';
 
@@ -34,7 +33,7 @@ const SCANNED = new Accepted(['.ts', '.tsx', '.js', '.mjs', '.css']);
 
 /** The suppressions the code holds, keyed by `site(path, tool:rule)`, with their counts and reasons. */
 const SUPPRESSIONS = new CountedExemptions(
-  counted({
+  {
   [site('packages/foundation/src/sim/system.ts', 'oxlint:typescript/no-unsafe-type-assertion')]: { count: 2, reason: 'stateOf and viewOf: the erasure owner reads a system value back after proving the owner id matches' },
   [site('packages/foundation/test/exhaustive.test.ts', 'oxlint:typescript/switch-exhaustiveness-check')]: { count: 1, reason: 'the planted non-exhaustive switch the test proves the compiler refuses' },
   [site('packages/foundation/test/exhaustive.test.ts', 'typescript:expect-error')]: { count: 1, reason: 'the planted missing case: the expected error is the proof' },
@@ -43,7 +42,7 @@ const SUPPRESSIONS = new CountedExemptions(
   [site('packages/characterisation/src/fixtures/ownership.tsx', 'oxlint:unicorn/no-null')]: { count: 1, reason: "the planted runWithOwner(null, …): Solid's API takes null for no owner" },
   [site('packages/characterisation/src/fixtures/props.tsx', 'oxlint:solid/no-destructure')]: { count: 1, reason: 'the planted destructured part whose staleness the fixture records' },
   [site('packages/characterisation/src/fixtures/csp.tsx', 'oxlint:aricanga/style-prop')]: { count: 1, reason: 'the planted style prop whose CSP effect the fixture records' },
-  }),
+  },
 );
 
 /** Refused comments the code still holds while the census is adopted, keyed by `site(path, problem)`. */
@@ -172,7 +171,7 @@ describe('the census of near misses', () => {
 
   test('a counted suppression that went away, or a new one, fails', () => {
     expect.hasAssertions();
-    const once = new CountedExemptions(counted({ [site('a.ts', 'oxlint:no-console')]: { count: 1, reason: 'planted' } }));
+    const once = new CountedExemptions({ [site('a.ts', 'oxlint:no-console')]: { count: 1, reason: 'planted' } });
     const twice = [site('a.ts', 'oxlint:no-console'), site('a.ts', 'oxlint:no-console')];
     expect(() => {
       once.assertExact([]);

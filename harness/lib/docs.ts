@@ -3,18 +3,23 @@
  *
  * "Current text" is what describes the project as it is: the held Markdown files and those under
  * the doc roots of `scope.ts`, except the history files; the comments of every held TypeScript or
- * JavaScript file (read through `ts-source.ts`, so a string holding `//` is never a comment); the comments of held stylesheets; and the full-line comments of held TOML and YAML.
- * History files record what happened and are left out.
+ * JavaScript file (read through `ts-source.ts`, so a string holding `//` is never a comment); the
+ * comments of held stylesheets; and the full-line comments of held TOML and YAML. History files
+ * record what happened and are left out.
  *
- * The Markdown reader knows fences, inline code spans, links, headings, pipe tables and the
- * generated blocks `harness/scripts/gen-docs.ts` writes. It does not read reference-style links,
- * HTML other than the block markers, or a table cell holding an escaped pipe.
+ * Markdown is parsed by `markdown-doc.ts` on the grammar of `markdown-text.ts`.
  */
 
-import { Prefixes } from './exemptions.ts';
 import { DOC_ROOTS, held } from './scope.ts';
-import { textOf, tracked } from './source-files.ts';
+import type { Prose, Span } from './markdown-text.ts';
 import { comments, parse } from './ts-source.ts';
+import { spansOf, withoutSpans } from './markdown-text.ts';
+import { textOf, tracked } from './source-files.ts';
+import { Doc } from './markdown-doc.ts';
+import { Prefixes } from './exemptions.ts';
+
+/** A comment line: its number and its text. */
+type CommentLine = readonly [number, string];
 
 /** The history files: they record what happened, so current-text checks leave them out. */
 const HISTORY: Prefixes = new Prefixes(['docs/roadmap/tasks/', 'CHANGELOG.md']);
@@ -24,288 +29,121 @@ const SCRIPT = new Prefixes(['.ts', '.tsx', '.js', '.mjs', '.cjs']);
 const STYLE = new Prefixes(['.css']);
 const CONFIG = new Prefixes(['.toml', '.yml', '.yaml']);
 
-const FENCE = /^ {0,3}(```+|~~~+)(.*)$/;
-const SPAN = /(`+)(.+?)\1/g;
-const LINK = /(?<!!)\[([^\]]*)\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g;
-const HEADING = /^(#{1,6})\s+(.*?)\s*#*\s*$/;
-const BLOCK_START = /^<!-- generated: ([\w-]+) -->$/;
-const BLOCK_END = /^<!-- end: ([\w-]+) -->$/;
-const HTML_COMMENT = /<!--.*?-->/g;
-const CSS_COMMENT = /\/\*[\s\S]*?\*\//g;
+const CSS_COMMENT = /\/\*[\s\S]*?\*\//gu;
+const LINE_COMMENT_OPENER = /^\/\/+\s?/u;
+const BLOCK_OPENER = /^\/\*+\s?/u;
+const BLOCK_CLOSER = /\*+\/$/u;
+const BLOCK_STAR = /^\*\s?/u;
+const HASH_OPENER = /^#+\s?/u;
 
-/** One line of current text, with its code spans removed. */
-export interface Prose {
-  readonly path: string;
-  readonly line: number;
-  readonly text: string;
-}
+/** The number of a file's first line. */
+const FIRST_LINE = 1;
 
-/** An inline code span of current text. */
-export interface Span {
-  readonly path: string;
-  readonly line: number;
-  readonly text: string;
-}
+/** The index of a text's first character. */
+const TEXT_START = 0;
 
-/** A fenced code block: its info string and its lines. */
-interface Fence {
-  readonly path: string;
-  readonly line: number;
-  readonly info: string;
-  readonly lines: readonly string[];
-}
-
-/** An inline link of a Markdown file. */
-export interface Link {
-  readonly path: string;
-  readonly line: number;
-  readonly target: string;
-}
-
-/** A Markdown heading. */
-interface Heading {
-  readonly line: number;
-  readonly level: number;
-  readonly text: string;
-}
-
-/** A generated block: the generator's name and the lines between its markers. */
-export interface Block {
-  readonly path: string;
-  readonly name: string;
-  readonly start: number;
-  readonly end: number;
-  readonly body: string;
-}
-
-export class BlockError extends Error {
-  override readonly name = 'BlockError';
-}
-
-/** Text with its inline code spans removed. */
-function withoutSpans(text: string): string {
-  return text.replaceAll(SPAN, '');
-}
-
-/** The inline code spans of a line, trimmed. */
-function spansOf(text: string): readonly string[] {
-  return [...text.matchAll(SPAN)].map((match) => (match[2] ?? '').trim());
-}
-
-/** The anchor GitHub gives a heading: lowercase, punctuation dropped, spaces as hyphens. */
-function anchor(heading: string): string {
-  const text = heading
-    .replaceAll(SPAN, (_whole, _ticks: string, inner: string) => inner)
-    .trim()
-    .toLowerCase();
-  return text.replaceAll(/[^\p{L}\p{N}_\- ]/gu, '').replaceAll(' ', '-');
-}
-
-/** A parsed Markdown file. */
-export class Doc {
-  readonly path: string;
-  readonly text: string;
-  readonly lines: readonly string[];
-  private readonly inFence: ReadonlySet<number>;
-
-  constructor(path: string, text: string) {
-    this.path = path;
-    this.text = text;
-    this.lines = text.split('\n');
-    if (this.lines.at(-1) === '') {
-      this.lines = this.lines.slice(0, -1);
-    }
-    this.inFence = this.fenceLines();
-  }
-
-  private fenceLines(): ReadonlySet<number> {
-    const inside = new Set<number>();
-    let opener: string | undefined;
-    this.lines.forEach((line, index) => {
-      const number = index + 1;
-      const match = FENCE.exec(line);
-      if (opener === undefined && match !== null) {
-        opener = match[1];
-        inside.add(number);
-      } else if (opener !== undefined) {
-        inside.add(number);
-        if (match !== null && (match[1] ?? '').startsWith(opener) && (match[2] ?? '').trim() === '') {
-          opener = undefined;
-        }
-      }
-    });
-    return inside;
-  }
-
-  private outside(): readonly (readonly [number, string])[] {
-    return this.lines
-      .map((line, index) => [index + 1, line] as const)
-      .filter(([number]) => !this.inFence.has(number));
-  }
-
-  /** Every fenced code block. */
-  fences(): readonly Fence[] {
-    const found: Fence[] = [];
-    let current: { line: number; info: string; lines: string[] } | undefined;
-    this.lines.forEach((line, index) => {
-      const number = index + 1;
-      if (!this.inFence.has(number)) {
-        return;
-      }
-      const match = FENCE.exec(line);
-      if (current === undefined) {
-        current = { info: (match?.[2] ?? '').trim(), line: number, lines: [] };
-      } else if (match !== null && (match[2] ?? '').trim() === '') {
-        found.push({ path: this.path, ...current });
-        current = undefined;
-      } else {
-        current.lines.push(line);
-      }
-    });
-    return found;
-  }
-
-  /** Every inline code span outside the fences. */
-  spans(): readonly Span[] {
-    return this.outside().flatMap(([line, text]) => spansOf(text).map((span) => ({ line, path: this.path, text: span })));
-  }
-
-  /** Every inline link outside the fences and code spans. */
-  links(): readonly Link[] {
-    return this.outside().flatMap(([line, text]) =>
-      [...withoutSpans(text).matchAll(LINK)].map((match) => ({ line, path: this.path, target: match[2] ?? '' })),
-    );
-  }
-
-  /** Every ATX heading outside the fences. */
-  headings(): readonly Heading[] {
-    return this.outside().flatMap(([line, text]) => {
-      const match = HEADING.exec(text);
-      return match === null ? [] : [{ level: (match[1] ?? '').length, line, text: match[2] ?? '' }];
-    });
-  }
-
-  /** The anchors of the headings. */
-  anchors(): ReadonlySet<string> {
-    return new Set(this.headings().map((heading) => anchor(heading.text)));
-  }
-
-  /** Every line outside the fences, without its code spans and HTML comments. */
-  prose(): readonly Prose[] {
-    return this.outside()
-      .filter(([, text]) => text.trim() !== '')
-      .map(([line, text]) => ({ line, path: this.path, text: withoutSpans(text).replaceAll(HTML_COMMENT, '') }));
-  }
-
-  /** Every generated block, refusing a marker without its pair. */
-  blocks(): readonly Block[] {
-    const found: Block[] = [];
-    let open: { name: string; line: number } | undefined;
-    this.lines.forEach((raw, index) => {
-      const number = index + 1;
-      const line = raw.trim();
-      const start = BLOCK_START.exec(line);
-      const end = BLOCK_END.exec(line);
-      if (start !== null && open === undefined) {
-        open = { line: number, name: start[1] ?? '' };
-      } else if (end !== null && open !== undefined && end[1] === open.name) {
-        const body = this.lines.slice(open.line, number - 1).join('\n');
-        found.push({ body, end: number, name: open.name, path: this.path, start: open.line });
-        open = undefined;
-      } else if (start !== null || end !== null) {
-        throw new BlockError(`${this.path}:${number}: unpaired generated-block marker ${JSON.stringify(line)}`);
-      }
-    });
-    if (open !== undefined) {
-      throw new BlockError(`${this.path}:${open.line}: generated block ${JSON.stringify(open.name)} has no end marker`);
-    }
-    return found;
-  }
-
-  /** Every pipe table outside the fences, as rows of cells, without the delimiter row. */
-  tables(): readonly (readonly (readonly string[])[])[] {
-    const tables: string[][][] = [];
-    let current: string[][] = [];
-    for (const [, line] of [...this.outside(), [0, ''] as const]) {
-      const trimmed = line.trim();
-      if (trimmed.startsWith('|')) {
-        const cells = trimmed
-          .replace(/^\|/, '')
-          .replace(/\|$/, '')
-          .split('|')
-          .map((cell) => cell.trim());
-        if (!cells.every((cell) => /^:?-+:?$/.test(cell))) {
-          current.push(cells);
-        }
-      } else if (current.length > 0) {
-        tables.push(current);
-        current = [];
-      }
-    }
-    return tables;
-  }
-}
-
-/** A listed Markdown file, parsed. */
-export function markdown(path: string): Doc {
+/**
+ * A listed Markdown file, parsed.
+ *
+ * @param {string} path - The file's repository-relative path.
+ * @returns {Doc} The parsed file.
+ */
+function markdown(path: string): Doc {
   return new Doc(path, textOf(path));
 }
 
-/** Whether a listed path is a Markdown file of current text. */
+/**
+ * Whether a listed path is a Markdown file of current text.
+ *
+ * @param {string} path - The path.
+ * @returns {boolean} Whether it is current Markdown.
+ */
 function isCurrentMarkdown(path: string): boolean {
-  return (
-    path.endsWith('.md') && (held(path) || DOC_ROOTS.some((root) => path.startsWith(root))) && !HISTORY.starts(path)
-  );
+  return path.endsWith('.md') && (held(path) || DOC_ROOTS.some((root) => path.startsWith(root))) && !HISTORY.starts(path);
 }
 
-/** The listed Markdown files of current text. */
-export function markdownPaths(): readonly string[] {
-  return tracked().filter(isCurrentMarkdown);
+/**
+ * The listed Markdown files of current text.
+ *
+ * @returns {readonly string[]} The files.
+ */
+function markdownPaths(): readonly string[] {
+  return tracked().filter((path) => isCurrentMarkdown(path));
 }
 
-/** The (line, text) of every comment line of TypeScript or JavaScript source, read by the parser. */
-function scriptComments(path: string, text: string): readonly (readonly [number, string])[] {
-  return comments(parse(path, text)).flatMap((comment) => numbered(comment.line, comment.text));
+/**
+ * A comment line without its delimiters.
+ *
+ * @param {string} line - The line.
+ * @returns {string} Its text.
+ */
+function cleanComment(line: string): string {
+  return line.trim().replace(LINE_COMMENT_OPENER, '').replace(BLOCK_OPENER, '').replace(BLOCK_CLOSER, '').replace(BLOCK_STAR, '').trim();
 }
 
-function numbered(first: number, comment: string): readonly (readonly [number, string])[] {
+/**
+ * The non-empty lines of a comment, numbered.
+ *
+ * @param {number} first - The number of the comment's first line.
+ * @param {string} comment - The comment.
+ * @returns {readonly CommentLine[]} Its lines.
+ */
+function numbered(first: number, comment: string): readonly CommentLine[] {
   return comment
     .split('\n')
     .map((line, offset) => [first + offset, cleanComment(line)] as const)
-    .filter(([, line]) => line !== '');
+    .filter(([, line]: CommentLine) => line !== '');
 }
 
-function commentLines(text: string, pos: number, comment: string): readonly (readonly [number, string])[] {
-  return numbered(text.slice(0, pos).split('\n').length, comment);
+/**
+ * The comment lines of TypeScript or JavaScript source, read by the parser.
+ *
+ * @param {string} path - The file's path.
+ * @param {string} text - Its text.
+ * @returns {readonly CommentLine[]} Its comment lines.
+ */
+function scriptComments(path: string, text: string): readonly CommentLine[] {
+  return comments(parse(path, text)).flatMap((comment) => numbered(comment.line, comment.text));
 }
 
-function cleanComment(line: string): string {
-  return line
-    .trim()
-    .replace(/^\/\/+\s?/, '')
-    .replace(/^\/\*+\s?/, '')
-    .replace(/\*+\/$/, '')
-    .replace(/^\*\s?/, '')
-    .trim();
+/**
+ * The comment lines of a stylesheet.
+ *
+ * @param {string} text - The stylesheet.
+ * @returns {readonly CommentLine[]} Its comment lines.
+ */
+function styleComments(text: string): readonly CommentLine[] {
+  const found: CommentLine[] = [];
+  for (const match of text.matchAll(CSS_COMMENT)) {
+    const [comment] = match;
+    found.push(...numbered(text.slice(TEXT_START, match.index).split('\n').length, comment));
+  }
+  return found;
 }
 
-/** The (line, text) of every comment line of a stylesheet. */
-function styleComments(text: string): readonly (readonly [number, string])[] {
-  return [...text.matchAll(CSS_COMMENT)].flatMap((match) => commentLines(text, match.index, match[0]));
-}
-
-/** The (line, text) of every full-line comment of a TOML or YAML file. */
-function configComments(text: string): readonly (readonly [number, string])[] {
+/**
+ * The full-line comments of a TOML or YAML file.
+ *
+ * @param {string} text - The file.
+ * @returns {readonly CommentLine[]} Its comment lines.
+ */
+function configComments(text: string): readonly CommentLine[] {
   return text
     .split('\n')
-    .map((line, index) => [index + 1, line.trim()] as const)
-    .filter(([, line]) => line.startsWith('#'))
-    .map(([number, line]) => [number, line.replace(/^#+\s?/, '').trim()] as const)
-    .filter(([, line]) => line !== '');
+    .map((line, index) => [index + FIRST_LINE, line.trim()] as const)
+    .filter(([, line]: CommentLine) => line.startsWith('#'))
+    .map(([number, line]: CommentLine) => [number, line.replace(HASH_OPENER, '').trim()] as const)
+    .filter(([, line]: CommentLine) => line !== '');
 }
 
-/** The (line, text) of every comment line of a held code file. */
-function codeComments(path: string, text: string): readonly (readonly [number, string])[] {
+/**
+ * The comment lines of a held code file.
+ *
+ * @param {string} path - The file's path.
+ * @param {string} text - Its text.
+ * @returns {readonly CommentLine[]} Its comment lines.
+ */
+function codeComments(path: string, text: string): readonly CommentLine[] {
   if (SCRIPT.ends(path)) {
     return scriptComments(path, text);
   }
@@ -315,29 +153,44 @@ function codeComments(path: string, text: string): readonly (readonly [number, s
   return configComments(text);
 }
 
-/** The held code files whose comments are current text. */
+/**
+ * The held code files whose comments are current text.
+ *
+ * @returns {readonly string[]} The files.
+ */
 function codePaths(): readonly string[] {
   return tracked().filter((path) => held(path) && (SCRIPT.ends(path) || STYLE.ends(path) || CONFIG.ends(path)));
 }
 
-/** Every line of current text, with code spans removed. */
-export function currentText(): readonly Prose[] {
-  const found: Prose[] = markdownPaths().flatMap((path) => markdown(path).prose());
-  for (const path of codePaths()) {
-    for (const [line, text] of codeComments(path, textOf(path))) {
-      found.push({ line, path, text: withoutSpans(text) });
-    }
-  }
-  return found;
+/**
+ * Every line of current text, with code spans removed.
+ *
+ * @returns {readonly Prose[]} The lines.
+ */
+function currentText(): readonly Prose[] {
+  return [
+    ...markdownPaths().flatMap((path) => markdown(path).prose()),
+    ...codePaths().flatMap((path) =>
+      codeComments(path, textOf(path)).map(([line, text]: CommentLine) => ({ line, path, text: withoutSpans(text) })),
+    ),
+  ];
 }
 
-/** Every inline code span of current text. */
-export function currentSpans(): readonly Span[] {
-  const found: Span[] = markdownPaths().flatMap((path) => markdown(path).spans());
-  for (const path of codePaths()) {
-    for (const [line, text] of codeComments(path, textOf(path))) {
-      found.push(...spansOf(text).map((span) => ({ line, path, text: span })));
-    }
-  }
-  return found;
+/**
+ * Every inline code span of current text.
+ *
+ * @returns {readonly Span[]} The spans.
+ */
+function currentSpans(): readonly Span[] {
+  return [
+    ...markdownPaths().flatMap((path) => markdown(path).spans()),
+    ...codePaths().flatMap((path) =>
+      codeComments(path, textOf(path)).flatMap(([line, text]: CommentLine) => spansOf(text).map((span) => ({ line, path, text: span }))),
+    ),
+  ];
 }
+
+export { BlockError } from './block-error.ts';
+export { Doc } from './markdown-doc.ts';
+export type { Block, Link, Prose, Span } from './markdown-text.ts';
+export { currentSpans, currentText, markdown, markdownPaths };

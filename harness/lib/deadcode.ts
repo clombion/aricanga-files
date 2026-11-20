@@ -6,25 +6,45 @@
  * binary or workspace ignore itself.
  */
 
-import { readFileSync } from 'node:fs';
-
+import { bin, finished } from './tools.ts';
 import { json, object, repoTasks } from './config.ts';
-import { fromRoot } from './paths.ts';
 import type { Finished } from './process.ts';
 import { textOf } from './source-files.ts';
-import { bin, finished } from './tools.ts';
 
-/** The knip invocations of the `deadcode` task, as argument lists (without the binary). */
-export function deadcodeRuns(): readonly (readonly string[])[] {
+/** The ignore lists of `knip.json` that list plain entries. */
+const LISTED_IGNORES: readonly string[] = ['ignoreWorkspaces', 'ignoreDependencies', 'ignoreBinaries', 'ignoreFiles'];
+
+/** The words of a `knip` command after the binary's name. */
+const AFTER_BINARY = 1;
+
+/**
+ * The knip invocations of the `deadcode` task.
+ *
+ * @returns {readonly (readonly string[])[]} Each invocation's arguments, without the binary.
+ */
+function deadcodeRuns(): readonly (readonly string[])[] {
   const commands = repoTasks().get('deadcode')?.commands ?? [];
-  return commands.filter((command) => command.startsWith('knip')).map((command) => command.split(' ').slice(1));
+  return commands.filter((command) => command.startsWith('knip')).map((command) => command.split(' ').slice(AFTER_BINARY));
 }
 
-/** Run knip with `args` in `cwd`. */
-export function knip(cwd: string, args: readonly string[]): Finished {
+/**
+ * Run knip with `args` in `cwd`.
+ *
+ * @param {string} cwd - Where knip runs.
+ * @param {readonly string[]} args - Its arguments.
+ * @returns {Finished} The finished run.
+ */
+function knip(cwd: string, args: readonly string[]): Finished {
   return finished([bin('knip'), ...args, '--no-progress'], { cwd });
 }
 
+/**
+ * A list of strings, or a refusal naming what it was.
+ *
+ * @param {unknown} value - The value to read.
+ * @param {string} what - What it is, for the refusal.
+ * @returns {readonly string[]} The strings.
+ */
 function strings(value: unknown, what: string): readonly string[] {
   if (!Array.isArray(value) || !value.every((item) => typeof item === 'string')) {
     throw new Error(`${what} is not a list of strings`);
@@ -36,26 +56,37 @@ function strings(value: unknown, what: string): readonly string[] {
  * Every ignore entry of a parsed `knip.json`, as a key: `ignoreWorkspaces:<workspace>`,
  * `ignoreDependencies:<package>`, `ignoreBinaries:<binary>`, `ignoreFiles:<glob>` or
  * `ignoreIssues:<glob>:<issue type>`.
+ *
+ * @param {unknown} config - The parsed `knip.json`.
+ * @returns {readonly string[]} The entries' keys.
  */
-export function ignoreEntries(config: unknown): readonly string[] {
+function ignoreEntries(config: unknown): readonly string[] {
   const fields = object(config, 'knip.json');
-  const listed = ['ignoreWorkspaces', 'ignoreDependencies', 'ignoreBinaries', 'ignoreFiles'].flatMap((field) =>
-    strings(fields[field] ?? [], field).map((entry) => `${field}:${entry}`),
-  );
-  const issues = Object.entries(object(fields['ignoreIssues'] ?? {}, 'ignoreIssues')).flatMap(([glob, types]) =>
-    strings(types, `ignoreIssues.${glob}`).map((type) => `ignoreIssues:${glob}:${type}`),
+  const listed = LISTED_IGNORES.flatMap((field) => strings(fields[field] ?? [], field).map((entry) => `${field}:${entry}`));
+  const issues = Object.entries(object(fields['ignoreIssues'] ?? {}, 'ignoreIssues')).flatMap(
+    ([glob, types]: readonly [string, unknown]) =>
+      strings(types, `ignoreIssues.${glob}`).map((type) => `ignoreIssues:${glob}:${type}`),
   );
   return [...listed, ...issues];
 }
 
-/** The ignore entries of the repository's `knip.json`. */
-export function repoIgnoreEntries(): readonly string[] {
+/**
+ * The ignore entries of the repository's `knip.json`.
+ *
+ * @returns {readonly string[]} The entries' keys.
+ */
+function repoIgnoreEntries(): readonly string[] {
   return ignoreEntries(json(textOf('knip.json')));
 }
 
-/** The issue types knip's installed schema names. */
-export function issueTypes(): readonly string[] {
-  const schema = object(json(readFileSync(fromRoot('node_modules/knip/schema.json'), 'utf8')), 'knip schema');
+/**
+ * The issue types knip's installed schema names.
+ *
+ * @returns {readonly string[]} The issue types.
+ */
+function issueTypes(): readonly string[] {
+  const text = textOf('node_modules/knip/schema.json');
+  const schema = object(json(text), 'knip schema');
   const rules = object(object(schema['properties'], 'properties')['rules'], 'rules');
   return Object.keys(object(rules['properties'], 'rules.properties'));
 }
@@ -63,8 +94,12 @@ export function issueTypes(): readonly string[] {
 /**
  * What keeps a parsed `knip.json` from knip's strictest setting: an issue type whose rule is not
  * `error`, or a file excused from an issue type (`ignoreIssues`, `ignoreFiles`).
+ *
+ * @param {unknown} config - The parsed `knip.json`.
+ * @param {readonly string[]} types - The issue types knip names.
+ * @returns {readonly string[]} Each problem.
  */
-export function strictnessProblems(config: unknown, types: readonly string[]): readonly string[] {
+function strictnessProblems(config: unknown, types: readonly string[]): readonly string[] {
   const rules = object(object(config, 'knip.json')['rules'] ?? {}, 'rules');
   return [
     ...types.filter((type) => rules[type] !== 'error').map((type) => `rule ${type} is not error`),
@@ -73,3 +108,5 @@ export function strictnessProblems(config: unknown, types: readonly string[]): r
       .map((entry) => `a file is excused: ${entry}`),
   ];
 }
+
+export { deadcodeRuns, ignoreEntries, issueTypes, knip, repoIgnoreEntries, strictnessProblems };
