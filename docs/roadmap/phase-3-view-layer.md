@@ -1,7 +1,7 @@
 # Phase 3 — View layer (imperative shell, rendering side)
 
 **Labels:** `type:epic`, `area:ui`, `area:chat`, `area:phone`
-**Depends on:** Phase 2 · **Contract:** ADR-0002, ADR-0007, ADR-0009, `phase-1-foundation-design.md`
+**Depends on:** Phase 2 · **Contract:** ADR-0002, ADR-0007, ADR-0008, `phase-1-foundation-design.md`
 
 ## Risk retired
 
@@ -50,7 +50,7 @@ The view is the dual of the kernel under the algebra:
 
 1. **Characterisation (hard gate).** Every claim about Solid's runtime that the
    view layer relies on is a real-browser test against the pinned versions, in
-   Chromium, Firefox and WebKit, desktop and mobile emulation. ADR-0009 is
+   Chromium, Firefox and WebKit, desktop and mobile emulation. ADR-0008 is
    written from the results. A contradicted claim changes the design. ([#20](https://github.com/clombion/aricanga-files/issues/20))
 2. **Toolchain.** oxlint for `.ts`/`.tsx` with `eslint-plugin-solid` v2-strict,
    Biome for CSS and JSON, oxfmt for formatting, under the correctness harness of

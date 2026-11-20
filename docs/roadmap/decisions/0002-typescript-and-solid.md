@@ -33,7 +33,7 @@ Shadow DOM boundary so an experience embeds anywhere.
   - Look and feel are design tokens (CSS custom properties) on that shadow root.
   - Solid's runtime model as this project relies on it — mounting and disposal,
     the snapshot adapter, error boundaries, measurement, events, CSP — is
-    ADR-0009, written from the characterisation results.
+    ADR-0008, written from the characterisation results.
 - **Vite** as bundler and dev server; **Vitest** for unit tests; **Playwright** for
   real-browser tests in Chromium, Firefox and WebKit.
 - **Module boundaries** are enforced by a lint, replacing the import-graph
@@ -66,7 +66,7 @@ the closest alternative and loses on the typed, overridable component contract.
 - ~60 bespoke checks collapse to types, one boundary lint and a small set of
   genuine domain validators (ink compile, tag schema, i18n parity).
 - Solid 2.0 is new; its runtime claims are tested rather than assumed, and a
-  claim a test contradicts is recorded in ADR-0009 with its evidence.
+  claim a test contradicts is recorded in ADR-0008 with its evidence.
 - Lint and format: oxlint owns `.ts`/`.tsx` (type-aware, with
   `eslint-plugin-solid`'s v2-strict rules), Biome lints CSS and JSON, oxfmt
   formats. TypeScript stays on 6.x until the boundary lint runs on oxlint with

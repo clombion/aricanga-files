@@ -14,7 +14,7 @@ export interface ChxRecord {
   readonly threw: boolean;
   /** The thrown error's message, if any. */
   readonly error?: string;
-  /** Evidence for ADR-0009. */
+  /** Evidence for ADR-0008. */
   readonly note?: string;
 }
 

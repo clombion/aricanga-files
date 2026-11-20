@@ -87,14 +87,7 @@ const SPANS_EXEMPT = Exemptions.grouped({
 });
 
 /** ADR numbers named before their record exists, keyed by `site(path, ADR-NNNN)`. */
-const ADRS_EXEMPT = Exemptions.grouped({
-  'ADR-0009 (the Solid runtime model) is written from the characterisation results; the entries go when it exists':
-    [
-      site('docs/roadmap/decisions/0002-typescript-and-solid.md', 'ADR-0009'),
-      site('docs/roadmap/phase-3-view-layer.md', 'ADR-0009'),
-      site('packages/characterisation/src/harness.ts', 'ADR-0009'),
-    ],
-});
+const ADRS_EXEMPT = Exemptions.grouped({});
 
 /** A reference that names nothing. */
 interface Unresolved {
