@@ -23,7 +23,12 @@ const MARKDOWN = new Prefixes(['.md']);
 /** Prose that uses a refused phrase in its domain sense, keyed by `site(path, the phrase)`. */
 const EXEMPT = Exemptions.grouped({});
 
-/** Every `site(path, phrase)` that narrates history, sorted and once each. */
+/**
+ * Every `site(path, phrase)` that narrates history, sorted and once each.
+ *
+ * @param {readonly Prose[]} lines - The lines.
+ * @returns {string[]} Every `site(path, phrase)` that narrates history, sorted and once each.
+ */
 function narration(lines: readonly Prose[]): string[] {
   const found = new Set<string>();
   for (const line of lines) {

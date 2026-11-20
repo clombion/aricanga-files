@@ -17,19 +17,35 @@ import { typescriptFiles } from '#lib/scope.ts';
 
 const HARNESS_ID = 'one-claims';
 
-/** Every `site(path, clause)` claim of current text, sorted and once each. */
+/**
+ * Every `site(path, clause)` claim of current text, sorted and once each.
+ *
+ * @param {readonly Prose[]} lines - The lines.
+ * @returns {string[]} Every `site(path, clause)` claim of current text, sorted and once each.
+ */
 function foundClaims(lines: readonly Prose[]): string[] {
   return [...new Set(lines.flatMap((line) => clauses(line.text).map((clause) => site(line.path, clause))))].toSorted();
 }
 
-/** The claims as an exemption list: an entry whose clause is gone from its file is stale. */
+/**
+ * The claims as an exemption list: an entry whose clause is gone from its file is stale.
+ *
+ * @param {readonly Claim[]} claims - The claims.
+ * @returns {Exemptions} The claims as an exemption list: an entry whose clause is gone from its file is stale.
+ */
 function registry(claims: readonly Claim[]): Exemptions {
   return new Exemptions(
     Object.fromEntries(claims.map((claim) => [site(claim.path, claim.clause), `held by ${String(claim.probe.pattern)}`])),
   );
 }
 
-/** What breaks a probe: no match in its owner, or a match outside it. */
+/**
+ * What breaks a probe: no match in its owner, or a match outside it.
+ *
+ * @param {Probe} probe - The probe.
+ * @param {ReadonlyMap<string, string>} texts - The texts.
+ * @returns {string[]} What breaks a probe: no match in its owner, or a match outside it.
+ */
 function probeProblems(probe: Probe, texts: ReadonlyMap<string, string>): string[] {
   const matched = [...texts]
     .filter(([path, text]) => probe.roots.some((root) => path.startsWith(root)) && probe.pattern.test(text))

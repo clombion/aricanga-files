@@ -45,7 +45,14 @@ const ruleNames = (): readonly string[] => Object.keys(RULES).toSorted();
 const descriptions = (): ReadonlyMap<string, string> =>
   new Map(Object.entries(RULES).map(([name, rule]) => [name, rule.meta.docs.description]));
 
-/** What breaks "every rule has a fixture folder with both kinds, and every folder a rule". */
+/**
+ * What breaks "every rule has a fixture folder with both kinds, and every folder a rule".
+ *
+ * @param {readonly string[]} rules - The rules.
+ * @param {readonly string[]} folders - The folders.
+ * @param {readonly Fixture[]} found - The fixtures found on disk.
+ * @returns {readonly string[]} What breaks "every rule has a fixture folder with both kinds, and every folder a rule".
+ */
 function fixtureProblems(
   rules: readonly string[],
   folders: readonly string[],
@@ -62,7 +69,12 @@ function fixtureProblems(
   return problems;
 }
 
-/** A rule setting's level: the setting itself, or the first entry of `[level, options]`. */
+/**
+ * A rule setting's level: the setting itself, or the first entry of `[level, options]`.
+ *
+ * @param {unknown} setting - A rule's setting in the config.
+ * @returns {unknown} A rule setting's level: the setting itself, or the first entry of `[level, options]`.
+ */
 function level(setting: unknown): unknown {
   if (!Array.isArray(setting)) {
     return setting;
@@ -71,7 +83,13 @@ function level(setting: unknown): unknown {
   return entries[0];
 }
 
-/** What breaks "the config turns on exactly the plugin's rules, as errors". */
+/**
+ * What breaks "the config turns on exactly the plugin's rules, as errors".
+ *
+ * @param {unknown} config - The config.
+ * @param {readonly string[]} rules - The rules.
+ * @returns {readonly string[]} What breaks "the config turns on exactly the plugin's rules, as errors".
+ */
 function configProblems(config: unknown, rules: readonly string[]): readonly string[] {
   const fields = object(config, '.oxlintrc.json');
   const plugins = Array.isArray(fields['jsPlugins']) ? fields['jsPlugins'] : [];
@@ -92,7 +110,13 @@ function configProblems(config: unknown, rules: readonly string[]): readonly str
   return problems;
 }
 
-/** What breaks "the README's table lists exactly the rules, with their descriptions". */
+/**
+ * What breaks "the README's table lists exactly the rules, with their descriptions".
+ *
+ * @param {string} readme - The readme.
+ * @param {ReadonlyMap<string, string>} described - Each rule's description in the docs table, by rule.
+ * @returns {readonly string[]} What breaks "the README's table lists exactly the rules, with their descriptions".
+ */
 function readmeProblems(readme: string, described: ReadonlyMap<string, string>): readonly string[] {
   const rows = new Map([...readme.matchAll(TABLE_ROW)].map((row) => [row[1] ?? '', row[2] ?? '']));
   const problems = [...rows.keys()].filter((rule) => !described.has(rule)).map((rule) => `README lists ${rule}: no such rule`);

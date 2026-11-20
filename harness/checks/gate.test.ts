@@ -35,7 +35,12 @@ const LOCK_CHECK = 'lock:check';
 const GATE_TESTS = ['pnpm run test', 'pnpm run test:browser'];
 const HOOK_TYPES = new Accepted(['pre-commit', 'pre-push', 'commit-msg']);
 
-/** What breaks the gate's rules among the tasks `check` runs. */
+/**
+ * What breaks the gate's rules among the tasks `check` runs.
+ *
+ * @param {ReadonlyMap<string, Task>} every - Every task of the root `package.json`, by name.
+ * @returns {readonly string[]} What breaks the gate's rules among the tasks `check` runs.
+ */
 function gateProblems(every: ReadonlyMap<string, Task>): readonly string[] {
   const problems: string[] = [];
   for (const task of closure('check', every)) {
@@ -61,12 +66,22 @@ function gateProblems(every: ReadonlyMap<string, Task>): readonly string[] {
   return problems;
 }
 
-/** The commands that run an unlocked tool runner. */
+/**
+ * The commands that run an unlocked tool runner.
+ *
+ * @param {readonly string[]} commands - The commands.
+ * @returns {readonly string[]} The commands that run an unlocked tool runner.
+ */
 function runnerProblems(commands: readonly string[]): readonly string[] {
   return commands.filter((command) => UNLOCKED_RUNNERS.test(command)).map((command) => `unlocked runner: ${command}`);
 }
 
-/** What breaks the hook rules. */
+/**
+ * What breaks the hook rules.
+ *
+ * @param {readonly Hook[]} declared - The hooks `lefthook.json` declares.
+ * @returns {readonly string[]} What breaks the hook rules.
+ */
 function hookProblems(declared: readonly Hook[]): readonly string[] {
   const problems = declared
     .filter((hook) => !HOOK_TYPES.has(hook.hook))
@@ -207,7 +222,12 @@ describe('the hook check', () => {
   });
 });
 
-/** A planted manifest pinning one dependency at `version`. */
+/**
+ * A planted manifest pinning one dependency at `version`.
+ *
+ * @param {string} version - The version.
+ * @returns {string} A planted manifest pinning one dependency at `version`.
+ */
 function manifest(version: string): string {
   return JSON.stringify({ devDependencies: { 'smol-toml': version }, name: 'plant', private: true, version: '0.0.0' });
 }

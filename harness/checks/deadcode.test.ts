@@ -61,7 +61,13 @@ const PLANT_CONFIG = {
   project: ['src/**/*.ts!'],
 };
 
-/** Run every knip invocation of the deadcode task on a planted package; their exit statuses and output. */
+/**
+ * Run every knip invocation of the deadcode task on a planted package; their exit statuses and output.
+ *
+ * @param {Readonly<Record<string, string>>} files - The files.
+ * @param {object} config - The config.
+ * @returns {readonly { status: number; output: string }[]} Each run's exit status and output.
+ */
 function plantedRuns(
   files: Readonly<Record<string, string>>,
   config: object = PLANT_CONFIG,

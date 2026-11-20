@@ -42,7 +42,12 @@ const PLANTS: Readonly<Record<string, string>> = {
   ].join('\n'),
 };
 
-/** A plain run and a hunt of one planted spec: their exit statuses. */
+/**
+ * A plain run and a hunt of one planted spec: their exit statuses.
+ *
+ * @param {string} file - The file.
+ * @returns {Promise<readonly [number, readonly number[]]>} A plain run and a hunt of one planted spec: their exit statuses.
+ */
 async function plainAndHunted(file: string): Promise<readonly [number, readonly number[]]> {
   const project = new Project();
   try {

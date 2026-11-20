@@ -102,7 +102,13 @@ function merge(...layers: readonly Overrides[]): Overrides {
   return merged;
 }
 
-/** The exit status of one plant run under the gate config with `overrides` merged over its `test`. */
+/**
+ * The exit status of one plant run under the gate config with `overrides` merged over its `test`.
+ *
+ * @param {Plant} plant - The planted project.
+ * @param {Overrides} overrides - The overrides.
+ * @returns {number} The exit status of one plant run under the gate config with `overrides` merged over its `test`.
+ */
 function status(plant: Plant, overrides: Overrides): number {
   const project = new Project({ copies: ['vitest.gate.config.ts', 'harness/lib'] });
   try {

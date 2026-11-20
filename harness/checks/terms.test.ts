@@ -48,7 +48,12 @@ function strings(table: unknown, what: string): ReadonlyMap<string, string> {
   );
 }
 
-/** Read a parsed terms file, refusing a retired term without its replacement. */
+/**
+ * Read a parsed terms file, refusing a retired term without its replacement.
+ *
+ * @param {string} text - The text.
+ * @returns {Terms} Read a parsed terms file, refusing a retired term without its replacement.
+ */
 function termsOf(text: string): Terms {
   const data = object(TOML.parse(text), 'terms');
   const retired = strings(data['retired'], 'retired');
@@ -73,7 +78,14 @@ interface Use {
   readonly why: string;
 }
 
-/** Every use of current text that the terms file refuses. */
+/**
+ * Every use of current text that the terms file refuses.
+ *
+ * @param {Terms} terms - The terms.
+ * @param {readonly Prose[]} prose - The prose.
+ * @param {readonly Span[]} spans - The spans.
+ * @returns {Use[]} Every use of current text that the terms file refuses.
+ */
 function uses(terms: Terms, prose: readonly Prose[], spans: readonly Span[]): Use[] {
   const found: Use[] = [];
   for (const [term, replacement] of terms.retired) {
@@ -101,7 +113,12 @@ function uses(terms: Terms, prose: readonly Prose[], spans: readonly Span[]): Us
   return found;
 }
 
-/** A term as a literal regular-expression source. */
+/**
+ * A term as a literal regular-expression source.
+ *
+ * @param {string} term - The term.
+ * @returns {string} A term as a literal regular-expression source.
+ */
 function escaped(term: string): string {
   return term.replaceAll(/[.*+?^${}()|[\]\\]/gu, String.raw`\$&`);
 }

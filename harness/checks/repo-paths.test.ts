@@ -24,7 +24,12 @@ const META = new Accepted(['url', 'dirname', 'filename']);
 const GLOBALS = new Accepted(['__dirname', '__filename']);
 const URL_MODULES = new Accepted(['node:url', 'url']);
 
-/** Whether an identifier names a property (`a.__dirname`, `{ __dirname: 1 }`) rather than a variable. */
+/**
+ * Whether an identifier names a property (`a.__dirname`, `{ __dirname: 1 }`) rather than a variable.
+ *
+ * @param {Identifier} node - The node.
+ * @returns {boolean} Whether an identifier names a property (`a.__dirname`, `{ __dirname: 1 }`) rather than a variable.
+ */
 function isPropertyName(node: Identifier): boolean {
   const {parent} = node;
   return (
@@ -33,7 +38,13 @@ function isPropertyName(node: Identifier): boolean {
   );
 }
 
-/** The sites of one module that find its own location, as `site(path, what)`. */
+/**
+ * The sites of one module that find its own location, as `site(path, what)`.
+ *
+ * @param {string} path - The path.
+ * @param {string} text - The text.
+ * @returns {string[]} The sites of one module that find its own location, as `site(path, what)`.
+ */
 function locating(path: string, text: string): string[] {
   const file = parse(path, text);
   const found: string[] = [];

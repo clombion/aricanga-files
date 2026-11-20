@@ -19,7 +19,13 @@ const PENDING = new Exemptions({
     'adopting: add "packageManager": "pnpm@10.28.0" to package.json, so the pnpm the gate runs is pinned',
 });
 
-/** A pin with no upstream or no version, and an upstream entry that pins nothing. */
+/**
+ * A pin with no upstream or no version, and an upstream entry that pins nothing.
+ *
+ * @param {readonly Pin[]} found - The pins the lock holds.
+ * @param {ReadonlyMap<string, string>} upstream - Each tool's latest version upstream, by tool.
+ * @returns {readonly string[]} A pin with no upstream or no version, and an upstream entry that pins nothing.
+ */
 function pinProblems(found: readonly Pin[], upstream: ReadonlyMap<string, string>): readonly string[] {
   const problems = found
     .filter((pin) => (upstream.get(pin.tool) ?? '') === '')

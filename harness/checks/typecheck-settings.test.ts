@@ -173,7 +173,12 @@ const SUPPORT: Readonly<Record<string, string>> = {
 
 const DIAGNOSTIC = /^(src\/[\w.-]+)\(\d+,\d+\): error (TS\d+):/u;
 
-/** The diagnostic codes of a tsc run, by planted file. */
+/**
+ * The diagnostic codes of a tsc run, by planted file.
+ *
+ * @param {string} stdout - The stdout.
+ * @returns {ReadonlyMap<string, readonly string[]>} The diagnostic codes of a tsc run, by planted file.
+ */
 function codesByFile(stdout: string): ReadonlyMap<string, readonly string[]> {
   const found = new Map<string, string[]>();
   for (const line of stdout.split('\n')) {
@@ -185,7 +190,12 @@ function codesByFile(stdout: string): ReadonlyMap<string, readonly string[]> {
   return found;
 }
 
-/** Run the locked tsc over every plant under the base config with `overrides` applied. */
+/**
+ * Run the locked tsc over every plant under the base config with `overrides` applied.
+ *
+ * @param {Readonly<Record<string, boolean | null>>} overrides - The overrides.
+ * @returns {ReadonlyMap<string, readonly string[]>} Run the locked tsc over every plant under the base config with `overrides` applied.
+ */
 function typecheck(overrides: Readonly<Record<string, boolean | null>>): ReadonlyMap<string, readonly string[]> {
   const project = new Project({ copies: ['tsconfig.base.json'], linkModules: false });
     project.write('node_modules/@typescript/lib-dom/package.json', JSON.stringify({ name: '@typescript/lib-dom', types: 'index.d.ts', version: '0.0.0' }));

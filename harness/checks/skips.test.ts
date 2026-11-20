@@ -26,7 +26,12 @@ const RUNNER_FUNCTIONS = new Accepted(['test', 'it', 'describe', 'suite', 'bench
 const RUNNERS = new Accepted(['vitest', '@playwright/test']);
 const SKIPPING = new Accepted(['skip', 'skipIf', 'runIf', 'todo', 'only', 'fails', 'fixme', 'fail']);
 
-/** The local names that stand for a runner's test functions in one module. */
+/**
+ * The local names that stand for a runner's test functions in one module.
+ *
+ * @param {SourceFile} file - The file.
+ * @returns {ReadonlyMap<string, string>} The local names that stand for a runner's test functions in one module.
+ */
 function runnerNames(file: SourceFile): ReadonlyMap<string, string> {
   const names = new Map<string, string>();
   for (const runner of RUNNERS) {
@@ -46,7 +51,12 @@ function titleOf(call: CallExpression): string | undefined {
     : undefined;
 }
 
-/** The test context parameters of a test callback: its first parameter, or `skip` destructured from it. */
+/**
+ * The test context parameters of a test callback: its first parameter, or `skip` destructured from it.
+ *
+ * @param {CallExpression} call - A test call expression.
+ * @returns {{ readonly context: Set<string>; readonly skip: Set<string> }} The test context parameters of a test callback: its first parameter, or `skip` destructured from it.
+ */
 function contextSkips(call: CallExpression): { readonly context: Set<string>; readonly skip: Set<string> } {
   const context = new Set<string>();
   const skip = new Set<string>();
@@ -68,7 +78,13 @@ function contextSkips(call: CallExpression): { readonly context: Set<string>; re
   return { context, skip };
 }
 
-/** The skip sites of one test module, as `site(path, owner)`. */
+/**
+ * The skip sites of one test module, as `site(path, owner)`.
+ *
+ * @param {string} path - The path.
+ * @param {string} text - The text.
+ * @returns {string[]} The skip sites of one test module, as `site(path, owner)`.
+ */
 function skips(path: string, text: string): string[] {
   const file = parse(path, text);
   const names = runnerNames(file);

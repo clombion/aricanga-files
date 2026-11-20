@@ -37,7 +37,12 @@ test('all', () => {
 });
 `;
 
-/** The coverage of a planted project whose test is `tests`. */
+/**
+ * The coverage of a planted project whose test is `tests`.
+ *
+ * @param {string} tests - The tests.
+ * @returns {readonly FileCoverage[]} The coverage of a planted project whose test is `tests`.
+ */
 function planted(tests: string): readonly FileCoverage[] {
   const project = new Project();
   try {
@@ -55,7 +60,12 @@ function planted(tests: string): readonly FileCoverage[] {
 
 const NONE = new CountedExemptions({});
 
-/** The files a debt names that the listing does not hold. */
+/**
+ * The files a debt names that the listing does not hold.
+ *
+ * @param {CountedExemptions} debt - The debt.
+ * @returns {readonly string[]} The files a debt names that the listing does not hold.
+ */
 function unlisted(debt: CountedExemptions): readonly string[] {
   const files = new Set(tracked());
   return [...debt.entries.keys()].map((key) => key.split(' :: ')[0] ?? key).filter((path) => !files.has(path));

@@ -36,7 +36,12 @@ describe('the pushed-subjects rule', () => {
   });
 });
 
-/** The pre-push script's exit status for a push of `subjects` onto a base commit. */
+/**
+ * The pre-push script's exit status for a push of `subjects` onto a base commit.
+ *
+ * @param {readonly string[]} subjects - The subjects of the pushed commits.
+ * @returns {number} The pre-push script's exit status for a push of `subjects` onto a base commit.
+ */
 function pushOf(subjects: readonly string[]): number {
   const project = new Project({ linkModules: false });
   try {

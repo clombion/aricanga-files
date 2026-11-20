@@ -40,7 +40,12 @@ const FIXTURES: readonly Fixture[] = [
 
 const BOUNDARY_RULES = ['no-restricted-imports', 'no-restricted-globals', 'no-restricted-properties'];
 
-/** The boundary findings oxlint reports for each fixture path, under a copy of the repository config. */
+/**
+ * The boundary findings oxlint reports for each fixture path, under a copy of the repository config.
+ *
+ * @param {readonly Fixture[]} fixtures - The fixtures.
+ * @returns {ReadonlyMap<string, boolean>} The boundary findings oxlint reports for each fixture path, under a copy of the repository config.
+ */
 function verdicts(fixtures: readonly Fixture[]): ReadonlyMap<string, boolean> {
   const project = new Project({ copies: OXLINT_CONFIG_FILES });
   try {
@@ -71,7 +76,11 @@ function verdicts(fixtures: readonly Fixture[]): ReadonlyMap<string, boolean> {
   }
 }
 
-/** The system packages of the listing. */
+/**
+ * The system packages of the listing.
+ *
+ * @returns {readonly string[]} The system packages of the listing.
+ */
 function systems(): readonly string[] {
   return [...new Set(tracked().flatMap((path) => /^packages\/systems\/([^/]+)\/package\.json$/u.exec(path)?.slice(1) ?? []))];
 }

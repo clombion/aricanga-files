@@ -38,7 +38,12 @@ function strings(value: unknown, what: string): string[] {
   return value;
 }
 
-/** oxlint's ignore patterns and override file globs. */
+/**
+ * oxlint's ignore patterns and override file globs.
+ *
+ * @param {unknown} config - The config.
+ * @returns {Entry[]} oxlint's ignore patterns and override file globs.
+ */
 function oxlintEntries(config: unknown): Entry[] {
   const fields = object(config, '.oxlintrc.json');
   const overrides = fields['overrides'] === undefined ? [] : fields['overrides'];
@@ -56,7 +61,12 @@ function oxlintEntries(config: unknown): Entry[] {
   ];
 }
 
-/** The gate's Vitest config: coverage include and exclude, and each project's include. */
+/**
+ * The gate's Vitest config: coverage include and exclude, and each project's include.
+ *
+ * @param {unknown} config - The config.
+ * @returns {Entry[]} The gate's Vitest config: coverage include and exclude, and each project's include.
+ */
 function vitestEntries(config: unknown): Entry[] {
   const testOptions = object(object(config, 'vitest config')['test'] ?? {}, 'test');
   const coverage = object(testOptions['coverage'] ?? {}, 'coverage');
@@ -76,7 +86,12 @@ function vitestEntries(config: unknown): Entry[] {
   ];
 }
 
-/** Biome's `files.includes`, a `!` entry read as the exclusion it is. */
+/**
+ * Biome's `files.includes`, a `!` entry read as the exclusion it is.
+ *
+ * @param {unknown} config - The config.
+ * @returns {Entry[]} Biome's `files.includes`, a `!` entry read as the exclusion it is.
+ */
 function biomeEntries(config: unknown): Entry[] {
   const files = object(object(config, 'biome.json')['files'] ?? {}, 'files');
   return strings(files['includes'], 'files.includes').map((glob) =>
@@ -84,7 +99,12 @@ function biomeEntries(config: unknown): Entry[] {
   );
 }
 
-/** oxfmt's ignore patterns. */
+/**
+ * oxfmt's ignore patterns.
+ *
+ * @param {unknown} config - The config.
+ * @returns {Entry[]} oxfmt's ignore patterns.
+ */
 function oxfmtEntries(config: unknown): Entry[] {
   return strings(object(config, '.oxfmtrc.json')['ignorePatterns'], 'ignorePatterns').map((glob) => ({
     glob,
@@ -92,7 +112,12 @@ function oxfmtEntries(config: unknown): Entry[] {
   }));
 }
 
-/** knip's `ignore`, at the top level and per workspace. */
+/**
+ * knip's `ignore`, at the top level and per workspace.
+ *
+ * @param {unknown} config - The config.
+ * @returns {Entry[]} knip's `ignore`, at the top level and per workspace.
+ */
 function knipEntries(config: unknown): Entry[] {
   const fields = object(config, 'knip.json');
   const workspaces = object(fields['workspaces'] ?? {}, 'workspaces');
@@ -107,7 +132,13 @@ function knipEntries(config: unknown): Entry[] {
   ];
 }
 
-/** stylelint's `ignoreFiles` and the lines of `.stylelintignore`. */
+/**
+ * stylelint's `ignoreFiles` and the lines of `.stylelintignore`.
+ *
+ * @param {unknown} config - The config.
+ * @param {string} ignoreFile - The ignore file.
+ * @returns {Entry[]} stylelint's `ignoreFiles` and the lines of `.stylelintignore`.
+ */
 function stylelintEntries(config: unknown, ignoreFile: string): Entry[] {
   return [
     ...strings(object(config, '.stylelintrc.json')['ignoreFiles'], 'ignoreFiles').map((glob) => ({
@@ -122,7 +153,13 @@ function stylelintEntries(config: unknown, ignoreFile: string): Entry[] {
   ];
 }
 
-/** The entries whose glob matches none of `paths`. */
+/**
+ * The entries whose glob matches none of `paths`.
+ *
+ * @param {readonly Entry[]} entries - The entries.
+ * @param {readonly string[]} paths - The paths.
+ * @returns {Entry[]} The entries whose glob matches none of `paths`.
+ */
 function deadEntries(entries: readonly Entry[], paths: readonly string[]): Entry[] {
   const unmatched = new Set(dead(entries.map((entry) => entry.glob), paths));
   return entries.filter((entry) => unmatched.has(entry.glob));

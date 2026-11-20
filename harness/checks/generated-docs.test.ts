@@ -16,7 +16,13 @@ const HARNESS_ID = 'generated-docs';
 
 const PLANTED = '# Planted\n\n<!-- generated: tasks -->\nhand-edited\n<!-- end: tasks -->\n';
 
-/** The generators no block of the docs names. */
+/**
+ * The generators no block of the docs names.
+ *
+ * @param {Generators} generators - The generators.
+ * @param {readonly string[]} names - The names.
+ * @returns {string[]} The generators no block of the docs names.
+ */
 function orphans(generators: Generators, names: readonly string[]): string[] {
   return [...generators.keys()].filter((name) => !names.includes(name)).toSorted();
 }

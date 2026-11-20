@@ -114,7 +114,12 @@ function suffix(path: string): string {
   return /\.[a-z]+$/u.exec(path)?.[0] ?? '';
 }
 
-/** The comments of a stylesheet: every `/* … *\/` outside a quoted string. */
+/**
+ * The comments of a stylesheet: every `/* … *\/` outside a quoted string.
+ *
+ * @param {string} text - The text.
+ * @returns {{ readonly text: string; readonly line: number }[]} The comments of a stylesheet: every `/* … *\/` outside a quoted string.
+ */
 function cssComments(text: string): { readonly text: string; readonly line: number }[] {
   const found: { text: string; line: number }[] = [];
   let index = 0;
@@ -149,7 +154,13 @@ function commentsOf(path: string, text: string): { readonly text: string; readon
   return path.endsWith('.css') ? cssComments(text) : comments(parse(path, text));
 }
 
-/** The census of one module: each suppression is refused or counted under `(path, tool:rule)`. */
+/**
+ * The census of one module: each suppression is refused or counted under `(path, tool:rule)`.
+ *
+ * @param {string} path - The path.
+ * @param {string} text - The text.
+ * @returns {Census} The census of one module: each suppression is refused or counted under `(path, tool:rule)`.
+ */
 function census(path: string, text: string): Census {
   const problems: Problem[] = [];
   const sites: string[] = [];
@@ -202,7 +213,11 @@ function census(path: string, text: string): Census {
   return { problems, sites };
 }
 
-/** The census over every held file the suppressions can sit in. */
+/**
+ * The census over every held file the suppressions can sit in.
+ *
+ * @returns {Census} The census over every held file the suppressions can sit in.
+ */
 function repoCensus(): Census {
   const all = heldFiles()
     .filter((path) => SCANNED.has(suffix(path)))

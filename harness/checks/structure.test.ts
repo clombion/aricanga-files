@@ -17,7 +17,12 @@ const BUILD_DIRECTORIES = /(^|\/)(dist|coverage|\.output|node_modules)\//u;
 const BUILD_FILES = new Prefixes(['.tsbuildinfo']);
 const MODULE = /\.tsx?$/u;
 
-/** The module stems that exist as both `.ts` and `.tsx`. */
+/**
+ * The module stems that exist as both `.ts` and `.tsx`.
+ *
+ * @param {readonly string[]} paths - The paths.
+ * @returns {string[]} The module stems that exist as both `.ts` and `.tsx`.
+ */
 function doubleModules(paths: readonly string[]): string[] {
   const stems = new Map<string, Set<string>>();
   for (const path of paths.filter((candidate) => MODULE.test(candidate))) {
@@ -30,7 +35,12 @@ function doubleModules(paths: readonly string[]): string[] {
     .toSorted();
 }
 
-/** The listed files that are build output. */
+/**
+ * The listed files that are build output.
+ *
+ * @param {readonly string[]} paths - The paths.
+ * @returns {string[]} The listed files that are build output.
+ */
 function buildOutput(paths: readonly string[]): string[] {
   return paths.filter((path) => BUILD_DIRECTORIES.test(path) || BUILD_FILES.ends(path));
 }

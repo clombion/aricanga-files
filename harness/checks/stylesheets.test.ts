@@ -20,7 +20,11 @@ import { textOf } from '#lib/source-files.ts';
 const HARNESS_ID = 'stylesheets';
 
 
-/** The rules `.stylelintrc.json` turns on itself (the standard config's own are its plants' concern). */
+/**
+ * The rules `.stylelintrc.json` turns on itself (the standard config's own are its plants' concern).
+ *
+ * @returns {readonly string[]} The rules `.stylelintrc.json` turns on itself (the standard config's own are its plants' concern).
+ */
 function configuredRules(): readonly string[] {
   const rules = object(object(json(textOf('.stylelintrc.json')), '.stylelintrc.json')['rules'], 'rules');
   return Object.entries(rules)
@@ -129,7 +133,13 @@ describe('the lint, on planted sheets', () => {
   });
 });
 
-/** A planted sheet starting on the first line of its file. */
+/**
+ * A planted sheet starting on the first line of its file.
+ *
+ * @param {string} path - The path.
+ * @param {string} text - The text.
+ * @returns {Sheet} A planted sheet starting on the first line of its file.
+ */
 function plantedSheet(path: string, text: string): Sheet {
   return { line: 1, path, text };
 }

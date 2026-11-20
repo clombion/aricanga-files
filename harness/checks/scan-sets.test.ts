@@ -67,12 +67,24 @@ const TEST_FILE = /(\.test\.tsx?$|\/test\/|^harness\/checks\/|^packages\/charact
 const PRODUCTION_PROJECT = /^(packages\/(foundation|systems\/[^/]+)|experiences\/[^/]+)\/tsconfig\.json$/u;
 const UNFORMATTED = '\nconst   plantedUnformatted   =   1  ;\n';
 
-/** Each held file with the scan sets that miss it, as `<path>: <scan set>`. */
+/**
+ * Each held file with the scan sets that miss it, as `<path>: <scan set>`.
+ *
+ * @param {readonly string[]} files - The files.
+ * @param {Readonly<Record<string, ReadonlySet<string>>>} sets - Each scan's set of files, by scan.
+ * @returns {readonly string[]} Each held file with the scan sets that miss it, as `<path>: <scan set>`.
+ */
 function unreached(files: readonly string[], sets: Readonly<Record<string, ReadonlySet<string>>>): readonly string[] {
   return files.flatMap((path) => Object.entries(sets).filter(([, reached]) => !reached.has(path)).map(([name]) => `${path}: ${name}`));
 }
 
-/** The project problems: a file in no project, in two production projects, or a test in a production project. */
+/**
+ * The project problems: a file in no project, in two production projects, or a test in a production project.
+ *
+ * @param {readonly string[]} files - The files.
+ * @param {ReadonlyMap<string, ReadonlySet<string>>} members - Each set's members, by set.
+ * @returns {readonly string[]} The project problems: a file in no project, in two production projects, or a test in a production project.
+ */
 function projectProblems(files: readonly string[], members: ReadonlyMap<string, ReadonlySet<string>>): readonly string[] {
   return files.flatMap((path) => {
     const holding = [...members].filter(([, set]) => set.has(path)).map(([project]) => project);
@@ -87,13 +99,22 @@ function projectProblems(files: readonly string[], members: ReadonlyMap<string, 
   });
 }
 
-/** The files oxlint lints in the checkout, from its own listing. */
+/**
+ * The files oxlint lints in the checkout, from its own listing.
+ *
+ * @returns {ReadonlySet<string>} The files oxlint lints in the checkout, from its own listing.
+ */
 function oxlintFiles(): ReadonlySet<string> {
   const done = finished([fromRoot('node_modules', '.bin', 'oxlint'), '--debug=files'], { cwd: REPO_ROOT });
   return new Set(done.stdout.split('\n').filter((line) => line !== ''));
 }
 
-/** The files oxfmt formats: every held file planted unformatted in a copy of the checkout's config. */
+/**
+ * The files oxfmt formats: every held file planted unformatted in a copy of the checkout's config.
+ *
+ * @param {readonly string[]} files - The files.
+ * @returns {ReadonlySet<string>} The files oxfmt formats: every held file planted unformatted in a copy of the checkout's config.
+ */
 function oxfmtFiles(files: readonly string[]): ReadonlySet<string> {
   const ignores = ['.gitignore', '.prettierignore', '.oxfmtrc.json'].filter((path) => tracked().includes(path));
   const project = new Project({ copies: ignores });
@@ -108,7 +129,12 @@ function oxfmtFiles(files: readonly string[]): ReadonlySet<string> {
   }
 }
 
-/** The directory a project file sits in, with a trailing slash (empty at the root). */
+/**
+ * The directory a project file sits in, with a trailing slash (empty at the root).
+ *
+ * @param {string} project - The project.
+ * @returns {string} The directory a project file sits in, with a trailing slash (empty at the root).
+ */
 function projectDirectory(project: string): string {
   const at = project.lastIndexOf('/');
   return at === -1 ? '' : project.slice(0, at + 1);
@@ -118,6 +144,8 @@ function projectDirectory(project: string): string {
  * The files each TypeScript project holds: those it lists (`tsc --listFilesOnly`) under its own
  * directory. A package's source a dependent project resolves through the package's exports is
  * listed there too, but held by its own package.
+ *
+ * @returns {ReadonlyMap<string, ReadonlySet<string>>} The files each TypeScript project holds: those it lists (`tsc --listFilesOnly`) under its own directory.
  */
 function projectMembers(): ReadonlyMap<string, ReadonlySet<string>> {
   return new Map(
@@ -129,7 +157,12 @@ function projectMembers(): ReadonlyMap<string, ReadonlySet<string>> {
   );
 }
 
-/** The non-test files Vitest's coverage `include` reaches and its `exclude` does not take back. */
+/**
+ * The non-test files Vitest's coverage `include` reaches and its `exclude` does not take back.
+ *
+ * @param {readonly string[]} files - The files.
+ * @returns {ReadonlySet<string>} The non-test files Vitest's coverage `include` reaches and its `exclude` does not take back.
+ */
 function coverageReached(files: readonly string[]): ReadonlySet<string> {
   const coverage = object(object(object(gate, 'vitest.gate.config.ts')['test'], 'test')['coverage'], 'coverage');
   const include = Array.isArray(coverage['include']) ? coverage['include'].map(String) : [];
