@@ -40,7 +40,7 @@ list.
 - `clones` (`harness/checks/clones.test.ts`): `harness/scripts/dupes.ts` finds a planted clone at its floor and past it, and fails when jscpd scans less than git lists.
 - `contract-widening` (`harness/checks/contract-widening.test.ts`): A contract union is never widened to `string`, and its words are not respelled outside its owner.
 - `coverage-floor` (`harness/checks/coverage-floor.test.ts`): The coverage floor fails an untaken branch, an uncalled function and an unrun line, on all four metrics, and its debt fails both ways.
-- `deadcode` (`harness/checks/deadcode.test.ts`): knip, at its strictest, finds no unused file, dependency or export in production mode or default mode, and every ignore entry carries its reason.
+- `deadcode` (`harness/checks/deadcode.test.ts`): `knip`, at its strictest, finds no unused file, dependency or export in production mode or default mode, and every ignore entry carries its reason.
 - `doc-references` (`harness/checks/doc-references.test.ts`): Every reference in current text resolves: links and anchors, backticked paths, tasks, ADRs and commands.
 - `doubles` (`harness/checks/doubles.test.ts`): A scripted double fails its test on an unscripted call, even when the code under test catches it.
 - `exemption-lists` (`harness/checks/exemption-lists.test.ts`): Every literal list a check consults is an exemption declaration, and every declaration is consulted.
@@ -66,7 +66,7 @@ list.
 - `tool-exemptions` (`harness/checks/tool-exemptions.test.ts`): Every tool exemption is live: each ignore, override, include and exclude glob matches a listed file.
 - `tool-upgrades` (`harness/checks/tool-upgrades.test.ts`): Every pinned tool has its upstream repository named, and every named repository pins a tool.
 - `type-exports` (`harness/checks/type-exports.test.ts`): An exported type is read by another production module (or a harness check) or carries `@public`.
-- `typecheck-settings` (`harness/checks/typecheck-settings.test.ts`): tsc, under this project's settings, fails each planted typing hole a setting closes, and passes it once that setting is removed.
+- `typecheck-settings` (`harness/checks/typecheck-settings.test.ts`): `tsc`, under this project's settings, fails each planted typing hole a setting closes, and passes it once that setting is removed.
 - `vitest-settings` (`harness/checks/vitest-settings.test.ts`): Vitest, under this project's settings, fails each planted test a bare configuration would pass.
 <!-- end: checks -->
 
@@ -170,7 +170,7 @@ writes this table from `package.json` and `pnpm-lock.yaml`.
 | `oxfmt` | [oxc-project/oxc](https://github.com/oxc-project/oxc) | `pnpm-lock.yaml` | 0.79.0 |
 | `oxlint` | [oxc-project/oxc](https://github.com/oxc-project/oxc) | `pnpm-lock.yaml` | 1.94.0 |
 | `oxlint-tsgolint` | [oxc-project/tsgolint](https://github.com/oxc-project/tsgolint) | `pnpm-lock.yaml` | 7.0.2007 |
-| `pnpm` | [pnpm/pnpm](https://github.com/pnpm/pnpm) | `package.json packageManager` |  |
+| `pnpm` | [pnpm/pnpm](https://github.com/pnpm/pnpm) | `package.json packageManager` | 10.28.0 |
 | `remark-parse` | [remarkjs/remark](https://github.com/remarkjs/remark) | `pnpm-lock.yaml` | 11.0.0 |
 | `sharp` | [lovell/sharp](https://github.com/lovell/sharp) | `pnpm-lock.yaml` | 0.35.5 |
 | `stylelint` | [stylelint/stylelint](https://github.com/stylelint/stylelint) | `pnpm-lock.yaml` | 17.16.0 |

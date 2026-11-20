@@ -9,12 +9,33 @@ import { BlockError, Doc } from '#lib/docs.ts';
 import type { Files, Generators } from '#lib/generated.ts';
 import { GENERATORS, blocks, problems, rendered, run } from '#lib/generated.ts';
 import { describe, expect, test } from 'vitest';
+import { EXIT_CLEAN } from './exit-status.ts';
 import { REPO_ROOT } from '#lib/paths.ts';
 import { finished } from '#lib/tools.ts';
 
 const HARNESS_ID = 'generated-docs';
 
 const PLANTED = '# Planted\n\n<!-- generated: tasks -->\nhand-edited\n<!-- end: tasks -->\n';
+
+/**
+ * A docs tree held in memory: a stale block and an unknown one, which writing changes in place.
+ *
+ * @returns {{ files: Files; texts: Map<string, string> }} The files the generators read and write, and their texts.
+ */
+function plantedFiles(): { readonly files: Files; readonly texts: Map<string, string> } {
+  const texts = new Map([
+    ['stale.md', PLANTED],
+    ['unknown.md', PLANTED.replaceAll('tasks', 'planted')],
+  ]);
+  const files: Files = {
+    paths: () => [...texts.keys()],
+    read: (path) => new Doc(path, texts.get(path) ?? ''),
+    write: (path, text) => {
+      texts.set(path, text);
+    },
+  };
+  return { files, texts };
+}
 
 /**
  * The generators no block of the docs names.
@@ -31,7 +52,7 @@ describe('the repository', () => {
   test('every block is current and named by a generator, as the gate runs it', () => {
     expect.hasAssertions();
     const done = finished(['node', 'harness/scripts/gen-docs.ts', '--check'], { cwd: REPO_ROOT });
-    expect([done.status, done.stderr]).toStrictEqual([0, '']);
+    expect({ status: done.status, stderr: done.stderr }).toStrictEqual({ status: EXIT_CLEAN, stderr: '' });
   });
 
   test('every generator has a block', () => {
@@ -47,7 +68,8 @@ describe('the generated-docs check', () => {
     expect(problems(doc, GENERATORS)).toStrictEqual([
       { line: 3, message: 'block "tasks" is stale: run `pnpm run fix`', path: 'docs/planted.md', writingFixesIt: true },
     ]);
-    expect(problems(new Doc('docs/planted.md', rendered(doc, GENERATORS)), GENERATORS)).toStrictEqual([]);
+    const restored = new Doc('docs/planted.md', rendered(doc, GENERATORS));
+    expect(problems(restored, GENERATORS)).toStrictEqual([]);
   });
 
   test('refuses an unknown block name and leaves it as it is', () => {
@@ -61,7 +83,7 @@ describe('the generated-docs check', () => {
 
   test('sees a generator with no block', () => {
     expect.hasAssertions();
-    const planted = new Map([...GENERATORS, ['planted', () => 'x']]);
+    const planted = new Map([...GENERATORS, ['planted', (): string => 'x']]);
     expect(orphans(planted, blocks().map((block) => block.name))).toStrictEqual(['planted']);
   });
 
@@ -75,21 +97,19 @@ describe('the generated-docs check', () => {
     expect(() => new Doc('docs/planted.md', text).blocks()).toThrow(BlockError);
   });
 
-  test('writing fixes a stale block and refuses an unknown one; checking writes nothing', () => {
+});
+
+describe('the generated-docs run', () => {
+  test('checking finds both blocks and writes nothing', () => {
     expect.hasAssertions();
-    const texts = new Map([
-      ['stale.md', PLANTED],
-      ['unknown.md', PLANTED.replaceAll('tasks', 'planted')],
-    ]);
-    const files: Files = {
-      paths: () => [...texts.keys()],
-      read: (path) => new Doc(path, texts.get(path) ?? ''),
-      write: (path, text) => {
-        texts.set(path, text);
-      },
-    };
-    expect(run(true, GENERATORS, files)).toHaveLength(2);
+    const { files, texts } = plantedFiles();
+    expect(run(true, GENERATORS, files).map((problem) => problem.path).toSorted()).toStrictEqual(['stale.md', 'unknown.md']);
     expect(texts.get('stale.md')).toBe(PLANTED);
+  });
+
+  test('writing fixes the stale block, leaves the unknown one, and checking then finds the unknown one only', () => {
+    expect.hasAssertions();
+    const { files, texts } = plantedFiles();
     expect(run(false, GENERATORS, files).map((problem) => problem.path)).toStrictEqual(['unknown.md']);
     expect(texts.get('stale.md')).not.toContain('hand-edited');
     expect(texts.get('unknown.md')).toBe(PLANTED.replaceAll('tasks', 'planted'));
