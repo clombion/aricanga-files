@@ -263,19 +263,19 @@ describe('the hook check', () => {
 });
 
 describe('the lock check', () => {
-  test('is the frozen, lockfile-only install', () => {
+  test('is the frozen, lockfile-only install', async () => {
     expect.hasAssertions();
-    expect(lockCheckArguments()).toStrictEqual(['pnpm', 'install', '--frozen-lockfile', '--lockfile-only']);
+    await expect(lockCheckArguments()).resolves.toStrictEqual(['pnpm', 'install', '--frozen-lockfile', '--lockfile-only']);
   });
 
-  test('passes a lockfile current with package.json', () => {
+  test('passes a lockfile current with package.json', async () => {
     expect.hasAssertions();
-    expect(lockCheckAfter('1.9.1', '1.9.1')).toStrictEqual({ outdated: false, status: EXIT_CLEAN });
+    await expect(lockCheckAfter('1.9.1', '1.9.1')).resolves.toStrictEqual({ outdated: false, status: EXIT_CLEAN });
   });
 
-  test('refuses a lockfile older than package.json', () => {
+  test('refuses a lockfile older than package.json', async () => {
     expect.hasAssertions();
-    expect(lockCheckAfter('1.9.1', '1.9.0')).toStrictEqual({ outdated: true, status: EXIT_FINDINGS });
+    await expect(lockCheckAfter('1.9.1', '1.9.0')).resolves.toStrictEqual({ outdated: true, status: EXIT_FINDINGS });
   });
 });
 

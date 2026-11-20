@@ -149,11 +149,11 @@ describe('the repository', () => {
     expect(sitesIn(repoScan, await scannedFiles())).toStrictEqual([]);
   });
 
-  test.each(OWNED)('the %s owner %s exists and uses its API', (_name, owner, rule) => {
+  test.each(OWNED)('the %s owner %s exists and uses its API', async (_name, owner, rule) => {
     expect.hasAssertions();
     const scan = repoScan();
     const file = sourceOf(scan, owner);
-    expect(tracked()).toContain(owner);
+    await expect(tracked()).resolves.toContain(owner);
     expect(ownerUses(scan, file, rule)).toBe(true);
   });
 });
