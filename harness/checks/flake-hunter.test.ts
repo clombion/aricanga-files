@@ -9,10 +9,20 @@
 
 import { describe, expect, test } from 'vitest';
 import { hunt, huntOf } from '#lib/stress.ts';
+import { EXIT_CLEAN } from './exit-status.ts';
 import type { Hunt } from '#lib/stress.ts';
 import { Project } from '#lib/tools.ts';
 
 const HARNESS_ID = 'flake-hunter';
+
+/** The hunt's options: its seed, copies and repeats. */
+const SEED = 1;
+const COPIES = 4;
+const REPEATS = 2;
+/** The planted options the parser reads back. */
+const PLANTED_SEED = 7;
+const PLANTED_COPIES = 2;
+const PLANTED_REPEATS = 3;
 
 const CONFIG = 'export default { test: { include: ["*.test.ts"], expect: { requireAssertions: true } } };\n';
 
@@ -56,7 +66,7 @@ async function plainAndHunted(file: string): Promise<readonly [number, readonly 
       project.write(path, text);
     }
     const plain = project.tool('vitest', 'run', '--root', project.root, '--config', 'vitest.config.ts', file);
-    const options: Hunt = { config: 'vitest.config.ts', copies: 4, filters: [file], repeats: 2, root: project.root, seed: 1 };
+    const options: Hunt = { config: 'vitest.config.ts', copies: COPIES, filters: [file], repeats: REPEATS, root: project.root, seed: SEED };
     const hunted = await hunt(options);
     return [plain.status, hunted.map((result) => result.status)];
   } finally {
@@ -68,28 +78,29 @@ describe('the flake hunter, on planted specs', () => {
   test('fails an order-dependent spec that a plain run passes', async () => {
     expect.hasAssertions();
     const [plain, hunted] = await plainAndHunted('order.test.ts');
-    expect(plain).toBe(0);
-    expect(hunted.some((status) => status !== 0)).toBe(true);
+    expect(plain).toBe(EXIT_CLEAN);
+    expect(hunted.some((status) => status !== EXIT_CLEAN)).toBe(true);
   });
 
   test('fails a timing-dependent spec that a plain run passes', async () => {
     expect.hasAssertions();
     const [plain, hunted] = await plainAndHunted('timing.test.ts');
-    expect(plain).toBe(0);
-    expect(hunted.some((status) => status !== 0)).toBe(true);
+    expect(plain).toBe(EXIT_CLEAN);
+    expect(hunted.some((status) => status !== EXIT_CLEAN)).toBe(true);
   });
 
   test('passes an independent spec in both', async () => {
     expect.hasAssertions();
-    await expect(plainAndHunted('independent.test.ts')).resolves.toStrictEqual([0, [0, 0, 0, 0]]);
+    const cleanCopies = Array.from({ length: COPIES }, () => EXIT_CLEAN);
+    await expect(plainAndHunted('independent.test.ts')).resolves.toStrictEqual([EXIT_CLEAN, cleanCopies]);
   });
 });
 
 describe('the hunt options', () => {
   test('read the seed, copies and repeats, keep the rest as filters, and give each copy its own seed', () => {
     expect.hasAssertions();
-    const options = huntOf(['--seed', '7', '--copies', '2', '--repeats', '3', 'packages/foundation']);
-    expect([options.seed, options.copies, options.repeats, options.filters]).toStrictEqual([7, 2, 3, ['packages/foundation']]);
+    const options = huntOf(['--seed', String(PLANTED_SEED), '--copies', String(PLANTED_COPIES), '--repeats', String(PLANTED_REPEATS), 'packages/foundation']);
+    expect([options.seed, options.copies, options.repeats, options.filters]).toStrictEqual([PLANTED_SEED, PLANTED_COPIES, PLANTED_REPEATS, ['packages/foundation']]);
   });
 
   test.each([['--seed', '0'], ['--copies', 'x'], ['--repeats', '-1']])('refuses %s %s', (name, value) => {

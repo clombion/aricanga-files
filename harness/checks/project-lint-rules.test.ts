@@ -39,7 +39,7 @@ const DECLARED = new Accepted([
 ]);
 const PLUGIN_PATH = './harness/lint-rules/plugin.ts';
 const README = 'harness/lint-rules/README.md';
-const TABLE_ROW = /^\| `aricanga\/([a-z-]+)` \| (.+) \|$/gmu;
+const TABLE_ROW = /^\| `aricanga\/(?<rule>[a-z-]+)` \| (?<description>.+) \|$/gmu;
 
 const ruleNames = (): readonly string[] => Object.keys(RULES).toSorted();
 const descriptions = (): ReadonlyMap<string, string> =>
@@ -80,7 +80,24 @@ function level(setting: unknown): unknown {
     return setting;
   }
   const entries: readonly unknown[] = setting;
-  return entries[0];
+  const [first] = entries;
+  return first;
+}
+
+/**
+ * What is wrong with one configured plugin rule: no such rule, or a level other than error.
+ *
+ * @param {string} name - The rule's configured name.
+ * @param {unknown} setting - Its setting.
+ * @param {readonly string[]} rules - The plugin's rules.
+ * @returns {readonly string[]} The rule's problem, if any.
+ */
+function settingProblems(name: string, setting: unknown, rules: readonly string[]): readonly string[] {
+  if (!rules.includes(name.slice(`${PLUGIN_NAME}/`.length))) {
+    return [`${name}: not a rule of the plugin`];
+  }
+  const severity = level(setting);
+  return severity === 'error' ? [] : [`${name}: is ${JSON.stringify(severity)}, not "error"`];
 }
 
 /**
@@ -92,22 +109,14 @@ function level(setting: unknown): unknown {
  */
 function configProblems(config: unknown, rules: readonly string[]): readonly string[] {
   const fields = object(config, '.oxlintrc.json');
-  const plugins = Array.isArray(fields['jsPlugins']) ? fields['jsPlugins'] : [];
-  const problems = plugins.includes(PLUGIN_PATH) ? [] : [`jsPlugins does not load ${PLUGIN_PATH}`];
+  const plugins: readonly unknown[] = Array.isArray(fields['jsPlugins']) ? fields['jsPlugins'] : [];
+  const loaded = plugins.includes(PLUGIN_PATH) ? [] : [`jsPlugins does not load ${PLUGIN_PATH}`];
   const prefix = `${PLUGIN_NAME}/`;
-  const configured = Object.entries(object(fields['rules'] ?? {}, 'rules')).filter(([name]) => name.startsWith(prefix));
-  for (const [name, setting] of configured) {
-    const rule = name.slice(prefix.length);
-    const severity = level(setting);
-    if (!rules.includes(rule)) {
-      problems.push(`${name}: not a rule of the plugin`);
-    } else if (severity !== 'error') {
-      problems.push(`${name}: is ${JSON.stringify(severity)}, not "error"`);
-    }
-  }
-  const on = new Set(configured.map(([name]) => name.slice(prefix.length)));
-  problems.push(...rules.filter((rule) => !on.has(rule)).map((rule) => `${prefix}${rule}: not turned on`));
-  return problems;
+  const settings = object(fields['rules'] ?? {}, 'rules');
+  const configured = Object.keys(settings).filter((name) => name.startsWith(prefix));
+  const wrong = configured.flatMap((name) => settingProblems(name, settings[name], rules));
+  const on = new Set(configured.map((name) => name.slice(prefix.length)));
+  return [...loaded, ...wrong, ...rules.filter((rule) => !on.has(rule)).map((rule) => `${prefix}${rule}: not turned on`)];
 }
 
 /**
@@ -118,7 +127,10 @@ function configProblems(config: unknown, rules: readonly string[]): readonly str
  * @returns {readonly string[]} What breaks "the README's table lists exactly the rules, with their descriptions".
  */
 function readmeProblems(readme: string, described: ReadonlyMap<string, string>): readonly string[] {
-  const rows = new Map([...readme.matchAll(TABLE_ROW)].map((row) => [row[1] ?? '', row[2] ?? '']));
+  const rows = new Map<string, string>();
+  for (const row of readme.matchAll(TABLE_ROW)) {
+    rows.set(row.groups?.['rule'] ?? '', row.groups?.['description'] ?? '');
+  }
   const problems = [...rows.keys()].filter((rule) => !described.has(rule)).map((rule) => `README lists ${rule}: no such rule`);
   for (const [rule, description] of described) {
     const row = rows.get(rule);
@@ -131,6 +143,35 @@ function readmeProblems(readme: string, described: ReadonlyMap<string, string>):
   return problems;
 }
 
+/**
+ * Whether a fixture's lint holds: a must-fire fixture reports its rule, a must-stay-clean one nothing.
+ *
+ * @param {Fixture} fixture - The fixture.
+ * @param {readonly string[]} codes - The codes its lint reported.
+ * @returns {boolean} Whether it holds.
+ */
+function holds(fixture: Fixture, codes: readonly string[]): boolean {
+  if (fixture.kind === 'fire') {
+    return codes.includes(`${PLUGIN_NAME}(${fixture.rule})`);
+  }
+  const [first] = codes;
+  return first === undefined;
+}
+
+/**
+ * The fixtures whose lint does not hold, with the codes reported.
+ *
+ * @returns {readonly { readonly codes: readonly string[]; readonly file: string }[]} Each fixture that does not hold.
+ */
+function unheldFixtures(): readonly { readonly codes: readonly string[]; readonly file: string }[] {
+  const planted = fixtures();
+  const found = lintFixtures(planted);
+  return planted.flatMap((fixture) => {
+    const codes = codesAt(found, fixture.path);
+    return holds(fixture, codes) ? [] : [{ codes, file: fixture.file }];
+  });
+}
+
 describe('the repository', () => {
   test('the plugin holds exactly the declared rules', () => {
     expect.hasAssertions();
@@ -139,25 +180,20 @@ describe('the repository', () => {
 
   test('every rule has must-fire and must-stay-clean fixtures, and every fixture folder a rule', () => {
     expect.hasAssertions();
-    expect(fixtureProblems(ruleNames(), fixtureFolders(), fixtures())).toStrictEqual([]);
+    const problems = fixtureProblems(ruleNames(), fixtureFolders(), fixtures());
+    expect(problems).toStrictEqual([]);
   });
 
   test('the config turns on exactly the plugin rules, and the README lists them', () => {
     expect.hasAssertions();
-    expect(configProblems(json(textOf('.oxlintrc.json')), ruleNames())).toStrictEqual([]);
+    const config = json(textOf('.oxlintrc.json'));
+    expect(configProblems(config, ruleNames())).toStrictEqual([]);
     expect(readmeProblems(textOf(README), descriptions())).toStrictEqual([]);
   });
 
   test('each must-fire fixture fails on its rule and each must-stay-clean fixture passes', () => {
     expect.hasAssertions();
-    const planted = fixtures();
-    const found = lintFixtures(planted);
-    const outcome = planted.map((fixture) => {
-      const codes = codesAt(found, fixture.path);
-      const held = fixture.kind === 'fire' ? codes.includes(`${PLUGIN_NAME}(${fixture.rule})`) : codes.length === 0;
-      return { codes, file: fixture.file, held };
-    });
-    expect(outcome.filter((entry) => !entry.held)).toStrictEqual([]);
+    expect(unheldFixtures()).toStrictEqual([]);
   });
 });
 
