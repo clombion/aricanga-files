@@ -1,7 +1,7 @@
 /** `tripped` lets through an error that is no trip, and fails a block that trips nothing. */
 
 import { describe, expect, test } from 'vitest';
-import { tripped } from '#lib/doubles.ts';
+import { trip, tripped } from '#lib/doubles.ts';
 
 describe('expecting a trip', () => {
   test('lets an error that is no trip through unchanged', () => {
@@ -21,5 +21,14 @@ describe('expecting a trip', () => {
         // The block calls no double.
       });
     }).toThrow('expected a trip naming "planted", got []');
+  });
+
+  test('passes a block that trips a double with the expected message', () => {
+    expect.hasAssertions();
+    expect(() => {
+      tripped('planted', () => {
+        trip('a planted call nobody scripted');
+      });
+    }).not.toThrow();
   });
 });
