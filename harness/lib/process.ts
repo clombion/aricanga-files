@@ -43,6 +43,9 @@ interface RunOptions {
   readonly input?: string;
 }
 
+/** The index of an entry's value. */
+const SECOND = 1;
+
 /**
  * This process's environment: the one read of `process.env` in the harness.
  *
@@ -50,7 +53,9 @@ interface RunOptions {
  */
 function environment(): Record<string, string> {
   return Object.fromEntries(
-    Object.entries(env).flatMap(([name, value]: readonly [string, string | undefined]) => (value === undefined ? [] : [[name, value]])),
+    Object.entries(env).filter(
+      (entry: readonly [string, string | undefined]): entry is [string, string] => typeof entry[SECOND] === 'string',
+    ),
   );
 }
 
@@ -108,7 +113,7 @@ async function closeOf(
     const status = statusOf(closed);
     return bound.aborted || status === undefined ? undefined : { argv, kind: 'finished', status, stderr, stdout };
   } catch (error: unknown) {
-    return bound.aborted ? undefined : { argv, kind: 'not-started', reason: error instanceof Error ? error.message : String(error) };
+    return bound.aborted ? undefined : { argv, kind: 'not-started', reason: String(error) };
   }
 }
 
