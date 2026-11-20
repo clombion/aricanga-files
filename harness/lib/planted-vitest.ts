@@ -31,8 +31,40 @@ function strings(value: unknown): string[] {
   return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
 }
 
-/** Run planted spec files ({path under planted/: text}); each test's outcome by its full name. */
-export function runPlanted(specs: Readonly<Record<string, string>>): ReadonlyMap<string, Outcome> {
+function list(value: unknown): readonly unknown[] {
+  return Array.isArray(value) ? value : [];
+}
+
+/**
+ * Each test's outcome in a Vitest JSON report.
+ *
+ * @param {string} reportText - The report's text.
+ * @returns {ReadonlyMap<string, Outcome>} Each test's outcome, by the test's full name.
+ */
+function outcomesOf(reportText: string): ReadonlyMap<string, Outcome> {
+  const report = object(json(reportText), 'the Vitest report');
+  const assertions = list(report['testResults']).flatMap((file) =>
+    list(object(file, 'a test file result')['assertionResults']),
+  );
+  return new Map(
+    assertions.map((assertion) => {
+      const fields = object(assertion, 'a test result');
+      const outcome: Outcome = {
+        failure: strings(fields['failureMessages']).join('\n'),
+        status: String(fields['status']),
+      };
+      return [String(fields['fullName']), outcome] as const;
+    }),
+  );
+}
+
+/**
+ * Run planted spec files.
+ *
+ * @param {Readonly<Record<string, string>>} specs - Each planted spec's text, by its path under `planted/`.
+ * @returns {ReadonlyMap<string, Outcome>} Each test's outcome, by its full name.
+ */
+function runPlanted(specs: Readonly<Record<string, string>>): ReadonlyMap<string, Outcome> {
   const project = new Project({ copies: ['harness/lib'] });
   try {
     project.write('vitest.config.ts', CONFIG);
@@ -40,20 +72,10 @@ export function runPlanted(specs: Readonly<Record<string, string>>): ReadonlyMap
       project.write(`planted/${path}`, text);
     }
     project.tool('vitest', 'run', '--reporter=json', '--outputFile=report.json');
-    const report = object(json(project.read('report.json')), 'the Vitest report');
-    const outcomes = new Map<string, Outcome>();
-    for (const file of Array.isArray(report['testResults']) ? report['testResults'] : []) {
-      const assertions = object(file, 'a test file result')['assertionResults'];
-      for (const assertion of Array.isArray(assertions) ? assertions : []) {
-        const fields = object(assertion, 'a test result');
-        outcomes.set(String(fields['fullName']), {
-          failure: strings(fields['failureMessages']).join('\n'),
-          status: String(fields['status']),
-        });
-      }
-    }
-    return outcomes;
+    return outcomesOf(project.read('report.json'));
   } finally {
     project.remove();
   }
 }
+
+export { runPlanted };

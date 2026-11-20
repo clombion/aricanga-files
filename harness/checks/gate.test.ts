@@ -12,7 +12,7 @@
 
 import { describe, expect, test } from 'vitest';
 
-import { closure, hooks, repoHooks, repoTasks, RUN, tasks } from '../lib/config.ts';
+import { closure, hooks, repoHooks, repoTasks, runsTask, tasks } from '../lib/config.ts';
 import type { Hook, Task } from '../lib/config.ts';
 import { Accepted } from '../lib/exemptions.ts';
 import { Project } from '../lib/tools.ts';
@@ -47,7 +47,7 @@ export function gateProblems(every: ReadonlyMap<string, Task>): readonly string[
         }
       }
     }
-    const runsATool = task.commands.some((command) => !RUN.test(command));
+    const runsATool = task.commands.some((command) => !runsTask(command));
     if (runsATool && task.name !== LOCK_CHECK && task.commands[0] !== `pnpm run ${LOCK_CHECK}`) {
       problems.push(`${task.name}: runs a tool but does not start with ${LOCK_CHECK}`);
     }
