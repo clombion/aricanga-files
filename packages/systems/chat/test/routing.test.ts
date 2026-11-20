@@ -28,4 +28,16 @@ describe('message routing', () => {
     expect(messages.map((message) => message.chatId)).toStrictEqual(['pat', 'pat']);
     expect(new Set(messages.map((message) => message.id)).size).toBe(messages.length);
   });
+
+  test('a chat id that names an Object.prototype member routes like any other', async () => {
+    expect.hasAssertions();
+    const result = await run([
+      story('', ['chat: toString']),
+      story('First', ['speaker: Pat']),
+      story('Second', ['targetChat: constructor', 'speaker: Sam']),
+      story('Third', ['speaker: Pat']),
+    ]);
+    expect(textsOf(result, 'toString')).toStrictEqual(['First', 'Third']);
+    expect(textsOf(result, 'constructor')).toStrictEqual(['Second']);
+  });
 });

@@ -3,6 +3,7 @@ import { chatSystem, openedChat } from '#src/system';
 import { declaredChatId, notificationOf, receiptChangeOf } from '#src/effects';
 import type { ChatState } from '#src/state';
 import type { ReduceRecord } from '@narratives/foundation';
+import { entryOf } from '#src/model/keyed';
 import { stateOf } from '@narratives/foundation';
 
 // The chat physics invariants from docs/concepts/simulation-physics.md, as pure
@@ -40,7 +41,7 @@ function asChat(record: ReduceRecord): ChatState {
  * @returns {boolean} Whether the chat owns such a message.
  */
 function chatHolds(state: ChatState, chatId: string, text: string): boolean {
-  const owned = [...(state.messageHistory[chatId] ?? []), ...(state.deferredMessages[chatId] ?? [])];
+  const owned = [...(entryOf(state.messageHistory, chatId) ?? []), ...(entryOf(state.deferredMessages, chatId) ?? [])];
   return owned.some((message) => message.text === text);
 }
 

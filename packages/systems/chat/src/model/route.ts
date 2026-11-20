@@ -1,6 +1,7 @@
 import type { InkStep, ReduceContext } from '@narratives/foundation';
 import type { ChatMessageVM } from '#src/reduce';
 import type { ChatState } from '#src/state';
+import { entryOf } from '#src/model/keyed';
 import { reduceStep } from '#src/reduce';
 
 const DEFAULT_CHAT = 'main';
@@ -62,7 +63,7 @@ function buildMessage(step: InkStep, placement: Placement): ChatMessageVM {
  * @returns {ChatState} The slice with the message at the end of its chat's history.
  */
 function appendMessage(state: ChatState, message: ChatMessageVM): ChatState {
-  const prev = state.messageHistory[message.chatId] ?? [];
+  const prev = entryOf(state.messageHistory, message.chatId) ?? [];
   return {
     ...state,
     messageHistory: { ...state.messageHistory, [message.chatId]: [...prev, message] },

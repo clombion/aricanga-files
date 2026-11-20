@@ -1,5 +1,6 @@
 import { closeChat, openChat, viewedChatId } from '#src/model/defer';
 import type { ChatState } from '#src/state';
+import { entryOf } from '#src/model/keyed';
 
 /** The index `Array.prototype.at` reads the last element at. */
 const LAST = -1;
@@ -13,7 +14,7 @@ const LAST = -1;
  * @returns {ChatState} The slice with the chat read to its end.
  */
 function markRead(state: ChatState, chatId: string): ChatState {
-  const last = state.messageHistory[chatId]?.at(LAST);
+  const last = entryOf(state.messageHistory, chatId)?.at(LAST);
   if (last === undefined) {
     return state;
   }

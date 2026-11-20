@@ -6,6 +6,7 @@ import { erase, parseTag } from '@narratives/foundation';
 import type { ChatMessageVM } from '#src/reduce';
 import type { Input } from '@narratives/foundation';
 import { chatSystem } from '#src/system';
+import { entryOf } from '#src/model/keyed';
 import { runStream } from '@narratives/foundation/testing';
 
 /** A completed run as the tests read it: its trace, its effects and its view-models. */
@@ -91,7 +92,7 @@ async function run(inputs: readonly FixtureInput[]): Promise<FixtureRun> {
  * @returns {readonly ChatMessageVM[]} Its messages, in order.
  */
 function messagesOf(result: ChatRun, chatId: string): readonly ChatMessageVM[] {
-  return result.viewOf(chatSystem).messages[chatId] ?? [];
+  return entryOf(result.viewOf(chatSystem).messages, chatId) ?? [];
 }
 
 /**

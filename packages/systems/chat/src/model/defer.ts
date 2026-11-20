@@ -1,5 +1,6 @@
 import type { ChatState, ReadCursor } from '#src/state';
 import type { Effect, InkStep } from '@narratives/foundation';
+import { entryOf, holds } from '#src/model/keyed';
 import type { ChatMessageVM } from '#src/reduce';
 import { appendMessage } from '#src/model/route';
 import { showNotification } from '#src/effects';
@@ -40,7 +41,7 @@ function isImmediate(step: InkStep): boolean {
  * @returns {ChatState} The slice without that queue; the same slice when it had none.
  */
 function clearDeferred(state: ChatState, chatId: string): ChatState {
-  if (!(chatId in state.deferredMessages)) {
+  if (!holds(state.deferredMessages, chatId)) {
     return state;
   }
   const { [chatId]: _drop, ...rest } = state.deferredMessages;
@@ -55,7 +56,7 @@ function clearDeferred(state: ChatState, chatId: string): ChatState {
  * @returns {ChatState} The slice with the message at the end of its chat's queue.
  */
 function appendDeferred(state: ChatState, message: ChatMessageVM): ChatState {
-  const prev = state.deferredMessages[message.chatId] ?? [];
+  const prev = entryOf(state.deferredMessages, message.chatId) ?? [];
   return {
     ...state,
     deferredMessages: { ...state.deferredMessages, [message.chatId]: [...prev, message] },
@@ -71,7 +72,7 @@ function appendDeferred(state: ChatState, message: ChatMessageVM): ChatState {
  */
 function flushDeferred(state: ChatState, chatId: string): ChatState {
   let next = state;
-  for (const message of state.deferredMessages[chatId] ?? []) {
+  for (const message of entryOf(state.deferredMessages, chatId) ?? []) {
     next = appendMessage(next, message);
   }
   return clearDeferred(next, chatId);
@@ -86,7 +87,7 @@ function flushDeferred(state: ChatState, chatId: string): ChatState {
  * @returns {ReadCursor} The cursor at the chat's current end.
  */
 function cursorAtEnd(state: ChatState, chatId: string): ReadCursor {
-  const last = state.messageHistory[chatId]?.at(LAST);
+  const last = entryOf(state.messageHistory, chatId)?.at(LAST);
   return last === undefined ? { at: 'top' } : { at: 'after', messageId: last.id };
 }
 
@@ -105,7 +106,7 @@ function notifyMessage(state: ChatState, message: ChatMessageVM): MessageOutcome
   const { chatId } = message;
   const next = appendMessage(state, message);
   const lastReadMessageId =
-    chatId in state.lastReadMessageId
+    holds(state.lastReadMessageId, chatId)
       ? next.lastReadMessageId
       : { ...next.lastReadMessageId, [chatId]: cursorAtEnd(state, chatId) };
   return {
