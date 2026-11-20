@@ -12,7 +12,7 @@ export function readChatSwitch(step: InkStep): string | null {
 // Resolve a message's owning chat: an explicit `# targetChat` overrides the
 // conversation context (`activeChat`), which falls back to the default chat. A
 // pure function of the step + the current context — the routing decision the
-// `routingOwnership` invariant (task-018) checks.
+// `routingOwnership` invariant checks.
 export function resolveChatId(step: InkStep, activeChat: string | null): string {
   const target = step.tags.find((t) => t.key === 'targetChat')?.value;
   return target ?? activeChat ?? DEFAULT_CHAT;

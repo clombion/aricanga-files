@@ -27,16 +27,26 @@ test('manifest ids are unique and every entry has a rationale', () => {
   for (const e of LEDGER) expect(e.rationale.length).toBeGreaterThan(0);
 });
 
-// AC#3/#5 — every kernel-physics bug keeps a fixture + predicate + consuming task
-// alive (so the durable repro data can't silently rot).
-test('every kernel-physics entry has a non-empty fixture, predicate, and task', () => {
+// Every kernel-physics bug keeps a fixture and a predicate alive (so the durable
+// repro data can't silently rot), and every open issue a disposition waits on is
+// written as an issue reference.
+test('every kernel-physics entry has a non-empty fixture and predicate', () => {
   const physics = LEDGER.flatMap((e) => (e.disposition.kind === 'kernel-physics' ? [e.disposition] : []));
   expect(physics.length).toBeGreaterThan(0);
   for (const disposition of physics) {
     expect(fixture(disposition.fixture).length).toBeGreaterThan(0);
     expect(disposition.predicate).not.toBe('');
-    expect(disposition.task).toMatch(/^task-\d+$/);
   }
+});
+
+test('every issue a disposition waits on is an issue reference', () => {
+  const issues = LEDGER.flatMap((e) =>
+    e.disposition.kind === 'kernel-physics' || e.disposition.kind === 'deferred'
+      ? (e.disposition.issue === undefined ? [] : [e.disposition.issue])
+      : [],
+  );
+  expect(issues).toEqual(['#13', '#18', '#38']);
+  expect(issues.filter((issue) => !/^#\d+$/.test(issue))).toEqual([]);
 });
 
 // AC#3 — the routing historical scenario is green NOW (asserts only routing).
@@ -47,13 +57,13 @@ test('routing regression (cross-chat) is green via routingOwnership', async () =
 
 // AC#4 — effectsCarryChatId is exercised over real chat effects (the notify
 // fixture produces chat/showNotification with a real chatId); the typing-specific
-// scenario lands with task-032.
+// scenario lands with #38.
 test('effectsCarryChatId holds over the notification fixture', async () => {
   const run = await runStream({ systems: [erase(chatSystem)], foreground: 'chat' }, [...fixture('duplicate-notifications')]);
   expect(effectsCarryChatId(run)).toBeNull();
 });
 
-// task-021 — the dup-notifications regression is now dead: notify-once holds over
+// The dup-notifications regression is dead: notify-once holds over
 // its historical scenario (two messages to one chat → exactly one notification).
 test('the duplicate-notifications regression stays dead (notifyOnce green)', async () => {
   const run = await runStream({ systems: [erase(chatSystem)], foreground: 'chat' }, [...fixture('duplicate-notifications')]);

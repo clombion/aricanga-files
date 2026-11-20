@@ -6,7 +6,7 @@ import { type Plugin, defineConfig } from 'vite';
 
 const fromHere = (p: string) => fileURLToPath(new URL(p, import.meta.url));
 
-// Compile story.ink → public/story.json as part of the build (task-007 AC #1).
+// Compile story.ink → public/story.json as part of the build.
 // Runs on both `vite dev` and `vite build` via buildStart.
 function compileInk(): Plugin {
   return {

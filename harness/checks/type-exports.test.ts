@@ -6,9 +6,9 @@
  * exported; a type a package offers to modules not yet written is marked `@public`.
  */
 
-import { afterAll, beforeAll, describe, expect, test } from 'vitest';
+import { describe, expect, test } from 'vitest';
 
-import { openScan, type Scan, scannedFiles } from '../lib/checker.ts';
+import { usePlanted, useScan } from '../lib/scan-hooks.ts';
 import { unread } from '../lib/type-exports.ts';
 
 export const HARNESS_ID = 'type-exports';
@@ -34,27 +34,17 @@ const PLANTS: Readonly<Record<string, string>> = {
   'harness/checks/__types.test.ts': "import type { ReadByCheck } from '../../packages/foundation/src/__types_owner';\nexport const z: ReadByCheck = { a: 1 };\n",
 };
 
-let plantedScan: Scan;
-let repoScan: Scan;
-
-beforeAll(() => {
-  plantedScan = openScan(Object.keys(PLANTS), PLANTS);
-  repoScan = openScan(scannedFiles());
-}, 120_000);
-
-afterAll(() => {
-  plantedScan.close();
-  repoScan.close();
-});
+const plantedScan = usePlanted(new Map(Object.entries(PLANTS)));
+const repoScan = useScan();
 
 describe('the repository', () => {
   test('every exported type is read by another module or marked @public', () => {
-    expect(unread(repoScan)).toEqual([]);
+    expect(unread(repoScan())).toEqual([]);
   });
 });
 
 describe('the scan', () => {
   test('fails a type only its own module, a re-export or a test names, and passes a read, a check read and @public', () => {
-    expect(unread(plantedScan).map((type) => type.name).toSorted()).toEqual(['OnlyReexported', 'ReadByTest', 'Unread']);
+    expect(unread(plantedScan()).map((type) => type.name).toSorted()).toEqual(['OnlyReexported', 'ReadByTest', 'Unread']);
   });
 });

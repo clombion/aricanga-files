@@ -2,8 +2,8 @@
  * No module is both `.ts` and `.tsx`, and no build output is committed under the held roots.
  *
  * Over the listing's held files: a module stem with both a `.ts` and a `.tsx` file makes an import
- * resolve by accident of extension order; and a file under a `dist/`, `coverage/`, `.output/` or
- * `node_modules/` directory, or a `*.tsbuildinfo`, is what a build makes, which the gate rebuilds
+ * resolve by accident of extension order; and a file under a folder named `dist`, `coverage`,
+ * `.output` or `node_modules`, or a `*.tsbuildinfo`, is what a build makes, which the gate rebuilds
  * and git must not hold.
  */
 

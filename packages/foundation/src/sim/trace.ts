@@ -15,7 +15,7 @@ export interface ReduceRecord {
 
 // The runtime's reduce-trace observability seam — a peer of the host's effect
 // sinks, not a new `Input`/`Effect` (the kernel algebra is untouched). The test
-// harness records it for goldens/determinism; analytics (task-058) forwards it.
+// harness records it for goldens/determinism; analytics (#17) forwards it.
 export interface ReduceObserver {
   observe(record: ReduceRecord): void;
 }

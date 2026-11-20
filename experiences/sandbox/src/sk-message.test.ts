@@ -1,8 +1,8 @@
 import { expect, test } from 'vitest';
 import { SkMessage } from './sk-message';
 
-// Component test in happy-dom (task-004 AC #2) — also the render proof for the
-// Lit baseline (task-003 AC #1, #2, #4).
+// Component test in happy-dom: the render proof for the Lit baseline, which #24
+// replaces with a Solid part.
 test('sk-message registers, renders into shadow DOM, and reacts to changes', async () => {
   const el = new SkMessage();
   el.text = 'hello';

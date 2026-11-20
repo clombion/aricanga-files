@@ -13,7 +13,7 @@ export interface Violation {
 }
 
 // An invariant: a pure check over a completed run's observable stream. The chat
-// predicates (task-018) are of this shape; tasks 020–026 assert them green.
+// predicates are of this shape; each physics slice asserts its own green.
 /** @public */
 export type Predicate = (run: FixtureRun) => Violation | null;
 

@@ -25,7 +25,7 @@ interface NotStarted {
   readonly reason: string;
 }
 
-type Outcome = Finished | TimedOut | NotStarted;
+export type Outcome = Finished | TimedOut | NotStarted;
 
 interface RunOptions {
   readonly timeoutMs: number;

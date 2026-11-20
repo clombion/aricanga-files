@@ -40,6 +40,27 @@ export function tasks(packageJson: unknown): ReadonlyMap<string, Task> {
   return found;
 }
 
+/** A command that runs another task, capturing its name. */
+export const RUN: RegExp = /^pnpm run ([\w:.-]+)$/;
+
+/** The tasks `name` runs: itself and the tasks its commands `pnpm run`, transitively. */
+export function closure(name: string, every: ReadonlyMap<string, Task>): readonly Task[] {
+  const seen = new Map<string, Task>();
+  const pending = [name];
+  while (pending.length > 0) {
+    const current = pending.pop() ?? '';
+    const task = every.get(current);
+    if (task === undefined) {
+      throw new Error(`no task named ${current}`);
+    }
+    if (!seen.has(current)) {
+      seen.set(current, task);
+      pending.push(...task.commands.flatMap((command) => RUN.exec(command)?.slice(1, 2) ?? []));
+    }
+  }
+  return [...seen.values()];
+}
+
 /** The tasks of the repository's root `package.json`. */
 export function repoTasks(): ReadonlyMap<string, Task> {
   return tasks(json(textOf('package.json')));

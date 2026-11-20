@@ -9,26 +9,25 @@
  *   a bare file name names a listed file's name; a path under `node_modules/` names an installed
  *   file and a package span (`@solidjs/web`) an installed or workspace package;
  * - `pnpm run <task>` names a script of the root `package.json`;
+ * - a span with no file suffix that is no listed path resolves as a named value (a lint rule id, an
+ *   effect kind) when held code or config outside the checks quotes it as a string;
  * - `ADR-NNNN` names a decision record under `docs/roadmap/decisions/`;
  * - in a shell fence, a locked tool runs through `pnpm exec` or `pnpm run`, never bare and never
  *   through an unlocked runner.
  *
- * A module specifier (`typescript/unstable/ast`) resolves as Node resolves it from the root; a
- * project lint rule id (`aricanga/vm-prop`) names a module of `harness/lint-rules/rules/`; a bare
- * directory name (`coverage/`) names a listed directory or one `.gitignore` names. A span holding
- * `<`, `{`, `*`, `...` or a space is a placeholder or a pattern and is not resolved.
+ * A span holding `<`, `{`, `*`, `...` or a space is a placeholder or a pattern and is not resolved.
  */
 
 import { existsSync } from 'node:fs';
-import { createRequire } from 'node:module';
 import { posix } from 'node:path';
 
 import { describe, expect, test } from 'vitest';
 
 import { json, object, repoTasks } from '../lib/config.ts';
 import { currentSpans, currentText, Doc, type Link, markdown, markdownPaths, type Prose, type Span } from '../lib/docs.ts';
-import { Accepted, Exemptions, site } from '../lib/exemptions.ts';
+import { Accepted, Exemptions, Prefixes, site } from '../lib/exemptions.ts';
 import { fromRoot } from '../lib/paths.ts';
+import { heldFiles } from '../lib/scope.ts';
 import { textOf, tracked } from '../lib/source-files.ts';
 
 export const HARNESS_ID = 'doc-references';
@@ -72,40 +71,24 @@ const ADR = /\bADR-(\d{4})\b/g;
 const PNPM_RUN = /\bpnpm run ([\w:.-]+)/g;
 /** A scoped package specifier, with or without a subpath (`@solidjs/web`). */
 const PACKAGE = /^(@[\w.-]+\/[\w.-]+)(?:\/.*)?$/;
-/** A rule of the project lint plugin (`aricanga/vm-prop`). */
-const RULE_ID = /^aricanga\/([\w-]+)$/;
-/** A bare directory name (`coverage/`). */
-const DIRECTORY_NAME = /^(\.?[\w-]+)\/$/;
 
 /** Links that are right though they do not resolve, keyed by `site(path, target)`. */
 const LINKS_EXEMPT = Exemptions.grouped({});
 
 /** Backticked paths and tasks that are right though they do not resolve, keyed by `site(path, span)`. */
 const SPANS_EXEMPT = Exemptions.grouped({
-  'an effect kind written namespace/kind, not a path': [
-    site('packages/systems/chat/src/testing/predicates.ts', 'chat/receiptChanged'),
-    site('packages/systems/chat/src/testing/predicates.ts', 'chat/showNotification'),
-  ],
-  'adopting: no effect is kinded foundation/emit; name what feeds the bus (`EventBus.emit`) instead': [
-    site('docs/roadmap/decisions/0003-headless-kernel-effects-one-bus.md', 'foundation/emit'),
-    site('packages/foundation/src/services/event-bus.ts', 'foundation/emit'),
-  ],
-  'adopting: names a lint rule, not a path; write it as prose or as the rule ids': [
-    site('docs/roadmap/phase-1-foundation-design.md', 'no-Date.now/Math.random/locale'),
-    site('docs/roadmap/testing-strategy.md', 'no-Date.now/Math.random/locale'),
-  ],
-  'adopting: HARNESS_STATUS.md is written with the harness-status check; the entries go when it exists': [
+  'HARNESS_STATUS.md is written with the harness-status check; the entries go when it exists': [
     site('docs/roadmap/decisions/0006-test-first-and-correctness-harness.md', 'HARNESS_STATUS.md'),
     site('harness.md', 'HARNESS_STATUS.md'),
   ],
-  'adopting: systems/phone is created by the phone-chrome issue (#34); the entry goes when it exists': [
+  'systems/phone is created by the phone-chrome issue (#34); the entry goes when it exists': [
     site('docs/roadmap/phase-3-view-layer.md', 'systems/phone'),
   ],
 });
 
 /** ADR numbers named before their record exists, keyed by `site(path, ADR-NNNN)`. */
 const ADRS_EXEMPT = Exemptions.grouped({
-  'adopting: ADR-0009 (the Solid runtime model) is written from the characterisation results; the entries go when it exists':
+  'ADR-0009 (the Solid runtime model) is written from the characterisation results; the entries go when it exists':
     [
       site('docs/roadmap/decisions/0002-typescript-and-solid.md', 'ADR-0009'),
       site('docs/roadmap/phase-3-view-layer.md', 'ADR-0009'),
@@ -161,6 +144,7 @@ function looksLikePath(text: string): boolean {
     text.replaceAll('/', '') === '' ||
     /[<{* ]/.test(text) ||
     text.includes('...') ||
+    text.includes('…') ||
     text.startsWith('-') ||
     /^[a-z]+:/.test(text)
   ) {
@@ -181,15 +165,21 @@ function listed(path: string, files: readonly string[]): boolean {
         [...directories(files)].some((dir) => posix.basename(dir) === path);
 }
 
-/** A backticked path, package or task that resolves to nothing. */
-export function spanProblems(
-  span: Span,
-  files: readonly string[],
-  taskNames: ReadonlySet<string>,
-  installed: (path: string) => boolean,
-  resolves: (specifier: string) => boolean = () => false,
-  ignored: ReadonlySet<string> = new Set(),
-): Unresolved[] {
+/** What a span resolves against. */
+interface Resolver {
+  /** The listed files. */
+  readonly files: readonly string[];
+  /** The root script names. */
+  readonly taskNames: ReadonlySet<string>;
+  /** Whether a `node_modules/` path is installed. */
+  readonly installed: (path: string) => boolean;
+  /** Whether a value is quoted as a string in held code or config: a rule id, an effect kind. */
+  readonly named: (value: string) => boolean;
+}
+
+/** A backticked path, package, named value or task that resolves to nothing. */
+export function spanProblems(span: Span, resolver: Resolver): Unresolved[] {
+  const { files, taskNames, installed, named } = resolver;
   const text = span.text;
   const unresolved = (problem: string): Unresolved[] => [{ path: span.path, line: span.line, reference: text, problem }];
   for (const match of text.matchAll(PNPM_RUN)) {
@@ -205,26 +195,19 @@ export function spanProblems(
     const name = PACKAGE.exec(text)?.[1] ?? '';
     return installed(`node_modules/${name}`) ? [] : unresolved('the package is not installed');
   }
-  const rule = RULE_ID.exec(text)?.[1];
-  if (rule !== undefined) {
-    return files.includes(`harness/lint-rules/rules/${rule}.ts`) ? [] : unresolved('no project lint rule is named so');
-  }
-  const head = text.split('/')[0] ?? '';
-  if (!text.startsWith('.') && installed(`node_modules/${head}`) && !listed(head, files)) {
-    return resolves(text) ? [] : unresolved('the module does not resolve');
-  }
-  const directory = DIRECTORY_NAME.exec(text)?.[1];
-  if (directory !== undefined && ignored.has(directory)) {
-    return [];
-  }
   const path = text.replace(/\/$/, '');
   if (path === 'node_modules' || path.startsWith('node_modules/')) {
     return installed(path) ? [] : unresolved('the path is not installed');
   }
   const fromDoc = posix.normalize(posix.join(posix.dirname(span.path), path));
-  return listed(path, files) || files.includes(fromDoc) || directories(files).has(fromDoc)
-    ? []
-    : unresolved('the path is not listed');
+  if (listed(path, files) || files.includes(fromDoc) || directories(files).has(fromDoc)) {
+    return [];
+  }
+  const [first = ''] = path.split('/');
+  if (path.includes('/') && installed(`node_modules/${first}`)) {
+    return [];
+  }
+  return posix.extname(path) === '' && named(text) ? [] : unresolved('the path is not listed');
 }
 
 /** An `ADR-NNNN` that names no decision record. */
@@ -278,23 +261,17 @@ function installedOnDisk(path: string): boolean {
   );
 }
 
-/** Whether Node resolves a module specifier from the repository root. */
-function resolvesFromRoot(specifier: string): boolean {
-  try {
-    createRequire(fromRoot('package.json')).resolve(specifier);
-    return true;
-  } catch {
-    return false;
-  }
-}
+const QUOTED = /['"]([^'"\n]+)['"]/g;
 
-/** The directory names `.gitignore` names (`coverage/`, `dist/`), however deep. */
-function ignoredDirectories(): ReadonlySet<string> {
+/** The checks' own modules: their planted strings must never resolve a reference. */
+const PLANTS = new Prefixes(['harness/checks/']);
+
+/** Every string value quoted in held TypeScript, JavaScript and JSON outside the checks. */
+function quotedValues(): ReadonlySet<string> {
   return new Set(
-    textOf('.gitignore')
-      .split('\n')
-      .map((line) => /(?:^|\/)(\.?[\w-]+)\/$/.exec(line.trim())?.[1])
-      .filter((name): name is string => name !== undefined),
+    heldFiles('.ts', '.tsx', '.js', '.mjs', '.json')
+      .filter((path) => !PLANTS.starts(path))
+      .flatMap((path) => [...textOf(path).matchAll(QUOTED)].map((match) => match[1] ?? '')),
   );
 }
 
@@ -313,10 +290,9 @@ describe('the repository', () => {
   test('every backticked path and task resolves', () => {
     const files = tracked();
     const names = repoTaskNames();
-    const ignored = ignoredDirectories();
-    const found = currentSpans().flatMap((span) =>
-      spanProblems(span, files, names, installedOnDisk, resolvesFromRoot, ignored),
-    );
+    const quoted = quotedValues();
+    const resolver: Resolver = { files, taskNames: names, installed: installedOnDisk, named: (value) => quoted.has(value) };
+    const found = currentSpans().flatMap((span) => spanProblems(span, resolver));
     expect(SPANS_EXEMPT.unexemptedBy(found, key)).toEqual([]);
   });
 
@@ -355,25 +331,23 @@ describe('the link check', () => {
 });
 
 /** The installed paths of the planted span checks. */
-const PLANTED_INSTALLED = new Accepted(['node_modules', 'node_modules/solid-js/skills', 'node_modules/@solidjs/web']);
+const PLANTED_INSTALLED = new Accepted([
+  'node_modules',
+  'node_modules/solid-js/skills',
+  'node_modules/@solidjs/web',
+  'node_modules/typescript',
+]);
+/** The values quoted in the planted span checks' code. */
+const PLANTED_NAMED = new Accepted(['chat/showNotification', 'aricanga/autofocus']);
 
-function plantedInstalled(path: string): boolean {
-  return PLANTED_INSTALLED.has(path);
-}
-
-/** The planted installs plus an unscoped package, for module specifiers. */
-function withModules(path: string): boolean {
-  return plantedInstalled(path) || path === 'node_modules/typescript';
-}
-
-/** The one planted module specifier that resolves. */
-function plantedResolves(specifier: string): boolean {
-  return specifier === 'typescript/unstable/ast';
-}
+const PLANTED_RESOLVER: Resolver = {
+  files: ['src/a.ts', 'docs/planted.md', 'docs/other.md', 'packages/systems/chat/src/model/route.ts'],
+  taskNames: new Set(['check']),
+  installed: (path) => PLANTED_INSTALLED.has(path),
+  named: (value) => PLANTED_NAMED.has(value),
+};
 
 describe('the span check', () => {
-  const files = ['src/a.ts', 'docs/planted.md', 'docs/other.md', 'packages/systems/chat/src/model/route.ts'];
-  const tasks = new Set(['check']);
 
   test.each([
     ['src/missing.ts', 'the path is not listed'],
@@ -383,8 +357,10 @@ describe('the span check', () => {
     ['systems/phone', 'the path is not listed'],
     ['../missing.md', 'the path is not listed'],
     ['pnpm run no-such-task', 'no task is named "no-such-task"'],
+    ['chat/noSuchEffect', 'the path is not listed'],
+    ['missing/rule.ts', 'the path is not listed'],
   ])('sees the planted span %s', (text, problem) => {
-    const found = spanProblems({ path: 'docs/planted.md', line: 1, text }, files, tasks, plantedInstalled);
+    const found = spanProblems({ path: 'docs/planted.md', line: 1, text }, PLANTED_RESOLVER);
     expect(found.map((unresolved) => unresolved.problem)).toEqual([problem]);
   });
 
@@ -408,29 +384,12 @@ describe('the span check', () => {
     'example.org',
     '-k 50',
     'https://example.com/a.ts',
+    'lint/...',
+    'typescript/unstable/ast',
+    'chat/showNotification',
+    'aricanga/autofocus',
   ])('lets the resolving span or placeholder %s through', (text) => {
-    expect(spanProblems({ path: 'docs/planted.md', line: 1, text }, files, tasks, plantedInstalled)).toEqual([]);
-  });
-
-  const ruleFiles = [...files, 'harness/lint-rules/rules/vm-prop.ts'];
-  const span = (text: string, ignored: ReadonlySet<string> = new Set()): Unresolved[] =>
-    spanProblems({ path: 'docs/planted.md', line: 1, text }, ruleFiles, tasks, withModules, plantedResolves, ignored);
-
-  test.each([
-    ['typescript/nothing', 'the module does not resolve'],
-    ['aricanga/nothing', 'no project lint rule is named so'],
-    ['coverage/', 'the path is not listed'],
-  ])('sees the planted specifier, rule id or directory %s', (text, problem) => {
-    expect(span(text).map((unresolved) => unresolved.problem)).toEqual([problem]);
-  });
-
-  test('lets a resolving specifier, a project rule, an ignored directory and an elided placeholder through', () => {
-    expect([
-      ...span('typescript/unstable/ast'),
-      ...span('aricanga/vm-prop'),
-      ...span('coverage/', new Set(['coverage'])),
-      ...span('lint/...'),
-    ]).toEqual([]);
+    expect(spanProblems({ path: 'docs/planted.md', line: 1, text }, PLANTED_RESOLVER)).toEqual([]);
   });
 });
 

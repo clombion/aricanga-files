@@ -3,8 +3,7 @@
  *
  * "Current text" is what describes the project as it is: the held Markdown files and those under
  * the doc roots of `scope.ts`, except the history files; the comments of every held TypeScript or
- * JavaScript file (read through TypeScript's own parser, so a string holding `//` is never a
- * comment); the comments of held stylesheets; and the full-line comments of held TOML and YAML.
+ * JavaScript file (read through `ts-source.ts`, so a string holding `//` is never a comment); the comments of held stylesheets; and the full-line comments of held TOML and YAML.
  * History files record what happened and are left out.
  *
  * The Markdown reader knows fences, inline code spans, links, headings, pipe tables and the
@@ -266,20 +265,18 @@ export function markdownPaths(): readonly string[] {
 
 /** The (line, text) of every comment line of TypeScript or JavaScript source, read by the parser. */
 export function scriptComments(path: string, text: string): readonly (readonly [number, string])[] {
-  return comments(parse(path, text)).flatMap((comment) =>
-    comment.text
-      .split('\n')
-      .map((line, offset) => [comment.line + offset, cleanComment(line)] as const)
-      .filter(([, line]) => line !== ''),
-  );
+  return comments(parse(path, text)).flatMap((comment) => numbered(comment.line, comment.text));
 }
 
-function commentLines(text: string, pos: number, comment: string): readonly (readonly [number, string])[] {
-  const first = text.slice(0, pos).split('\n').length;
+function numbered(first: number, comment: string): readonly (readonly [number, string])[] {
   return comment
     .split('\n')
     .map((line, offset) => [first + offset, cleanComment(line)] as const)
     .filter(([, line]) => line !== '');
+}
+
+function commentLines(text: string, pos: number, comment: string): readonly (readonly [number, string])[] {
+  return numbered(text.slice(0, pos).split('\n').length, comment);
 }
 
 function cleanComment(line: string): string {

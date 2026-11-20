@@ -74,7 +74,7 @@ export class Exemptions {
 }
 
 /** A key whose found count differs from its registered count. */
-interface Mismatch {
+export interface Mismatch {
   readonly key: string;
   readonly found: number;
   readonly registered: number;

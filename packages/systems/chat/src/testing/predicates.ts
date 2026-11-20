@@ -6,16 +6,16 @@ import { chatSystem, openedChat } from '../system';
 
 // The chat physics invariants from docs/concepts/simulation-physics.md, as pure
 // predicates over a completed run's observable Input→Effect+state stream. Authored
-// here (task-018); tasks 020–025 drive the reducer until each holds green. Each
+// here; each physics slice drives the reducer until its invariant holds. Each
 // reads its natural observable: persistent values (routing, HWM cursor, the clock)
 // over state; transient events (notifications) over effects. `receiptMonotonic`
-// forward-declares the `chat/receiptChanged` effect task-024 will emit.
+// forward-declares the `chat/receiptChanged` effect read receipts (#13) emit.
 
 /** The chat state a trace record holds, read back through the chat system. */
 const asChat = (record: ReduceRecord): ChatState => stateOf(chatSystem, { systemId: record.systemId, value: record.state });
 
-// task-020: a message tagged `targetChat:X` reaches chat X. Ownership-only — it
-// lands in X's history OR its deferred queue (task-021 may defer it); defer-
+// Routing: a message tagged `targetChat:X` reaches chat X. Ownership-only — it
+// lands in X's history OR its deferred queue (the defer branch may hold it); defer-
 // correctness (when to defer) is covered by the chat example tests, not here.
 export function routingOwnership(run: FixtureRun): Violation | null {
   let at = 0;
@@ -37,7 +37,7 @@ export function routingOwnership(run: FixtureRun): Violation | null {
   return null;
 }
 
-// task-021: at most one notification per chat per epoch; an open clears the epoch.
+// Notify-once: at most one notification per chat per epoch; an open clears the epoch.
 export function notifyOnce(run: FixtureRun): Violation | null {
   const notified = new Set<string>();
   let at = 0;
@@ -60,7 +60,7 @@ export function notifyOnce(run: FixtureRun): Violation | null {
   return null;
 }
 
-// task-021/025: a seed init produces no notifications (historical, not new activity).
+// Seed exclusion (#14): a seed init produces no notifications (historical, not new activity).
 export function seedExclusion(run: FixtureRun): Violation | null {
   let at = 0;
   for (const rec of run.trace) {
@@ -75,7 +75,7 @@ export function seedExclusion(run: FixtureRun): Violation | null {
   return null;
 }
 
-// task-022: a read cursor, once set for a chat, never resets to null (no un-reading).
+// HWM monotonic: a read cursor, once set for a chat, never resets to null (no un-reading).
 export function hwmMonotonic(run: FixtureRun): Violation | null {
   const set = new Set<string>();
   let at = 0;
@@ -91,7 +91,7 @@ export function hwmMonotonic(run: FixtureRun): Violation | null {
   return null;
 }
 
-// task-023: simulation time never goes backward (forward-only rule).
+// Forward-only time: simulation time never goes backward.
 export function forwardOnlyTime(run: FixtureRun): Violation | null {
   let last = Number.NEGATIVE_INFINITY;
   let at = 0;
@@ -108,8 +108,8 @@ export function forwardOnlyTime(run: FixtureRun): Violation | null {
   return null;
 }
 
-// task-019/BUG-008, consumed by task-032: no chat effect that declares a chatId
-// carries a null/absent one (the typing-emission guard). Vacuous until task-032
+// BUG-008, consumed by the typing indicator (#38): no chat effect that declares a chatId
+// carries a null/absent one (the typing-emission guard). Vacuous until #38
 // emits the typing effect; green over today's `chat/showNotification`.
 export function effectsCarryChatId(run: FixtureRun): Violation | null {
   for (const eff of run.effects) {
@@ -123,7 +123,7 @@ export function effectsCarryChatId(run: FixtureRun): Violation | null {
   return null;
 }
 
-// task-024: a message receipt only advances sent → delivered → read.
+// Receipt monotonic (#13): a message receipt only advances sent → delivered → read.
 const RECEIPT_RANK: Readonly<Record<string, number>> = { sent: 0, delivered: 1, read: 2 };
 export function receiptMonotonic(run: FixtureRun): Violation | null {
   const seen = new Map<string, number>();

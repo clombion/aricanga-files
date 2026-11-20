@@ -4,7 +4,7 @@ import { expect, test } from 'vitest';
 import { run } from './main';
 import { SkMessage } from './sk-message';
 
-// End-to-end smoke for the walking skeleton (task-007 AC #2, #3): ink compiles,
+// End-to-end smoke for the walking skeleton: ink compiles,
 // flows through the stub reduce, and renders as a Lit component in the DOM.
 test('walking skeleton: ink → reduce → Lit render', async () => {
   // Read via a cwd-relative path (happy-dom makes import.meta.url non-file).

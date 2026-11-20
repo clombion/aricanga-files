@@ -8,10 +8,11 @@
  * pure constructor call, the owner itself, and a root the rule does not cover.
  */
 
-import { afterAll, beforeAll, describe, expect, test } from 'vitest';
+import { describe, expect, test } from 'vitest';
 
-import { openScan, type Scan, scannedFiles, sourceOf } from '../lib/checker.ts';
+import { type Scan, scannedFiles, sourceOf } from '../lib/checker.ts';
 import { keyOf, ownerUses, RULES, type Site, sites } from '../lib/owners.ts';
+import { usePlanted, useScan } from '../lib/scan-hooks.ts';
 import { tracked } from '../lib/source-files.ts';
 
 export const HARNESS_ID = 'owner-registry';
@@ -104,18 +105,8 @@ for (const [path, text] of NEAR_MISSES) {
   plants.set(path, text);
 }
 
-let plantedScan: Scan;
-let repoScan: Scan;
-
-beforeAll(() => {
-  plantedScan = openScan([...plants.keys()], Object.fromEntries(plants));
-  repoScan = openScan(scannedFiles());
-}, 120_000);
-
-afterAll(() => {
-  plantedScan.close();
-  repoScan.close();
-});
+const plantedScan = usePlanted(plants);
+const repoScan = useScan();
 
 function sitesIn(scan: Scan, paths: readonly string[]): Site[] {
   return paths.flatMap((path) => sites(scan, sourceOf(scan, path)));
@@ -123,7 +114,7 @@ function sitesIn(scan: Scan, paths: readonly string[]): Site[] {
 
 describe('the repository', () => {
   test('no guarded API is used outside its owner', () => {
-    expect(sitesIn(repoScan, scannedFiles())).toEqual([]);
+    expect(sitesIn(repoScan(), scannedFiles())).toEqual([]);
   });
 
   test.each(RULES.flatMap((rule) => rule.scopes.flatMap((scope) => (scope.owner === null ? [] : [[rule.name, scope.owner] as const]))))(
@@ -131,7 +122,7 @@ describe('the repository', () => {
     (name, owner) => {
       const rule = RULES.find((candidate) => candidate.name === name);
       expect(tracked()).toContain(owner);
-      expect(rule !== undefined && ownerUses(repoScan, sourceOf(repoScan, owner), rule)).toBe(true);
+      expect(rule !== undefined && ownerUses(repoScan(), sourceOf(repoScan(), owner), rule)).toBe(true);
     },
   );
 });
@@ -140,11 +131,11 @@ describe('the scan', () => {
   test('sees each planted call form and each planted root', () => {
     expect(CANONICAL.map(([name]) => name).toSorted()).toEqual(RULES.map((rule) => rule.name).toSorted());
     const planted = [...plants.keys()].filter((path) => /__(form|root|in_a_test)/.test(path));
-    const found = sitesIn(plantedScan, planted).map(keyOf).toSorted();
+    const found = sitesIn(plantedScan(), planted).map(keyOf).toSorted();
     expect(found).toEqual(expected.map(keyOf).toSorted());
   });
 
   test.each(NEAR_MISSES.map(([path]) => path))('lets the near miss %s through', (path) => {
-    expect(sitesIn(plantedScan, [path])).toEqual([]);
+    expect(sitesIn(plantedScan(), [path])).toEqual([]);
   });
 });

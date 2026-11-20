@@ -15,7 +15,7 @@ const focusedChat = (state: ChatState): string | undefined =>
 
 // Open a chat: on chat-to-chat navigation, mark the chat you're leaving read first
 // (the cursor is not written for the chat being opened), then focus + clear-notified
-// + replay (task-021's `openChat`).
+// + replay (the `openChat` of the defer branch).
 export function openWithReadState(state: ChatState, chatId: string): ChatState {
   const prev = focusedChat(state);
   const left = prev !== undefined && prev !== chatId ? markRead(state, prev) : state;

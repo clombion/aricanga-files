@@ -63,11 +63,7 @@ export const CLAIMS: readonly Claim[] = [
   {
     path: 'packages/foundation/src/sim/system.ts',
     clause: 'the one place a',
-    probe: probe(/typescript\/no-unsafe-type-assertion/, 'packages/foundation/src/sim/system.ts', [
-      'packages/foundation/',
-      'packages/systems/',
-      'experiences/sandbox/',
-    ]),
+    probe: probe(/^function reclaim\(/m, 'packages/foundation/src/sim/system.ts', ['packages/']),
   },
   {
     path: 'harness/lib/output.ts',
