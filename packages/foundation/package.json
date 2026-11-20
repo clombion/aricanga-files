@@ -3,6 +3,10 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "imports": {
+    "#src/*": "./src/*.ts",
+    "#test/*": "./test/*.ts"
+  },
   "exports": {
     ".": "./src/index.ts",
     "./testing": "./src/testing/index.ts"

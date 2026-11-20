@@ -1,43 +1,55 @@
-import { Runtime } from '../host/runtime';
-import type { Host } from '../host/runtime';
-import type { InkRuntime } from '../ink/ink-runtime';
-import type { RenderContext } from '../sim/context';
-import type { Input } from '../sim/input';
-import type { Router } from '../sim/router';
-import type { Snapshot, SystemId } from '../sim/snapshot';
-import type { AnySystem } from '../sim/system';
+import type { Snapshot, SystemId } from '#src/sim/snapshot';
+import type { AnySystem } from '#src/sim/system';
+import type { Host } from '#src/host/effects';
+import type { InkRuntime } from '#src/ink/ink-runtime';
+import type { Input } from '#src/sim/input';
+import type { RenderContext } from '#src/sim/context';
+import type { Router } from '#src/sim/router';
+import { Runtime } from '#src/host/runtime';
 
 /** @public */
-export interface ExperienceConfig {
-  readonly ink: InkRuntime;
-  readonly systems: readonly AnySystem[];
-  readonly host: Host;
+interface ExperienceConfig {
+  readonly ink: Readonly<InkRuntime>;
+  readonly systems: readonly Readonly<AnySystem>[];
+  readonly host: Readonly<Host>;
   readonly foreground?: SystemId;
-  readonly router?: Router;
+  readonly router?: Readonly<Router>;
   readonly seed?: number;
 }
 
 /** @public */
-export interface Experience {
+interface Experience {
   /** Inject an inbound value (story routed by tag; player/resume by target). */
-  send(input: Input<unknown>, target?: SystemId): void;
+  readonly send: (input: Input<unknown>, target?: SystemId) => void;
   /** Advance ink one step if ready; returns whether it advanced. */
-  step(): boolean;
-  view(id: SystemId, render: RenderContext): unknown;
-  snapshot(): Snapshot;
-  restore(snap: Snapshot): void;
+  readonly step: () => boolean;
+  readonly view: (id: SystemId, render: RenderContext) => unknown;
+  readonly snapshot: () => Snapshot;
+  readonly restore: (snap: Snapshot) => void;
 }
 
-// Composition root — instance-scoped, no singletons (ADR-0005). It builds the
-// generic runtime over the chosen systems + host and exposes the experience
-// surface. The runtime owns the loop; this just wires and delegates.
-export function createExperience(config: ExperienceConfig): Experience {
+/**
+ * Composition root — instance-scoped, no singletons (ADR-0005). It builds the
+ * generic runtime over the chosen systems + host and exposes the experience
+ * surface. The runtime owns the loop; this just wires and delegates.
+ *
+ * @param {ExperienceConfig} config - The ink story, the systems and the host.
+ * @returns {Experience} The experience's surface.
+ */
+function createExperience(config: Readonly<ExperienceConfig>): Experience {
   const runtime = new Runtime(config);
   return {
-    restore: (snap) =>{  runtime.restore(snap); },
-    send: (input, target) =>{  runtime.send(input, target); },
+    restore: (snap) => {
+      runtime.restore(snap);
+    },
+    send: (input, target) => {
+      runtime.send(input, target);
+    },
     snapshot: () => runtime.snapshot(),
     step: () => runtime.step(),
     view: (id, render) => runtime.view(id, render),
   };
 }
+
+export { createExperience };
+export type { Experience, ExperienceConfig };

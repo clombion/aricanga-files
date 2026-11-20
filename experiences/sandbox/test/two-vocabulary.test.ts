@@ -30,8 +30,10 @@ interface RecordingHost {
 function recordingHost(): RecordingHost {
   const presented: string[] = [];
   const host: Host = {
-    // These stories fetch nothing: a data request is refused with the request as the reason.
-    fetchData: Promise.reject.bind(Promise),
+    // These stories fetch nothing: a data request fails the test, naming the request.
+    fetchData: (request) => {
+      throw new Error(`these stories fetch nothing, and requested ${JSON.stringify(request)}`);
+    },
     present: (effect: Effect) => {
       presented.push(effect.kind);
     },
@@ -44,7 +46,7 @@ function recordingHost(): RecordingHost {
       },
     },
     store: {
-      load: () => sessionStorage.getItem(SAVE_KEY),
+      load: () => sessionStorage.getItem(SAVE_KEY) ?? undefined,
       save: (data) => {
         sessionStorage.setItem(SAVE_KEY, data);
       },

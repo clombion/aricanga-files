@@ -249,7 +249,11 @@
       "error",
       {
         "capIsNewExceptions": [
+          "BindExternalFunction",
+          "ChooseChoiceIndex",
           "Compile",
+          "Continue",
+          "LoadJson",
           "ToJson"
         ]
       }
