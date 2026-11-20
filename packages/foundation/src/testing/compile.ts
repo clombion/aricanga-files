@@ -1,5 +1,9 @@
 import { Compiler } from 'inkjs/full';
 import { InkRuntime } from '#src/ink/ink-runtime';
+import { readerOf } from '#src/sim/parse';
+
+/** The reader of the compiler's output, which inkjs types as text or nothing. */
+const READ = readerOf('ink compiler');
 
 /**
  * Compile ink source to story JSON headlessly.
@@ -8,7 +12,7 @@ import { InkRuntime } from '#src/ink/ink-runtime';
  * @returns {string} The compiled story's JSON text.
  */
 function compileInk(source: string): string {
-  return new Compiler(source).Compile().ToJson() ?? '';
+  return READ.string(new Compiler(source).Compile().ToJson(), 'the compiled story');
 }
 
 /**
