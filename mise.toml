@@ -325,7 +325,7 @@ run = "pnpm run playwright:install"
 
 [tasks.lint]
 description = "Run all linters"
-depends = ["lint:ink", "lint:tags", "lint:image-paths", "lint:css", "lint:toml", "lint:ink-comments", "lint:dom", "lint:svg-a11y", "lint:globals", "lint:events", "lint:ink-access", "lint:js", "lint:doc-links", "lint:imports", "lint:test-paths", "lint:file-structure", "lint:time-tags", "lint:locale-parity", "lint:i18n-parity", "lint:glossary-parity", "lint:config-ink", "lint:current-chat", "lint:cross-chat", "lint:component-registration", "lint:link-preview", "lint:transition-safety"]
+depends = ["lint:ink", "lint:tags", "lint:image-paths", "lint:css", "lint:toml", "lint:ink-comments", "lint:dom", "lint:svg-a11y", "lint:globals", "lint:events", "lint:ink-access", "lint:doc-links", "lint:imports", "lint:test-paths", "lint:file-structure", "lint:time-tags", "lint:locale-parity", "lint:i18n-parity", "lint:glossary-parity", "lint:config-ink", "lint:current-chat", "lint:cross-chat", "lint:component-registration", "lint:link-preview", "lint:transition-safety"]
 
 [tasks.check]
 description = "Build and lint (pre-commit)"
@@ -421,10 +421,6 @@ description = "Check for unreachable ink content"
 run = "pnpm run test:unit -- packages/tests/quality/architecture/dead-code.test.ts"
 
 # --- Code Linting ---
-
-[tasks."lint:js"]
-description = "Lint JavaScript with Biome"
-run = "pnpm run lint:js"
 
 [tasks."lint:css"]
 description = "Check for hardcoded colors in components"

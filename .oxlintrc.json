@@ -204,7 +204,7 @@
       "always",
       {
         "ignoreConsecutiveComments": true,
-        "ignorePattern": "pragma|ignore|oxlint|eslint|biome|c8|v8|istanbul|@ts|[a-z][a-z0-9-]*[(/:.@-]"
+        "ignorePattern": "pragma|ignore|oxlint|eslint|c8|v8|istanbul|@ts|[a-z][a-z0-9-]*[(/:.@-]"
       }
     ],
     "vitest/prefer-to-be-falsy": "off",
