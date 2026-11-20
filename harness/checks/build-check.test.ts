@@ -9,6 +9,7 @@
 
 import { apps, checkBuild } from '#lib/build.ts';
 import { describe, expect, test } from 'vitest';
+import { inSequence } from '#lib/lists.ts';
 import { EXIT_CLEAN } from './exit-status.ts';
 import { Project } from '#lib/tools.ts';
 
@@ -25,46 +26,53 @@ const WRITING_CONFIG = [
   '',
 ].join('\n');
 
-function plantedBuild(main: string, config: string): ReturnType<typeof checkBuild> {
-  const project = new Project();
+async function plantedBuild(main: string, config: string): ReturnType<typeof checkBuild> {
+  const project = await Project.create();
   try {
-    project.run('git', 'init', '-q');
-    project.write('.gitignore', 'node_modules\n');
-    project.write('app/index.html', INDEX);
-    project.write('app/main.ts', main);
-    project.write('app/vite.config.ts', config);
-    return checkBuild('app', project.root);
+    await project.run('git', 'init', '-q');
+    await Promise.all([
+      project.write('.gitignore', 'node_modules\n'),
+      project.write('app/index.html', INDEX),
+      project.write('app/main.ts', main),
+      project.write('app/vite.config.ts', config),
+    ]);
+    const result = await checkBuild('app', project.root);
+    return result;
   } finally {
-    project.remove();
+    await project.remove();
   }
 }
 
 describe('the repository', () => {
-  test('builds every held app and writes nothing into the checkout', () => {
+  test('builds every held app and writes nothing into the checkout', async () => {
     expect.hasAssertions();
-    expect(apps()).toStrictEqual(['experiences/sandbox', 'packages/characterisation']);
-    const results = apps().map((app) => checkBuild(app));
+    const found = await apps();
+    expect(found).toStrictEqual(['experiences/sandbox', 'packages/characterisation']);
+    const results = await inSequence(found, async (app) => {
+      const result = await checkBuild(app);
+      return result;
+    });
     expect(results.filter((result) => result.status !== EXIT_CLEAN).map((result) => result.output)).toStrictEqual([]);
     expect(results.flatMap((result) => result.written)).toStrictEqual([]);
   });
 });
 
 describe('the build check', () => {
-  test('fails a planted broken import', () => {
+  test('fails a planted broken import', async () => {
     expect.hasAssertions();
-    const result = plantedBuild("import { gone } from './missing';\nexport const x = gone;\n", QUIET_CONFIG);
+    const result = await plantedBuild("import { gone } from './missing';\nexport const x = gone;\n", QUIET_CONFIG);
     expect(result.status).not.toBe(EXIT_CLEAN);
   });
 
-  test('passes a planted clean module', () => {
+  test('passes a planted clean module', async () => {
     expect.hasAssertions();
-    const result = plantedBuild('export const x = 1;\n', QUIET_CONFIG);
+    const result = await plantedBuild('export const x = 1;\n', QUIET_CONFIG);
     expect([result.status, result.written]).toStrictEqual([EXIT_CLEAN, []]);
   });
 
-  test('sees a build that writes into its checkout', () => {
+  test('sees a build that writes into its checkout', async () => {
     expect.hasAssertions();
-    const result = plantedBuild('export const x = 1;\n', WRITING_CONFIG);
+    const result = await plantedBuild('export const x = 1;\n', WRITING_CONFIG);
     expect([result.status, result.written]).toStrictEqual([EXIT_CLEAN, ['app/made.json']]);
   });
 });

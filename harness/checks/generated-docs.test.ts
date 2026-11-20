@@ -28,10 +28,16 @@ function plantedFiles(): { readonly files: Files; readonly texts: Map<string, st
     ['unknown.md', PLANTED.replaceAll('tasks', 'planted')],
   ]);
   const files: Files = {
-    paths: () => [...texts.keys()],
-    read: (path) => new Doc(path, texts.get(path) ?? ''),
-    write: (path, text) => {
-      texts.set(path, text);
+    paths: async () => {
+      const paths = await Promise.resolve([...texts.keys()]);
+      return paths;
+    },
+    read: async (path) => {
+      const text = await Promise.resolve(texts.get(path) ?? '');
+      return new Doc(path, text);
+    },
+    write: async (path, text) => {
+      await Promise.resolve(texts.set(path, text));
     },
   };
   return { files, texts };
@@ -49,42 +55,47 @@ function orphans(generators: Generators, names: readonly string[]): string[] {
 }
 
 describe('the repository', () => {
-  test('every block is current and named by a generator, as the gate runs it', () => {
+  test('every block is current and named by a generator, as the gate runs it', async () => {
     expect.hasAssertions();
-    const done = finished(['node', 'harness/scripts/gen-docs.ts', '--check'], { cwd: REPO_ROOT });
+    const done = await finished(['node', 'harness/scripts/gen-docs.ts', '--check'], { cwd: REPO_ROOT });
     expect({ status: done.status, stderr: done.stderr }).toStrictEqual({ status: EXIT_CLEAN, stderr: '' });
   });
 
-  test('every generator has a block', () => {
+  test('every generator has a block', async () => {
     expect.hasAssertions();
-    expect(orphans(GENERATORS, blocks().map((block) => block.name))).toStrictEqual([]);
+    const found = await blocks();
+    expect(orphans(GENERATORS, found.map((block) => block.name))).toStrictEqual([]);
   });
 });
 
 describe('the generated-docs check', () => {
-  test('sees a hand-edited block as stale, and rendering restores it', () => {
+  test('sees a hand-edited block as stale, and rendering restores it', async () => {
     expect.hasAssertions();
     const doc = new Doc('docs/planted.md', PLANTED);
-    expect(problems(doc, GENERATORS)).toStrictEqual([
+    await expect(problems(doc, GENERATORS)).resolves.toStrictEqual([
       { line: 3, message: 'block "tasks" is stale: run `pnpm run fix`', path: 'docs/planted.md', writingFixesIt: true },
     ]);
-    const restored = new Doc('docs/planted.md', rendered(doc, GENERATORS));
-    expect(problems(restored, GENERATORS)).toStrictEqual([]);
+    const restored = new Doc('docs/planted.md', await rendered(doc, GENERATORS));
+    await expect(problems(restored, GENERATORS)).resolves.toStrictEqual([]);
   });
 
-  test('refuses an unknown block name and leaves it as it is', () => {
+  test('refuses an unknown block name and leaves it as it is', async () => {
     expect.hasAssertions();
     const doc = new Doc('docs/planted.md', PLANTED.replaceAll('tasks', 'planted'));
-    expect(problems(doc, GENERATORS)).toStrictEqual([
+    await expect(problems(doc, GENERATORS)).resolves.toStrictEqual([
       { line: 3, message: 'no generator is named "planted"', path: 'docs/planted.md', writingFixesIt: false },
     ]);
-    expect(rendered(doc, GENERATORS)).toBe(doc.text);
+    await expect(rendered(doc, GENERATORS)).resolves.toBe(doc.text);
   });
 
-  test('sees a generator with no block', () => {
+  test('sees a generator with no block', async () => {
     expect.hasAssertions();
-    const planted = new Map([...GENERATORS, ['planted', (): string => 'x']]);
-    expect(orphans(planted, blocks().map((block) => block.name))).toStrictEqual(['planted']);
+    const planted = new Map([...GENERATORS, ['planted', async (): Promise<string> => {
+      const text = await Promise.resolve('x');
+      return text;
+    }]]);
+    const found = await blocks();
+    expect(orphans(planted, found.map((block) => block.name))).toStrictEqual(['planted']);
   });
 
   test.each([
@@ -100,20 +111,23 @@ describe('the generated-docs check', () => {
 });
 
 describe('the generated-docs run', () => {
-  test('checking finds both blocks and writes nothing', () => {
+  test('checking finds both blocks and writes nothing', async () => {
     expect.hasAssertions();
     const { files, texts } = plantedFiles();
-    expect(run(true, GENERATORS, files).map((problem) => problem.path).toSorted()).toStrictEqual(['stale.md', 'unknown.md']);
+    const left = await run(true, GENERATORS, files);
+    expect(left.map((problem) => problem.path).toSorted()).toStrictEqual(['stale.md', 'unknown.md']);
     expect(texts.get('stale.md')).toBe(PLANTED);
   });
 
-  test('writing fixes the stale block, leaves the unknown one, and checking then finds the unknown one only', () => {
+  test('writing fixes the stale block, leaves the unknown one, and checking then finds the unknown one only', async () => {
     expect.hasAssertions();
     const { files, texts } = plantedFiles();
-    expect(run(false, GENERATORS, files).map((problem) => problem.path)).toStrictEqual(['unknown.md']);
+    const written = await run(false, GENERATORS, files);
+    expect(written.map((problem) => problem.path)).toStrictEqual(['unknown.md']);
     expect(texts.get('stale.md')).not.toContain('hand-edited');
     expect(texts.get('unknown.md')).toBe(PLANTED.replaceAll('tasks', 'planted'));
-    expect(run(true, GENERATORS, files).map((problem) => problem.path)).toStrictEqual(['unknown.md']);
+    const checked = await run(true, GENERATORS, files);
+    expect(checked.map((problem) => problem.path)).toStrictEqual(['unknown.md']);
   });
 });
 

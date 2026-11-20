@@ -21,6 +21,7 @@ import { describe, expect, test } from 'vitest';
 import { Exemptions } from '#lib/exemptions.ts';
 import { Project } from '#lib/tools.ts';
 import { REPO_ROOT } from '#lib/paths.ts';
+import { inSequence } from '#lib/lists.ts';
 import { json } from '#lib/config.ts';
 import { textOf } from '#lib/source-files.ts';
 
@@ -71,22 +72,26 @@ const PLANT_CONFIG = {
  *
  * @param {Readonly<Record<string, string>>} files - The files.
  * @param {object} config - The config.
- * @returns {readonly Run[]} Each run's exit status and output.
+ * @returns {Promise<readonly Run[]>} Each run's exit status and output.
  */
-function plantedRuns(files: Readonly<Record<string, string>>, config: object = PLANT_CONFIG): readonly Run[] {
-  const project = new Project();
+async function plantedRuns(files: Readonly<Record<string, string>>, config: object = PLANT_CONFIG): Promise<readonly Run[]> {
+  const project = await Project.create();
   try {
-    project.write('package.json', JSON.stringify({ name: 'plant', private: true, type: 'module', version: '0.0.0' }));
-    project.write('knip.json', JSON.stringify(config));
-    for (const [path, text] of Object.entries(files)) {
-      project.write(path, text);
-    }
-    return deadcodeRuns().map((args) => {
-      const run = knip(project.root, args);
+    await project.write('package.json', JSON.stringify({ name: 'plant', private: true, type: 'module', version: '0.0.0' }));
+    await project.write('knip.json', JSON.stringify(config));
+    await Promise.all(
+      Object.entries(files).map(async ([path, text]: readonly [string, string]) => {
+        await project.write(path, text);
+      }),
+    );
+    const runs = await deadcodeRuns();
+    const done = await inSequence(runs, async (args) => {
+      const run = await knip(project.root, args);
       return { output: run.stdout + run.stderr, status: run.status };
     });
+    return done;
   } finally {
-    project.remove();
+    await project.remove();
   }
 }
 
@@ -104,11 +109,15 @@ function statusAndNamed(runs: readonly Run[], name: string): readonly (readonly 
 /**
  * The output of every repository run of knip that did not exit clean.
  *
- * @returns {readonly string[]} Each failed run's output.
+ * @returns {Promise<readonly string[]>} Each failed run's output.
  */
-function failedRepoRuns(): readonly string[] {
-  return deadcodeRuns()
-    .map((args) => knip(REPO_ROOT, args))
+async function failedRepoRuns(): Promise<readonly string[]> {
+  const runs = await deadcodeRuns();
+  const done = await inSequence(runs, async (args) => {
+    const run = await knip(REPO_ROOT, args);
+    return run;
+  });
+  return done
     .filter((run) => run.status !== EXIT_CLEAN)
     .map((run) => run.stdout + run.stderr);
 }
@@ -120,53 +129,55 @@ const CLEAN = {
 };
 
 describe('the repository', () => {
-  test('the deadcode task runs knip in production mode and in default mode, treating hints as errors', () => {
+  test('the deadcode task runs knip in production mode and in default mode, treating hints as errors', async () => {
     expect.hasAssertions();
-    expect(deadcodeRuns()).toStrictEqual([
+    await expect(deadcodeRuns()).resolves.toStrictEqual([
       ['--production', '--treat-config-hints-as-errors'],
       ['--treat-config-hints-as-errors'],
     ]);
   });
 
-  test('knip finds nothing unused in either mode', () => {
+  test('knip finds nothing unused in either mode', async () => {
     expect.hasAssertions();
-    expect(failedRepoRuns()).toStrictEqual([]);
+    await expect(failedRepoRuns()).resolves.toStrictEqual([]);
   });
 
-  test('every ignore entry of knip.json carries its reason', () => {
+  test('every ignore entry of knip.json carries its reason', async () => {
     expect.hasAssertions();
-    expect(KNIP_IGNORES.unexempted(repoIgnoreEntries())).toStrictEqual([]);
+    const entries = await repoIgnoreEntries();
+    expect(KNIP_IGNORES.unexempted(entries)).toStrictEqual([]);
   });
 
-  test('knip.json is at the strictest: every issue type an error, no file excused', () => {
+  test('knip.json is at the strictest: every issue type an error, no file excused', async () => {
     expect.hasAssertions();
-    expect(issueTypes()).toContain('exports');
-    const config = json(textOf('knip.json'));
-    expect(strictnessProblems(config, issueTypes())).toStrictEqual([]);
+    const [types, text] = await Promise.all([issueTypes(), textOf('knip.json')]);
+    expect(types).toContain('exports');
+    expect(strictnessProblems(json(text), types)).toStrictEqual([]);
   });
 });
 
 describe('the deadcode check, on a planted package', () => {
-  test('passes a package whose every export is read by production code', () => {
+  test('passes a package whose every export is read by production code', async () => {
     expect.hasAssertions();
-    expect(statusAndNamed(plantedRuns(CLEAN), 'unread')).toStrictEqual([
+    const runs = await plantedRuns(CLEAN);
+    expect(statusAndNamed(runs, 'unread')).toStrictEqual([
       [EXIT_CLEAN, false],
       [EXIT_CLEAN, false],
     ]);
   });
 
-  test('fails an export nothing reads, in both modes', () => {
+  test('fails an export nothing reads, in both modes', async () => {
     expect.hasAssertions();
-    const runs = plantedRuns({ ...CLEAN, 'src/lib.ts': 'export const a = 1;\nexport const unread = 2;\n' });
+    const runs = await plantedRuns({ ...CLEAN, 'src/lib.ts': 'export const a = 1;\nexport const unread = 2;\n' });
     expect(statusAndNamed(runs, 'unread')).toStrictEqual([
       [EXIT_FINDINGS, true],
       [EXIT_FINDINGS, true],
     ]);
   });
 
-  test('fails an export only a test reads, in production mode only', () => {
+  test('fails an export only a test reads, in production mode only', async () => {
     expect.hasAssertions();
-    const runs = plantedRuns({
+    const runs = await plantedRuns({
       ...CLEAN,
       'src/lib.test.ts': "import { a, testOnly } from './lib.ts';\nconsole.assert(a + testOnly === 3);\n",
       'src/lib.ts': 'export const a = 1;\nexport const testOnly = 2;\n',
@@ -177,9 +188,9 @@ describe('the deadcode check, on a planted package', () => {
     ]);
   });
 
-  test('fails a stale dependency ignore, which knip hints in default mode', () => {
+  test('fails a stale dependency ignore, which knip hints in default mode', async () => {
     expect.hasAssertions();
-    const runs = plantedRuns(CLEAN, { ...PLANT_CONFIG, ignoreDependencies: ['no-such-package'] });
+    const runs = await plantedRuns(CLEAN, { ...PLANT_CONFIG, ignoreDependencies: ['no-such-package'] });
     expect(statusAndNamed(runs, 'no-such-package')).toStrictEqual([
       [EXIT_CLEAN, false],
       [EXIT_FINDINGS, true],

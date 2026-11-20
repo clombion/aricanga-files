@@ -49,15 +49,17 @@ const BOUNDARY_RULES = ['no-restricted-imports', 'no-restricted-globals', 'no-re
  * The boundary findings oxlint reports for each fixture path, under a copy of the repository config.
  *
  * @param {readonly Fixture[]} fixtures - The fixtures.
- * @returns {ReadonlyMap<string, boolean>} The boundary findings oxlint reports for each fixture path, under a copy of the repository config.
+ * @returns {Promise<ReadonlyMap<string, boolean>>} The boundary findings oxlint reports for each fixture path, under a copy of the repository config.
  */
-function verdicts(fixtures: readonly Fixture[]): ReadonlyMap<string, boolean> {
-  const project = new Project({ copies: OXLINT_CONFIG_FILES });
+async function verdicts(fixtures: readonly Fixture[]): Promise<ReadonlyMap<string, boolean>> {
+  const project = await Project.create({ copies: OXLINT_CONFIG_FILES });
   try {
-    for (const fixture of fixtures) {
-      project.write(fixture.path, fixture.text);
-    }
-    const outcome = project.tool(
+    await Promise.all(
+      fixtures.map(async (fixture) => {
+        await project.write(fixture.path, fixture.text);
+      }),
+    );
+    const outcome = await project.tool(
       'oxlint',
       '-c',
       '.oxlintrc.json',
@@ -77,44 +79,46 @@ function verdicts(fixtures: readonly Fixture[]): ReadonlyMap<string, boolean> {
       ]),
     );
   } finally {
-    project.remove();
+    await project.remove();
   }
 }
 
 /**
  * The system packages of the listing.
  *
- * @returns {readonly string[]} The system packages of the listing.
+ * @returns {Promise<readonly string[]>} The system packages of the listing.
  */
-function systems(): readonly string[] {
-  return [...new Set(tracked().flatMap((path) => SYSTEM_MANIFEST.exec(path)?.groups?.['name'] ?? []))];
+async function systems(): Promise<readonly string[]> {
+  const listed = await tracked();
+  return [...new Set(listed.flatMap((path) => SYSTEM_MANIFEST.exec(path)?.groups?.['name'] ?? []))];
 }
 
 /**
  * The file globs of every override of the repository's oxlint config.
  *
- * @returns {readonly unknown[]} The globs.
+ * @returns {Promise<readonly unknown[]>} The globs.
  */
-function overrideGlobs(): readonly unknown[] {
-  const { overrides } = object(json(textOf('.oxlintrc.json')), '.oxlintrc.json');
+async function overrideGlobs(): Promise<readonly unknown[]> {
+  const text = await textOf('.oxlintrc.json');
+  const { overrides } = object(json(text), '.oxlintrc.json');
   const entries: readonly unknown[] = Array.isArray(overrides) ? overrides : [];
   return entries.flatMap((entry) => object(entry, 'override')['files']);
 }
 
 describe('the boundary lint', () => {
-  test('fails each must-fail fixture and passes each must-pass fixture', () => {
+  test('fails each must-fail fixture and passes each must-pass fixture', async () => {
     expect.hasAssertions();
-    const found = verdicts(FIXTURES);
+    const found = await verdicts(FIXTURES);
     expect(FIXTURES.map((fixture) => [fixture.path, found.get(fixture.path)])).toStrictEqual(
       FIXTURES.map((fixture) => [fixture.path, fixture.fails]),
     );
   });
 
-  test('every system package has its own import override', () => {
+  test('every system package has its own import override', async () => {
     expect.hasAssertions();
-    const globs = overrideGlobs();
-    expect(systems().filter((name) => !globs.includes(`packages/systems/${name}/**`))).toStrictEqual([]);
-    expect(systems().length).toBeGreaterThan(ONE_SYSTEM);
+    const [globs, names] = await Promise.all([overrideGlobs(), systems()]);
+    expect(names.filter((name) => !globs.includes(`packages/systems/${name}/**`))).toStrictEqual([]);
+    expect(names.length).toBeGreaterThan(ONE_SYSTEM);
   });
 });
 
