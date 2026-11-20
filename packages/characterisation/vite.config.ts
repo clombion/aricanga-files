@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite';
+import { defineConfig, type UserConfig } from 'vite';
 import solid from '@solidjs/vite-plugin';
 
 // Dev-mode Solid build so the runtime's structured diagnostics ([CODE] message)
@@ -6,7 +6,7 @@ import solid from '@solidjs/vite-plugin';
 // assert against. `mode: 'development'` is forced regardless of how vite is
 // invoked, so `vite build` + `vite preview` and `vite dev` both carry the dev
 // runtime. The native @solidjs/compiler is used (no Babel).
-export default defineConfig({
+const config: UserConfig = defineConfig({
   root: import.meta.dirname,
   plugins: [solid({ dev: true })],
   define: {
@@ -24,3 +24,5 @@ export default defineConfig({
     sourcemap: true,
   },
 });
+
+export default config;

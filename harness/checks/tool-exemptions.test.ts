@@ -42,14 +42,14 @@ function strings(value: unknown, what: string): string[] {
 /** oxlint's ignore patterns and override file globs. */
 export function oxlintEntries(config: unknown): Entry[] {
   const fields = object(config, '.oxlintrc.json');
-  const overrides = fields.overrides === undefined ? [] : fields.overrides;
+  const overrides = fields['overrides'] === undefined ? [] : fields['overrides'];
   if (!Array.isArray(overrides)) {
     throw new TypeError('.oxlintrc.json overrides is not a list');
   }
   return [
-    ...strings(fields.ignorePatterns, 'ignorePatterns').map((glob) => ({ tool: 'oxlint ignorePatterns', glob })),
+    ...strings(fields['ignorePatterns'], 'ignorePatterns').map((glob) => ({ tool: 'oxlint ignorePatterns', glob })),
     ...overrides.flatMap((override: unknown, index) =>
-      strings(object(override, `override ${index}`).files, `override ${index} files`).map((glob) => ({
+      strings(object(override, `override ${index}`)['files'], `override ${index} files`).map((glob) => ({
         tool: `oxlint overrides[${index}]`,
         glob,
       })),
@@ -59,17 +59,17 @@ export function oxlintEntries(config: unknown): Entry[] {
 
 /** The gate's Vitest config: coverage include and exclude, and each project's include. */
 export function vitestEntries(config: unknown): Entry[] {
-  const testOptions = object(object(config, 'vitest config').test ?? {}, 'test');
-  const coverage = object(testOptions.coverage ?? {}, 'coverage');
-  const projects = testOptions.projects === undefined ? [] : testOptions.projects;
+  const testOptions = object(object(config, 'vitest config')['test'] ?? {}, 'test');
+  const coverage = object(testOptions['coverage'] ?? {}, 'coverage');
+  const projects = testOptions['projects'] === undefined ? [] : testOptions['projects'];
   if (!Array.isArray(projects)) {
     throw new TypeError('vitest projects is not a list');
   }
   return [
-    ...strings(coverage.include, 'coverage.include').map((glob) => ({ tool: 'vitest coverage.include', glob })),
-    ...strings(coverage.exclude, 'coverage.exclude').map((glob) => ({ tool: 'vitest coverage.exclude', glob })),
+    ...strings(coverage['include'], 'coverage.include').map((glob) => ({ tool: 'vitest coverage.include', glob })),
+    ...strings(coverage['exclude'], 'coverage.exclude').map((glob) => ({ tool: 'vitest coverage.exclude', glob })),
     ...projects.flatMap((project: unknown, index) =>
-      strings(object(object(project, `project ${index}`).test ?? {}, 'test').include, 'include').map((glob) => ({
+      strings(object(object(project, `project ${index}`)['test'] ?? {}, 'test')['include'], 'include').map((glob) => ({
         tool: `vitest projects[${index}].include`,
         glob,
       })),
@@ -79,15 +79,15 @@ export function vitestEntries(config: unknown): Entry[] {
 
 /** Biome's `files.includes`, a `!` entry read as the exclusion it is. */
 export function biomeEntries(config: unknown): Entry[] {
-  const files = object(object(config, 'biome.json').files ?? {}, 'files');
-  return strings(files.includes, 'files.includes').map((glob) =>
+  const files = object(object(config, 'biome.json')['files'] ?? {}, 'files');
+  return strings(files['includes'], 'files.includes').map((glob) =>
     glob.startsWith('!') ? { tool: 'biome files.includes (exclusion)', glob: glob.slice(1) } : { tool: 'biome files.includes', glob },
   );
 }
 
 /** oxfmt's ignore patterns. */
 export function oxfmtEntries(config: unknown): Entry[] {
-  return strings(object(config, '.oxfmtrc.json').ignorePatterns, 'ignorePatterns').map((glob) => ({
+  return strings(object(config, '.oxfmtrc.json')['ignorePatterns'], 'ignorePatterns').map((glob) => ({
     tool: 'oxfmt ignorePatterns',
     glob,
   }));
@@ -96,11 +96,11 @@ export function oxfmtEntries(config: unknown): Entry[] {
 /** knip's `ignore`, at the top level and per workspace. */
 export function knipEntries(config: unknown): Entry[] {
   const fields = object(config, 'knip.json');
-  const workspaces = object(fields.workspaces ?? {}, 'workspaces');
+  const workspaces = object(fields['workspaces'] ?? {}, 'workspaces');
   return [
-    ...strings(fields.ignore, 'ignore').map((glob) => ({ tool: 'knip ignore', glob })),
+    ...strings(fields['ignore'], 'ignore').map((glob) => ({ tool: 'knip ignore', glob })),
     ...Object.entries(workspaces).flatMap(([workspace, settings]) =>
-      strings(object(settings, workspace).ignore, `${workspace}.ignore`).map((glob) => ({
+      strings(object(settings, workspace)['ignore'], `${workspace}.ignore`).map((glob) => ({
         tool: `knip workspaces[${workspace}].ignore`,
         glob: workspace === '.' ? glob : `${workspace}/${glob}`,
       })),
@@ -111,7 +111,7 @@ export function knipEntries(config: unknown): Entry[] {
 /** stylelint's `ignoreFiles` and the lines of `.stylelintignore`. */
 export function stylelintEntries(config: unknown, ignoreFile: string): Entry[] {
   return [
-    ...strings(object(config, '.stylelintrc.json').ignoreFiles, 'ignoreFiles').map((glob) => ({
+    ...strings(object(config, '.stylelintrc.json')['ignoreFiles'], 'ignoreFiles').map((glob) => ({
       tool: 'stylelint ignoreFiles',
       glob,
     })),
@@ -135,7 +135,7 @@ function listedJson(path: string): unknown {
 
 async function repoEntries(): Promise<Entry[]> {
   const vitestModule: unknown = await import(fromRoot('vitest.gate.config.ts'));
-  const vitest = object(vitestModule, 'vitest.gate.config.ts').default;
+  const vitest = object(vitestModule, 'vitest.gate.config.ts')['default'];
   const oxfmt = listedJson('.oxfmtrc.json');
   const knip = listedJson('knip.json');
   const stylelint = listedJson('.stylelintrc.json');

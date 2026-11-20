@@ -86,8 +86,8 @@ describe('the boundary lint', () => {
   });
 
   test('every system package has its own import override', () => {
-    const overrides = object(json(textOf('.oxlintrc.json')), '.oxlintrc.json').overrides;
-    const globs = Array.isArray(overrides) ? overrides.flatMap((entry) => object(entry, 'override').files) : [];
+    const overrides = object(json(textOf('.oxlintrc.json')), '.oxlintrc.json')['overrides'];
+    const globs = Array.isArray(overrides) ? overrides.flatMap((entry) => object(entry, 'override')['files']) : [];
     expect(systems().filter((name) => !globs.includes(`packages/systems/${name}/**`))).toEqual([]);
     expect(systems().length).toBeGreaterThan(1);
   });
