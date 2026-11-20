@@ -42,7 +42,8 @@ function setsOf(scan: Scan, path: string): readonly DeclaredSet[] {
   const found: DeclaredSet[] = [];
   for (const node of nodes(sourceOf(scan, path))) {
     if (isTypeAliasDeclaration(node) && isWrittenUnion(node.type)) {
-      const words = stringLiterals(scan.checker.getTypeAtLocation(node.type));
+      const type = scan.checker.getTypeAtLocation(node.type);
+      const words = type === undefined ? undefined : stringLiterals(type);
       if (words !== undefined && words.length >= SET_FLOOR) {
         found.push({ name: node.name.text, path, words: words.toSorted() });
       }

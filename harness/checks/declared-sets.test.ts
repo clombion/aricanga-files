@@ -27,22 +27,21 @@ const PLANTS: Readonly<Record<string, string>> = {
   'packages/systems/__sets_restated.ts': "export type Status = 'read' | 'sent' | 'delivered';\n",
 };
 
-const plantedScan = usePlanted(new Map(Object.entries(PLANTS)));
-const repoScan = useScan();
+/** The one restatement among the plants: the owner's set, and the second alias that writes it out again. */
+const RESTATED = [['packages/foundation/src/__sets_owner.ts#Receipt', 'packages/systems/__sets_restated.ts#Status']];
 
-describe('the repository', () => {
-  test('declares each closed set of words once', () => {
+describe('closed sets of words', () => {
+  const planted = usePlanted(new Map(Object.entries(PLANTS)));
+  const repository = useScan();
+
+  test('a set restated in another module is found in any order; a derived alias, a derived subset, a single word and a wider set pass', () => {
     expect.hasAssertions();
-    expect(twiceDeclared(repoScan())).toStrictEqual([]);
+    expect(twiceDeclared(planted())).toStrictEqual(RESTATED);
   });
-});
 
-describe('the scan', () => {
-  test('finds a set restated in another module in any order, and passes a derived alias, a derived subset, a single word and a wider set', () => {
+  test('the repository declares each one once', () => {
     expect.hasAssertions();
-    expect(twiceDeclared(plantedScan())).toStrictEqual([
-      ['packages/foundation/src/__sets_owner.ts#Receipt', 'packages/systems/__sets_restated.ts#Status'],
-    ]);
+    expect(twiceDeclared(repository())).toStrictEqual([]);
   });
 });
 
