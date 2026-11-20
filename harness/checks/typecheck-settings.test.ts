@@ -3,8 +3,10 @@
  *
  * Each run is the locked tsc over a planted project holding a copy of `tsconfig.base.json`. Every
  * plant is a file that must fail with its own diagnostic under the base config, and pass when only
- * the setting it rests on is turned off (with `exactOptionalPropertyTypes`, which tsc refuses
- * without `strictNullChecks`). `isolatedModules` is implied by `verbatimModuleSyntax`: its plant
+ * the setting it rests on is turned off or, for `allowUnreachableCode` and `allowUnusedLabels`,
+ * reset to tsc's default (`null`), which reports without failing (`exactOptionalPropertyTypes` goes
+ * with `strictNullChecks`, which tsc refuses it without). `skipLibCheck: false` is held by a broken
+ * declaration file. `isolatedModules` is implied by `verbatimModuleSyntax`: its plant
  * passes only when both are off, and the check holds that redundancy. Two plants hold the
  * exemption declarations' shapes: a membership test on `Prefixes` and a prefix match on `Accepted`
  * are type errors. The clean plant must pass.
@@ -21,7 +23,7 @@ interface Plant {
   readonly path: string;
   readonly text: string;
   readonly codes: readonly string[];
-  readonly removal: Readonly<Record<string, boolean>>;
+  readonly removal: Readonly<Record<string, boolean | null>>;
 }
 
 const WITHOUT_NULL_CHECKS = { exactOptionalPropertyTypes: false };
@@ -88,6 +90,48 @@ const PLANTS: readonly Plant[] = [
     removal: { verbatimModuleSyntax: false, isolatedModules: false },
   },
   {
+    path: 'src/index-signature.ts',
+    text: 'const bag: Record<string, number> = {};\nexport const count = bag.count;\n',
+    codes: ['TS4111'],
+    removal: { noPropertyAccessFromIndexSignature: false },
+  },
+  {
+    path: 'src/unused-local.ts',
+    text: 'const unused = 1;\nexport const used = 2;\n',
+    codes: ['TS6133'],
+    removal: { noUnusedLocals: false },
+  },
+  {
+    path: 'src/unused-parameter.ts',
+    text: 'export function keep(value: number, extra: number): number {\n  return value;\n}\n',
+    codes: ['TS6133'],
+    removal: { noUnusedParameters: false },
+  },
+  {
+    path: 'src/unreachable.ts',
+    text: 'export function one(): number {\n  return 1;\n  console.log("never");\n}\n',
+    codes: ['TS7027'],
+    removal: { allowUnreachableCode: null },
+  },
+  {
+    path: 'src/unused-label.ts',
+    text: 'export function loop(): void {\n  outer: for (;;) {\n    break;\n  }\n}\n',
+    codes: ['TS7028'],
+    removal: { allowUnusedLabels: null },
+  },
+  {
+    path: 'src/side-effect.ts',
+    text: "import './missing-module';\nexport const loaded = true;\n",
+    codes: ['TS2882'],
+    removal: { noUncheckedSideEffectImports: false },
+  },
+  {
+    path: 'src/broken.d.ts',
+    text: 'export declare const value: Missing;\n',
+    codes: ['TS2304'],
+    removal: { skipLibCheck: true },
+  },
+  {
     path: 'src/erasable.ts',
     text: 'export enum Colour {\n  Red,\n}\n',
     codes: ['TS1294'],
@@ -130,7 +174,7 @@ export function codesByFile(stdout: string): ReadonlyMap<string, readonly string
 }
 
 /** Run the locked tsc over every plant under the base config with `overrides` applied. */
-function typecheck(overrides: Readonly<Record<string, boolean>>): ReadonlyMap<string, readonly string[]> {
+function typecheck(overrides: Readonly<Record<string, boolean | null>>): ReadonlyMap<string, readonly string[]> {
   const project = new Project({ copies: ['tsconfig.base.json'] });
   try {
     project.write('src/exemptions.ts', textOf('harness/lib/exemptions.ts'));

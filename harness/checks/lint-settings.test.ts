@@ -8,17 +8,37 @@
  * fails under `reportUnusedDisableDirectives` and passes without it; an `eslint-disable` comment
  * silences nothing under `respectEslintDisableDirectives: false` and silences its rule with it.
  * `eslint-plugin-solid` is loaded as a JS plugin, a destructured component fails, and its rules in
- * the config are exactly its `v2-strict` config.
+ * the config are exactly its `v2-strict` config. Every category is on at error, and every rule the
+ * config turns off, at the top level or in an override, is declared with its reason.
  */
 
 import { describe, expect, test } from 'vitest';
 
 import { json, object } from '../lib/config.ts';
+import { Accepted, Exemptions } from '../lib/exemptions.ts';
 import { textOf } from '../lib/source-files.ts';
 import { finished, Project } from '../lib/tools.ts';
 import { fromRoot } from '../lib/paths.ts';
 
 export const HARNESS_ID = 'lint-settings';
+
+/** oxlint's rule categories: the config turns every one on at error. */
+const CATEGORIES = new Accepted(['correctness', 'suspicious', 'perf', 'pedantic', 'style', 'restriction', 'nursery']);
+
+/**
+ * The rules the config turns off, each with its reason: the enabled rule it contradicts, or the
+ * mirrored config that turns it off. A rule turned off and not listed fails, and so does an entry
+ * the config no longer turns off.
+ */
+const TURNED_OFF = Exemptions.grouped({
+  'off in eslint-plugin-solid v2-strict, which the config mirrors exactly (the v2-strict test below)': [
+    'solid/no-react-deps',
+    'solid/no-array-handlers',
+    'solid/prefer-show',
+    'solid/no-proxy-apis',
+    'solid/prefer-classlist',
+  ],
+});
 
 const UNUSED_DIRECTIVE = 'unused-disable-directive';
 
@@ -66,7 +86,7 @@ const PLANTS: Readonly<Record<string, readonly [string, readonly string[]]>> = {
   ],
   'src/destructure.tsx': [
     'export function Bubble({ vm }: { vm: { text: string } }): unknown {\n  return <p>{vm.text}</p>;\n}\n',
-    ['solid(no-destructure)'],
+    ['aricanga(vm-prop)', 'solid(no-destructure)'],
   ],
   'src/expect-described.ts': ['// @ts-expect-error: the planted mismatch this check needs\nexport const value: string = 1;\n', []],
   'src/types.ts': ['export interface Shape {\n  readonly kind: string;\n}\n', []],
@@ -78,11 +98,13 @@ const WARNING_TEXT = 'export function stop(): void {\n  debugger;\n}\n';
 
 type Options = Readonly<Record<string, unknown>>;
 
-/** A copy of the repository's oxlint config with `options` merged over its options. */
+/** A copy of the repository's oxlint config with `options` merged over its options; a local JS plugin is read from the repository. */
 function config(options: Options, rules: Options = {}): string {
   const repo = object(json(textOf('.oxlintrc.json')), '.oxlintrc.json');
+  const plugins = Array.isArray(repo.jsPlugins) ? repo.jsPlugins.map(String) : [];
   return JSON.stringify({
     ...repo,
+    jsPlugins: plugins.map((plugin) => (plugin.startsWith('./') ? fromRoot(plugin) : plugin)),
     options: { ...object(repo.options ?? {}, 'options'), ...options },
     rules: { ...object(repo.rules ?? {}, 'rules'), ...rules },
   });
@@ -143,6 +165,25 @@ export function enabled(rules: Options, prefix: string): readonly string[] {
     .toSorted();
 }
 
+/** The rules a config turns off, at the top level and in every override. */
+export function turnedOff(configText: unknown): readonly string[] {
+  const repo = object(configText, '.oxlintrc.json');
+  const overrides = Array.isArray(repo.overrides) ? repo.overrides : [];
+  const ruleSets = [repo.rules ?? {}, ...overrides.map((entry) => object(entry, 'override').rules ?? {})];
+  const off = ruleSets.flatMap((rules) => {
+    const all = object(rules, 'rules');
+    const on = new Set(enabled(all, ''));
+    return Object.keys(all).filter((rule) => !on.has(rule));
+  });
+  return [...new Set(off)].toSorted();
+}
+
+/** The categories a config does not turn on at error. */
+export function categoryProblems(configText: unknown): readonly string[] {
+  const categories = object(object(configText, '.oxlintrc.json').categories ?? {}, 'categories');
+  return [...CATEGORIES].filter((category) => categories[category] !== 'error').map((category) => `${category} is not at error`);
+}
+
 /** eslint-plugin-solid's `v2-strict` rules, read from the locked plugin. */
 function v2Strict(): Options {
   const done = finished(
@@ -171,6 +212,28 @@ describe('the repository config', () => {
     const plugins = Array.isArray(repo.jsPlugins) ? repo.jsPlugins : [];
     expect(plugins).toContain('eslint-plugin-solid');
     expect(enabled(object(repo.rules ?? {}, 'rules'), 'solid/')).toEqual(enabled(v2Strict(), 'solid/'));
+  });
+});
+
+describe('the strictness of the config', () => {
+  test('turns every category on at error', () => {
+    expect(categoryProblems(json(textOf('.oxlintrc.json')))).toEqual([]);
+  });
+
+  test('declares every rule it turns off with its reason', () => {
+    expect(TURNED_OFF.unexempted(turnedOff(json(textOf('.oxlintrc.json'))))).toEqual([]);
+  });
+
+  test('sees a category left out or below error, and a rule turned off at the top or in an override', () => {
+    expect(categoryProblems({ categories: { correctness: 'error', style: 'warn' } })).toEqual([
+      'nursery is not at error',
+      'pedantic is not at error',
+      'perf is not at error',
+      'restriction is not at error',
+      'style is not at error',
+      'suspicious is not at error',
+    ]);
+    expect(turnedOff({ rules: { a: 'off', b: 'error' }, overrides: [{ files: ['x'], rules: { c: ['off'], d: 'warn' } }] })).toEqual(['a', 'c']);
   });
 });
 
