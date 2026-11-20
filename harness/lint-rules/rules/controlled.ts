@@ -5,32 +5,50 @@
  * attribute, and is not a binding. An `<option>`'s change is handled by its enclosing `<select>`.
  */
 
-import { child, jsxAttributes, jsxName, problemMeta } from '../ast.ts';
-import type { Node, Rule } from '../ast.ts';
+import type { Node, Rule } from '#lint-rules/ast.ts';
+import { child, problemMeta } from '#lint-rules/ast.ts';
+import { jsxAttributes, jsxName } from '#lint-rules/jsx.ts';
 
-const CONTROLLED = ['value', 'checked', 'selected'];
+/** Each controlled property and the attribute that sets only its initial value. */
+const CONTROLLED: ReadonlyMap<string, string> = new Map([
+  ['checked', 'defaultChecked'],
+  ['selected', 'defaultSelected'],
+  ['value', 'defaultValue'],
+]);
 const HANDLERS = ['onInput', 'onChange', 'onClick', 'on:input', 'on:change', 'on:click'];
 
+/**
+ * Whether an element handles its own change.
+ * @param {Node} opening - A `JSXOpeningElement`.
+ * @returns {boolean} Whether it has an input, change or click handler.
+ */
 function handlesChange(opening: Node): boolean {
   const attributes = jsxAttributes(opening);
   return HANDLERS.some((handler) => attributes.has(handler));
 }
 
-/** The opening element of the nearest enclosing `<select>`, if the option sits directly inside one. */
+/**
+ * The opening element of the nearest enclosing `<select>`, if the option sits directly inside one.
+ * @param {Node} opening - An `<option>`'s opening element.
+ * @returns {Node | undefined} The `<select>`'s opening element, or undefined when another element encloses the option.
+ */
 function enclosingSelect(opening: Node): Node | undefined {
   let current = child(opening, 'parent');
   while (current !== undefined) {
-    if (current.type === 'JSXElement') {
-      const parentOpening = child(current, 'openingElement');
-      if (parentOpening !== undefined && parentOpening !== opening) {
-        return jsxName(parentOpening) === 'select' ? parentOpening : undefined;
-      }
+    const parentOpening = current.type === 'JSXElement' ? child(current, 'openingElement') : undefined;
+    if (parentOpening !== undefined && parentOpening !== opening) {
+      return jsxName(parentOpening) === 'select' ? parentOpening : undefined;
     }
     current = child(current, 'parent');
   }
   return undefined;
 }
 
+/**
+ * Whether an attribute is bound to an expression rather than written as a literal.
+ * @param {Node} attribute - A `JSXAttribute`.
+ * @returns {boolean} Whether its value is an expression container.
+ */
 function isBinding(attribute: Node): boolean {
   return child(attribute, 'value')?.type === 'JSXExpressionContainer';
 }
@@ -44,10 +62,9 @@ export const controlled: Rule = {
           return;
         }
         const attributes = jsxAttributes(node);
-        for (const name of CONTROLLED) {
+        for (const [name, fallback] of CONTROLLED) {
           const attribute = attributes.get(name);
           if (attribute !== undefined && isBinding(attribute)) {
-            const fallback = `default${name[0]?.toUpperCase() ?? ''}${name.slice(1)}`;
             context.report({
               message: `${name} is a property: handle the change (onInput/onChange) or use ${fallback}`,
               node: attribute,

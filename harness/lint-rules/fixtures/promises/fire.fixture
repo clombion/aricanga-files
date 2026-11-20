@@ -1,7 +1,10 @@
 // path: harness/scripts/promises-fire.ts
-export function settle(pending: Promise<number>): Promise<number> {
-  return pending.then(
+const FALLBACK = 0;
+
+export async function settle(pending: Readonly<Promise<number>>): Promise<number> {
+  const settled = await pending.then(
     (value) => value,
-    () => 0,
+    () => FALLBACK,
   );
+  return settled;
 }

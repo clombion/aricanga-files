@@ -1,8 +1,18 @@
 // path: harness/lib/statics-fire.ts
 export class Clock {
-  static readonly origin = 0;
+  public static readonly origin: number = Number.MIN_SAFE_INTEGER;
 
-  static start(): number {
+  public readonly offset: number;
+
+  public constructor(offset: number) {
+    this.offset = offset;
+  }
+
+  public static start(): number {
     return this.origin;
+  }
+
+  public read(): number {
+    return Clock.origin + this.offset;
   }
 }

@@ -241,7 +241,9 @@
         "ignoreConsecutiveComments": true,
         "ignorePattern": "pragma|ignore|oxlint|eslint|biome|c8|v8|istanbul|@ts|[a-z][a-z0-9-]*[(/:.@-]"
       }
-    ]
+    ],
+    "vitest/prefer-to-be-falsy": "off",
+    "vitest/prefer-to-be-truthy": "off"
   },
   "overrides": [
     {
@@ -416,6 +418,14 @@
       },
       "rules": {
         "import/no-nodejs-modules": "off"
+      }
+    },
+    {
+      "files": [
+        "harness/lint-rules/plugin.ts"
+      ],
+      "rules": {
+        "import/no-default-export": "off"
       }
     }
   ],

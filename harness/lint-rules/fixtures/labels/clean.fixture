@@ -1,16 +1,24 @@
 // path: packages/systems/chat/src/view/labels-clean.tsx
-export const Named = () => (
-  <div>
-    <label for="name">Name</label>
-    <input id="name" />
-  </div>
-);
+import type { JSX } from 'solid-js';
 
-export const Wrapped = () => (
-  <label>
-    Mail
-    <span>
-      <input id="mail" />
-    </span>
-  </label>
-);
+function Named(): JSX.Element {
+  return (
+    <div>
+      <label for="name">Name</label>
+      <input id="name" />
+    </div>
+  );
+}
+
+function Wrapped(): JSX.Element {
+  return (
+    <label>
+      Mail
+      <span>
+        <input id="mail" />
+      </span>
+    </label>
+  );
+}
+
+export { Named, Wrapped };

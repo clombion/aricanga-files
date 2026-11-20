@@ -1,17 +1,20 @@
-import { erase } from '@narratives/foundation';
 import { checkInvariant, storyStreamArb } from '@narratives/foundation/testing';
+import { describe, expect, test } from 'vitest';
+import { chatSystem } from '#src/system';
+import { erase } from '@narratives/foundation';
 import { routingOwnership } from '@narratives/system-chat/testing';
-import { expect, test } from 'vitest';
-import { chatSystem } from '../src/system';
 
 // The routing-ownership predicate holds over generated streams; it is the
 // acceptance target of message routing. Also proves @narratives/system-chat/testing
 // is importable from a sibling test (the new subpath).
-test('routing ownership holds over generated targetChat streams', async () => {
-  const result = await checkInvariant(
-    { foreground: 'chat', systems: [erase(chatSystem)] },
-    storyStreamArb({ tagKeys: ['speaker', 'chat', 'targetChat'] }),
-    routingOwnership,
-  );
-  expect(result.failed, result.message).toBe(false);
+describe('routing ownership', () => {
+  test('holds over generated targetChat streams', async () => {
+    expect.hasAssertions();
+    const result = await checkInvariant(
+      { foreground: 'chat', systems: [erase(chatSystem)] },
+      storyStreamArb({ tagKeys: ['speaker', 'chat', 'targetChat'] }),
+      routingOwnership,
+    );
+    expect(result).toStrictEqual({ failed: false, message: 'the property held' });
+  });
 });

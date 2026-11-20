@@ -1,2 +1,4 @@
 // path: harness/lib/tools.ts
-export const ci: string | undefined = process.env.CI;
+import { env } from 'node:process';
+
+export const ci: string | undefined = env.CI;

@@ -1,6 +1,7 @@
 // path: packages/systems/chat/src/view/legacy-fire.tsx
-export function mount(host: HTMLElement, text: string): void {
+export function mount(text: string): HTMLElement {
   const line = document.createElement('p');
   line.textContent = text;
-  host.replaceChildren(line);
+  document.body.replaceChildren(line);
+  return line;
 }

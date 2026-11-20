@@ -1,4 +1,6 @@
 // path: packages/systems/chat/src/view/legacy-clean.tsx
-export function Line(props: { vm: { text: string } }) {
+import type { JSX } from 'solid-js';
+
+export function Line(props: { readonly vm: { readonly text: string } }): JSX.Element {
   return <p>{props.vm.text}</p>;
 }

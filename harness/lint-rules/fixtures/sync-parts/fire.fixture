@@ -1,8 +1,13 @@
 // path: packages/systems/chat/src/view/sync-parts-fire.tsx
-export function Bubble(props: { vm: { text: Promise<string> } }) {
+import type { JSX } from 'solid-js';
+
+export function Bubble(props: { readonly vm: { readonly text: Readonly<Promise<string>> } }): JSX.Element {
   let shown = '';
-  void props.vm.text.then((text) => {
-    shown = text;
-  });
+  props.vm.text
+    .then((text) => {
+      shown = text;
+      return text;
+    })
+    .catch(() => '');
   return <p>{shown}</p>;
 }

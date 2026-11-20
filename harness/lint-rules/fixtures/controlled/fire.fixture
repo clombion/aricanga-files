@@ -1,4 +1,6 @@
 // path: packages/systems/chat/src/view/controlled-fire.tsx
-export function Draft(props: { vm: { text: string } }) {
+import type { JSX } from 'solid-js';
+
+export function Draft(props: { readonly vm: { readonly text: string } }): JSX.Element {
   return <input value={props.vm.text} />;
 }

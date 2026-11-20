@@ -1,8 +1,19 @@
 // path: packages/systems/chat/src/view/controlled-clean.tsx
-export function Draft(props: { vm: { text: string; edit: (text: string) => void } }) {
-  return <input value={props.vm.text} onInput={(event) => props.vm.edit(event.currentTarget.value)} />;
+import type { JSX } from 'solid-js';
+
+function Draft(props: { readonly vm: { readonly text: string; readonly edit: (text: string) => void } }): JSX.Element {
+  return (
+    <input
+      value={props.vm.text}
+      onInput={(event: Readonly<{ currentTarget: Readonly<{ value: string }> }>) => {
+        props.vm.edit(event.currentTarget.value);
+      }}
+    />
+  );
 }
 
-export function Seed(props: { vm: { text: string } }) {
+function Seed(props: { readonly vm: { readonly text: string } }): JSX.Element {
   return <input defaultValue={props.vm.text} />;
 }
+
+export { Draft, Seed };
