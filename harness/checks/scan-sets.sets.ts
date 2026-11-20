@@ -10,7 +10,7 @@ import { matches } from '#lib/globs.ts';
 import { projects } from '#lib/projects.ts';
 import { relativeTo } from '#lib/relative.ts';
 
-const TEST_FILE = /(?:\.test\.tsx?$|\/test\/|^harness\/checks\/|^packages\/characterisation\/tests\/)/u;
+const TEST_FILE: RegExp = /(?:\.test\.tsx?$|\/test\/|^harness\/checks\/|^packages\/characterisation\/tests\/)/u;
 const UNFORMATTED = '\nconst   plantedUnformatted   =   1  ;\n';
 
 /**
