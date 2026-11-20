@@ -11,9 +11,9 @@
  */
 
 import { customPropertyProblems, duplicateRules, unusedClasses } from '#lib/sheet-scans.ts';
-import { lintSheet, readers, sheets, sheetsOf, withoutSheets } from '#lib/stylesheets.ts';
 import { describe, expect, test } from 'vitest';
 import { json, object } from '#lib/config.ts';
+import { lintSheet, readers, sheets, sheetsOf, withoutSheets } from '#lib/stylesheets.ts';
 import { rawSizes, rawTokenValues } from '#lib/design-tokens.ts';
 import type { Sheet } from '#lib/stylesheets.ts';
 import { textOf } from '#lib/source-files.ts';

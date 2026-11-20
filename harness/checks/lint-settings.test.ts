@@ -34,6 +34,9 @@ const CATEGORIES = new Accepted(['correctness', 'suspicious', 'perf', 'pedantic'
  * listed fails, and so does an entry the config does not turn off.
  */
 const TURNED_OFF = Exemptions.grouped({
+  'a Vitest setup file registers its hooks at top level, outside any describe; the override holds only harness/lib/guards.ts': [
+    'vitest/require-top-level-describe',
+  ],
   'asks for the truthy and falsy matchers vitest/prefer-strict-boolean-matchers refuses; toBe(true) and toBe(false) stay': [
     'vitest/prefer-to-be-falsy',
     'vitest/prefer-to-be-truthy',
@@ -58,10 +61,11 @@ const TURNED_OFF = Exemptions.grouped({
     'solid/no-proxy-apis',
     'solid/prefer-classlist',
   ],
-  'oxlint, Vite, Playwright and Vitest load the plugin and config modules through their default export; the override holds only those': [
+  'oxlint, stylelint, Vite, Playwright and Vitest load the plugin and config modules through their default export; the override holds only those': [
     'import/no-default-export',
   ],
   "restates the gate config's one testTimeout, which the vitest-settings check holds": ['vitest/require-test-timeout'],
+  'the TypeScript API exposes a symbol\'s kind only as bit flags; the override holds only harness/lib/checker.ts': ['eslint/no-bitwise'],
 });
 
 const SEVERITY = /^(?:off|0)$/u;

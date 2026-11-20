@@ -112,14 +112,15 @@ function destructuredSkips(parameter: Node): readonly string[] {
   if (!isObjectBindingPattern(parameter)) {
     return [];
   }
-  return parameter.elements.flatMap((element) => {
+  const bound: string[] = [];
+  for (const element of parameter.elements) {
     const { name } = element;
     const key = element.propertyName ?? name;
-    if (key === undefined || name === undefined) {
-      return [];
+    if (key !== undefined && isIdentifier(key) && key.text === 'skip' && name !== undefined && isIdentifier(name)) {
+      bound.push(name.text);
     }
-    return isIdentifier(key) && key.text === 'skip' && isIdentifier(name) ? [name.text] : [];
-  });
+  }
+  return bound;
 }
 
 /**

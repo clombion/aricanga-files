@@ -111,12 +111,15 @@ function isLiteral(value: Expression): boolean {
  * @returns {ReadonlyMap<string, Expression>} Each binding's initializer, by name.
  */
 function moduleBindings(file: SourceFile): ReadonlyMap<string, Expression> {
-  const declared = file.statements.filter((statement) => isVariableStatement(statement)).flatMap((statement) => statement.declarationList.declarations);
-  return new Map(
-    declared.flatMap((binding) =>
-      isIdentifier(binding.name) && binding.initializer !== undefined ? [[binding.name.text, binding.initializer] as const] : [],
-    ),
-  );
+  const bindings = new Map<string, Expression>();
+  for (const statement of file.statements.filter((candidate) => isVariableStatement(candidate))) {
+    for (const binding of statement.declarationList.declarations) {
+      if (isIdentifier(binding.name) && binding.initializer !== undefined) {
+        bindings.set(binding.name.text, binding.initializer);
+      }
+    }
+  }
+  return bindings;
 }
 
 /**
@@ -191,10 +194,13 @@ function consultingParameters(file: SourceFile): ReadonlyMap<string, ReadonlySet
         return [];
       }
       const names = consultedNames(statement);
-      const positions = [...statement.parameters.entries()]
-        .filter(([, parameter]) => names.has(identifierText(parameter.name) ?? ''))
-        .map(([index]) => index);
-      return [[statement.name.text, new Set(positions)] as const];
+      const positions = new Set<number>();
+      for (const [index, parameter] of statement.parameters.entries()) {
+        if (names.has(identifierText(parameter.name) ?? '')) {
+          positions.add(index);
+        }
+      }
+      return [[statement.name.text, positions] as const];
     }),
   );
 }
