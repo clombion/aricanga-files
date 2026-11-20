@@ -9,22 +9,27 @@
  */
 
 import * as ast from 'typescript/unstable/ast';
-import { type Type, TypeFlags } from 'typescript/unstable/sync';
+import { type Checker, type Type, TypeFlags } from 'typescript/unstable/sync';
 
-import { nodes, pathOf, type Scan, sourceOf, textOfNode } from './checker.ts';
+import { nameText, nodes, pathOf, type Scan, sourceOf, textOfNode } from './checker.ts';
+import { relative as relativeTo } from './paths.ts';
 import { Prefixes } from './exemptions.ts';
 
-/** The roots whose exported unions are contracts, and whose code must keep them closed. */
+/** The roots whose exported unions are contracts: the kernel's packages. */
 export const CONTRACT_ROOTS = new Prefixes(['packages/foundation/src/', 'packages/systems/']);
 
-/** The roots whose code must name a contract word through its union, never respell it. */
-export const RESPELLING_ROOTS = new Prefixes(['packages/foundation/src/', 'packages/systems/', 'experiences/sandbox/']);
-
-/** A closed union: the module that owns it, its name, and its words. */
+/** A closed union: the module that owns it, its package, its name, and its words. */
 export interface Contract {
   readonly owner: string;
+  readonly ownerPackage: string;
   readonly name: string;
   readonly words: ReadonlySet<string>;
+}
+
+/** The package directory of a module: the path up to its `src/` (`packages/systems/chat/`). */
+function packageOf(path: string): string {
+  const index = path.indexOf('/src/');
+  return index === -1 ? path : path.slice(0, index + 1);
 }
 
 /** A place where code loses a contract: the file, the contract, the form, and the code. */
@@ -62,7 +67,7 @@ export function contracts(scan: Scan, paths: readonly string[]): readonly Contra
       const type = checker.getDeclaredTypeOfSymbol(symbol);
       const words = stringLiterals(type);
       if (words !== undefined && words.length > 1) {
-        found.push({ owner: path, name: statement.name.text, words: new Set(words) });
+        found.push({ owner: path, ownerPackage: packageOf(path), name: statement.name.text, words: new Set(words) });
         continue;
       }
       const members = type.isUnionType() ? (type.getTypes() ?? []) : [];
@@ -77,7 +82,12 @@ export function contracts(scan: Scan, paths: readonly string[]): readonly Contra
           return ownType?.isStringLiteralType() === true ? String(ownType.value) : undefined;
         });
         if (discriminant.every((word) => word !== undefined)) {
-          found.push({ owner: path, name: `${statement.name.text}['${property.name}']`, words: new Set(discriminant) });
+          found.push({
+            owner: path,
+            ownerPackage: packageOf(path),
+            name: `${statement.name.text}['${property.name}']`,
+            words: new Set(discriminant),
+          });
         }
       }
     }
@@ -143,9 +153,17 @@ export function widenings(scan: Scan, file: ast.SourceFile, known: readonly Cont
   return found;
 }
 
-function holds(type: Type | undefined, word: string): boolean {
-  const members = type === undefined ? [] : type.isUnionType() ? (type.getTypes() ?? []) : [type];
-  return members.some((member) => member.isStringLiteralType() && member.value === word);
+/** Whether a type holds `word`: as a literal member, or inside a type argument (an array, a set). */
+function holds(checker: Checker, type: Type | undefined, word: string, depth = 0): boolean {
+  if (type === undefined || depth > 3) {
+    return false;
+  }
+  const members = type.isUnionType() ? (type.getTypes() ?? []) : [type];
+  return members.some(
+    (member) =>
+      (member.isStringLiteralType() && member.value === word) ||
+      (member.isTypeReference() && checker.getTypeArguments(member).some((argument) => holds(checker, argument, word, depth + 1))),
+  );
 }
 
 const COMPARISONS = new Set([
@@ -155,39 +173,114 @@ const COMPARISONS = new Set([
   ast.SyntaxKind.ExclamationEqualsToken,
 ]);
 
-/** The other side a literal is compared with, in `x === 'w'` or a `case 'w':` of `switch (x)`. */
-function comparedWith(literal: ast.Node): ast.Expression | undefined {
-  const parent = literal.parent;
-  if (ast.isBinaryExpression(parent) && COMPARISONS.has(parent.operatorToken.kind)) {
-    return parent.left === literal ? parent.right : parent.left;
+/** The value an expectation is about: `x` of `expect(x).matcher(...)`, through `.not` and the like. */
+function expectationSubject(call: ast.CallExpression): ast.Expression | undefined {
+  if (!ast.isPropertyAccessExpression(call.expression)) {
+    return undefined;
   }
-  if (ast.isCaseClause(parent) && ast.isCaseBlock(parent.parent) && ast.isSwitchStatement(parent.parent.parent)) {
-    return parent.parent.parent.expression;
+  let subject: ast.Expression = call.expression.expression;
+  while (ast.isPropertyAccessExpression(subject)) {
+    subject = subject.expression;
   }
-  return undefined;
+  return ast.isCallExpression(subject) && ast.isIdentifier(subject.expression) && subject.expression.text === 'expect'
+    ? subject.arguments[0]
+    : undefined;
+}
+
+/** The types at a property path below `types`: a name reads a property, `[]` reads elements. */
+function descend(checker: Checker, types: readonly Type[], path: readonly string[]): readonly Type[] {
+  let current = types;
+  for (const segment of path) {
+    current = current.flatMap((type) => (type.isUnionType() ? (type.getTypes() ?? []) : [type])).flatMap((type) => {
+      if (segment === '[]') {
+        return type.isTypeReference() ? checker.getTypeArguments(type) : [];
+      }
+      const property = checker.getPropertyOfType(type, segment);
+      const own = property === undefined ? undefined : checker.getTypeOfSymbol(property);
+      return own === undefined ? [] : [own];
+    });
+  }
+  return current;
 }
 
 /**
- * The places in a covered file where a contract's word is written as a bare string: not contextually
- * typed by a type holding that word, and not compared with a value whose type holds it.
+ * The types a literal is compared with: the other side of `x === 'w'`, the subject of a `switch`
+ * holding `case 'w':`, or the matching part of `x` in an expectation `expect(x).matcher(arg)` where
+ * the literal sits at a property path inside `arg` (`toEqual({ family: 'w' })`, `toContain('w')`).
+ */
+function comparedTypes(checker: Checker, literal: ast.Node): readonly Type[] {
+  const parent = literal.parent;
+  const typeOf = (node: ast.Node): readonly Type[] => {
+    const type = checker.getTypeAtLocation(node);
+    return type === undefined ? [] : [type];
+  };
+  if (ast.isBinaryExpression(parent) && COMPARISONS.has(parent.operatorToken.kind)) {
+    return typeOf(parent.left === literal ? parent.right : parent.left);
+  }
+  if (ast.isCaseClause(parent) && ast.isCaseBlock(parent.parent) && ast.isSwitchStatement(parent.parent.parent)) {
+    return typeOf(parent.parent.parent.expression);
+  }
+  const path: string[] = [];
+  let node: ast.Node = literal;
+  while (ast.isPropertyAssignment(node.parent) || ast.isArrayLiteralExpression(node.parent) || ast.isObjectLiteralExpression(node.parent)) {
+    if (ast.isPropertyAssignment(node.parent)) {
+      const name = nameText(node.parent.name);
+      if (name === undefined) {
+        return [];
+      }
+      path.unshift(name);
+    } else if (ast.isArrayLiteralExpression(node.parent)) {
+      path.unshift('[]');
+    }
+    node = node.parent;
+  }
+  const call = node.parent;
+  if (!ast.isCallExpression(call) || !call.arguments.some((argument) => argument === node)) {
+    return [];
+  }
+  const subject = expectationSubject(call);
+  return subject === undefined ? [] : descend(checker, typeOf(subject), path);
+}
+
+/** The packages a module imports from, by where its import specifiers resolve. */
+function reachedPackages(scan: Scan, file: ast.SourceFile): ReadonlySet<string> {
+  const found = new Set<string>([packageOf(pathOf(file))]);
+  for (const statement of file.statements) {
+    if ((ast.isImportDeclaration(statement) || ast.isExportDeclaration(statement)) && statement.moduleSpecifier !== undefined) {
+      for (const declaration of scan.checker.getSymbolAtLocation(statement.moduleSpecifier)?.declarations ?? []) {
+        if (!declaration.path.includes('/node_modules/')) {
+          found.add(packageOf(relativeTo(declaration.path)));
+        }
+      }
+    }
+  }
+  return found;
+}
+
+/**
+ * The places in a covered file where a contract's word is written as a bare string: in a module that
+ * reaches the contract's package and owns no contract holding the word, neither contextually typed
+ * by a type holding it nor compared with a value whose type holds it.
  */
 export function respellings(scan: Scan, file: ast.SourceFile, known: readonly Contract[]): readonly ContractSite[] {
   const { checker } = scan;
   const path = pathOf(file);
-  if (!RESPELLING_ROOTS.starts(path)) {
-    return [];
-  }
+  const reached = reachedPackages(scan, file);
+  const reachable = known.filter((contract) => reached.has(contract.ownerPackage));
+  const owned = known.filter((contract) => contract.owner === path);
   const found: ContractSite[] = [];
   for (const node of nodes(file)) {
     if (!(ast.isStringLiteral(node) || ast.isNoSubstitutionTemplateLiteral(node)) || inTypeOrImport(node)) {
       continue;
     }
-    const contract = known.find((candidate) => candidate.owner !== path && candidate.words.has(node.text));
-    if (contract === undefined || holds(checker.getContextualType(node), node.text)) {
-      continue;
-    }
-    const other = comparedWith(node);
-    if (other !== undefined && holds(checker.getTypeAtLocation(other), node.text)) {
+    const word = node.text;
+    const contract = reachable.find((candidate) => candidate.words.has(word));
+    if (
+      contract === undefined ||
+      owned.some((candidate) => candidate.words.has(word)) ||
+      holds(checker, checker.getContextualType(node), word) ||
+      comparedTypes(checker, node).some((type) => holds(checker, type, word))
+    ) {
       continue;
     }
     found.push({ path, contract: contract.name, form: 'respelled', code: textOfNode(node.parent) });

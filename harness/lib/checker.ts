@@ -1,24 +1,28 @@
 /**
- * The one owner of the TypeScript programs the harness's type-aware scans read.
+ * The harness's type-aware scans: programs whose checker says what each name resolves to.
  *
- * A scan asks TypeScript 7's own checker (`typescript/unstable/sync`, served by `tsgo`) what each name
- * resolves to, so an alias, a destructured binding or a property chain resolves to the declaration it
- * stands for. The repository scan covers the held production modules (not tests or specs). A planted
- * scan holds in-memory sources at paths under the repository root, served through the API's virtual
- * file system, so its imports, `lib` and `@types` resolve exactly as the repository's do.
+ * A scan opens a project on the one TypeScript 7 session of harness/lib/ts-source.ts, through a
+ * virtual project file listing the paths it covers. An alias, a destructured binding or a property
+ * chain resolves to the declaration it stands for. A planted scan mounts in-memory sources at paths
+ * under the repository root, so their imports, `lib` and `@types` resolve exactly as the repository's
+ * do. Every held module is scanned: tests, scripts and configs are held to the rules production
+ * code is.
  */
 
 import { join } from 'node:path';
 
 import * as ast from 'typescript/unstable/ast';
-import { API, type Checker, type Program, type Symbol as TsSymbol, SymbolFlags } from 'typescript/unstable/sync';
+import type { Checker, Program, Symbol as TsSymbol } from 'typescript/unstable/sync';
+import { SymbolFlags } from 'typescript/unstable/sync';
 
 import { REPO_ROOT, relative } from './paths.ts';
 import { typescriptFiles } from './scope.ts';
-import { textOf } from './source-files.ts';
+import { api, mount, nodes } from './ts-source.ts';
+
+export { nodes };
 
 /** The compiler options of a scan: the shared base's strictness, every lib a held module reads. */
-export const OPTIONS = {
+const OPTIONS = {
   target: 'es2022',
   module: 'esnext',
   moduleResolution: 'bundler',
@@ -32,25 +36,18 @@ export const OPTIONS = {
   allowImportingTsExtensions: true,
 } as const;
 
-/** The virtual project file a scan opens; it never exists on disk. */
-const CONFIG = join(REPO_ROOT, '.harness-scan', 'tsconfig.json');
-
 /**
- * A held module that ships: TypeScript, not a Vitest test, a Playwright spec, or test support under a
- * `test/`, `tests/` or `testing/` directory.
+ * A module that ships: not a Vitest test, a Playwright spec, or test support under a `test/`,
+ * `tests/` or `testing/` directory. Every rule holds both kinds; the distinction only says who
+ * counts as a reader of a production module's exports.
  */
 export function isProduction(path: string): boolean {
-  return (
-    /\.tsx?$/.test(path) &&
-    !/\.(test|spec)\.tsx?$/.test(path) &&
-    !path.endsWith('.d.ts') &&
-    !/(^|\/)(test|tests|testing)\//.test(path)
-  );
+  return !/\.(test|spec)\.tsx?$/.test(path) && !/(^|\/)(test|tests|testing)\//.test(path);
 }
 
-/** The held production modules the repository scan covers. */
-export function productionFiles(): readonly string[] {
-  return typescriptFiles().filter(isProduction);
+/** Every held TypeScript module but declaration files: what a repository scan covers. */
+export function scannedFiles(): readonly string[] {
+  return typescriptFiles().filter((path) => !path.endsWith('.d.ts'));
 }
 
 /** An open program and its checker over repository-relative paths. Close it when done. */
@@ -61,37 +58,33 @@ export interface Scan {
   readonly close: () => void;
 }
 
+let opened = 0;
+
 /**
  * A scan over `paths`. `sources` ({path: text}) overlay the real files: a planted path need not exist
- * on disk, and a real path read from `sources` sees the overlay's text.
+ * on disk, and a real path in `sources` reads as the overlay's text.
  */
 export function openScan(paths: readonly string[], sources: Readonly<Record<string, string>> = {}): Scan {
-  const files = new Map<string, string>(Object.entries(sources).map(([path, text]) => [join(REPO_ROOT, path), text]));
-  files.set(CONFIG, JSON.stringify({ compilerOptions: OPTIONS, files: paths.map((path) => join(REPO_ROOT, path)) }));
-  const api = new API({
-    cwd: REPO_ROOT,
-    fs: {
-      readFile: (name) => files.get(name),
-      fileExists: (name) => (files.has(name) ? true : undefined),
-    },
-  });
-  const project = api.updateSnapshot({ openProjects: [CONFIG] }).getProject(CONFIG);
+  opened += 1;
+  const config = join(REPO_ROOT, '.harness-scan', String(opened), 'tsconfig.json');
+  const files = new Map(Object.entries(sources).map(([path, text]) => [join(REPO_ROOT, path), text]));
+  files.set(config, JSON.stringify({ compilerOptions: OPTIONS, files: paths.map((path) => join(REPO_ROOT, path)) }));
+  const unmount = mount(files);
+  const project = api().updateSnapshot({ openProjects: [config] }).getProject(config);
+  const close = (): void => {
+    api().updateSnapshot({ closeProjects: [config] });
+    unmount();
+  };
   if (project === undefined) {
-    api.close();
+    close();
     throw new Error('the scan project did not open');
   }
-  return { program: project.program, checker: project.checker, paths, close: () => api.close() };
+  return { program: project.program, checker: project.checker, paths, close };
 }
 
-/** A scan over in-memory sources only ({path: text}, paths relative to the root). */
-export function planted(sources: Readonly<Record<string, string>>): Scan {
-  return openScan(Object.keys(sources), sources);
-}
-
-/** A scan over every held production module. */
+/** A scan over every held module. */
 export function repositoryScan(): Scan {
-  const paths = productionFiles();
-  return openScan(paths, Object.fromEntries(paths.map((path) => [path, textOf(path)])));
+  return openScan(scannedFiles());
 }
 
 /** The source file of a covered path. */
@@ -106,17 +99,6 @@ export function sourceOf(scan: Scan, path: string): ast.SourceFile {
 /** The repository-relative path of a source file. */
 export function pathOf(file: ast.SourceFile): string {
   return relative(file.fileName);
-}
-
-/** Every node of a source file, depth first. */
-export function nodes(file: ast.SourceFile): ast.Node[] {
-  const found: ast.Node[] = [];
-  const visit = (node: ast.Node): void => {
-    found.push(node);
-    node.forEachChild(visit);
-  };
-  visit(file);
-  return found;
 }
 
 /** The source text of a node, without its leading trivia. */
@@ -134,9 +116,9 @@ export function resolved(checker: Checker, symbol: TsSymbol | undefined): TsSymb
 }
 
 /**
- * The qualified name of the declaration a symbol resolves to, through its parents:
- * `Math.random`, `DateConstructor.now`, `child_process.spawn`, `NodeJS.Process.env`. A module's quotes
- * and `node:` prefix are dropped, and so is Node's `__global` wrapper.
+ * The qualified name of the declaration a symbol resolves to, through its parents: `Math.random`,
+ * `DateConstructor.now`, `child_process.spawn`, `NodeJS.Process.env`. A module's quotes and `node:`
+ * prefix are dropped, and so is Node's `__global` wrapper.
  */
 export function qualifiedName(checker: Checker, symbol: TsSymbol | undefined): string | undefined {
   const target = resolved(checker, symbol);

@@ -3,14 +3,14 @@
  *
  * The scan resolves every name through TypeScript's checker, so each call form is planted: a plain
  * call, an aliased import, a destructured binding, a `globalThis.`/`window.` chain and an element
- * access. Each rule is also planted once in every root it covers. The near misses: a type-only
- * import, a module's own `fetch` or `now`, a pure constructor call, the owner itself, a test file,
- * and a root the rule does not cover.
+ * access. Each rule is also planted once in every root it covers, and once in a test: tests are held
+ * as production code is. The near misses: a type-only import, a module's own `fetch` or `now`, a
+ * pure constructor call, the owner itself, and a root the rule does not cover.
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 
-import { isProduction, openScan, productionFiles, type Scan, sourceOf } from '../lib/checker.ts';
+import { openScan, type Scan, scannedFiles, sourceOf } from '../lib/checker.ts';
 import { Exemptions, site } from '../lib/exemptions.ts';
 import { keyOf, ownerUses, RULES, type Site, sites } from '../lib/owners.ts';
 import { tracked } from '../lib/source-files.ts';
@@ -87,7 +87,6 @@ const NEAR_MISSES: readonly (readonly [string, string])[] = [
   ['packages/foundation/src/__miss_own_fetch.ts', "export function load() {\n  const fetch = (x: string) => x;\n  return fetch('a');\n}\n"],
   ['packages/foundation/src/__miss_pure.ts', 'new Date(0).getTime();\nDate.UTC(2020, 1);\nJSON.stringify({});\n'],
   ['harness/lib/process.ts', "import { spawnSync } from 'node:child_process';\nexport const out = spawnSync('x');\nexport const env = process.env;\n"],
-  ['packages/foundation/src/__miss.test.ts', 'Math.random();\nDate.now();\n'],
   ['utils/__miss_uncovered.ts', 'Math.random();\n'],
 ];
 
@@ -105,6 +104,8 @@ for (const rule of RULES) {
     expected.push({ path, rule: rule.name });
   }
 }
+plants['packages/systems/chat/test/__in_a_test.test.ts'] = 'Math.random();\n';
+expected.push({ path: 'packages/systems/chat/test/__in_a_test.test.ts', rule: 'random' });
 for (const [path, text] of NEAR_MISSES) {
   plants[path] = text;
 }
@@ -114,7 +115,7 @@ let repoScan: Scan;
 
 beforeAll(() => {
   plantedScan = openScan(Object.keys(plants), plants);
-  repoScan = openScan(productionFiles(), {});
+  repoScan = openScan(scannedFiles());
 }, 120_000);
 
 afterAll(() => {
@@ -123,12 +124,12 @@ afterAll(() => {
 });
 
 function sitesIn(scan: Scan, paths: readonly string[]): Site[] {
-  return paths.filter(isProduction).flatMap((path) => sites(scan, sourceOf(scan, path)));
+  return paths.flatMap((path) => sites(scan, sourceOf(scan, path)));
 }
 
 describe('the repository', () => {
   test('no guarded API is used outside its owner', () => {
-    expect(EXEMPT.unexemptedBy(sitesIn(repoScan, productionFiles()), keyOf)).toEqual([]);
+    expect(EXEMPT.unexemptedBy(sitesIn(repoScan, scannedFiles()), keyOf)).toEqual([]);
   });
 
   test.each(RULES.flatMap((rule) => rule.scopes.flatMap((scope) => (scope.owner === null ? [] : [[rule.name, scope.owner] as const]))))(
@@ -143,7 +144,7 @@ describe('the repository', () => {
 
 describe('the scan', () => {
   test('sees each planted call form and each planted root', () => {
-    const planted = Object.keys(plants).filter((path) => path.includes('__form_') || path.includes('__root_'));
+    const planted = Object.keys(plants).filter((path) => /__(form|root|in_a_test)/.test(path));
     const found = sitesIn(plantedScan, planted).map(keyOf).toSorted();
     expect(found).toEqual(expected.map(keyOf).toSorted());
   });

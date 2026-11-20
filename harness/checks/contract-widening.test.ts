@@ -9,7 +9,7 @@
 
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 
-import { openScan, productionFiles, type Scan, sourceOf } from '../lib/checker.ts';
+import { openScan, type Scan, scannedFiles, sourceOf } from '../lib/checker.ts';
 import { type Contract, contracts, type ContractSite, respellings, widenings } from '../lib/contracts.ts';
 import { Accepted, CountedExemptions, site } from '../lib/exemptions.ts';
 
@@ -68,7 +68,7 @@ let planted: readonly Contract[];
 
 beforeAll(() => {
   plantedScan = openScan(Object.keys(plants), plants);
-  repoScan = openScan(productionFiles(), {});
+  repoScan = openScan(scannedFiles());
   planted = contracts(plantedScan, [OWNER]);
 }, 120_000);
 
@@ -84,13 +84,13 @@ function lost(scan: Scan, known: readonly Contract[], path: string): ContractSit
 
 describe('the repository', () => {
   test('the derivation sees the algebra', () => {
-    const names = contracts(repoScan, productionFiles()).map((contract) => contract.name);
+    const names = contracts(repoScan, scannedFiles()).map((contract) => contract.name);
     expect([...ALGEBRA].filter((name) => !names.includes(name))).toEqual([]);
   });
 
   test('no contract is widened or respelled', () => {
-    const known = contracts(repoScan, productionFiles());
-    const found = productionFiles().flatMap((path) => lost(repoScan, known, path));
+    const known = contracts(repoScan, scannedFiles());
+    const found = scannedFiles().flatMap((path) => lost(repoScan, known, path));
     expect(DEBT.mismatches(found.map((entry) => site(entry.path, `${entry.form} ${entry.contract}`)))).toEqual([]);
   });
 });

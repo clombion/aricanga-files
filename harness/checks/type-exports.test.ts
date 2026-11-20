@@ -8,10 +8,9 @@
 
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 
-import { openScan, type Scan } from '../lib/checker.ts';
+import { openScan, type Scan, scannedFiles } from '../lib/checker.ts';
 import { Exemptions, site } from '../lib/exemptions.ts';
-import { typescriptFiles } from '../lib/scope.ts';
-import { isReader, unread } from '../lib/type-exports.ts';
+import { unread } from '../lib/type-exports.ts';
 
 export const HARNESS_ID = 'type-exports';
 
@@ -86,7 +85,7 @@ let repoScan: Scan;
 
 beforeAll(() => {
   plantedScan = openScan(Object.keys(PLANTS), PLANTS);
-  repoScan = openScan(typescriptFiles().filter(isReader), {});
+  repoScan = openScan(scannedFiles());
 }, 120_000);
 
 afterAll(() => {

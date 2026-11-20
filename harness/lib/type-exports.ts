@@ -1,8 +1,9 @@
 /**
  * Exported types and their readers: an exported type a module declares is read when another module
  * names it outside an import or export declaration (a re-export passes a name on; it is not a read).
- * The readers of a production module's types are the other production modules and the harness's
- * checks, which ship the harness library's API; a test of the rebuild reading a type is not a reader.
+ * A production module's types are read by other production modules and by the harness's checks,
+ * which ship the harness library's API: a type only a test names is exported for the test alone. A
+ * test-support module's types are read by any other module.
  */
 
 import * as ast from 'typescript/unstable/ast';
@@ -12,11 +13,11 @@ import { isProduction, nodes, resolved, type Scan, sourceOf } from './checker.ts
 import { Prefixes } from './exemptions.ts';
 
 /** Modules that read the harness library's types without being production modules themselves. */
-export const READER_ROOTS = new Prefixes(['harness/checks/']);
+const CHECK_ROOTS = new Prefixes(['harness/checks/']);
 
-/** Whether a covered module reads exported types: a production module or a harness check. */
-export function isReader(path: string): boolean {
-  return isProduction(path) || READER_ROOTS.starts(path);
+/** Whether `reader` counts as a reader of a type `declarer` exports. */
+export function reads(reader: string, declarer: string): boolean {
+  return reader !== declarer && (!isProduction(declarer) || isProduction(reader) || CHECK_ROOTS.starts(reader));
 }
 
 /** An exported type and whether its doc comment carries `@public`. */
@@ -45,7 +46,7 @@ function inImportOrExport(node: ast.Node): boolean {
 /** The exported types of the covered production modules, by symbol id. */
 export function exportedTypes(scan: Scan): ReadonlyMap<number, ExportedType> {
   const found = new Map<number, ExportedType>();
-  for (const path of scan.paths.filter(isProduction)) {
+  for (const path of scan.paths) {
     for (const statement of sourceOf(scan, path).statements) {
       if ((ast.isTypeAliasDeclaration(statement) || ast.isInterfaceDeclaration(statement)) && exported(statement)) {
         const symbol = scan.checker.getSymbolAtLocation(statement.name);
@@ -64,7 +65,7 @@ export function readers(scan: Scan): ReadonlyMap<number, ReadonlySet<string>> {
   const { checker } = scan;
   const found = new Map<number, Set<string>>();
   const aliases = new Map<number, TsSymbol | undefined>();
-  for (const path of scan.paths.filter(isReader)) {
+  for (const path of scan.paths) {
     const names = nodes(sourceOf(scan, path)).filter(
       (node): node is ast.Identifier => ast.isIdentifier(node) && !inImportOrExport(node),
     );
@@ -91,6 +92,6 @@ export function readers(scan: Scan): ReadonlyMap<number, ReadonlySet<string>> {
 export function unread(scan: Scan): readonly ExportedType[] {
   const read = readers(scan);
   return [...exportedTypes(scan)]
-    .filter(([id, type]) => !type.isPublic && ![...(read.get(id) ?? [])].some((path) => path !== type.path))
+    .filter(([id, type]) => !type.isPublic && ![...(read.get(id) ?? [])].some((path) => reads(path, type.path)))
     .map(([, type]) => type);
 }
