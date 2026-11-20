@@ -37,7 +37,7 @@ export interface Rule {
 }
 
 /** The options schema every path-scoped rule accepts: globs of the files it does not hold. */
-export const IGNORE_SCHEMA: readonly unknown[] = [
+const IGNORE_SCHEMA: readonly unknown[] = [
   {
     type: 'object',
     properties: { ignore: { type: 'array', items: { type: 'string' } } },

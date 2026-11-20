@@ -15,5 +15,6 @@ export {
   fixtureSystem,
   fixtureSystemErased,
   FIXTURE_TAG,
+  gatedSystem,
 } from './fixture-system';
 export type { FixtureState, FixtureCommand } from './fixture-system';
