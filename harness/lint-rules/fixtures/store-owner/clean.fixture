@@ -1,0 +1,4 @@
+// path: packages/view/src/snapshot-adapter.ts
+import { createStore } from 'solid-js';
+
+export const thread = (): ReturnType<typeof createStore<{ count: number }>> => createStore({ count: 0 });

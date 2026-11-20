@@ -1,0 +1,16 @@
+// path: packages/systems/chat/src/view/labels-clean.tsx
+export const Named = () => (
+  <div>
+    <label for="name">Name</label>
+    <input id="name" />
+  </div>
+);
+
+export const Wrapped = () => (
+  <label>
+    Mail
+    <span>
+      <input id="mail" />
+    </span>
+  </label>
+);

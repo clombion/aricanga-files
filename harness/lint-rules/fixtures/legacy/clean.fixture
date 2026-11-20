@@ -1,0 +1,4 @@
+// path: packages/systems/chat/src/view/legacy-clean.tsx
+export function Line(props: { vm: { text: string } }) {
+  return <p>{props.vm.text}</p>;
+}

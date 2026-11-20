@@ -1,0 +1,7 @@
+// path: packages/systems/chat/src/view/labels-htmlfor.tsx
+export const Field = () => (
+  <div>
+    <label htmlFor="name">Name</label>
+    <input id="name" />
+  </div>
+);

@@ -1,0 +1,7 @@
+// path: packages/systems/chat/src/view/labels-fire.tsx
+export const Field = () => (
+  <div>
+    <label>Name</label>
+    <input id="name" />
+  </div>
+);

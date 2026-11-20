@@ -1,0 +1,2 @@
+// path: packages/systems/chat/src/view/autofocus-clean.tsx
+export const Search = () => <input autocomplete="off" />;

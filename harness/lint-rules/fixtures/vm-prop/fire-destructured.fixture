@@ -1,0 +1,2 @@
+// path: packages/systems/chat/src/view/vm-prop-destructured.tsx
+export const Bubble = ({ vm }: { vm: { text: string } }) => <p>{vm.text}</p>;

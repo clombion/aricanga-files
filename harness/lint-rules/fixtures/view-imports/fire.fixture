@@ -1,0 +1,4 @@
+// path: packages/systems/chat/src/view/view-imports-fire.ts
+import type { Effect } from '@narratives/foundation';
+
+export type Shown = readonly Effect[];
