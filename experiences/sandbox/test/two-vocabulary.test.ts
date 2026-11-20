@@ -24,11 +24,14 @@ interface RecordingHost {
 }
 
 /**
- * A host over the platform's own ports that records every effect it presents.
+ * A deterministic host that records every effect it presents: a timer it is handed is held and
+ * never fires, so a run is the same on every machine, and a save is kept in memory.
  * @returns {RecordingHost} The host and what it presented.
  */
 function recordingHost(): RecordingHost {
   const presented: string[] = [];
+  const timers = new Set<() => void>();
+  const saves = new Map<string, string>();
   const host: Host = {
     // These stories fetch nothing: a data request fails the test, naming the request.
     fetchData: (request) => {
@@ -38,17 +41,17 @@ function recordingHost(): RecordingHost {
       presented.push(effect.kind);
     },
     scheduler: {
-      schedule: (delayMs, fire) => {
-        const timer = setTimeout(fire, delayMs);
+      schedule: (_delayMs, fire) => {
+        timers.add(fire);
         return (): void => {
-          clearTimeout(timer);
+          timers.delete(fire);
         };
       },
     },
     store: {
-      load: () => sessionStorage.getItem(SAVE_KEY) ?? undefined,
+      load: () => saves.get(SAVE_KEY),
       save: (data) => {
-        sessionStorage.setItem(SAVE_KEY, data);
+        saves.set(SAVE_KEY, data);
       },
     },
   };

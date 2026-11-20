@@ -14,3 +14,4 @@ export type { FixtureInput, FixtureOptions, FixtureRun } from './harness';
 export { checkDeterministic, checkInvariant, runStream } from './property';
 export type { Predicate, PropertyReport, StreamOptions, Violation } from './property';
 export { canonical } from './serialize';
+export { throughSave } from './saved';

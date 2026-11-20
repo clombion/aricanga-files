@@ -1,24 +1,13 @@
 import { describe, expect, test } from 'vitest';
 import { cardsSystem } from '#src/system';
 import { parseTag } from '@narratives/foundation';
+import { throughSave } from '@narratives/foundation/testing';
 
 /** The seed a deck starts from. */
 const SEED = 0;
 
 /** The courage a played card adds. */
 const COURAGE = 2;
-
-/**
- * A value as it comes back from saved text: the JSON round trip a save and a load make.
- *
- * @param {unknown} value - The value saved.
- * @returns {unknown} The value read back, untyped.
- */
-function throughText(value: unknown): unknown {
-  const text = JSON.stringify(value);
-  const read: unknown = JSON.parse(text);
-  return read;
-}
 
 describe('the cards parsers', () => {
   test('refuse every command: the cards system takes none', () => {
@@ -39,7 +28,7 @@ describe('the cards parsers', () => {
       { nextId: () => 'id-0' },
     ).state;
     expect(played.stats).toStrictEqual({ courage: COURAGE });
-    expect(cardsSystem.parseState(throughText(played))).toStrictEqual(played);
+    expect(cardsSystem.parseState(throughSave(played))).toStrictEqual(played);
   });
 
   test('refuse a deck whose stat is not a number, naming the stat', () => {

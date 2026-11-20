@@ -5,6 +5,7 @@ import type { Host } from '#src/host/runtime';
 import { InkRuntime } from '#src/ink/ink-runtime';
 import { Runtime } from '#src/host/runtime';
 import { compileInk } from '#src/testing/harness';
+import { throughSave } from '#src/testing/saved';
 
 /** The seed a fixture state starts from. */
 const SEED = 0;
@@ -20,18 +21,6 @@ const EVERY_COMMAND: readonly FixtureCommand[] = [
   { kind: 'persist', payload: undefined },
   { kind: 'choose', payload: { index: SECOND_CHOICE } },
 ];
-
-/**
- * A value as it comes back from saved text: the JSON round trip a save and a load make.
- *
- * @param {unknown} value - The value saved.
- * @returns {unknown} The value read back, untyped.
- */
-function throughText(value: unknown): unknown {
-  const text = JSON.stringify(value);
-  const read: unknown = JSON.parse(text);
-  return read;
-}
 
 /**
  * A saved state with one more field than its system holds, as a save from an older shape would have.
@@ -101,7 +90,7 @@ describe('the runtime boundary', () => {
     live.send({ command: { kind: 'present', payload: undefined }, source: 'player' }, 'fixture');
     const saved = live.snapshot();
     const restored = runtime();
-    restored.restore({ ...saved, state: { fixture: throughText(withRetiredField(saved.state['fixture'])) } });
+    restored.restore({ ...saved, state: { fixture: throughSave(withRetiredField(saved.state['fixture'])) } });
     expect(restored.snapshot().state).toStrictEqual(saved.state);
   });
 });
@@ -109,7 +98,7 @@ describe('the runtime boundary', () => {
 describe('the fixture system’s parsers', () => {
   test('read every command back from saved text as the command it is', () => {
     expect.hasAssertions();
-    expect(EVERY_COMMAND.map((command) => fixtureSystem.parseCommand(throughText(command)))).toStrictEqual(EVERY_COMMAND);
+    expect(EVERY_COMMAND.map((command) => fixtureSystem.parseCommand(throughSave(command)))).toStrictEqual(EVERY_COMMAND);
   });
 
   test('refuse a choose whose index is not a number', () => {
@@ -120,6 +109,6 @@ describe('the fixture system’s parsers', () => {
   test('read a state back from saved text as the state it is', () => {
     expect.hasAssertions();
     const state = { ...fixtureSystem.init(SEED), lines: ['Start'], saved: true };
-    expect(fixtureSystem.parseState(throughText(state))).toStrictEqual(state);
+    expect(fixtureSystem.parseState(throughSave(state))).toStrictEqual(state);
   });
 });

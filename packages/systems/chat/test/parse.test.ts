@@ -2,6 +2,7 @@ import { chatSystem, openedChat } from '#src/system';
 import { close, open, run, story } from '#test/support';
 import { describe, expect, test } from 'vitest';
 import type { ChatCommand } from '#src/system';
+import { throughSave } from '@narratives/foundation/testing';
 
 /** The seed a chat slice starts from. */
 const SEED = 0;
@@ -11,18 +12,6 @@ const EVERY_COMMAND: readonly ChatCommand[] = [
   { kind: 'open', payload: { chatId: 'pat' } },
   { kind: 'close', payload: undefined },
 ];
-
-/**
- * A value as it comes back from saved text: the JSON round trip a save and a load make.
- *
- * @param {unknown} value - The value saved.
- * @returns {unknown} The value read back, untyped.
- */
-function throughText(value: unknown): unknown {
-  const text = JSON.stringify(value);
-  const read: unknown = JSON.parse(text);
-  return read;
-}
 
 /**
  * The field names of a value read back untyped, in sorted order.
@@ -54,7 +43,7 @@ async function playedState(): Promise<unknown> {
 describe('the chat command parser', () => {
   test('reads every command back from saved text as the command it is', () => {
     expect.hasAssertions();
-    expect(EVERY_COMMAND.map((command) => chatSystem.parseCommand(throughText(command)))).toStrictEqual(EVERY_COMMAND);
+    expect(EVERY_COMMAND.map((command) => chatSystem.parseCommand(throughSave(command)))).toStrictEqual(EVERY_COMMAND);
   });
 
   test('refuses a command chat does not take, an open with no chat id, and a close that carries a payload', () => {
@@ -88,7 +77,7 @@ describe('the chat state parser', () => {
       'messageHistory',
       'notifiedChatIds',
     ]);
-    expect(chatSystem.parseState(throughText(state))).toStrictEqual(state);
+    expect(chatSystem.parseState(throughSave(state))).toStrictEqual(state);
   });
 
   test('refuses a slice with a field of the wrong shape, naming the field', () => {
