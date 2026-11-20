@@ -24,7 +24,7 @@ import { closeSession, parse } from '#lib/ts-source.ts';
 import { describe, expect, test } from 'vitest';
 import type { Census } from './suppressions.census.ts';
 import { heldFiles } from '#lib/scope.ts';
-import { textOf } from '#lib/source-files.ts';
+import { textsOf } from '#lib/source-files.ts';
 
 const HARNESS_ID = 'suppressions';
 
@@ -54,25 +54,25 @@ const ONE_STATEMENT = 1;
 /**
  * The census over every held file the suppressions can sit in.
  *
- * @returns {Census} The census over every held file the suppressions can sit in.
+ * @returns {Promise<Census>} The census over every held file the suppressions can sit in.
  */
-function repoCensus(): Census {
-  const all = heldFiles()
-    .filter((path) => SCANNED.has(suffix(path)))
-    .map((path) => census(path, textOf(path)));
+async function repoCensus(): Promise<Census> {
+  const files = await heldFiles();
+  const texts = await textsOf(files.filter((path) => SCANNED.has(suffix(path))));
+  const all = texts.map(([path, text]: readonly [string, string]) => census(path, text));
   return { problems: all.flatMap((one) => one.problems), sites: all.flatMap((one) => one.sites) };
 }
 
 describe('the repository', () => {
-  test('every suppression names its rule, a tool that checks the file, and its reason', () => {
+  test('every suppression names its rule, a tool that checks the file, and its reason', async () => {
     expect.hasAssertions();
-    const { problems } = repoCensus();
+    const { problems } = await repoCensus();
     expect(ADOPTING.unexemptedBy(problems, (found) => site(found.path, found.problem))).toStrictEqual([]);
   });
 
-  test('every suppression is counted with its reason', () => {
+  test('every suppression is counted with its reason', async () => {
     expect.hasAssertions();
-    const { sites } = repoCensus();
+    const { sites } = await repoCensus();
     expect(SUPPRESSIONS.mismatches(sites)).toStrictEqual([]);
   });
 });

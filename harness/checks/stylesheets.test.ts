@@ -38,10 +38,11 @@ function isEnabled(setting: unknown): boolean {
 /**
  * The rules `.stylelintrc.json` turns on itself (the standard config's own are its plants' concern).
  *
- * @returns {readonly string[]} The rules `.stylelintrc.json` turns on itself (the standard config's own are its plants' concern).
+ * @returns {Promise<readonly string[]>} The rules `.stylelintrc.json` turns on itself (the standard config's own are its plants' concern).
  */
-function configuredRules(): readonly string[] {
-  const config = object(json(textOf('.stylelintrc.json')), '.stylelintrc.json');
+async function configuredRules(): Promise<readonly string[]> {
+  const text = await textOf('.stylelintrc.json');
+  const config = object(json(text), '.stylelintrc.json');
   const rules = object(config['rules'], 'rules');
   return Object.keys(rules).filter((rule) => isEnabled(rules[rule]));
 }
@@ -75,17 +76,19 @@ async function textsOf(found: Promise<readonly { readonly text: string }[]>): Pr
 describe('the repository', () => {
   test('every sheet passes the lint', async () => {
     expect.hasAssertions();
-    const findings = await Promise.all(sheets().map(async (sheet) => {
-    const found = await lintSheet(sheet);
-    return found;
-  }));
+    const all = await sheets();
+    const findings = await Promise.all(
+      all.map(async (sheet) => {
+        const found = await lintSheet(sheet);
+        return found;
+      }),
+    );
     expect(findings.flat()).toStrictEqual([]);
   });
 
   test('every custom property is defined and read, every class is used, no selector repeats', async () => {
     expect.hasAssertions();
-    const all = sheets();
-    const modules = readers();
+    const [all, modules] = await Promise.all([sheets(), readers()]);
     const properties = await customPropertyProblems(all, modules);
     const classes = await unusedClasses(all, modules);
     const duplicates = await Promise.all(all.map(async (sheet) => {
@@ -134,9 +137,10 @@ const PLANTS: readonly (readonly [string, string, string])[] = [
 ];
 
 describe('the lint, on planted sheets', () => {
-  test('every rule the configuration turns on has a plant', () => {
+  test('every rule the configuration turns on has a plant', async () => {
     expect.hasAssertions();
-    expect([...new Set(PLANTS.map(([rule]) => rule))].toSorted()).toStrictEqual(configuredRules().toSorted());
+    const configured = await configuredRules();
+    expect([...new Set(PLANTS.map(([rule]) => rule))].toSorted()).toStrictEqual(configured.toSorted());
   });
 
   test.each(PLANTS)('%s fails its plant and passes its near miss', async (rule, failing, passing) => {

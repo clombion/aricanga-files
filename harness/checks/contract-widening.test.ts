@@ -82,16 +82,18 @@ function lost(scanOf: () => Scan, known: readonly Contract[], path: string): Con
 }
 
 describe('the repository', () => {
-  test('the derivation sees the algebra', () => {
+  test('the derivation sees the algebra', async () => {
     expect.hasAssertions();
-    const names = new Set(contracts(repoScan(), scannedFiles()).map((contract) => contract.name));
+    const files = await scannedFiles();
+    const names = new Set(contracts(repoScan(), files).map((contract) => contract.name));
     expect([...ALGEBRA].filter((name) => !names.has(name))).toStrictEqual([]);
   });
 
-  test('no contract is widened or respelled', () => {
+  test('no contract is widened or respelled', async () => {
     expect.hasAssertions();
-    const known = contracts(repoScan(), scannedFiles());
-    const found = scannedFiles().flatMap((path) => lost(repoScan, known, path));
+    const files = await scannedFiles();
+    const known = contracts(repoScan(), files);
+    const found = files.flatMap((path) => lost(repoScan, known, path));
     expect(found).toStrictEqual([]);
   });
 });

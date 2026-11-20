@@ -1,8 +1,9 @@
 /** Runs jscpd once, with every flag stated here, and reads its JSON report. */
 
-import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import type { Outcome } from './process.ts';
 import { fromRoot } from './paths.ts';
+import { isFile } from './source-files.ts';
 import { json } from './config.ts';
 import { noReport } from './dupes-report.ts';
 import path from 'node:path';
@@ -17,7 +18,7 @@ interface Target {
 }
 
 /** The runner jscpd is started through; the scan takes it so a check can plant an outcome. */
-type Runner = (argv: readonly string[], cwd: string) => Outcome;
+type Runner = (argv: readonly string[], cwd: string) => Promise<Outcome>;
 
 const MAX_SIZE_MB = 100;
 const TIMEOUT_MS = 300_000;
@@ -60,15 +61,19 @@ function command(flags: readonly string[], roots: readonly string[], output: str
   return [fromRoot('node_modules', '.bin', 'jscpd'), ...flags, ...COMMON, '--output', output, ...roots];
 }
 
+/** The report jscpd writes into its output folder. */
+const REPORT = 'jscpd-report.json';
+
 /**
  * Start jscpd through the repository's process owner.
  *
  * @param {readonly string[]} argv - The command and its arguments.
  * @param {string} cwd - Where it runs.
- * @returns {Outcome} How it ended.
+ * @returns {Promise<Outcome>} How it ended.
  */
-function defaultRunner(argv: readonly string[], cwd: string): Outcome {
-  return run(argv, { cwd, timeoutMs: TIMEOUT_MS });
+async function defaultRunner(argv: readonly string[], cwd: string): Promise<Outcome> {
+  const outcome = await run(argv, { cwd, timeoutMs: TIMEOUT_MS });
+  return outcome;
 }
 
 /**
@@ -77,17 +82,22 @@ function defaultRunner(argv: readonly string[], cwd: string): Outcome {
  * @param {readonly string[]} flags - The run's flags.
  * @param {Readonly<Pick<Target, 'root' | 'roots'>>} target - The checkout and the roots jscpd reads.
  * @param {Runner} runner - How jscpd is started.
- * @returns {unknown} The parsed report, or the reason it gave none.
+ * @returns {Promise<unknown>} The parsed report, or the reason it gave none.
  */
-function reportOf(flags: readonly string[], target: Readonly<Pick<Target, 'root' | 'roots'>>, runner: Runner = defaultRunner): unknown {
-  const folder = mkdtempSync(path.join(tmpdir(), 'jscpd-'));
+async function reportOf(
+  flags: readonly string[],
+  target: Readonly<Pick<Target, 'root' | 'roots'>>,
+  runner: Runner = defaultRunner,
+): Promise<unknown> {
+  const folder = await mkdtemp(path.join(tmpdir(), 'jscpd-'));
   try {
-    const outcome = runner(command(flags, target.roots, folder), target.root);
-    const report = path.join(folder, 'jscpd-report.json');
-    const problem = noReport(outcome, existsSync(report));
-    return problem ?? json(readFileSync(report, 'utf8'));
+    const outcome = await runner(command(flags, target.roots, folder), target.root);
+    const report = path.join(folder, REPORT);
+    const written = await isFile(folder, REPORT);
+    const problem = noReport(outcome, written);
+    return problem ?? json(await readFile(report, 'utf8'));
   } finally {
-    rmSync(folder, { force: true, recursive: true });
+    await rm(folder, { force: true, recursive: true });
   }
 }
 

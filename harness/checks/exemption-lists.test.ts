@@ -19,7 +19,7 @@ import { UNCONSULTED, UNDECLARED, findings } from './exemption-lists.fence.ts';
 import { describe, expect, test } from 'vitest';
 import type { Finding } from './exemption-lists.fence.ts';
 import { heldFiles } from '#lib/scope.ts';
-import { textOf } from '#lib/source-files.ts';
+import { textsOf } from '#lib/source-files.ts';
 
 const HARNESS_ID = 'exemption-lists';
 
@@ -73,25 +73,26 @@ function keyOf(finding: Finding): string {
 /**
  * The harness modules the fence holds, by path.
  *
- * @returns {Readonly<Record<string, string>>} Each held module's source, by path.
+ * @returns {Promise<Readonly<Record<string, string>>>} Each held module's source, by path.
  */
-function harnessModules(): Readonly<Record<string, string>> {
-  const held = heldFiles('.ts').filter((path) => path.startsWith('harness/checks/') || path.startsWith('harness/lib/'));
-  return Object.fromEntries(held.map((path) => [path, textOf(path)]));
+async function harnessModules(): Promise<Readonly<Record<string, string>>> {
+  const files = await heldFiles('.ts');
+  const texts = await textsOf(files.filter((path) => path.startsWith('harness/checks/') || path.startsWith('harness/lib/')));
+  return Object.fromEntries(texts);
 }
 
 describe('the repository', () => {
-  test('every consulted list is declared and every declaration is consulted', () => {
+  test('every consulted list is declared and every declaration is consulted', async () => {
     expect.hasAssertions();
-    const found = findings(harnessModules());
+    const found = await findings(await harnessModules());
     expect(ADOPTING.unexemptedBy(found, keyOf)).toStrictEqual([]);
   });
 });
 
 describe('the fence', () => {
-  test.each(CONSULTED_LITERALS)('sees %s', (_name, source) => {
+  test.each(CONSULTED_LITERALS)('sees %s', async (_name, source) => {
     expect.hasAssertions();
-    expect(findings({ [PLANT]: source })).toStrictEqual([{ name: 'NAMES', path: PLANT, problem: UNDECLARED }]);
+    await expect(findings({ [PLANT]: source })).resolves.toStrictEqual([{ name: 'NAMES', path: PLANT, problem: UNDECLARED }]);
   });
 
   test.each([
@@ -105,9 +106,9 @@ describe('the fence', () => {
     "const NAMES = ['a'];\nfunction helper(values: readonly string[]) { return values.length; }\nexport const n = helper(NAMES);",
     "const cache = new Map<string, number>();\nexport const hit = cache.get('a');",
     "const FIRST = ['a', 'b'];\nexport const first = FIRST[0];",
-  ])('lets a declared, iterated or run-time list through: %j', (source) => {
+  ])('lets a declared, iterated or run-time list through: %j', async (source) => {
     expect.hasAssertions();
-    expect(findings({ [PLANT]: source })).toStrictEqual([]);
+    await expect(findings({ [PLANT]: source })).resolves.toStrictEqual([]);
   });
 
   test.each([
@@ -116,19 +117,19 @@ describe('the fence', () => {
     "const NAME = new CountedExemptions({ a: { count: 1, reason: 'why' } });",
     "const NAME = new Accepted(['a']);",
     "const NAME = new Prefixes(['a']);",
-  ])('sees a declaration nothing consults: %j', (source) => {
+  ])('sees a declaration nothing consults: %j', async (source) => {
     expect.hasAssertions();
-    expect(findings({ [PLANT]: source })).toStrictEqual([{ name: 'NAME', path: PLANT, problem: UNCONSULTED }]);
+    await expect(findings({ [PLANT]: source })).resolves.toStrictEqual([{ name: 'NAME', path: PLANT, problem: UNCONSULTED }]);
   });
 
   test.each([
     ['a relative specifier', '../lib/planted.ts'],
     ['a subpath specifier', '#lib/planted.ts'],
-  ])('a declaration consulted by a module importing it through %s is live', (_name, specifier) => {
+  ])('a declaration consulted by a module importing it through %s is live', async (_name, specifier) => {
     expect.hasAssertions();
     const owner = "export const EXEMPT = new Exemptions({ a: 'why' });\nexport const NAMES = new Accepted(['a']);\n";
     const user = `import { EXEMPT, NAMES } from '${specifier}';\nexport function check() { EXEMPT.unexempted(['a']); return NAMES.has('a'); }\n`;
-    expect(findings({ [PLANT]: user, 'harness/lib/planted.ts': owner })).toStrictEqual([]);
+    await expect(findings({ [PLANT]: user, 'harness/lib/planted.ts': owner })).resolves.toStrictEqual([]);
   });
 
   test('a stale adopting entry fails', () => {

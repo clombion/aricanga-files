@@ -14,7 +14,7 @@ import { DOC_ROOTS, held } from './scope.ts';
 import type { Prose, Span } from './markdown-text.ts';
 import { comments, parse } from './ts-source.ts';
 import { spansOf, withoutSpans } from './markdown-text.ts';
-import { textOf, tracked } from './source-files.ts';
+import { textOf, textsOf, tracked } from './source-files.ts';
 import { Doc } from './markdown-doc.ts';
 import { Prefixes } from './exemptions.ts';
 
@@ -46,10 +46,11 @@ const TEXT_START = 0;
  * A listed Markdown file, parsed.
  *
  * @param {string} path - The file's repository-relative path.
- * @returns {Doc} The parsed file.
+ * @returns {Promise<Doc>} The parsed file.
  */
-function markdown(path: string): Doc {
-  return new Doc(path, textOf(path));
+async function markdown(path: string): Promise<Doc> {
+  const text = await textOf(path);
+  return new Doc(path, text);
 }
 
 /**
@@ -65,10 +66,22 @@ function isCurrentMarkdown(path: string): boolean {
 /**
  * The listed Markdown files of current text.
  *
- * @returns {readonly string[]} The files.
+ * @returns {Promise<readonly string[]>} The files.
  */
-function markdownPaths(): readonly string[] {
-  return tracked().filter((path) => isCurrentMarkdown(path));
+async function markdownPaths(): Promise<readonly string[]> {
+  const listed = await tracked();
+  return listed.filter((path) => isCurrentMarkdown(path));
+}
+
+/**
+ * Every listed Markdown file of current text, parsed.
+ *
+ * @returns {Promise<readonly Doc[]>} The parsed files.
+ */
+async function markdownDocs(): Promise<readonly Doc[]> {
+  const paths = await markdownPaths();
+  const texts = await textsOf(paths);
+  return texts.map(([path, body]: readonly [string, string]) => new Doc(path, body));
 }
 
 /**
@@ -156,22 +169,25 @@ function codeComments(path: string, text: string): readonly CommentLine[] {
 /**
  * The held code files whose comments are current text.
  *
- * @returns {readonly string[]} The files.
+ * @returns {Promise<readonly (readonly [string, string])[]>} Each file with its text.
  */
-function codePaths(): readonly string[] {
-  return tracked().filter((path) => held(path) && (SCRIPT.ends(path) || STYLE.ends(path) || CONFIG.ends(path)));
+async function codeTexts(): Promise<readonly (readonly [string, string])[]> {
+  const listed = await tracked();
+  const texts = await textsOf(listed.filter((path) => held(path) && (SCRIPT.ends(path) || STYLE.ends(path) || CONFIG.ends(path))));
+  return texts;
 }
 
 /**
  * Every line of current text, with code spans removed.
  *
- * @returns {readonly Prose[]} The lines.
+ * @returns {Promise<readonly Prose[]>} The lines.
  */
-function currentText(): readonly Prose[] {
+async function currentText(): Promise<readonly Prose[]> {
+  const [docs, code] = await Promise.all([markdownDocs(), codeTexts()]);
   return [
-    ...markdownPaths().flatMap((path) => markdown(path).prose()),
-    ...codePaths().flatMap((path) =>
-      codeComments(path, textOf(path)).map(([line, text]: CommentLine) => ({ line, path, text: withoutSpans(text) })),
+    ...docs.flatMap((doc) => doc.prose()),
+    ...code.flatMap(([path, body]: readonly [string, string]) =>
+      codeComments(path, body).map(([line, text]: CommentLine) => ({ line, path, text: withoutSpans(text) })),
     ),
   ];
 }
@@ -179,13 +195,14 @@ function currentText(): readonly Prose[] {
 /**
  * Every inline code span of current text.
  *
- * @returns {readonly Span[]} The spans.
+ * @returns {Promise<readonly Span[]>} The spans.
  */
-function currentSpans(): readonly Span[] {
+async function currentSpans(): Promise<readonly Span[]> {
+  const [docs, code] = await Promise.all([markdownDocs(), codeTexts()]);
   return [
-    ...markdownPaths().flatMap((path) => markdown(path).spans()),
-    ...codePaths().flatMap((path) =>
-      codeComments(path, textOf(path)).flatMap(([line, text]: CommentLine) => spansOf(text).map((span) => ({ line, path, text: span }))),
+    ...docs.flatMap((doc) => doc.spans()),
+    ...code.flatMap(([path, body]: readonly [string, string]) =>
+      codeComments(path, body).flatMap(([line, text]: CommentLine) => spansOf(text).map((span) => ({ line, path, text: span }))),
     ),
   ];
 }
@@ -193,4 +210,4 @@ function currentSpans(): readonly Span[] {
 export { BlockError } from './block-error.ts';
 export { Doc } from './markdown-doc.ts';
 export type { Block, Link, Prose, Span } from './markdown-text.ts';
-export { currentSpans, currentText, markdown, markdownPaths };
+export { currentSpans, currentText, markdown, markdownDocs, markdownPaths };

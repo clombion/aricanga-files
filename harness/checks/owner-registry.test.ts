@@ -144,16 +144,16 @@ const OWNED = RULES.flatMap((rule) =>
 );
 
 describe('the repository', () => {
-  test('no guarded API is used outside its owner', () => {
+  test('no guarded API is used outside its owner', async () => {
     expect.hasAssertions();
-    expect(sitesIn(repoScan, scannedFiles())).toStrictEqual([]);
+    expect(sitesIn(repoScan, await scannedFiles())).toStrictEqual([]);
   });
 
-  test.each(OWNED)('the %s owner %s exists and uses its API', (_name, owner, rule) => {
+  test.each(OWNED)('the %s owner %s exists and uses its API', async (_name, owner, rule) => {
     expect.hasAssertions();
     const scan = repoScan();
     const file = sourceOf(scan, owner);
-    expect(tracked()).toContain(owner);
+    await expect(tracked()).resolves.toContain(owner);
     expect(ownerUses(scan, file, rule)).toBe(true);
   });
 });

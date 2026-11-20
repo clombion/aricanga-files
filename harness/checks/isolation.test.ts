@@ -40,9 +40,9 @@ test('the test after a leak starts clean', () => {
 `;
 
 describe('the guards, through a planted Vitest run', () => {
-  test('fail a pending timeout and interval, and pass a fired, a cleared and a clean test', () => {
+  test('fail a pending timeout and interval, and pass a fired, a cleared and a clean test', async () => {
     expect.hasAssertions();
-    const outcomes = runPlanted({ 'isolation.test.ts': PLANTED });
+    const outcomes = await runPlanted({ 'isolation.test.ts': PLANTED });
     expect([...outcomes].map(([name, { status }]: readonly [string, Readonly<{ status: string }>]) => [name, status])).toStrictEqual([
       ['a pending timeout fails', 'failed'],
       ['a pending interval fails', 'failed'],

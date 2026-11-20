@@ -54,10 +54,11 @@ function held(path: string): boolean {
  * The listed files the harness holds, optionally filtered by suffix.
  *
  * @param {readonly string[]} suffixes - The suffixes to keep; none keeps every file.
- * @returns {readonly string[]} The held files.
+ * @returns {Promise<readonly string[]>} The held files.
  */
-function heldFiles(...suffixes: readonly string[]): readonly string[] {
-  return tracked().filter(
+async function heldFiles(...suffixes: readonly string[]): Promise<readonly string[]> {
+  const listed = await tracked();
+  return listed.filter(
     (path) => held(path) && (isEmpty(suffixes) || suffixes.some((suffix) => path.endsWith(suffix))),
   );
 }
@@ -65,10 +66,11 @@ function heldFiles(...suffixes: readonly string[]): readonly string[] {
 /**
  * The held TypeScript sources.
  *
- * @returns {readonly string[]} The held `.ts` and `.tsx` files.
+ * @returns {Promise<readonly string[]>} The held `.ts` and `.tsx` files.
  */
-function typescriptFiles(): readonly string[] {
-  return heldFiles('.ts', '.tsx');
+async function typescriptFiles(): Promise<readonly string[]> {
+  const files = await heldFiles('.ts', '.tsx');
+  return files;
 }
 
 export { DOC_ROOTS, held, heldFiles, ROOTS, typescriptFiles };

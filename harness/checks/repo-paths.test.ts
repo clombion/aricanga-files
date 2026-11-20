@@ -11,11 +11,11 @@ import { Accepted, site } from '#lib/exemptions.ts';
 import { describe, expect, test } from 'vitest';
 import { importsFrom, nodes, parse } from '#lib/ts-source.ts';
 import { isIdentifier, isMetaProperty, isPropertyAccessExpression, isPropertyAssignment } from 'typescript/unstable/ast/is';
+import { textOf, textsOf } from '#lib/source-files.ts';
 import type { Identifier } from 'typescript/unstable/ast';
 import type { SourceFile } from '#lib/ts-source.ts';
 import { SyntaxKind } from 'typescript/unstable/ast';
 import { heldFiles } from '#lib/scope.ts';
-import { textOf } from '#lib/source-files.ts';
 
 const HARNESS_ID = 'repo-paths';
 
@@ -83,21 +83,24 @@ function locating(path: string, text: string): string[] {
 /**
  * The held harness modules other than the owner.
  *
- * @returns {readonly string[]} Their paths.
+ * @returns {Promise<readonly string[]>} Their paths.
  */
-function otherHarnessModules(): readonly string[] {
-  return heldFiles('.ts').filter((path) => path.startsWith('harness/') && path !== OWNER);
+async function otherHarnessModules(): Promise<readonly string[]> {
+  const files = await heldFiles('.ts');
+  return files.filter((path) => path.startsWith('harness/') && path !== OWNER);
 }
 
 describe('the repository', () => {
-  test('only paths.ts computes where the repository is', () => {
+  test('only paths.ts computes where the repository is', async () => {
     expect.hasAssertions();
-    expect(otherHarnessModules().flatMap((path) => locating(path, textOf(path)))).toStrictEqual([]);
+    const texts = await textsOf(await otherHarnessModules());
+    expect(texts.flatMap(([path, text]: readonly [string, string]) => locating(path, text))).toStrictEqual([]);
   });
 
-  test('paths.ts is where the root is computed', () => {
+  test('paths.ts is where the root is computed', async () => {
     expect.hasAssertions();
-    expect(locating(OWNER, textOf(OWNER))).not.toStrictEqual([]);
+    const text = await textOf(OWNER);
+    expect(locating(OWNER, text)).not.toStrictEqual([]);
   });
 });
 

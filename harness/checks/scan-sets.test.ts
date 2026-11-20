@@ -108,37 +108,36 @@ function projectProblems(files: readonly string[], members: ReadonlyMap<string, 
 }
 
 describe('the listing', () => {
-  test('is over its floor', () => {
+  test('is over its floor', async () => {
     expect.hasAssertions();
-    expect(tracked().length).toBeGreaterThanOrEqual(FLOOR);
+    const listed = await tracked();
+    expect(listed.length).toBeGreaterThanOrEqual(FLOOR);
   });
 
-  test('refuses a short listing instead of scanning nothing', () => {
+  test('refuses a short listing instead of scanning nothing', async () => {
     expect.hasAssertions();
-    expect(() => listing('', tmpdir())).toThrow(ListingError);
+    await expect(listing('', tmpdir())).rejects.toThrow(ListingError);
   });
 
   test('refuses a folder git cannot list', async () => {
     expect.hasAssertions();
     const folder = await mkdtemp(join(tmpdir(), 'unlisted-'));
     try {
-      expect(() => tracked(folder)).toThrow(ListingError);
+      await expect(tracked(folder)).rejects.toThrow(ListingError);
     } finally {
       await rm(folder, { force: true, recursive: true });
     }
   });
 
-  test('keeps existing files only', () => {
+  test('keeps existing files only', async () => {
     expect.hasAssertions();
-    const project = new Project({ linkModules: false });
+    const project = await Project.create({ linkModules: false });
     try {
       const names = Array.from({ length: FLOOR }, (_value, index) => `f${index}.ts`);
-      for (const name of names) {
-        project.write(name, '');
-      }
-      expect(listing([...names, 'deleted.ts', ''].join('\0'), project.root)).toStrictEqual(names.toSorted());
+      await project.writeAll(names.map((name) => [name, ''] as const));
+      await expect(listing([...names, 'deleted.ts', ''].join('\0'), project.root)).resolves.toStrictEqual(names.toSorted());
     } finally {
-      project.remove();
+      await project.remove();
     }
   });
 });
@@ -146,21 +145,22 @@ describe('the listing', () => {
 describe('the repository', () => {
   test('every held TypeScript file is reached by oxlint, oxfmt and coverage', async () => {
     expect.hasAssertions();
-    const files = typescriptFiles();
-    const coverage = await coverageReached(files);
-    const found = unreached(files, { coverage, oxfmt: oxfmtFiles(files), oxlint: oxlintFiles() });
+    const files = await typescriptFiles();
+    const [coverage, oxfmt, oxlint] = await Promise.all([coverageReached(files), oxfmtFiles(files), oxlintFiles()]);
+    const found = unreached(files, { coverage, oxfmt, oxlint });
     expect(UNREACHED.unexempted(found)).toStrictEqual([]);
   });
 
-  test('every held TypeScript file is in a project, once in production, and no test is in production', () => {
+  test('every held TypeScript file is in a project, once in production, and no test is in production', async () => {
     expect.hasAssertions();
-    const problems = projectProblems(typescriptFiles(), projectMembers());
+    const [files, members] = await Promise.all([typescriptFiles(), projectMembers()]);
+    const problems = projectProblems(files, members);
     expect(UNPROJECTED.unexempted(problems)).toStrictEqual([]);
   });
 
-  test('knip declares its scan set', () => {
+  test('knip declares its scan set', async () => {
     expect.hasAssertions();
-    expect(tracked()).toContain('knip.json');
+    await expect(tracked()).resolves.toContain('knip.json');
   });
 });
 

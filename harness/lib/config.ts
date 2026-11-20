@@ -118,10 +118,11 @@ function closure(name: string, every: Readonly<ReadonlyMap<string, Task>>): read
 /**
  * The tasks of the repository's root `package.json`.
  *
- * @returns {ReadonlyMap<string, Task>} Each task, by name.
+ * @returns {Promise<ReadonlyMap<string, Task>>} Each task, by name.
  */
-function repoTasks(): ReadonlyMap<string, Task> {
-  return tasks(json(textOf('package.json')));
+async function repoTasks(): Promise<ReadonlyMap<string, Task>> {
+  const text = await textOf('package.json');
+  return tasks(json(text));
 }
 
 /**
@@ -147,10 +148,11 @@ function hooks(lefthook: unknown): readonly Hook[] {
 /**
  * The hooks of the repository's `lefthook.json`.
  *
- * @returns {readonly Hook[]} Each command, with its hook.
+ * @returns {Promise<readonly Hook[]>} Each command, with its hook.
  */
-function repoHooks(): readonly Hook[] {
-  return hooks(json(textOf('lefthook.json')));
+async function repoHooks(): Promise<readonly Hook[]> {
+  const text = await textOf('lefthook.json');
+  return hooks(json(text));
 }
 
 export { closure, ConfigError, hooks, json, object, repoHooks, repoTasks, runsTask, tasks };

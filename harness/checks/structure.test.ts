@@ -48,14 +48,14 @@ function buildOutput(paths: readonly string[]): string[] {
 }
 
 describe('the repository', () => {
-  test('no module is both .ts and .tsx', () => {
+  test('no module is both .ts and .tsx', async () => {
     expect.hasAssertions();
-    expect(doubleModules(heldFiles())).toStrictEqual([]);
+    expect(doubleModules(await heldFiles())).toStrictEqual([]);
   });
 
-  test('no build output is listed', () => {
+  test('no build output is listed', async () => {
     expect.hasAssertions();
-    expect(buildOutput(heldFiles())).toStrictEqual([]);
+    expect(buildOutput(await heldFiles())).toStrictEqual([]);
   });
 });
 

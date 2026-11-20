@@ -155,20 +155,23 @@ function scriptsOf(read: ReadonlyMap<string, Task>): Readonly<Record<string, str
 }
 
 describe('the repository', () => {
-  test('the gate writes nothing and runs locked tools', () => {
+  test('the gate writes nothing and runs locked tools', async () => {
     expect.hasAssertions();
-    expect(gateProblems(repoTasks())).toStrictEqual([]);
+    const repoTaskMap = await repoTasks();
+    expect(gateProblems(repoTaskMap)).toStrictEqual([]);
   });
 
-  test('no task or hook runs an unlocked tool', () => {
+  test('no task or hook runs an unlocked tool', async () => {
     expect.hasAssertions();
-    const commands = [...repoTasks().values()].flatMap((task) => task.commands);
-    expect(runnerProblems([...commands, ...repoHooks().map((hook) => hook.run)])).toStrictEqual([]);
+    const [repoTaskMap, repoHookList] = await Promise.all([repoTasks(), repoHooks()]);
+    const commands = [...repoTaskMap.values()].flatMap((task) => task.commands);
+    expect(runnerProblems([...commands, ...repoHookList.map((hook) => hook.run)])).toStrictEqual([]);
   });
 
-  test('the hooks run the gate', () => {
+  test('the hooks run the gate', async () => {
     expect.hasAssertions();
-    expect(hookProblems(repoHooks())).toStrictEqual([]);
+    const repoHookList = await repoHooks();
+    expect(hookProblems(repoHookList)).toStrictEqual([]);
   });
 });
 
@@ -260,19 +263,19 @@ describe('the hook check', () => {
 });
 
 describe('the lock check', () => {
-  test('is the frozen, lockfile-only install', () => {
+  test('is the frozen, lockfile-only install', async () => {
     expect.hasAssertions();
-    expect(lockCheckArguments()).toStrictEqual(['pnpm', 'install', '--frozen-lockfile', '--lockfile-only']);
+    await expect(lockCheckArguments()).resolves.toStrictEqual(['pnpm', 'install', '--frozen-lockfile', '--lockfile-only']);
   });
 
-  test('passes a lockfile current with package.json', () => {
+  test('passes a lockfile current with package.json', async () => {
     expect.hasAssertions();
-    expect(lockCheckAfter('1.9.1', '1.9.1')).toStrictEqual({ outdated: false, status: EXIT_CLEAN });
+    await expect(lockCheckAfter('1.9.1', '1.9.1')).resolves.toStrictEqual({ outdated: false, status: EXIT_CLEAN });
   });
 
-  test('refuses a lockfile older than package.json', () => {
+  test('refuses a lockfile older than package.json', async () => {
     expect.hasAssertions();
-    expect(lockCheckAfter('1.9.1', '1.9.0')).toStrictEqual({ outdated: true, status: EXIT_FINDINGS });
+    await expect(lockCheckAfter('1.9.1', '1.9.0')).resolves.toStrictEqual({ outdated: true, status: EXIT_FINDINGS });
   });
 });
 

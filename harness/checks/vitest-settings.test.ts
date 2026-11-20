@@ -112,20 +112,21 @@ function merge(...layers: readonly Overrides[]): Overrides {
  *
  * @param {Plant} plant - The planted project.
  * @param {Overrides} overrides - The overrides.
- * @returns {number} The exit status of one plant run under the gate config with `overrides` merged over its `test`.
+ * @returns {Promise<number>} The exit status of one plant run under the gate config with `overrides` merged over its `test`.
  */
-function status(plant: Plant, overrides: Overrides): number {
-  const project = new Project({ copies: ['vitest.gate.config.ts', 'harness/lib'] });
+async function status(plant: Plant, overrides: Overrides): Promise<number> {
+  const project = await Project.create({ copies: ['vitest.gate.config.ts', 'harness/lib'] });
   try {
-    project.write(
+    await project.write(
       'vitest.planted.config.ts',
       `import { mergeConfig } from 'vitest/config';\nimport gate from './vitest.gate.config.ts';\nexport default mergeConfig(gate, ${JSON.stringify({ test: overrides })});\n`,
     );
     const path = `packages/foundation/plant/${plant.name}.test.ts`;
-    project.write(path, plant.text);
-    return project.tool('vitest', 'run', '--config', 'vitest.planted.config.ts', '--project', 'rebuild', path).status;
+    await project.write(path, plant.text);
+    const done = await project.tool('vitest', 'run', '--config', 'vitest.planted.config.ts', '--project', 'rebuild', path);
+    return done.status;
   } finally {
-    project.remove();
+    await project.remove();
   }
 }
 
@@ -146,11 +147,13 @@ function order(plant: Plant): Overrides {
  * A plant's exit statuses under the gate config, then with its setting reverted.
  *
  * @param {Plant} plant - The plant.
- * @returns {readonly [number, number]} The two exit statuses.
+ * @returns {Promise<readonly [number, number]>} The two exit statuses.
  */
-function underGateAndReverted(plant: Plant): readonly [number, number] {
+async function underGateAndReverted(plant: Plant): Promise<readonly [number, number]> {
   const sequence = order(plant);
-  return [status(plant, sequence), status(plant, merge(sequence, plant.revert))];
+  const gated = await status(plant, sequence);
+  const reverted = await status(plant, merge(sequence, plant.revert));
+  return [gated, reverted];
 }
 
 /**
@@ -165,16 +168,16 @@ async function timeoutBounded(): Promise<boolean> {
 }
 
 describe('each setting', () => {
-  test.for(PLANTS)('fails the $name plant, and passes it once reverted', (plant) => {
+  test.for(PLANTS)('fails the $name plant, and passes it once reverted', async (plant) => {
     expect.hasAssertions();
-    expect(underGateAndReverted(plant)).toStrictEqual([EXIT_FINDINGS, EXIT_CLEAN]);
+    await expect(underGateAndReverted(plant)).resolves.toStrictEqual([EXIT_FINDINGS, EXIT_CLEAN]);
   });
 });
 
 describe('the defaults the gate keeps', () => {
-  test.for(DEFAULTS)('fail the $name plant', (plant) => {
+  test.for(DEFAULTS)('fail the $name plant', async (plant) => {
     expect.hasAssertions();
-    expect(status(plant, {})).toBe(EXIT_FINDINGS);
+    await expect(status(plant, {})).resolves.toBe(EXIT_FINDINGS);
   });
 
   test('the test timeout is set and bounded', async () => {
@@ -184,10 +187,10 @@ describe('the defaults the gate keeps', () => {
 });
 
 describe('the plants', () => {
-  test('a clean spec passes under the gate config', () => {
+  test('a clean spec passes under the gate config', async () => {
     expect.hasAssertions();
     const clean = { name: 'clean', ordered: false, revert: {}, text: `${IMPORTS}test('a', () => {\n  expect(1).toBe(1);\n});\n` };
-    expect(status(clean, {})).toBe(EXIT_CLEAN);
+    await expect(status(clean, {})).resolves.toBe(EXIT_CLEAN);
   });
 });
 

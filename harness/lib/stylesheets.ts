@@ -15,7 +15,7 @@ import { Slot } from './lists.ts';
 import { fromRoot } from './paths.ts';
 import { heldFiles } from './scope.ts';
 import stylelint from 'stylelint';
-import { textOf } from './source-files.ts';
+import { textsOf } from './source-files.ts';
 
 /** A sheet parsed by stylelint's postcss. */
 type Root = ReturnType<RuleBase> extends (root: infer Parsed, ...rest: infer _Rest) => unknown ? Parsed : never;
@@ -66,10 +66,11 @@ const SUBSTITUTION = '0';
  * The held files of the product with the given suffixes.
  *
  * @param {readonly string[]} suffixes - The suffixes.
- * @returns {readonly string[]} The files.
+ * @returns {Promise<readonly string[]>} The files.
  */
-function productFiles(...suffixes: readonly string[]): readonly string[] {
-  return heldFiles(...suffixes).filter((path) => !PLANTS.starts(path));
+async function productFiles(...suffixes: readonly string[]): Promise<readonly string[]> {
+  const files = await heldFiles(...suffixes);
+  return files.filter((path) => !PLANTS.starts(path));
 }
 
 /**
@@ -138,19 +139,23 @@ function withoutSheets(path: string, text: string): string {
 /**
  * Every held sheet of the product.
  *
- * @returns {readonly Sheet[]} The sheets.
+ * @returns {Promise<readonly Sheet[]>} The sheets.
  */
-function sheets(): readonly Sheet[] {
-  return productFiles('.css', ...MODULES.values).flatMap((path) => sheetsOf(path, textOf(path)));
+async function sheets(): Promise<readonly Sheet[]> {
+  const files = await productFiles('.css', ...MODULES.values);
+  const texts = await textsOf(files);
+  return texts.flatMap(([path, text]: readonly [string, string]) => sheetsOf(path, text));
 }
 
 /**
  * The product's modules and pages a class or custom property may be read from, without their sheets.
  *
- * @returns {ReadonlyMap<string, string>} Each reader's text, by path.
+ * @returns {Promise<ReadonlyMap<string, string>>} Each reader's text, by path.
  */
-function readers(): ReadonlyMap<string, string> {
-  return new Map(productFiles('.html', ...MODULES.values).map((path) => [path, withoutSheets(path, textOf(path))] as const));
+async function readers(): Promise<ReadonlyMap<string, string>> {
+  const files = await productFiles('.html', ...MODULES.values);
+  const texts = await textsOf(files);
+  return new Map(texts.map(([path, text]: readonly [string, string]) => [path, withoutSheets(path, text)] as const));
 }
 
 /**

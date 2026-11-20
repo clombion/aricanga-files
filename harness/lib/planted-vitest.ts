@@ -62,19 +62,18 @@ function outcomesOf(reportText: string): ReadonlyMap<string, Outcome> {
  * Run planted spec files.
  *
  * @param {Readonly<Record<string, string>>} specs - Each planted spec's text, by its path under the planted project's root.
- * @returns {ReadonlyMap<string, Outcome>} Each test's outcome, by its full name.
+ * @returns {Promise<ReadonlyMap<string, Outcome>>} Each test's outcome, by its full name.
  */
-function runPlanted(specs: Readonly<Record<string, string>>): ReadonlyMap<string, Outcome> {
-  const project = new Project({ copies: ['harness/lib'] });
+async function runPlanted(specs: Readonly<Record<string, string>>): Promise<ReadonlyMap<string, Outcome>> {
+  const project = await Project.create({ copies: ['harness/lib'] });
   try {
-    project.write('vitest.config.ts', CONFIG);
-    for (const [path, text] of Object.entries(specs)) {
-      project.write(`planted/${path}`, text);
-    }
-    project.tool('vitest', 'run', '--reporter=json', '--outputFile=report.json');
-    return outcomesOf(project.read('report.json'));
+    await project.write('vitest.config.ts', CONFIG);
+    await project.writeAll(Object.entries(specs).map(([path, text]: readonly [string, string]) => [`planted/${path}`, text] as const));
+    await project.tool('vitest', 'run', '--reporter=json', '--outputFile=report.json');
+    const report = await project.read('report.json');
+    return outcomesOf(report);
   } finally {
-    project.remove();
+    await project.remove();
   }
 }
 

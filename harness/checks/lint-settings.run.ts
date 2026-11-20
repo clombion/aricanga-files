@@ -16,10 +16,11 @@ interface Lint {
 /**
  * The repository's oxlint config, parsed.
  *
- * @returns {Options} The config's top-level fields.
+ * @returns {Promise<Options>} The config's top-level fields.
  */
-function repoConfig(): Options {
-  return object(json(textOf('.oxlintrc.json')), '.oxlintrc.json');
+async function repoConfig(): Promise<Options> {
+  const text = await textOf('.oxlintrc.json');
+  return object(json(text), '.oxlintrc.json');
 }
 
 /**
@@ -27,10 +28,10 @@ function repoConfig(): Options {
  *
  * @param {Options} options - Options to merge over the config's.
  * @param {Options} rules - Rule settings to merge over the config's.
- * @returns {string} The config's text.
+ * @returns {Promise<string>} The config's text.
  */
-function config(options: Options, rules: Options = {}): string {
-  const repo = repoConfig();
+async function config(options: Options, rules: Options = {}): Promise<string> {
+  const repo = await repoConfig();
   return JSON.stringify({
     ...repo,
     options: { ...object(repo['options'] ?? {}, 'options'), ...options },
@@ -87,32 +88,31 @@ function codesByFile(report: unknown): ReadonlyMap<string, readonly string[]> {
  *
  * @param {Readonly<Record<string, string>>} files - Each planted file's text, by path.
  * @param {string} configText - The config the run reads.
- * @returns {Lint} The run's exit status and codes.
+ * @returns {Promise<Lint>} The run's exit status and codes.
  */
-function lint(files: Readonly<Record<string, string>>, configText: string): Lint {
-  const project = new Project({ copies: [...OXLINT_CONFIG_FILES, 'tsconfig.base.json'] });
+async function lint(files: Readonly<Record<string, string>>, configText: string): Promise<Lint> {
+  const project = await Project.create({ copies: [...OXLINT_CONFIG_FILES, 'tsconfig.base.json'] });
   try {
-    project.write('.oxlintrc.json', configText);
-    project.write('tsconfig.json', JSON.stringify({ compilerOptions: { jsx: 'preserve', types: [] }, extends: './tsconfig.base.json', include: ['src'] }));
-    for (const [path, text] of Object.entries(files)) {
-      project.write(path, text);
-    }
-    const done = project.tool('oxlint', '-c', '.oxlintrc.json', '--format', 'json', ...Object.keys(files));
+    await project.write('.oxlintrc.json', configText);
+    await project.write('tsconfig.json', JSON.stringify({ compilerOptions: { jsx: 'preserve', types: [] }, extends: './tsconfig.base.json', include: ['src'] }));
+    await project.writeAll(Object.entries(files));
+    const done = await project.tool('oxlint', '-c', '.oxlintrc.json', '--format', 'json', ...Object.keys(files));
     return { codes: codesByFile(json(done.stdout)), status: done.status };
   } finally {
-    project.remove();
+    await project.remove();
   }
 }
 
 /**
  * The codes oxlint reports for each plant, and the codes each plant expects.
  *
- * @returns {readonly [Options, Options]} The reported and the expected codes, by plant.
+ * @returns {Promise<readonly [Options, Options]>} The reported and the expected codes, by plant.
  */
-function plantedCodes(): readonly [Options, Options] {
+async function plantedCodes(): Promise<readonly [Options, Options]> {
   const planted = Object.entries(PLANTS);
   const texts = Object.fromEntries(planted.map(([path, [text]]: readonly [string, readonly [string, readonly string[]]]) => [path, text]));
-  const found = lint(texts, config({})).codes;
+  const run = await lint(texts, await config({}));
+  const found = run.codes;
   return [
     Object.fromEntries(planted.map(([path]: readonly [string, unknown]) => [path, found.get(path) ?? []])),
     Object.fromEntries(planted.map(([path, [, codes]]: readonly [string, readonly [string, readonly string[]]]) => [path, codes])),

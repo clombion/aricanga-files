@@ -1,6 +1,6 @@
 /** The shipped checks: every check module that declares a `HARNESS_ID`, with its doc comment's first line. */
 
-import { textOf, tracked } from './source-files.ts';
+import { textsOf, tracked } from './source-files.ts';
 
 /** A check module, its id and its summary. */
 interface CheckModule {
@@ -46,13 +46,13 @@ function byId(left: CheckModule, right: CheckModule): number {
 /**
  * Every listed check module declaring a `HARNESS_ID`.
  *
- * @returns {readonly CheckModule[]} The modules, sorted by id.
+ * @returns {Promise<readonly CheckModule[]>} The modules, sorted by id.
  */
-function checkModules(): readonly CheckModule[] {
-  return tracked()
-    .filter((path) => path.startsWith('harness/checks/') && path.endsWith('.test.ts'))
-    .flatMap((path) => {
-      const text = textOf(path);
+async function checkModules(): Promise<readonly CheckModule[]> {
+  const listed = await tracked();
+  const texts = await textsOf(listed.filter((path) => path.startsWith('harness/checks/') && path.endsWith('.test.ts')));
+  return texts
+    .flatMap(([path, text]: readonly [string, string]) => {
       const harnessId = declaredId(text);
       return harnessId === undefined ? [] : [{ harnessId, path, summary: summary(text) }];
     })

@@ -41,9 +41,9 @@ function narration(lines: readonly Prose[]): string[] {
 }
 
 describe('the repository', () => {
-  test('no current text narrates history', () => {
+  test('no current text narrates history', async () => {
     expect.hasAssertions();
-    const found = narration(currentText());
+    const found = narration(await currentText());
     expect(EXEMPT.unexempted(found)).toStrictEqual([]);
   });
 });

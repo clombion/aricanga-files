@@ -99,9 +99,9 @@ describe('the guard', () => {
 });
 
 describe('the guards, through a planted Vitest run', () => {
-  test('fail a connection, a lookup and a fetch of another host, and pass this machine', () => {
+  test('fail a connection, a lookup and a fetch of another host, and pass this machine', async () => {
     expect.hasAssertions();
-    const outcomes = runPlanted({ 'network.test.ts': PLANTED });
+    const outcomes = await runPlanted({ 'network.test.ts': PLANTED });
     expect([...outcomes].map(([name, { status }]: readonly [string, Readonly<{ status: string }>]) => [name, status])).toStrictEqual([
       ['a connection to another host trips', 'failed'],
       ['a lookup of another host trips', 'failed'],

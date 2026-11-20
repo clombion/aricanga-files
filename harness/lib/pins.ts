@@ -9,7 +9,7 @@
  */
 
 import { ConfigError, json, object } from './config.ts';
-import { textOf, tracked } from './source-files.ts';
+import { textOf, textsOf, tracked } from './source-files.ts';
 import { engineRange } from './node-floor.ts';
 import { held } from './scope.ts';
 
@@ -215,16 +215,17 @@ function pinned(manifests: readonly Manifest[], lockText: string): readonly Pin[
 /**
  * Every pin of this repository: the root manifest and each held workspace package's.
  *
- * @returns {readonly Pin[]} The pins.
+ * @returns {Promise<readonly Pin[]>} The pins.
  */
-function pins(): readonly Pin[] {
-  const manifests = tracked()
-    .filter((path) => path === 'package.json' || (held(path) && path.endsWith('/package.json')))
-    .map((path) => ({
-      importer: path === 'package.json' ? '.' : path.replace(MANIFEST_SUFFIX, ''),
-      manifest: json(textOf(path)),
-    }));
-  return pinned(manifests, textOf(LOCKFILE));
+async function pins(): Promise<readonly Pin[]> {
+  const listed = await tracked();
+  const texts = await textsOf(listed.filter((path) => path === 'package.json' || (held(path) && path.endsWith('/package.json'))));
+  const manifests = texts.map(([path, text]: readonly [string, string]) => ({
+    importer: path === 'package.json' ? '.' : path.replace(MANIFEST_SUFFIX, ''),
+    manifest: json(text),
+  }));
+  const lockText = await textOf(LOCKFILE);
+  return pinned(manifests, lockText);
 }
 
 export { pinned, pins, UPSTREAM };

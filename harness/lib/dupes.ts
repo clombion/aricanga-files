@@ -23,7 +23,7 @@ import { MAX_SIZE, RUNS, reportOf } from './dupes-run.ts';
 import { ROOTS, typescriptFiles } from './scope.ts';
 import type { Runner, Target } from './dupes-run.ts';
 import { cloneKey, clones, scanned } from './dupes-report.ts';
-import { readFileSync, statSync } from 'node:fs';
+import { readFile, stat } from 'node:fs/promises';
 import type { Clone } from './dupes-report.ts';
 import { Exemptions } from './exemptions.ts';
 import { REPO_ROOT } from './paths.ts';
@@ -48,6 +48,9 @@ const TRAILING_LINE = 1;
 const TRAILING_SLASH = /\/$/u;
 
 
+/** A run's problems and its clones. */
+type RunResult = readonly [readonly string[], readonly Clone[]];
+
 /** The clones the project accepts, each with its reason. */
 const ALLOWED: Exemptions = Exemptions.grouped({});
 
@@ -57,15 +60,16 @@ const ALLOWED: Exemptions = Exemptions.grouped({});
  * @param {string} listed - The file, relative to the root.
  * @param {Readonly<ReadonlySet<string>>} seen - The files jscpd scanned.
  * @param {string} root - The root.
- * @returns {string | undefined} The problem, or undefined.
+ * @returns {Promise<string | undefined>} The problem, or undefined.
  */
-function coverageProblem(listed: string, seen: Readonly<ReadonlySet<string>>, root: string): string | undefined {
+async function coverageProblem(listed: string, seen: Readonly<ReadonlySet<string>>, root: string): Promise<string | undefined> {
   const full = path.join(root, listed);
-  const { size } = statSync(full);
+  const { size } = await stat(full);
   if (size > MAX_SIZE) {
     return `coverage: ${listed} is over jscpd's size limit (${size} bytes)`;
   }
-  const lines = readFileSync(full, 'utf8').split('\n').length - TRAILING_LINE;
+  const text = await readFile(full, 'utf8');
+  const lines = text.split('\n').length - TRAILING_LINE;
   return !seen.has(listed) && lines > SMALL_FILE_LINES ? `coverage: jscpd did not scan ${listed}` : undefined;
 }
 
@@ -75,19 +79,25 @@ function coverageProblem(listed: string, seen: Readonly<ReadonlySet<string>>, ro
  * @param {readonly [string, readonly string[]]} named - The run's name and flags.
  * @param {Target} target - What the scan covers.
  * @param {Runner | undefined} runner - How jscpd is started; the repository's process owner when undefined.
- * @returns {readonly [readonly string[], readonly Clone[]]} The run's problems and its clones.
+ * @returns {Promise<RunResult>} The run's problems and its clones.
  */
-function runOnce(named: readonly [string, readonly string[]], target: Target, runner: Runner | undefined): readonly [readonly string[], readonly Clone[]] {
+async function runOnce(named: readonly [string, readonly string[]], target: Target, runner: Runner | undefined): Promise<RunResult> {
   const [runName, flags] = named;
-  const report = reportOf(flags, target, runner);
+  const report = await reportOf(flags, target, runner);
   if (typeof report === 'string') {
     return [[`${runName}: ${report}`], []];
   }
+  const seen = scanned(report, target.root);
   const coverage =
     runName === 'exact'
-      ? target.listed.flatMap((listed) => coverageProblem(listed, scanned(report, target.root), target.root) ?? [])
+      ? await Promise.all(
+          target.listed.map(async (listed) => {
+            const problem = await coverageProblem(listed, seen, target.root);
+            return problem;
+          }),
+        )
       : [];
-  return [coverage, clones(runName, report, target.root)];
+  return [coverage.filter((problem) => problem !== undefined), clones(runName, report, target.root)];
 }
 
 /**
@@ -111,12 +121,17 @@ function cloneProblems(found: readonly Clone[], allowed: Readonly<Exemptions>): 
  * @param {Target} target - What the scan covers.
  * @param {Readonly<Exemptions>} allowed - The clones the project accepts.
  * @param {Runner | undefined} runner - How jscpd is started; the repository's process owner when undefined.
- * @returns {readonly string[]} The problems.
+ * @returns {Promise<readonly string[]>} The problems.
  */
-function scan(target: Target, allowed: Readonly<Exemptions>, runner?: Runner): readonly string[] {
-  const runs = RUN_ORDER.map((name) => runOnce([name, RUNS[name]], target, runner));
-  const problems = runs.flatMap(([runProblems]: readonly [readonly string[], readonly Clone[]]) => runProblems);
-  return [...problems, ...cloneProblems(runs.flatMap(([, found]: readonly [readonly string[], readonly Clone[]]) => found), allowed)];
+async function scan(target: Target, allowed: Readonly<Exemptions>, runner?: Runner): Promise<readonly string[]> {
+  const runs = await Promise.all(
+    RUN_ORDER.map(async (name) => {
+      const result = await runOnce([name, RUNS[name]], target, runner);
+      return result;
+    }),
+  );
+  const problems = runs.flatMap(([runProblems]: RunResult) => runProblems);
+  return [...problems, ...cloneProblems(runs.flatMap(([, found]: RunResult) => found), allowed)];
 }
 
 /**
@@ -124,13 +139,13 @@ function scan(target: Target, allowed: Readonly<Exemptions>, runner?: Runner): r
  *
  * @param {Streams} streams - Where the result and the problems are written.
  * @param {Runner | undefined} runner - How jscpd is started; the repository's process owner when undefined.
- * @returns {number} The exit status.
+ * @returns {Promise<number>} The exit status.
  */
-function main(streams: Streams, runner?: Runner): number {
-  const listed = typescriptFiles();
+async function main(streams: Streams, runner?: Runner): Promise<number> {
+  const listed = await typescriptFiles();
   const directories = ROOTS.map((root) => root.replace(TRAILING_SLASH, ''));
   const rootFiles = listed.filter((file) => !ROOTS.some((root) => file.startsWith(root)));
-  const problems = scan({ listed, root: REPO_ROOT, roots: [...directories, ...rootFiles] }, ALLOWED, runner);
+  const problems = await scan({ listed, root: REPO_ROOT, roots: [...directories, ...rootFiles] }, ALLOWED, runner);
   for (const problem of problems) {
     streams.err(`${problem}\n`);
   }

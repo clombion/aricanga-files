@@ -11,17 +11,18 @@ const OPEN_TIMEOUT_MS = 120_000;
 /**
  * Open a scan over `paths`, with `sources` overlaid, for the check's tests.
  *
- * @param {() => readonly string[]} paths - The files to scan.
+ * @param {() => Promise<readonly string[]>} paths - The files to scan.
  * @param {() => Readonly<Record<string, string>>} sources - Texts that replace or add files, by path.
  * @returns {() => Scan} Reads the open scan; throws outside the check's tests.
  */
 function useScan(
-  paths: () => readonly string[] = scannedFiles,
+  paths: () => Promise<readonly string[]> = scannedFiles,
   sources: () => Readonly<Record<string, string>> = () => ({}),
 ): () => Scan {
   const opened = new Slot<Scan>();
-  beforeAll(() => {
-    opened.put(openScan(paths(), sources()));
+  beforeAll(async () => {
+    const files = await paths();
+    opened.put(openScan(files, sources()));
   }, OPEN_TIMEOUT_MS);
 
   afterAll(() => {
@@ -44,7 +45,10 @@ function useScan(
  */
 function usePlanted(plants: Readonly<ReadonlyMap<string, string>>): () => Scan {
   return useScan(
-    () => [...plants.keys()],
+    async () => {
+      const files = await Promise.resolve([...plants.keys()]);
+      return files;
+    },
     () => Object.fromEntries(plants),
   );
 }

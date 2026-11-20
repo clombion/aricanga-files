@@ -2,15 +2,18 @@
 
 import { apps, checkBuild } from '#lib/build.ts';
 import { exitCode, out, succeeded } from '#lib/output.ts';
-import { isEmpty } from '#lib/lists.ts';
+import { inSequence, isEmpty } from '#lib/lists.ts';
 
 /**
  * Build every app, reporting each failure and each write into the checkout.
  *
- * @returns {number} The script's exit code.
+ * @returns {Promise<number>} The script's exit code.
  */
-function main(): number {
-  const results = apps().map((app) => checkBuild(app));
+async function main(): Promise<number> {
+  const results = await inSequence(await apps(), async (app) => {
+    const result = await checkBuild(app);
+    return result;
+  });
   const failed = results.filter((result) => !succeeded(result));
   const written = results.flatMap((result) => result.written);
   for (const result of failed) {
@@ -23,4 +26,4 @@ function main(): number {
   return exitCode(isEmpty(failed) && isEmpty(written));
 }
 
-process.exitCode = main();
+process.exitCode = await main();

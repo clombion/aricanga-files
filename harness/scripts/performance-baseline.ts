@@ -88,7 +88,8 @@ function slower(timing: Timing, slowest: Timing | undefined): Timing {
  * @returns {Promise<ReadonlyMap<string, Timing>>} The baseline with this run's reports folded in.
  */
 async function recordRun(baseline: Readonly<ReadonlyMap<string, Timing>>): Promise<ReadonlyMap<string, Timing>> {
-  out(`performance run exited ${finished(RUN_ARGUMENTS, { cwd: REPO_ROOT }).status}\n`);
+  const run = await finished(RUN_ARGUMENTS, { cwd: REPO_ROOT });
+  out(`performance run exited ${run.status}\n`);
   const directories = await readdir(RESULTS);
   const reports = await Promise.all(
     directories.map(async (directory) => {

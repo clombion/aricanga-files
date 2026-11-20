@@ -10,14 +10,14 @@ import { run } from '#lib/generated.ts';
 /**
  * Write or compare the generated blocks, complaining of each one left stale.
  *
- * @returns {number} The script's exit code.
+ * @returns {Promise<number>} The script's exit code.
  */
-function main(): number {
-  const left = run(process.argv.includes('--check'));
+async function main(): Promise<number> {
+  const left = await run(process.argv.includes('--check'));
   for (const problem of left) {
     complain(`${problem.path}:${problem.line}: ${problem.message}`);
   }
   return exitCode(isEmpty(left));
 }
 
-process.exitCode = main();
+process.exitCode = await main();

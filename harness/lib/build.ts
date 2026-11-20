@@ -4,11 +4,12 @@
  */
 
 import { bin, finished } from './tools.ts';
-import { existsSync, mkdtempSync, readFileSync, rmSync, statSync } from 'node:fs';
+import { mkdtemp, readFile, rm, stat } from 'node:fs/promises';
 import type { Finished } from './process.ts';
 import { REPO_ROOT } from './paths.ts';
 import { createHash } from 'node:crypto';
 import { heldFiles } from './scope.ts';
+import { isFile } from './source-files.ts';
 import path from 'node:path';
 import { tmpdir } from 'node:os';
 
@@ -26,10 +27,11 @@ const STATUS_WIDTH = 3;
 /**
  * The held Vite apps: every held directory with a `vite.config.ts`.
  *
- * @returns {readonly string[]} The apps' directories.
+ * @returns {Promise<readonly string[]>} The apps' directories.
  */
-function apps(): readonly string[] {
-  return heldFiles('/vite.config.ts').map((config) => path.dirname(config));
+async function apps(): Promise<readonly string[]> {
+  const configs = await heldFiles('/vite.config.ts');
+  return configs.map((config) => path.dirname(config));
 }
 
 /**
@@ -38,10 +40,10 @@ function apps(): readonly string[] {
  * @param {string} app - The app's directory.
  * @param {string} outDir - Where the build writes.
  * @param {string} cwd - The checkout the build runs in.
- * @returns {Finished} The finished build.
+ * @returns {Promise<Finished>} The finished build.
  */
-function buildApp(app: string, outDir: string, cwd: string): Finished {
-  return finished(
+async function buildApp(app: string, outDir: string, cwd: string): Promise<Finished> {
+  const built = await finished(
     [
       bin('vite'),
       'build',
@@ -60,31 +62,33 @@ function buildApp(app: string, outDir: string, cwd: string): Finished {
     ],
     { cwd },
   );
+  return built;
 }
 
 /**
  * A file's content hash and modification time, so a rewrite with identical content still counts as a write.
  *
  * @param {string} full - The file's absolute path.
- * @returns {string | undefined} Its state, or undefined when it is no file.
+ * @returns {Promise<string | undefined>} Its state, or undefined when it is no file.
  */
-function fileState(full: string): string | undefined {
-  const stat = existsSync(full) ? statSync(full) : undefined;
-  if (stat?.isFile() !== true) {
+async function fileState(full: string): Promise<string | undefined> {
+  if (!(await isFile(path.dirname(full), path.basename(full)))) {
     return undefined;
   }
-  const content = createHash('sha256').update(readFileSync(full)).digest('hex');
-  return `${content}@${stat.mtimeMs}`;
+  const found = await stat(full);
+  const bytes = await readFile(full);
+  const content = createHash('sha256').update(bytes).digest('hex');
+  return `${content}@${found.mtimeMs}`;
 }
 
 /**
  * The untracked and ignored files of a checkout (outside node_modules), each with its state.
  *
  * @param {string} root - The checkout.
- * @returns {ReadonlyMap<string, string>} Each file's state, by path.
+ * @returns {Promise<ReadonlyMap<string, string>>} Each file's state, by path.
  */
-function checkoutState(root: string): ReadonlyMap<string, string> {
-  const status = finished(
+async function checkoutState(root: string): Promise<ReadonlyMap<string, string>> {
+  const status = await finished(
     [
       'git',
       'status',
@@ -99,13 +103,20 @@ function checkoutState(root: string): ReadonlyMap<string, string> {
     ],
     { cwd: root },
   );
-  return new Map(
-    status.stdout.split('\0').flatMap((entry) => {
-      const listed = entry.slice(STATUS_WIDTH);
-      const state = listed === '' ? undefined : fileState(path.join(root, listed));
-      return state === undefined ? [] : [[listed, state] as const];
+  const listed = status.stdout
+    .split('\0')
+    .map((entry) => entry.slice(STATUS_WIDTH))
+    .filter((entry) => entry !== '');
+  const states = await Promise.all(
+    listed.map(async (entry) => {
+      const state = await fileState(path.join(root, entry));
+      return state;
     }),
   );
+  return new Map(listed.flatMap((entry, index) => {
+    const state = states[index];
+    return state === undefined ? [] : [[entry, state] as const];
+  }));
 }
 
 /**
@@ -126,21 +137,22 @@ function writes(before: Readonly<ReadonlyMap<string, string>>, after: Readonly<R
  *
  * @param {string} app - The app's directory.
  * @param {string} root - The checkout.
- * @returns {BuildResult} The build's result.
+ * @returns {Promise<BuildResult>} The build's result.
  */
-function checkBuild(app: string, root: string = REPO_ROOT): BuildResult {
-  const outDir = mkdtempSync(path.join(tmpdir(), 'build-check-'));
+async function checkBuild(app: string, root: string = REPO_ROOT): Promise<BuildResult> {
+  const outDir = await mkdtemp(path.join(tmpdir(), 'build-check-'));
   try {
-    const before = checkoutState(root);
-    const built = buildApp(app, outDir, root);
+    const before = await checkoutState(root);
+    const built = await buildApp(app, outDir, root);
+    const after = await checkoutState(root);
     return {
       app,
       output: built.stdout + built.stderr,
       status: built.status,
-      written: writes(before, checkoutState(root)),
+      written: writes(before, after),
     };
   } finally {
-    rmSync(outDir, { force: true, recursive: true });
+    await rm(outDir, { force: true, recursive: true });
   }
 }
 

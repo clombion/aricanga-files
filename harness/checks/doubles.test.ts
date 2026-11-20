@@ -97,9 +97,9 @@ describe('a scripted double', () => {
 });
 
 describe('the guards, through a planted Vitest run', () => {
-  test('fail a caught unscripted call and the test after a late trip, and pass the rest', () => {
+  test('fail a caught unscripted call and the test after a late trip, and pass the rest', async () => {
     expect.hasAssertions();
-    const outcomes = runPlanted({ 'doubles.test.ts': PLANTED });
+    const outcomes = await runPlanted({ 'doubles.test.ts': PLANTED });
     expect([...outcomes].map(([name, { status }]: readonly [string, Readonly<{ status: string }>]) => [name, status])).toStrictEqual([
       ['first a caught unscripted call fails', 'failed'],
       ['first a scripted call passes', 'passed'],

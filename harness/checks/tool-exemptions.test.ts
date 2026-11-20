@@ -168,21 +168,31 @@ function deadEntries(entries: readonly Entry[], paths: readonly string[]): Entry
   return entries.filter((entry) => unmatched.has(entry.glob));
 }
 
-function listedJson(path: string): unknown {
-  return tracked().includes(path) ? json(textOf(path)) : undefined;
+async function listedJson(path: string): Promise<unknown> {
+  const listed = await tracked();
+  if (!listed.includes(path)) {
+    return undefined;
+  }
+  const text = await textOf(path);
+  return json(text);
 }
 
 async function repoEntries(): Promise<Entry[]> {
   const vitestModule: unknown = await import(fromRoot('vitest.gate.config.ts'));
   const vitest = object(vitestModule, 'vitest.gate.config.ts')['default'];
-  const oxfmt = listedJson('.oxfmtrc.json');
-  const knip = listedJson('knip.json');
-  const stylelint = listedJson('.stylelintrc.json');
-  const stylelintIgnore = tracked().includes('.stylelintignore') ? textOf('.stylelintignore') : '';
+  const [oxfmt, knip, stylelint, oxlint, biome, listed] = await Promise.all([
+    listedJson('.oxfmtrc.json'),
+    listedJson('knip.json'),
+    listedJson('.stylelintrc.json'),
+    listedJson('.oxlintrc.json'),
+    listedJson('biome.json'),
+    tracked(),
+  ]);
+  const stylelintIgnore = listed.includes('.stylelintignore') ? await textOf('.stylelintignore') : '';
   return [
-    ...oxlintEntries(json(textOf('.oxlintrc.json'))),
+    ...oxlintEntries(oxlint),
     ...vitestEntries(vitest),
-    ...biomeEntries(json(textOf('biome.json'))),
+    ...biomeEntries(biome),
     ...(oxfmt === undefined ? [] : oxfmtEntries(oxfmt)),
     ...(knip === undefined ? [] : knipEntries(knip)),
     ...stylelintEntries(stylelint ?? {}, stylelintIgnore),
@@ -192,7 +202,8 @@ async function repoEntries(): Promise<Entry[]> {
 describe('the repository', () => {
   test('every tool glob matches a listed file, or is a declared policy', async () => {
     expect.hasAssertions();
-    const unmatched = deadEntries(await repoEntries(), tracked());
+    const [entries, listed] = await Promise.all([repoEntries(), tracked()]);
+    const unmatched = deadEntries(entries, listed);
     expect(POLICIES.unexemptedBy(unmatched, (entry) => site(entry.tool, entry.glob))).toStrictEqual([]);
   });
 });

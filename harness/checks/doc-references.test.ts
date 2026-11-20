@@ -20,7 +20,7 @@
  */
 
 import { Accepted, Exemptions, site } from '#lib/exemptions.ts';
-import { Doc, currentSpans, currentText, markdown, markdownPaths } from '#lib/docs.ts';
+import { Doc, currentSpans, currentText, markdownDocs } from '#lib/docs.ts';
 import { adrProblems, fenceProblems, key, linkProblems, spanProblems } from './doc-references.resolve.ts';
 import { describe, expect, test } from 'vitest';
 import { installedPaths, oxlintRuleIds, quotedValues } from './doc-references.installed.ts';
@@ -49,19 +49,18 @@ const ADRS_EXEMPT = Exemptions.grouped({});
  * @returns {Promise<Resolver>} The resolver.
  */
 async function repoResolver(): Promise<Resolver> {
-  const quoted = quotedValues();
-  const rules = oxlintRuleIds();
+  const [quoted, rules, files, tasks, spans] = await Promise.all([quotedValues(), oxlintRuleIds(), tracked(), repoTasks(), currentSpans()]);
   const named = (value: string): boolean => quoted.has(value) || rules.has(value);
-  const base = { files: tracked(), named, taskNames: new Set(repoTasks().keys()) };
-  const installed = await installedPaths(currentSpans(), base);
+  const base = { files, named, taskNames: new Set(tasks.keys()) };
+  const installed = await installedPaths(spans, base);
   return { ...base, installed: (path) => installed.has(path) };
 }
 
 describe('the repository', () => {
-  test('every link resolves', () => {
+  test('every link resolves', async () => {
     expect.hasAssertions();
-    const files = tracked();
-    const docs = new Map(markdownPaths().map((path) => [path, markdown(path)] as const));
+    const [files, parsed] = await Promise.all([tracked(), markdownDocs()]);
+    const docs = new Map(parsed.map((doc) => [doc.path, doc] as const));
     const found = [...docs.values()].flatMap((doc) => doc.links().flatMap((link) => linkProblems(link, files, docs)));
     expect(LINKS_EXEMPT.unexemptedBy(found, key)).toStrictEqual([]);
   });
@@ -69,20 +68,22 @@ describe('the repository', () => {
   test('every backticked path and task resolves', async () => {
     expect.hasAssertions();
     const resolver = await repoResolver();
-    const found = currentSpans().flatMap((span) => spanProblems(span, resolver));
+    const spans = await currentSpans();
+    const found = spans.flatMap((span) => spanProblems(span, resolver));
     expect(SPANS_EXEMPT.unexemptedBy(found, key)).toStrictEqual([]);
   });
 
-  test('every ADR named has its record', () => {
+  test('every ADR named has its record', async () => {
     expect.hasAssertions();
-    const files = tracked();
-    const found = currentText().flatMap((line) => adrProblems(line, files));
+    const [files, lines] = await Promise.all([tracked(), currentText()]);
+    const found = lines.flatMap((line) => adrProblems(line, files));
     expect(ADRS_EXEMPT.unexemptedBy(found, key)).toStrictEqual([]);
   });
 
-  test('every locked tool in a shell fence runs through pnpm', () => {
+  test('every locked tool in a shell fence runs through pnpm', async () => {
     expect.hasAssertions();
-    const found = markdownPaths().flatMap((path) => fenceProblems(markdown(path)));
+    const docs = await markdownDocs();
+    const found = docs.flatMap((doc) => fenceProblems(doc));
     expect(found).toStrictEqual([]);
   });
 });
