@@ -184,7 +184,7 @@ function globTest(glob: string): FileTest {
  */
 function globs(context: Context, key: string): readonly FileTest[] {
   const [first] = context.options;
-  if (typeof first !== 'object' || first === null || !(key in first)) {
+  if (typeof first !== 'object' || first === null || !Object.hasOwn(first, key)) {
     return [];
   }
   const value: unknown = Reflect.get(first, key);

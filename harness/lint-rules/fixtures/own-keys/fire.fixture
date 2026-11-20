@@ -1,0 +1,15 @@
+// path: own-keys-fire.ts
+/** A chat's messages, keyed by the chat id the story writes. */
+type History = Readonly<Record<string, readonly string[]>>;
+
+/**
+ * The messages of one chat: a chat named toString reads Object.prototype's member.
+ * @param {History} history - The messages by chat.
+ * @param {string} chatId - The chat.
+ * @returns {readonly string[]} Its messages.
+ */
+function messagesOf(history: History, chatId: string): readonly string[] {
+  return history[chatId] ?? [];
+}
+
+export { messagesOf };

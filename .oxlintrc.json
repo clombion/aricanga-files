@@ -61,7 +61,6 @@
         "ignore": ["packages/characterisation/**"]
       }
     ],
-    "aricanga/promises": "error",
     "aricanga/statics": "error",
     "aricanga/store-owner": [
       "error",
@@ -278,7 +277,9 @@
           }
         ]
       }
-    ]
+    ],
+    "aricanga/own-keys": "error",
+    "aricanga/total-reads": "error"
   },
   "overrides": [
     {

@@ -126,7 +126,7 @@ function comments(file: SourceFile): Comment[] {
     .map((range) => {
       const { line, character } = file.getLineAndCharacterOfPosition(range.pos);
       return {
-        code: (lines[line] ?? '').slice(LINE_START, character).trim(),
+        code: (lines.at(line) ?? '').slice(LINE_START, character).trim(),
         line: line + FIRST_LINE,
         text: text.slice(range.pos, range.end),
       };

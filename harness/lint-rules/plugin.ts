@@ -4,6 +4,7 @@
  * (`harness/checks/project-lint-rules.test.ts`).
  */
 
+import { CLOSED_RULES } from '#lint-rules/rules/closed-rules.ts';
 import { JSX_RULES } from '#lint-rules/rules/jsx-rules.ts';
 import { MODULE_RULES } from '#lint-rules/rules/module-rules.ts';
 import type { Rule } from '#lint-rules/ast.ts';
@@ -12,7 +13,7 @@ import type { Rule } from '#lint-rules/ast.ts';
 const PLUGIN_NAME = 'aricanga';
 
 /** Every project rule, by the name the config turns it on under. */
-const RULES: Readonly<Record<string, Rule>> = { ...JSX_RULES, ...MODULE_RULES };
+const RULES: Readonly<Record<string, Rule>> = { ...CLOSED_RULES, ...JSX_RULES, ...MODULE_RULES };
 
 /** The plugin oxlint loads: its name and its rules. */
 interface Plugin {

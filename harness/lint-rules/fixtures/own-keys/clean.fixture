@@ -1,0 +1,38 @@
+// path: own-keys-clean.ts
+/** A chat's messages, keyed by the chat id the story writes. */
+type History = Readonly<Record<string, readonly string[]>>;
+
+/** What a missing part of a version reads as. */
+const MISSING_PART = 0;
+
+/**
+ * The messages of one chat, read through the record's own entry.
+ * @param {History} history - The messages by chat.
+ * @param {string} chatId - The chat.
+ * @returns {readonly string[]} Its messages.
+ */
+function messagesOf(history: History, chatId: string): readonly string[] {
+  return Object.hasOwn(history, chatId) ? (history[chatId] ?? []) : [];
+}
+
+/**
+ * Whether a payload holds a field of its own.
+ * @param {object} payload - The payload.
+ * @param {string} name - The field.
+ * @returns {boolean} Whether the payload itself holds it.
+ */
+function holds(payload: object, name: string): boolean {
+  return Object.hasOwn(payload, name) && 'kind' in payload;
+}
+
+/**
+ * A part of a version, read from a list by its place.
+ * @param {readonly number[]} parts - The version's parts.
+ * @param {number} index - The place.
+ * @returns {number} The part, or zero past the end.
+ */
+function partAt(parts: readonly number[], index: number): number {
+  return parts.at(index) ?? MISSING_PART;
+}
+
+export { holds, messagesOf, partAt };

@@ -1,0 +1,21 @@
+// path: total-reads-fire.ts
+/** Where a message's receipt stands. */
+type Receipt = 'delivered' | 'read' | 'sent';
+
+/**
+ * A receipt's label, read one arm at a time: a receipt added to the set falls through unseen.
+ * @param {Receipt} receipt - The receipt.
+ * @returns {string} Its label.
+ */
+function labelOf(receipt: Receipt): string {
+  let label = 'seen';
+  if (receipt === 'sent') {
+    label = 'on its way';
+  } else if (receipt === 'delivered') {
+    label = 'arrived';
+  }
+  return label;
+}
+
+export { labelOf };
+export type { Receipt };

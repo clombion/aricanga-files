@@ -33,6 +33,10 @@ function plantedTest(declare: string): string {
 const PLANTS: Readonly<Record<string, readonly [string, readonly string[]]>> = {
   'src/clean.ts': ['export function double(value: number): number {\n  return value + value;\n}\n', []],
   'src/console.ts': ["export function say(): void {\n  console.log('x');\n}\n", ['eslint(no-console)']],
+  'src/default-lookup.ts': [
+    "const NAMES: Readonly<Record<'one' | 'two', string>> = { one: 'A', two: 'B' };\n\nexport function name(kind: 'one' | 'two'): string {\n  return NAMES[kind] ?? '';\n}\n",
+    ['aricanga(own-keys)', 'typescript(no-unnecessary-condition)'],
+  ],
   'src/destructure.tsx': [
     'export function Bubble({ vm }: { readonly vm: { readonly text: string } }): unknown {\n  return <p>{vm.text}</p>;\n}\n',
     ['aricanga(vm-prop)', 'solid(no-destructure)'],
@@ -46,12 +50,24 @@ const PLANTS: Readonly<Record<string, readonly [string, readonly string[]]>> = {
     ['typescript(no-floating-promises)'],
   ],
   'src/focused.test.ts': [plantedTest('test.only'), ['vitest(no-focused-tests)']],
+  'src/narrowed.ts': [
+    "export function kind(raw: string): 'a' | 'b' {\n  return raw as 'a' | 'b';\n}\n",
+    ['typescript(no-unsafe-type-assertion)'],
+  ],
+  'src/switch-default.ts': [
+    "export function name(kind: 'a' | 'b'): string {\n  switch (kind) {\n    case 'a': {\n      return 'A';\n    }\n    default: {\n      return '';\n    }\n  }\n}\n",
+    ['typescript(switch-exhaustiveness-check)'],
+  ],
   'src/switch.ts': [
     "export function name(kind: 'a' | 'b'): string {\n  switch (kind) {\n    case 'a': {\n      return 'A';\n    }\n    // No default\n  }\n  return '';\n}\n",
     ['typescript(switch-exhaustiveness-check)'],
   ],
   'src/ts-expect-bare.ts': ['// @ts-expect-error\nexport const value: string = true;\n', ['typescript(ban-ts-comment)']],
   'src/ts-ignore.ts': ["// @ts-ignore\nexport const value = 'a';\n", ['typescript(ban-ts-comment)', 'typescript(prefer-ts-expect-error)']],
+  'src/two-argument-then.ts': [
+    'const FALLBACK = 0;\n\nexport async function settle(pending: Readonly<Promise<number>>): Promise<number> {\n  const settled = await pending.then(\n    (value) => value,\n    () => FALLBACK,\n  );\n  return settled;\n}\n',
+    ['promise(prefer-catch)'],
+  ],
   'src/type-import.ts': [
     "import { Shape } from './types';\n\nexport const shape: Shape = { kind: 'a' };\n",
     ['typescript(consistent-type-imports)'],

@@ -16,11 +16,11 @@ import { stateOf } from '@narratives/foundation';
 /** The part of a completed run a predicate reads: the reduce trace, or the flattened effects. */
 type Run = Pick<FixtureRun, 'effects' | 'trace'>;
 
-/** The rank a receipt that names no known receipt takes: below `sent`. */
+/** The rank a receipt that names no known receipt takes: below `sent`, as `indexOf` reports it. */
 const UNKNOWN_RECEIPT = -1;
 
-/** Receipt monotonic (#13): a message receipt only advances sent, then delivered, then read. */
-const RECEIPT_RANK: ReadonlyMap<string, number> = new Map(['sent', 'delivered', 'read'].map((receipt, rank) => [receipt, rank]));
+/** Receipt monotonic (#13): a message receipt only advances sent, then delivered, then read; its rank is its place here. */
+const RECEIPT_ORDER: readonly string[] = ['sent', 'delivered', 'read'];
 
 /**
  * The chat state a trace record holds, read back through the chat system.
@@ -197,7 +197,7 @@ function receiptMonotonic(run: Run): Violation | undefined {
   for (const change of run.effects.map((effect) => receiptChangeOf(effect))) {
     if (change !== undefined) {
       const { messageId, receipt } = change;
-      const rank = RECEIPT_RANK.get(receipt) ?? UNKNOWN_RECEIPT;
+      const rank = RECEIPT_ORDER.indexOf(receipt);
       if (rank < (seen.get(messageId) ?? UNKNOWN_RECEIPT)) {
         return { detail: `receipt for "${messageId}" regressed to "${receipt}"`, rule: 'receipt-monotonic' };
       }
