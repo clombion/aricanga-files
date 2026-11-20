@@ -4,6 +4,7 @@ import type { ChatCommand, ChatViewModel } from '#src/system';
 import type { FixtureInput, FixtureRun } from '@narratives/foundation/testing';
 import { erase, parseTag } from '@narratives/foundation';
 import type { ChatMessageVM } from '#src/reduce';
+import type { Input } from '@narratives/foundation';
 import { chatSystem } from '#src/system';
 import { runStream } from '@narratives/foundation/testing';
 
@@ -13,6 +14,9 @@ interface ChatRun {
   readonly effects: FixtureRun['effects'];
   readonly viewOf: FixtureRun['viewOf'];
 }
+
+/** What one reduction took in: a story step's text, or the source of any other input, kept as its own word. */
+type Taken = { readonly text: string } | { readonly source: Exclude<Input<unknown>['source'], 'story'> };
 
 /** Options of a story line. */
 interface StoryOptions {
@@ -105,10 +109,10 @@ function textsOf(result: ChatRun, chatId: string): readonly string[] {
  * What each reduction of a run took in: a story step's text, or the source of any other input.
  *
  * @param {ChatRun} result - The completed run.
- * @returns {readonly string[]} One entry per trace record, in reduction order.
+ * @returns {readonly Taken[]} One entry per trace record, in reduction order.
  */
-function inputsOf(result: ChatRun): readonly string[] {
-  return result.trace.map(({ input }) => (input.source === 'story' ? input.step.text : input.source));
+function inputsOf(result: ChatRun): readonly Taken[] {
+  return result.trace.map(({ input }): Taken => (input.source === 'story' ? { text: input.step.text } : { source: input.source }));
 }
 
 /**

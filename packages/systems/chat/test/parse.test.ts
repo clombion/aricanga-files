@@ -2,16 +2,23 @@ import { chatSystem, openedChat } from '#src/system';
 import { close, open, run, story } from '#test/support';
 import { describe, expect, test } from 'vitest';
 import type { ChatCommand } from '#src/system';
+import type { FixtureCommand } from '@narratives/foundation/testing';
 import { throughSave } from '@narratives/foundation/testing';
 
 /** The seed a chat slice starts from. */
 const SEED = 0;
 
+/** Opening Pat's chat, as a player would send it. */
+const OPEN_PAT: ChatCommand = { kind: 'open', payload: { chatId: 'pat' } };
+
+/** Closing the open chat, as a player would send it. */
+const CLOSE: ChatCommand = { kind: 'close', payload: undefined };
+
+/** A command of another system's vocabulary, which chat does not take. */
+const FOREIGN: FixtureCommand = { kind: 'choose', payload: { index: SEED } };
+
 /** One of every chat command, each as a player would send it. */
-const EVERY_COMMAND: readonly ChatCommand[] = [
-  { kind: 'open', payload: { chatId: 'pat' } },
-  { kind: 'close', payload: undefined },
-];
+const EVERY_COMMAND: readonly ChatCommand[] = [OPEN_PAT, CLOSE];
 
 /**
  * The field names of a value read back untyped, in sorted order.
@@ -48,18 +55,18 @@ describe('the chat command parser', () => {
 
   test('refuses a command chat does not take, an open with no chat id, and a close that carries a payload', () => {
     expect.hasAssertions();
-    expect(() => chatSystem.parseCommand({ kind: 'choose', payload: { index: SEED } })).toThrow(
+    expect(() => chatSystem.parseCommand(FOREIGN)).toThrow(
       'system "chat" refuses a command: {"kind":"choose","payload":{"index":0}}',
     );
-    expect(() => chatSystem.parseCommand({ kind: 'open', payload: {} })).toThrow('system "chat" refuses chatId: undefined');
-    expect(() => chatSystem.parseCommand({ kind: 'open', payload: { chatId: 7 } })).toThrow('system "chat" refuses chatId: 7');
-    expect(() => chatSystem.parseCommand({ kind: 'close', payload: 'pat' })).toThrow('system "chat" refuses the close payload: "pat"');
+    expect(() => chatSystem.parseCommand({ ...OPEN_PAT, payload: {} })).toThrow('system "chat" refuses chatId: undefined');
+    expect(() => chatSystem.parseCommand({ ...OPEN_PAT, payload: { chatId: 7 } })).toThrow('system "chat" refuses chatId: 7');
+    expect(() => chatSystem.parseCommand({ ...CLOSE, payload: 'pat' })).toThrow('system "chat" refuses the close payload: "pat"');
   });
 
   test('a recorded command that is not chat’s is refused, not read as opening nothing', () => {
     expect.hasAssertions();
-    expect(openedChat({ kind: 'open', payload: { chatId: 'pat' } })).toBe('pat');
-    expect(openedChat({ kind: 'close', payload: undefined })).toBeUndefined();
+    expect(openedChat(OPEN_PAT)).toBe('pat');
+    expect(openedChat(CLOSE)).toBeUndefined();
     expect(() => openedChat({ kind: 'detonate', payload: undefined })).toThrow('system "chat" refuses a command');
   });
 });

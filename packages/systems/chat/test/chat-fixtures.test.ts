@@ -46,6 +46,6 @@ describe('the chat ink fixtures', () => {
     // The chat stub does not handle choices yet (physics, 020–026); the harness
     // must still drive the pre-choice line and return without hanging.
     const run = await runFixture({ story: await ink('choices'), systems: [erase(chatSystem)] });
-    expect(inputsOf(run)).toStrictEqual(['Pick a reply']);
+    expect(inputsOf(run)).toStrictEqual([{ text: 'Pick a reply' }]);
   });
 });

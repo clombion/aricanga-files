@@ -39,6 +39,8 @@ const RESPELLED: readonly (readonly [string, string])[] = [
   ['packages/systems/__respell_0.ts', `${IMPORT}export const w = 'on';\n`],
   ['packages/systems/__respell_1.ts', `${IMPORT}export function g(s: string): boolean {\n  return s === 'off';\n}\n`],
   ['packages/foundation/src/__respell_2.ts', "export function h(s: string): number {\n  switch (s) {\n    case 'ping':\n      return 1;\n  }\n  return 0;\n}\n"],
+  ['packages/systems/__respell_3.ts', `${IMPORT}export const t: Readonly<Record<string, number>> = { 'on': 1 };\n`],
+  ['packages/systems/__respell_4.ts', `${IMPORT}declare const t: Readonly<Record<string, number>>;\nexport const n = t['off'];\n`],
 ];
 
 const NEAR_MISSES: readonly (readonly [string, string])[] = [
@@ -47,6 +49,7 @@ const NEAR_MISSES: readonly (readonly [string, string])[] = [
   ['packages/systems/__miss_template.ts', `${IMPORT}${PICK}export const label = \`mode \${m}\`;\n`],
   ['packages/systems/__miss_generic.ts', `${IMPORT}${PICK}function id<T extends string>(value: T): T {\n  return value;\n}\nexport const same = id(m);\n`],
   ['packages/systems/__miss_unreached.ts', "export const word = 'on';\n"],
+  ['packages/systems/__miss_keyed.ts', `${IMPORT}${PICK}const BY_MODE: { readonly [TMode in Mode]: number } = { 'off': 0, 'on': 1 };\nexport const picked = BY_MODE['on'] + BY_MODE[m];\n`],
   ['packages/systems/__miss_expectation.ts', `${IMPORT}${PICK}declare function expect(value: unknown): { toBe(expected: unknown): void; toEqual(expected: unknown): void };\nexpect(m).toBe('on');\nexpect({ x }).toStrictEqual({ x: { tag: 'ping' } });\n`],
 ];
 

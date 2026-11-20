@@ -56,6 +56,22 @@ function messagesOf(entry: unknown, at: string): readonly ChatMessageVM[] {
   return READ.list(entry, at, messageOf);
 }
 
+/** How each kind of read cursor is read from its saved fields, keyed by the cursor's own words. */
+const CURSORS: Readonly<Record<ReadCursor['at'], (cursor: Readonly<Record<string, unknown>>, at: string) => ReadCursor>> = {
+  after: (cursor, at) => ({ at: 'after', messageId: READ.string(cursor['messageId'], `${at}.messageId`) }),
+  top: () => ({ at: 'top' }),
+};
+
+/**
+ * Whether a saved value names a kind of read cursor.
+ *
+ * @param {unknown} kind - The saved `at` field.
+ * @returns {boolean} Whether it is one of the cursor's words.
+ */
+function isCursorKind(kind: unknown): kind is ReadCursor['at'] {
+  return typeof kind === 'string' && Object.hasOwn(CURSORS, kind);
+}
+
 /**
  * Read a chat's read cursor: above every message, or after a named one.
  *
@@ -65,17 +81,8 @@ function messagesOf(entry: unknown, at: string): readonly ChatMessageVM[] {
  */
 function cursorOf(entry: unknown, at: string): ReadCursor {
   const cursor = READ.object(entry, at);
-  switch (cursor['at']) {
-    case 'top': {
-      return { at: 'top' };
-    }
-    case 'after': {
-      return { at: 'after', messageId: READ.string(cursor['messageId'], `${at}.messageId`) };
-    }
-    default: {
-      return READ.refuse(at, entry);
-    }
-  }
+  const kind = cursor['at'];
+  return isCursorKind(kind) ? CURSORS[kind](cursor, at) : READ.refuse(at, entry);
 }
 
 /**

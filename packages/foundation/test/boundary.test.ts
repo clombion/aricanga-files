@@ -13,13 +13,19 @@ const SEED = 0;
 /** The choice a choose command picks. */
 const SECOND_CHOICE = 1;
 
+/** A present command, as a player would send it. */
+const PRESENT: FixtureCommand = { kind: 'present', payload: undefined };
+
+/** A choose command, as a player would send it. */
+const CHOOSE: FixtureCommand = { kind: 'choose', payload: { index: SECOND_CHOICE } };
+
 /** One of every fixture command, each as a player would send it. */
 const EVERY_COMMAND: readonly FixtureCommand[] = [
   { kind: 'schedule', payload: undefined },
   { kind: 'fetch', payload: undefined },
-  { kind: 'present', payload: undefined },
+  PRESENT,
   { kind: 'persist', payload: undefined },
-  { kind: 'choose', payload: { index: SECOND_CHOICE } },
+  CHOOSE,
 ];
 
 /**
@@ -87,7 +93,7 @@ describe('the runtime boundary', () => {
   test('restores a state read back from saved text as the system parses it, keeping none of a field it does not hold', () => {
     expect.hasAssertions();
     const live = runtime();
-    live.send({ command: { kind: 'present', payload: undefined }, source: 'player' }, 'fixture');
+    live.send({ command: PRESENT, source: 'player' }, 'fixture');
     const saved = live.snapshot();
     const restored = runtime();
     restored.restore({ ...saved, state: { fixture: throughSave(withRetiredField(saved.state['fixture'])) } });
@@ -103,7 +109,7 @@ describe('the fixture system’s parsers', () => {
 
   test('refuse a choose whose index is not a number', () => {
     expect.hasAssertions();
-    expect(() => fixtureSystem.parseCommand({ kind: 'choose', payload: { index: '1' } })).toThrow('system "fixture" refuses index: "1"');
+    expect(() => fixtureSystem.parseCommand({ ...CHOOSE, payload: { index: '1' } })).toThrow('system "fixture" refuses index: "1"');
   });
 
   test('read a state back from saved text as the state it is', () => {

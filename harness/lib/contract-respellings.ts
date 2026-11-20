@@ -1,7 +1,9 @@
 /**
  * The respellings of a contract: one of its words written as a bare string, in a module that reaches
  * the contract's package and owns no contract holding the word, neither contextually typed by a type
- * holding it nor compared with a value whose type holds it.
+ * holding it, nor compared with a value whose type holds it, nor a key the compiler holds: a property
+ * name in an object literal whose contextual type declares that key, or an index into a value whose
+ * type declares it (a table keyed by the contract, such as `{ readonly [K in Mode]: … }`).
  */
 
 import type { CallExpression, Expression, Node, SourceFile } from 'typescript/unstable/ast';
@@ -28,6 +30,7 @@ import { inTypeOrImport, packageOf } from './contract-model.ts';
 import { nameText, nodes, pathOf, textOfNode } from './checker.ts';
 import { Accepted } from './exemptions.ts';
 import type { Scan } from './checker.ts';
+import { heldAsKey } from './contract-keys.ts';
 import { relative as relativeTo } from './paths.ts';
 
 /** How deep into type arguments a word is looked for. */
@@ -243,7 +246,8 @@ function heldByContext(checker: Readonly<Checker>, node: Expression, word: strin
   const sought = { depth: TOP, word };
   return (
     holds(checker, checker.getContextualType(node), sought) ||
-    comparedTypes(checker, node).some((type) => holds(checker, type, sought))
+    comparedTypes(checker, node).some((type) => holds(checker, type, sought)) ||
+    heldAsKey(checker, node, word)
   );
 }
 
