@@ -89,6 +89,11 @@ const CLAIMS: readonly Claim[] = [
     probe: probe(/^function reclaim\(/mu, 'packages/foundation/src/sim/system.ts', ['packages/']),
   },
   {
+    clause: "The one reader of chat's records keyed by chat id",
+    path: 'packages/systems/chat/src/model/keyed.ts',
+    probe: probe(/\bObject\.hasOwn\(record, key\)/u, 'packages/systems/chat/src/model/keyed.ts', ['packages/systems/chat/']),
+  },
+  {
     clause: "The one module of the harness's scripts that writes to the standard streams",
     path: 'harness/lib/output.ts',
     probe: probe(/\bprocess\.(?:stdout|stderr)\b/u, 'harness/lib/output.ts', HARNESS_CODE),

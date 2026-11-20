@@ -127,7 +127,7 @@ async function main(): Promise<void> {
   const sorted = Object.fromEntries(
     [...baseline].toSorted(([left]: readonly [string, Timing], [right]: readonly [string, Timing]) => left.localeCompare(right)),
   );
-  writeText('packages/characterisation/performance-baseline.json', `${JSON.stringify(sorted, undefined, INDENT)}\n`);
+  await writeText('packages/characterisation/performance-baseline.json', `${JSON.stringify(sorted, undefined, INDENT)}\n`);
   out(`baseline written for ${Object.keys(sorted).join(', ')}\n`);
 }
 
