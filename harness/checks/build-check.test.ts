@@ -9,7 +9,7 @@
 
 import { describe, expect, test } from 'vitest';
 
-import { apps, BUILD_WRITES, checkBuild } from '../lib/build.ts';
+import { apps, checkBuild } from '../lib/build.ts';
 import { Project } from '../lib/tools.ts';
 
 export const HARNESS_ID = 'build-check';
@@ -40,11 +40,11 @@ function plantedBuild(main: string, config: string): ReturnType<typeof checkBuil
 }
 
 describe('the repository', () => {
-  test('builds every held app and writes only what is exempted', () => {
+  test('builds every held app and writes nothing into the checkout', () => {
     expect(apps()).toEqual(['experiences/sandbox', 'packages/characterisation']);
     const results = apps().map((app) => checkBuild(app));
     expect(results.filter((result) => result.status !== 0).map((result) => result.output)).toEqual([]);
-    expect(BUILD_WRITES.unexempted(results.flatMap((result) => result.written))).toEqual([]);
+    expect(results.flatMap((result) => result.written)).toEqual([]);
   });
 });
 

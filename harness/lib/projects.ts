@@ -5,7 +5,7 @@
 
 import { heldFiles } from './scope.ts';
 
-export const BASE = 'tsconfig.base.json';
+const BASE = 'tsconfig.base.json';
 
 /** Every held TypeScript project file. */
 export function projects(): readonly string[] {

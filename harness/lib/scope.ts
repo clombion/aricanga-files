@@ -15,7 +15,7 @@ export const ROOTS: readonly string[] = [
 ];
 
 /** Root files the harness holds besides the roots: the configuration the gate reads. */
-export const ROOT_FILES: readonly string[] = [
+const ROOT_FILES: readonly string[] = [
   'package.json',
   'tsconfig.json',
   'tsconfig.base.json',

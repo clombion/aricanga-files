@@ -8,17 +8,10 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, statSync } from 'node:fs
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 
-import { Exemptions } from './exemptions.ts';
 import { REPO_ROOT } from './paths.ts';
 import type { Finished } from './process.ts';
 import { heldFiles } from './scope.ts';
 import { bin, finished } from './tools.ts';
-
-/** Builds that write a file of the checkout, keyed by the path written. */
-export const BUILD_WRITES = new Exemptions({
-  'experiences/sandbox/public/story.json':
-    'adopting: the compile-ink plugin emits story.json with this.emitFile instead of writing public/',
-});
 
 /** The held Vite apps: every held directory with a `vite.config.ts`. */
 export function apps(): readonly string[] {

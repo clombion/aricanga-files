@@ -1,5 +1,24 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
+  "rules": {
+    "files": "error",
+    "dependencies": "error",
+    "devDependencies": "error",
+    "optionalPeerDependencies": "error",
+    "unlisted": "error",
+    "binaries": "error",
+    "unresolved": "error",
+    "exports": "error",
+    "types": "error",
+    "nsExports": "error",
+    "nsTypes": "error",
+    "duplicates": "error",
+    "enumMembers": "error",
+    "namespaceMembers": "error",
+    "catalog": "error",
+    "catalogReferences": "error",
+    "cycles": "error"
+  },
   "ignoreWorkspaces": [
     "packages/framework",
     "packages/tests",
@@ -23,63 +42,6 @@
     "zod",
     "@solidjs/compiler"
   ],
-  "ignoreIssues": {
-    "harness/lib/checks.ts": [
-      "files"
-    ],
-    "harness/lib/config.ts": [
-      "exports"
-    ],
-    "harness/lib/exemptions.ts": [
-      "exports"
-    ],
-    "harness/lib/paths.ts": [
-      "exports"
-    ],
-    "harness/lib/process.ts": [
-      "types"
-    ],
-    "harness/lib/projects.ts": [
-      "exports"
-    ],
-    "harness/lib/scope.ts": [
-      "exports"
-    ],
-    "harness/lib/source-files.ts": [
-      "exports"
-    ],
-    "harness/lib/tools.ts": [
-      "exports"
-    ],
-    "packages/characterisation/src/harness.ts": [
-      "exports"
-    ],
-    "packages/characterisation/tests/_helpers.ts": [
-      "exports"
-    ],
-    "packages/systems/chat/src/model/defer.ts": [
-      "exports"
-    ],
-    "packages/systems/chat/src/model/read-state.ts": [
-      "exports"
-    ],
-    "packages/systems/chat/src/model/route.ts": [
-      "exports"
-    ],
-    "packages/systems/chat/src/model/time.ts": [
-      "exports"
-    ],
-    "packages/systems/chat/src/system.ts": [
-      "types"
-    ],
-    "packages/systems/chat/test/regression-ledger.ts": [
-      "exports",
-      "types"
-    ],
-    "packages/characterisation/playwright.characterisation.config.ts": [
-      "binaries"
-    ]
-  },
   "workspaces": {
     ".": {
       "entry": [

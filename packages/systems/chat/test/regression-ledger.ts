@@ -7,7 +7,7 @@ import type { FixtureInput } from '@narratives/foundation/testing';
 // The meta-test (regression-ledger.test.ts) enforces that every BUG-HISTORY entry
 // is dispositioned and that each kernel-physics bug keeps its fixture alive.
 
-export type Disposition =
+type Disposition =
   | { readonly kind: 'kernel-physics'; readonly predicate: string; readonly task: string; readonly fixture: string }
   | { readonly kind: 'structurally-eliminated' }
   | { readonly kind: 'deferred'; readonly task: string }
@@ -33,7 +33,7 @@ const story = (text: string, rawTags: string[] = []): FixtureInput => ({
 // Recorded Input streams for the kernel-physics regressions. The routing scenario
 // is asserted green now; the rest carry the durable repro data, asserted green by
 // their consuming physics task.
-export const FIXTURES: Readonly<Record<string, readonly FixtureInput[]>> = {
+const FIXTURES: Readonly<Record<string, readonly FixtureInput[]>> = {
   'cross-chat-routing': [
     story('Routes to spectre', ['targetChat: spectre', 'speaker: TonyGov', 'type: received']),
   ],

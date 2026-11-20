@@ -12,14 +12,14 @@ import { REPO_ROOT } from './paths.ts';
 import { run } from './process.ts';
 
 /** The fewest files a listing of this repository can hold; fewer means the listing failed. */
-export const FLOOR = 50;
+const FLOOR = 50;
 
-export class ListingError extends Error {
+class ListingError extends Error {
   override readonly name = 'ListingError';
 }
 
 /** Parse `git ls-files -z` output into the existing files' POSIX paths, refusing a short listing. */
-export function listing(stdout: string, root: string, floor: number = FLOOR): readonly string[] {
+function listing(stdout: string, root: string, floor: number = FLOOR): readonly string[] {
   const paths = [...new Set(stdout.split('\0'))]
     .filter((path) => path !== '' && existsSync(join(root, path)) && statSync(join(root, path)).isFile())
     .toSorted();

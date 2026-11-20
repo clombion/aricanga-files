@@ -11,6 +11,6 @@ export function fromRoot(...parts: string[]): string {
 }
 
 /** `path` relative to the repository root, in POSIX form. */
-export function relative(path: string): string {
+function relative(path: string): string {
   return relativePath(REPO_ROOT, resolve(path)).split(sep).join('/');
 }

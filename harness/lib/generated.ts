@@ -22,14 +22,14 @@ const ENTRY_TASKS = new Accepted(['check', 'check:fast', 'lock:check', 'setup', 
 const LOCK_FIRST = 'pnpm run lock:check';
 
 /** The list of shipped checks, from each check module's `HARNESS_ID` and leading doc comment. */
-export function checkList(): string {
+function checkList(): string {
   return checkModules()
     .map((module) => `- \`${module.harnessId}\` (\`${module.path}\`): ${module.summary}`)
     .join('\n');
 }
 
 /** The table of pinned tools, with each tool's upstream repository. */
-export function pinTable(): string {
+function pinTable(): string {
   const rows = pins().map((pin) => {
     const repository = UPSTREAM.get(pin.tool);
     const upstream = repository === undefined ? 'no upstream named' : `[${repository}](https://github.com/${repository})`;
@@ -39,7 +39,7 @@ export function pinTable(): string {
 }
 
 /** The table of the harness's tasks: the entry points and every task that starts with the lock check. */
-export function taskTable(): string {
+function taskTable(): string {
   const rows = [...repoTasks().values()]
     .filter((task) => ENTRY_TASKS.has(task.name) || task.commands[0] === LOCK_FIRST)
     .map((task) => `| \`pnpm run ${task.name}\` | \`${task.script.replaceAll('|', String.raw`\|`)}\` |`);
@@ -106,7 +106,7 @@ export interface Files {
   readonly write: (path: string, text: string) => void;
 }
 
-export const REPO_FILES: Files = {
+const REPO_FILES: Files = {
   paths: markdownPaths,
   read: markdown,
   write: (path, text) => {

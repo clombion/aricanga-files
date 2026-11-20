@@ -1,18 +1,24 @@
 /**
  * The one owner of the harness's stylesheet scans. A sheet is a held `.css` file or a `css`
- * tagged template in a held module (found in the module's syntax tree); every sheet is linted with
+ * tagged template in a held module (found in the module's syntax tree, read through
+ * `ts-source.ts`); every sheet is linted with
  * `.stylelintrc.json`, and three scans read across sheets: custom properties defined and read,
  * classes used, and one rule per selector in each media context. Sheets parse through stylelint's
  * own postcss, handed back by a one-rule collector plugin.
  */
 
 import stylelint, { type Rule, type RuleBase } from 'stylelint';
-import ts from 'typescript';
+import {
+  isIdentifier,
+  isNoSubstitutionTemplateLiteral,
+  isTaggedTemplateExpression,
+} from 'typescript/unstable/ast/is';
 
 import { Prefixes } from './exemptions.ts';
 import { fromRoot } from './paths.ts';
 import { heldFiles } from './scope.ts';
 import { textOf } from './source-files.ts';
+import { nodes, parse as parseModule } from './ts-source.ts';
 
 type Root = Parameters<ReturnType<RuleBase>>[0];
 
@@ -42,21 +48,21 @@ function productFiles(...suffixes: string[]): readonly string[] {
 }
 
 /** The `css` tagged templates of a module: their text (a substitution reads as `0`) and span. */
-function cssTemplates(path: string, text: string): readonly { readonly text: string; readonly start: number; readonly end: number }[] {
-  const source = ts.createSourceFile(path, text, ts.ScriptTarget.Latest, true);
-  const found: { text: string; start: number; end: number }[] = [];
-  const visit = (node: ts.Node): void => {
-    if (ts.isTaggedTemplateExpression(node) && ts.isIdentifier(node.tag) && node.tag.text === 'css') {
-      const template = node.template;
-      const body = ts.isNoSubstitutionTemplateLiteral(template)
-        ? template.text
-        : template.head.text + template.templateSpans.map((span) => `0${span.literal.text}`).join('');
-      found.push({ text: body, start: template.getStart(source) + 1, end: template.getEnd() - 1 });
+function cssTemplates(
+  path: string,
+  text: string,
+): readonly { readonly text: string; readonly start: number; readonly end: number }[] {
+  const file = parseModule(path, text);
+  return nodes(file).flatMap((node) => {
+    if (!isTaggedTemplateExpression(node) || !isIdentifier(node.tag) || node.tag.text !== 'css') {
+      return [];
     }
-    ts.forEachChild(node, visit);
-  };
-  visit(source);
-  return found;
+    const template = node.template;
+    const body = isNoSubstitutionTemplateLiteral(template)
+      ? template.text
+      : template.head.text + template.templateSpans.map((span) => `0${span.literal.text}`).join('');
+    return [{ text: body, start: text.indexOf('`', template.pos) + 1, end: template.end - 1 }];
+  });
 }
 
 function lineAt(text: string, index: number): number {
@@ -73,6 +79,9 @@ export function sheetsOf(path: string, text: string): readonly Sheet[] {
 
 /** A module's text with its `css` templates blanked, so a sheet never counts as its own reader. */
 export function withoutSheets(path: string, text: string): string {
+  if (!MODULE_SUFFIXES.some((suffix) => path.endsWith(suffix))) {
+    return text;
+  }
   let blanked = text;
   for (const template of cssTemplates(path, text)) {
     blanked = blanked.slice(0, template.start) + ' '.repeat(template.end - template.start) + blanked.slice(template.end);

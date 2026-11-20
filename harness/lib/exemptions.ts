@@ -17,7 +17,7 @@ export class StaleExemptionError extends Error {
   override readonly name = 'StaleExemptionError';
 }
 
-export class ExemptionError extends Error {
+class ExemptionError extends Error {
   override readonly name = 'ExemptionError';
 }
 

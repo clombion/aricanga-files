@@ -59,7 +59,7 @@ export interface Pin {
   readonly version: string;
 }
 
-export class PinError extends Error {
+class PinError extends Error {
   override readonly name = 'PinError';
 }
 
@@ -69,7 +69,7 @@ const ENTRY = /^ {6}'?([^':]+)'?:$/;
 const VERSION = /^ {8}version: ([^(\s]+)/;
 
 /** The versions `pnpm-lock.yaml` resolves for one importer, by package name. */
-export function lockedVersions(lockText: string, importer = '.'): ReadonlyMap<string, string> {
+function lockedVersions(lockText: string, importer = '.'): ReadonlyMap<string, string> {
   const found = new Map<string, string>();
   let inImporters = false;
   let inImporter = false;
@@ -109,7 +109,7 @@ export function lockedVersions(lockText: string, importer = '.'): ReadonlyMap<st
 }
 
 /** Every pin: the root dev dependencies at their locked versions, and Node's declared floor. */
-export function pinned(packageJson: unknown, lockText: string): readonly Pin[] {
+function pinned(packageJson: unknown, lockText: string): readonly Pin[] {
   const manifest = object(packageJson, 'package.json');
   const locked = lockedVersions(lockText);
   const found = Object.keys(object(manifest['devDependencies'] ?? {}, 'devDependencies')).map((tool) => {

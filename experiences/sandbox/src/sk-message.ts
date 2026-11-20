@@ -10,13 +10,17 @@ export class SkMessage extends LitElement {
   static override styles = css`
     :host {
       display: block;
-      font: 14px/1.4 system-ui, sans-serif;
+      font-family: var(--font-body);
+      font-size: var(--text-body);
+      line-height: var(--leading-body);
     }
+
     p {
       margin: 0;
-      padding: 8px 12px;
-      border-radius: 12px;
-      background: #e9e9eb;
+      padding-block: var(--space-bubble-block);
+      padding-inline: var(--space-bubble-inline);
+      border-radius: var(--radius-bubble);
+      background-color: var(--surface-bubble);
     }
   `;
 

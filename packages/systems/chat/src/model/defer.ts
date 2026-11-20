@@ -23,7 +23,7 @@ function clearDeferred(state: ChatState, chatId: string): ChatState {
   return { ...state, deferredMessages: rest };
 }
 
-export function appendDeferred(state: ChatState, message: ChatMessageVM): ChatState {
+function appendDeferred(state: ChatState, message: ChatMessageVM): ChatState {
   const prev = state.deferredMessages[message.chatId] ?? [];
   return {
     ...state,

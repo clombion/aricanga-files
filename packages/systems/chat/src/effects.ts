@@ -2,7 +2,7 @@
 
 import { type Effect, field, fx, hasField, text } from '@narratives/foundation';
 
-export const CHAT_EFFECT = {
+const CHAT_EFFECT = {
   notification: 'chat/showNotification',
   receipt: 'chat/receiptChanged',
 } as const;

@@ -13,13 +13,13 @@ export interface Finished {
   readonly stderr: string;
 }
 
-export interface TimedOut {
+interface TimedOut {
   readonly kind: 'timed-out';
   readonly argv: readonly string[];
   readonly timeoutMs: number;
 }
 
-export interface NotStarted {
+interface NotStarted {
   readonly kind: 'not-started';
   readonly argv: readonly string[];
   readonly reason: string;

@@ -2,7 +2,7 @@
 
 import { textOf } from './source-files.ts';
 
-export class ConfigError extends Error {
+class ConfigError extends Error {
   override readonly name = 'ConfigError';
 }
 

@@ -3,6 +3,8 @@
   "plugins": [
     "stylelint-plugin-logical-css",
     "stylelint-no-unsupported-browser-features",
+    "stylelint-declaration-strict-value",
+    "@double-great/stylelint-a11y",
     "./harness/stylelint/design-tokens.ts"
   ],
   "allowEmptyInput": true,
@@ -21,6 +23,26 @@
     "**/build/**"
   ],
   "rules": {
+    "no-descending-specificity": true,
+    "selector-max-specificity": "0,2,0",
+    "selector-max-compound-selectors": 3,
+    "max-nesting-depth": 1,
+    "selector-max-id": 0,
+    "selector-no-qualifying-type": true,
+    "declaration-no-important": true,
+    "color-named": "never",
+    "font-weight-notation": "numeric",
+    "declaration-property-unit-allowed-list": {
+      "font-size": ["rem"],
+      "line-height": [],
+      "letter-spacing": ["em"],
+      "/^(margin|padding|gap|row-gap|column-gap|inset)/": ["rem", "%"],
+      "/^(min-|max-)?(inline|block)-size$/": ["rem", "%", "ch", "dvi", "dvb", "svi", "svb", "cqi", "cqb"],
+      "/radius$/": ["rem", "%"],
+      "/^border(-[a-z]+)*-width$/": ["px"],
+      "/^outline(-width|-offset)$/": ["px"],
+      "/^(transition|animation)(-duration|-delay)?$/": ["ms"]
+    },
     "logical-css/require-logical-properties": true,
     "logical-css/require-logical-keywords": true,
     "logical-css/require-logical-units": true,
@@ -37,6 +59,33 @@
         "severity": "error"
       }
     ],
+    "scale-unlimited/declaration-strict-value": [
+      [
+        "/color$/",
+        "fill",
+        "stroke",
+        "z-index",
+        "/^(transition|animation)-(duration|timing-function)$/",
+        "/^(transition|animation|border|outline|background)$/"
+      ],
+      {
+        "ignoreValues": ["currentColor", "transparent", "inherit", "initial", "unset", "revert", "none", "auto", "0"],
+        "expandShorthand": true,
+        "disableFix": true
+      }
+    ],
+    "a11y/content-property-no-static-value": true,
+    "a11y/font-size-is-readable": true,
+    "a11y/line-height-is-vertical-rhythmed": true,
+    "a11y/media-prefers-color-scheme": true,
+    "a11y/media-prefers-reduced-motion": true,
+    "a11y/no-display-none": true,
+    "a11y/no-obsolete-attribute": true,
+    "a11y/no-obsolete-element": true,
+    "a11y/no-outline-none": true,
+    "a11y/no-spread-text": true,
+    "a11y/no-text-align-justify": true,
+    "a11y/selector-pseudo-class-focus": true,
     "harness/design-tokens": true
   }
 }

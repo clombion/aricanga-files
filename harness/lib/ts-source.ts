@@ -30,9 +30,9 @@ import { API } from 'typescript/unstable/sync';
 
 import { REPO_ROOT } from './paths.ts';
 
-export type { CallExpression, Expression, Node, SourceFile };
+export type { Expression, Node, SourceFile };
 
-export class ParseError extends Error {
+class ParseError extends Error {
   override readonly name = 'ParseError';
 }
 
@@ -171,11 +171,11 @@ export function chain(node: Expression): string[] | undefined {
 }
 
 /** The root name of a callee, looking through curried calls such as `test.skipIf(x)(...)`. */
-export function calleeRoot(expression: Expression): string | undefined {
+function calleeRoot(expression: Expression): string | undefined {
   return isCallExpression(expression) ? calleeRoot(expression.expression) : chain(expression)?.[0];
 }
 
 /** Whether a node is a function literal (an arrow or a function expression). */
-export function isFunctionLiteral(node: Node): boolean {
+function isFunctionLiteral(node: Node): boolean {
   return isArrowFunction(node) || isFunctionExpression(node);
 }

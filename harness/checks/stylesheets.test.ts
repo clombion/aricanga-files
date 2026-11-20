@@ -12,36 +12,31 @@
 
 import { describe, expect, test } from 'vitest';
 
-import { CountedExemptions, site } from '../lib/exemptions.ts';
 import {
   customPropertyProblems,
   duplicateRules,
   lintSheet,
   readers,
   type Sheet,
-  type SheetFinding,
   sheets,
   sheetsOf,
   unusedClasses,
   withoutSheets,
 } from '../lib/stylesheets.ts';
-import { rawValues } from '../stylelint/design-tokens.ts';
+import { rawSizes, rawTokenValues } from '../stylelint/design-tokens.ts';
+import { json, object } from '../lib/config.ts';
+import { textOf } from '../lib/source-files.ts';
 
 export const HARNESS_ID = 'stylesheets';
 
-/** Lint findings the rebuild still carries, keyed by (path, rule), with their counts. */
-const LINT_DEBT = new CountedExemptions({
-  [site('experiences/sandbox/src/sk-message.ts', 'harness/design-tokens')]: [
-    5,
-    'adopting: the Solid message part that replaces the Lit SkMessage reads its sizes and colour from design tokens',
-  ],
-  [site('experiences/sandbox/src/sk-message.ts', 'rule-empty-line-before')]: [
-    1,
-    'adopting: the Solid message part that replaces the Lit SkMessage is formatted by the standard config',
-  ],
-});
 
-const key = (finding: SheetFinding): string => site(finding.path, finding.rule);
+/** The rules `.stylelintrc.json` turns on itself (the standard config's own are its plants' concern). */
+function configuredRules(): readonly string[] {
+  const rules = object(object(json(textOf('.stylelintrc.json')), '.stylelintrc.json').rules, 'rules');
+  return Object.entries(rules)
+    .filter(([, value]) => value !== null && value !== false)
+    .map(([rule]) => rule);
+}
 
 async function lintText(path: string, text: string): Promise<readonly string[]> {
   const findings = await Promise.all(sheetsOf(path, text).map(lintSheet));
@@ -49,9 +44,8 @@ async function lintText(path: string, text: string): Promise<readonly string[]> 
 }
 
 describe('the repository', () => {
-  test('every sheet passes the lint, but for its counted debt', async () => {
-    const findings = (await Promise.all(sheets().map(lintSheet))).flat();
-    expect(LINT_DEBT.mismatches(findings.map(key))).toEqual([]);
+  test('every sheet passes the lint', async () => {
+    expect((await Promise.all(sheets().map(lintSheet))).flat()).toEqual([]);
   });
 
   test('every custom property is defined and read, every class is used, no selector repeats', async () => {
@@ -65,53 +59,76 @@ describe('the repository', () => {
   });
 });
 
+const RM = '\n\n@media (prefers-reduced-motion: reduce) {\n  .a {\n    transition: none;\n  }\n}\n';
+
+/** One plant per rule `.stylelintrc.json` turns on: a sheet the rule must fail, and a near miss every rule passes. */
+const PLANTS: readonly (readonly [string, string, string])[] = [
+  ['no-descending-specificity', 'p .a {\n  color: var(--x);\n}\n\n.a {\n  color: var(--y);\n}\n', '.a {\n  color: var(--y);\n}\n\np .a {\n  color: var(--x);\n}\n'],
+  ['selector-max-specificity', '.a .b .c {\n  color: var(--x);\n}\n', '.a .b {\n  color: var(--x);\n}\n'],
+  ['selector-max-compound-selectors', 'p span em strong {\n  color: var(--x);\n}\n', 'p span em {\n  color: var(--x);\n}\n'],
+  ['max-nesting-depth', 'p {\n  & span {\n    & em {\n      color: var(--x);\n    }\n  }\n}\n', 'p {\n  & span {\n    color: var(--x);\n  }\n}\n'],
+  ['selector-max-id', '#a {\n  color: var(--x);\n}\n', '.a {\n  color: var(--x);\n}\n'],
+  ['selector-no-qualifying-type', 'p.a {\n  color: var(--x);\n}\n', '.a {\n  color: var(--x);\n}\n'],
+  ['declaration-no-important', '.a {\n  color: var(--x) !important;\n}\n', '.a {\n  color: var(--x);\n}\n'],
+  ['color-named', '.a {\n  color: red;\n}\n', '.a {\n  color: var(--danger);\n}\n'],
+  ['font-weight-notation', '.a {\n  font-weight: bold;\n}\n', '.a {\n  font-weight: 700;\n}\n'],
+  ['declaration-property-unit-allowed-list', '.a {\n  font-size: 120%;\n}\n', '.a {\n  inline-size: 50%;\n}\n'],
+  ['logical-css/require-logical-properties', '.a {\n  margin-left: 0;\n}\n', '.a {\n  margin-inline-start: 0;\n}\n'],
+  ['logical-css/require-logical-keywords', '.a {\n  float: left;\n}\n', '.a {\n  float: inline-start;\n}\n'],
+  ['logical-css/require-logical-units', '.a {\n  inline-size: 50vw;\n}\n', '.a {\n  inline-size: 50%;\n}\n'],
+  ['plugin/no-unsupported-browser-features', '.a {\n  initial-letter: 2;\n}\n', '.a {\n  display: grid;\n}\n'],
+  ['scale-unlimited/declaration-strict-value', '.a {\n  color: #fff;\n}\n', '.a {\n  color: var(--ink);\n}\n'],
+  ['scale-unlimited/declaration-strict-value', '.a {\n  z-index: 3;\n}\n', '.a {\n  z-index: var(--layer-top);\n}\n'],
+  ['scale-unlimited/declaration-strict-value', '.a {\n  transition-duration: 200ms;\n}' + RM, '.a {\n  transition-duration: var(--quick);\n}' + RM],
+  ['scale-unlimited/declaration-strict-value', '.a {\n  transition-timing-function: ease-in;\n}' + RM, '.a {\n  transition-timing-function: var(--ease-out);\n}' + RM],
+  ['a11y/content-property-no-static-value', '.a::before {\n  content: "New";\n}\n', '.a::before {\n  content: "";\n}\n'],
+  ['a11y/font-size-is-readable', '.a {\n  font-size: 12px;\n}\n', '.a {\n  font-size: var(--text-body);\n}\n'],
+  ['a11y/line-height-is-vertical-rhythmed', '.a {\n  line-height: 1.2;\n}\n', '.a {\n  line-height: 1.5;\n}\n'],
+  ['a11y/media-prefers-color-scheme', '.a {\n  color: #000;\n}\n', '.a {\n  color: var(--ink);\n}\n'],
+  ['a11y/media-prefers-reduced-motion', '.a {\n  transition: opacity var(--quick) var(--ease-out);\n}\n', '.a {\n  transition: opacity var(--quick) var(--ease-out);\n}' + RM],
+  ['a11y/no-display-none', '.a {\n  display: none;\n}\n', '.a {\n  display: block;\n}\n'],
+  ['a11y/no-obsolete-attribute', '[dropzone] {\n  color: var(--x);\n}\n', '[hidden] {\n  color: var(--x);\n}\n'],
+  ['a11y/no-obsolete-element', 'blink {\n  color: var(--x);\n}\n', 'em {\n  color: var(--x);\n}\n'],
+  ['a11y/no-outline-none', '.a:focus {\n  outline: none;\n}\n', '.a:focus {\n  outline: var(--focus-ring);\n}\n'],
+  ['a11y/no-spread-text', '.a {\n  text-align: start;\n  max-width: 120ch;\n}\n', '.a {\n  text-align: start;\n  max-inline-size: var(--measure);\n}\n'],
+  ['a11y/no-text-align-justify', '.a {\n  text-align: justify;\n}\n', '.a {\n  text-align: start;\n}\n'],
+  ['a11y/selector-pseudo-class-focus', '.a:hover {\n  color: var(--x);\n}\n', '.a:hover,\n.a:focus {\n  color: var(--x);\n}\n'],
+  ['harness/design-tokens', '.a {\n  padding-inline: 1rem;\n}\n', '.a {\n  padding-inline: var(--gap);\n}\n'],
+];
+
 describe('the lint, on planted sheets', () => {
-  test.each([
-    ['a size', '.a {\n  inline-size: 12px;\n}\n'],
-    ['a colour', '.a {\n  color: #e9e9eb;\n}\n'],
-    ['a named colour', '.a {\n  color: tomato;\n}\n'],
-    ['a colour function', '.a {\n  color: oklch(70% 0.1 200deg);\n}\n'],
-    ['a duration', '.a {\n  transition-duration: 200ms;\n}\n'],
-    ['an easing', '.a {\n  transition-timing-function: cubic-bezier(0.2, 0, 0, 1);\n}\n'],
-    ['a z-index', '.a {\n  z-index: 10;\n}\n'],
-    ['a raw value in a custom property outside the tokens', ':root {\n  --gap: 8px;\n}\n'],
-  ])('refuses %s outside the design tokens', async (_kind, text) => {
-    expect(await lintText('plant/theme.css', text)).toEqual(['harness/design-tokens']);
+  test('every rule the configuration turns on has a plant', () => {
+    expect([...new Set(PLANTS.map(([rule]) => rule))].toSorted()).toEqual(configuredRules().toSorted());
   });
 
-  test('lets a token definition and a token read through', async () => {
-    expect(await lintText('plant/tokens.css', ':root {\n  --gap: 8px;\n  --ink: #111;\n}\n')).toEqual([]);
-    const reads = '.a {\n  padding-inline: var(--gap);\n  color: var(--ink);\n  margin-block: 0;\n  line-height: 1.4;\n}\n';
-    expect(await lintText('plant/theme.css', reads)).toEqual([]);
+  test.each(PLANTS)('%s fails its plant and passes its near miss', async (rule, failing, passing) => {
+    expect(await lintText('plant/theme.css', failing)).toContain(rule);
+    expect(await lintText('plant/theme.css', passing)).toEqual([]);
   });
 
-  test('refuses a physical property, and lets its logical twin through', async () => {
-    expect(await lintText('plant/theme.css', '.a {\n  margin-left: 0;\n}\n')).toEqual([
-      'logical-css/require-logical-properties',
+  test('a token file defines raw values; a custom property anywhere else may not', async () => {
+    const tokens = ':root {\n  --gap: 0.5rem;\n  --ink: #111;\n  --quick: 150ms;\n  --layer-top: 10;\n}\n';
+    expect(await lintText('plant/tokens.css', tokens)).toEqual([]);
+    expect(await lintText('plant/theme.css', tokens)).toEqual([
+      'harness/design-tokens',
+      'harness/design-tokens',
+      'harness/design-tokens',
+      'harness/design-tokens',
     ]);
-    expect(await lintText('plant/theme.css', '.a {\n  margin-inline-start: 0;\n}\n')).toEqual([]);
-  });
-
-  test('refuses a feature a supported browser lacks, and lets a supported one through', async () => {
-    expect(await lintText('plant/theme.css', '.a {\n  initial-letter: 2;\n}\n')).toEqual([
-      'plugin/no-unsupported-browser-features',
-    ]);
-    expect(await lintText('plant/theme.css', '.a {\n  display: grid;\n}\n')).toEqual([]);
   });
 
   test('reads a stylesheet written in a module', async () => {
-    const module = "import { css } from 'lit';\nexport const styles = css`\n  .a {\n    color: red;\n  }\n`;\n";
+    const module = "import { css } from 'lit';\nexport const styles = css`\n  .a {\n    color: #fff;\n  }\n`;\n";
     expect(sheetsOf('plant/part.ts', module).map((sheet) => sheet.line)).toEqual([2]);
-    expect(await lintText('plant/part.ts', module)).toEqual(['harness/design-tokens']);
+    expect(await lintText('plant/part.ts', module)).toContain('scale-unlimited/declaration-strict-value');
   });
 
-  test('the token rule sees each raw kind and lets zero, unitless and var() through', () => {
-    expect(rawValues('transition', 'opacity 0.2s ease-out').map(([kind]) => kind)).toEqual(['duration', 'easing']);
-    expect(rawValues('margin', '0 var(--gap)')).toEqual([]);
-    expect(rawValues('line-height', '1.4')).toEqual([]);
-    expect(rawValues('z-index', 'var(--layer-top)')).toEqual([]);
-    expect(rawValues('background', 'linear-gradient(var(--a), var(--b))')).toEqual([]);
-    expect(rawValues('inline-size', 'var(--space-4px)')).toEqual([]);
+  test('the token rule lets zero, unitless numbers and var() through', () => {
+    expect(rawSizes('0 var(--gap)')).toEqual([]);
+    expect(rawSizes('1.5')).toEqual([]);
+    expect(rawSizes('var(--space-4px)')).toEqual([]);
+    expect(rawTokenValues('var(--a)')).toEqual([]);
+    expect(rawTokenValues('0')).toEqual([]);
   });
 });
 

@@ -12,12 +12,12 @@ const DECLARED = /^export const HARNESS_ID = '([a-z0-9-]+)';$/m;
 const LEADING_DOC = /^\/\*\*\s*\n?\s*\*?\s*(.+?)\s*(?:\n|\*\/)/;
 
 /** The `HARNESS_ID` a module's source declares, if any. */
-export function declaredId(text: string): string | undefined {
+function declaredId(text: string): string | undefined {
   return DECLARED.exec(text)?.[1];
 }
 
 /** The first line of a module's leading doc comment. */
-export function summary(text: string): string {
+function summary(text: string): string {
   return LEADING_DOC.exec(text)?.[1] ?? '';
 }
 

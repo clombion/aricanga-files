@@ -12,14 +12,14 @@ import { fromRoot, REPO_ROOT } from './paths.ts';
 import { type Finished, run } from './process.ts';
 
 /** The bound on one tool run from a check. */
-export const TIMEOUT_MS = 300_000;
+const TIMEOUT_MS = 300_000;
 
-export class ToolError extends Error {
+class ToolError extends Error {
   override readonly name = 'ToolError';
 }
 
 /** This process's environment without the variables that tie a child run to this one. */
-export function isolatedEnv(extra: Readonly<Record<string, string>> = {}): Record<string, string> {
+function isolatedEnv(extra: Readonly<Record<string, string>> = {}): Record<string, string> {
   const env: Record<string, string> = {};
   for (const [name, value] of Object.entries(process.env)) {
     if (value !== undefined && !name.startsWith('VITEST') && !name.startsWith('NODE_V8_COVERAGE')) {
