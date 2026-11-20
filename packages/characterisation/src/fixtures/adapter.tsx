@@ -72,10 +72,23 @@ function itemsById(host: Readonly<Pick<ParentNode, 'querySelectorAll'>>): Map<st
  * @param {HTMLElement} host The element the list is rendered into.
  */
 function recordReconcile(store: Adapter, host: Readonly<Pick<ParentNode, 'querySelectorAll'>>): void {
-  store.apply({ messages: [{ id: 'a', text: 'one' }, { id: 'b', text: 'two' }, { id: 'c', text: 'three' }] });
+  store.apply({
+    messages: [
+      { id: 'a', text: 'one' },
+      { id: 'b', text: 'two' },
+      { id: 'c', text: 'three' },
+    ],
+  });
   flush();
   const before = itemsById(host);
-  store.apply({ messages: [{ id: 'a', text: 'one' }, { id: 'b', text: 'TWO' }, { id: 'c', text: 'three' }, { id: 'd', text: 'four' }] });
+  store.apply({
+    messages: [
+      { id: 'a', text: 'one' },
+      { id: 'b', text: 'TWO' },
+      { id: 'c', text: 'three' },
+      { id: 'd', text: 'four' },
+    ],
+  });
   flush();
   const after = itemsById(host);
   const kept = ['a', 'b', 'c'].every((id) => before.get(id) === after.get(id));

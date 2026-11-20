@@ -281,7 +281,12 @@ function fenceProblems(doc: Doc): readonly Unresolved[] {
     if (SHELL_FENCES.has(language)) {
       for (const [offset, line] of fence.lines.entries()) {
         if (runsUnlocked(line)) {
-          found.push({ line: fence.line + offset + FIRST_LINE_OFFSET, path: doc.path, problem: 'a locked tool runs through pnpm', reference: line.trim() });
+          found.push({
+            line: fence.line + offset + FIRST_LINE_OFFSET,
+            path: doc.path,
+            problem: 'a locked tool runs through pnpm',
+            reference: line.trim(),
+          });
         }
       }
     }

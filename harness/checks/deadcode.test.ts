@@ -9,14 +9,7 @@
  */
 
 import { EXIT_CLEAN, EXIT_FINDINGS } from './exit-status.ts';
-import {
-  deadcodeRuns,
-  ignoreEntries,
-  issueTypes,
-  knip,
-  repoIgnoreEntries,
-  strictnessProblems,
-} from '#lib/deadcode.ts';
+import { deadcodeRuns, ignoreEntries, issueTypes, knip, repoIgnoreEntries, strictnessProblems } from '#lib/deadcode.ts';
 import { describe, expect, test } from 'vitest';
 import { Exemptions } from '#lib/exemptions.ts';
 import { Project } from '#lib/tools.ts';
@@ -113,9 +106,7 @@ async function failedRepoRuns(): Promise<readonly string[]> {
     const run = await knip(REPO_ROOT, args);
     return run;
   });
-  return done
-    .filter((run) => run.status !== EXIT_CLEAN)
-    .map((run) => run.stdout + run.stderr);
+  return done.filter((run) => run.status !== EXIT_CLEAN).map((run) => run.stdout + run.stderr);
 }
 
 const CLEAN = {
@@ -192,7 +183,6 @@ describe('the deadcode check, on a planted package', () => {
       [EXIT_FINDINGS, true],
     ]);
   });
-
 });
 
 describe('the deadcode check, on planted configs', () => {
@@ -201,10 +191,10 @@ describe('the deadcode check, on planted configs', () => {
     const strict = { rules: { exports: 'error', types: 'error' } };
     expect(strictnessProblems(strict, ['exports', 'types'])).toStrictEqual([]);
     expect(
-      strictnessProblems(
-        { ignoreFiles: ['src/y.ts'], ignoreIssues: { 'src/x.ts': ['exports'] }, rules: { exports: 'warn' } },
-        ['exports', 'types'],
-      ),
+      strictnessProblems({ ignoreFiles: ['src/y.ts'], ignoreIssues: { 'src/x.ts': ['exports'] }, rules: { exports: 'warn' } }, [
+        'exports',
+        'types',
+      ]),
     ).toStrictEqual([
       'rule exports is not error',
       'rule types is not error',

@@ -57,9 +57,7 @@ type Metric = (typeof METRICS)[number];
  * @returns {readonly number[]} The hit counts.
  */
 function counts(value: unknown, what: string): readonly number[] {
-  return Object.values(object(value, what)).flatMap((entry) =>
-    Array.isArray(entry) ? entry.map(Number) : [Number(entry)],
-  );
+  return Object.values(object(value, what)).flatMap((entry) => (Array.isArray(entry) ? entry.map(Number) : [Number(entry)]));
 }
 
 /**
@@ -142,8 +140,7 @@ function shortfalls(files: readonly FileCoverage[], floor: number = FLOOR): read
 }
 
 /** The shortfall the project carries while it adopts the floor, per file and metric. */
-const ADOPTING =
-  'adopting: the shortfall this file carried when the floor was adopted; close it with tests and lower the entry';
+const ADOPTING = 'adopting: the shortfall this file carried when the floor was adopted; close it with tests and lower the entry';
 
 const DEBT: CountedExemptions = new CountedExemptions({
   'experiences/sandbox/src/main.ts :: branches': { count: 6, reason: ADOPTING },
@@ -260,11 +257,13 @@ const DEBT: CountedExemptions = new CountedExemptions({
  * @returns {readonly string[]} The problems.
  */
 function floorProblems(files: readonly FileCoverage[], debt: Readonly<CountedExemptions>): readonly string[] {
-  return debt.mismatches(shortfalls(files)).map((mismatch: Mismatch) =>
-    mismatch.found > mismatch.registered
-      ? `${mismatch.key}: ${mismatch.found} items under the ${FLOOR} % floor, ${mismatch.registered} registered`
-      : `${mismatch.key}: ${mismatch.found} items under the floor, but ${mismatch.registered} registered: lower the debt`,
-  );
+  return debt
+    .mismatches(shortfalls(files))
+    .map((mismatch: Mismatch) =>
+      mismatch.found > mismatch.registered
+        ? `${mismatch.key}: ${mismatch.found} items under the ${FLOOR} % floor, ${mismatch.registered} registered`
+        : `${mismatch.key}: ${mismatch.found} items under the floor, but ${mismatch.registered} registered: lower the debt`,
+    );
 }
 
 /**

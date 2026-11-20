@@ -122,9 +122,7 @@ function below(checker: Readonly<Checker>, type: Type, segment: string): readonl
 function descend(checker: Readonly<Checker>, types: readonly Type[], path: readonly string[]): readonly Type[] {
   let current = types;
   for (const segment of path) {
-    current = current
-      .flatMap((type) => (type.isUnionType() ? type.getTypes() : [type]))
-      .flatMap((type) => below(checker, type, segment));
+    current = current.flatMap((type) => (type.isUnionType() ? type.getTypes() : [type])).flatMap((type) => below(checker, type, segment));
   }
   return current;
 }
@@ -187,7 +185,12 @@ function argumentPath(literal: Node): Readonly<{ argument: Node; path: readonly 
 function expectedTypes(checker: Readonly<Checker>, literal: Node): readonly Type[] {
   const located = argumentPath(literal);
   const call = located?.argument.parent;
-  if (located === undefined || call === undefined || !isCallExpression(call) || !call.arguments.some((argument) => argument === located.argument)) {
+  if (
+    located === undefined ||
+    call === undefined ||
+    !isCallExpression(call) ||
+    !call.arguments.some((argument) => argument === located.argument)
+  ) {
     return [];
   }
   const subject = expectationSubject(call);

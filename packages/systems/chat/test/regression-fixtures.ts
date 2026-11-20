@@ -7,9 +7,7 @@ import { story } from '#test/support';
 // is asserted green now; the rest carry the durable repro data, asserted green by
 // their consuming physics task.
 const FIXTURES: Readonly<Record<string, readonly FixtureInput[]>> = {
-  'cross-chat-routing': [
-    story('Routes to spectre', ['targetChat: spectre', 'speaker: TonyGov', 'type: received']),
-  ],
+  'cross-chat-routing': [story('Routes to spectre', ['targetChat: spectre', 'speaker: TonyGov', 'type: received'])],
   'duplicate-notifications': [
     story('First from Maria', ['targetChat: maria', 'speaker: Maria', 'type: received']),
     story('Second from Maria', ['targetChat: maria', 'speaker: Maria', 'type: received']),
@@ -18,9 +16,7 @@ const FIXTURES: Readonly<Record<string, readonly FixtureInput[]>> = {
     story('My question', ['type: sent', 'receipt: delivered']),
     story('Their reply', ['type: received', 'speaker: Pat']),
   ],
-  'typing-null-chatid': [
-    story('Pat replies from the background', ['targetChat: pat', 'speaker: Pat', 'type: received']),
-  ],
+  'typing-null-chatid': [story('Pat replies from the background', ['targetChat: pat', 'speaker: Pat', 'type: received'])],
 };
 
 /**

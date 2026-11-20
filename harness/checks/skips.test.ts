@@ -56,7 +56,7 @@ describe('the scan', () => {
     "import { test } from 'vitest';\ntest('a', () => { const s = 'test.skip'; });",
     "import { test } from 'vitest';\nconst list = { skip: 1 };\ntest('a', () => { list.skip; });",
     "import { test } from 'vitest';\ntest.each([1])('a %s', () => {});",
-    "const test = { skip: () => {} };\ntest.skip();",
+    'const test = { skip: () => {} };\ntest.skip();',
   ])('lets a near miss through: %j', (text) => {
     expect.hasAssertions();
     expect(skips(PLANT, text)).toStrictEqual([]);

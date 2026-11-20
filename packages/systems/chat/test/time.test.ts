@@ -81,11 +81,7 @@ describe('the clock', () => {
   test('# duration:N jumps N minutes; a malformed one drifts (#1)', async () => {
     expect.hasAssertions();
     const nine = minutesAt('09:00');
-    const result = await run([
-      story('a', ['time: 9:00 AM']),
-      story('b', [`duration: ${JUMP}`]),
-      story('c', ['duration: nope']),
-    ]);
+    const result = await run([story('a', ['time: 9:00 AM']), story('b', [`duration: ${JUMP}`]), story('c', ['duration: nope'])]);
     expect(times(result)).toStrictEqual([nine, nine + JUMP, nine + JUMP + DRIFT]);
   });
 

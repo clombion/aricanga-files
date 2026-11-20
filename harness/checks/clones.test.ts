@@ -111,7 +111,10 @@ describe('the scan of a clone', () => {
   test('fails a planted clone in both runs', async () => {
     expect.hasAssertions();
     const { root, listed } = await plant({ 'a/one.ts': PLANT, 'b/two.ts': PLANT.replace('first', 'second') });
-    await expect(scan({ listed, root, roots: ['a', 'b'] }, NONE)).resolves.toStrictEqual(['clone (exact): a/one.ts and b/two.ts', 'clone (cross-file): a/one.ts and b/two.ts']);
+    await expect(scan({ listed, root, roots: ['a', 'b'] }, NONE)).resolves.toStrictEqual([
+      'clone (exact): a/one.ts and b/two.ts',
+      'clone (cross-file): a/one.ts and b/two.ts',
+    ]);
   });
 
   test('still sees the planted clone past the floor', async () => {
@@ -163,7 +166,9 @@ describe('the scan of what jscpd reads', () => {
     expect.hasAssertions();
     const { root, listed } = await plant({ 'a/huge.ts': '', 'a/one.ts': FILLER });
     await growTo(root, 'a/huge.ts', MAX_SIZE + OVER_LIMIT);
-    await expect(scan({ listed, root, roots: ['a'] }, NONE)).resolves.toStrictEqual([`coverage: a/huge.ts is over jscpd's size limit (${MAX_SIZE + OVER_LIMIT} bytes)`]);
+    await expect(scan({ listed, root, roots: ['a'] }, NONE)).resolves.toStrictEqual([
+      `coverage: a/huge.ts is over jscpd's size limit (${MAX_SIZE + OVER_LIMIT} bytes)`,
+    ]);
   });
 });
 

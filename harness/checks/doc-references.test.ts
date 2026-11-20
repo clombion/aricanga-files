@@ -131,7 +131,6 @@ const PLANTED_RESOLVER: Resolver = {
 };
 
 describe('the span check', () => {
-
   test.each([
     ['src/missing.ts', 'the path is not listed'],
     ['missing.toml', 'the path is not listed'],
@@ -202,12 +201,7 @@ describe('the fence check', () => {
       'docs/planted.md',
       '```sh\noxlint\n$ vitest run\nnpx knip\npnpm dlx jscpd\npnpm exec oxlint\npnpm run check\ngit status\n```\n\n```ts\nconst tsc = 1;\n```\n',
     );
-    expect(fenceProblems(doc).map((problem) => problem.reference)).toStrictEqual([
-      'oxlint',
-      '$ vitest run',
-      'npx knip',
-      'pnpm dlx jscpd',
-    ]);
+    expect(fenceProblems(doc).map((problem) => problem.reference)).toStrictEqual(['oxlint', '$ vitest run', 'npx knip', 'pnpm dlx jscpd']);
   });
 });
 

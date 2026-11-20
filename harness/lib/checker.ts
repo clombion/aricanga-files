@@ -112,7 +112,9 @@ function mounted(config: string, paths: readonly string[], sources: Readonly<Rec
 function openScan(paths: readonly string[], sources: Readonly<Record<string, string>> = {}): Scan {
   const config = path.join(REPO_ROOT, '.harness-scan', nextName(), 'tsconfig.json');
   const unmount = mount(mounted(config, paths, sources));
-  const project = api().updateSnapshot({ openProjects: [config] }).getProject(config);
+  const project = api()
+    .updateSnapshot({ openProjects: [config] })
+    .getProject(config);
   const close = (): void => {
     api().updateSnapshot({ closeProjects: [config] });
     unmount();

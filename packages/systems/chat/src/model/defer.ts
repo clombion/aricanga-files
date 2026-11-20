@@ -105,10 +105,9 @@ function cursorAtEnd(state: ChatState, chatId: string): ReadCursor {
 function notifyMessage(state: ChatState, message: ChatMessageVM): MessageOutcome {
   const { chatId } = message;
   const next = appendMessage(state, message);
-  const lastReadMessageId =
-    holds(state.lastReadMessageId, chatId)
-      ? next.lastReadMessageId
-      : { ...next.lastReadMessageId, [chatId]: cursorAtEnd(state, chatId) };
+  const lastReadMessageId = holds(state.lastReadMessageId, chatId)
+    ? next.lastReadMessageId
+    : { ...next.lastReadMessageId, [chatId]: cursorAtEnd(state, chatId) };
   return {
     effects: [showNotification({ chatId, preview: message.text })],
     state: { ...next, lastReadMessageId, notifiedChatIds: [...next.notifiedChatIds, chatId] },

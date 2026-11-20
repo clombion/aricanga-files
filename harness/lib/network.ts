@@ -121,10 +121,14 @@ function install(): Installed {
     patch(net.Socket.prototype, 'connect', guarded('connect', connectHost)),
     patch(dns, 'lookup', guarded('lookup', lookupHost)),
     patch(dns.promises, 'lookup', guarded('lookup', lookupHost)),
-    patch(globalThis, 'fetch', guarded('fetch', (args) => {
-      const [input] = args;
-      return fetchHost(input);
-    })),
+    patch(
+      globalThis,
+      'fetch',
+      guarded('fetch', (args) => {
+        const [input] = args;
+        return fetchHost(input);
+      }),
+    ),
   ];
   return {
     restore: () => {

@@ -104,7 +104,12 @@ function recordContained(host: Readonly<Pick<ParentNode, 'querySelector'>>, clea
     ok: sibling === 'alpha' && fallback?.includes('part b broke') === true,
     threw: false,
   });
-  record({ id: 'errored/throwing-branch-cleanup', note: `settled cleanups run when part b threw: ${cleanedSinceBreak}`, ok: true, threw: false });
+  record({
+    id: 'errored/throwing-branch-cleanup',
+    note: `settled cleanups run when part b threw: ${cleanedSinceBreak}`,
+    ok: true,
+    threw: false,
+  });
 }
 
 /** Break one part behind its own boundary and record what its sibling and its cleanup did. */

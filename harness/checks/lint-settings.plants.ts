@@ -51,10 +51,7 @@ const PLANTS: Readonly<Record<string, readonly [string, readonly string[]]>> = {
     ['typescript(switch-exhaustiveness-check)'],
   ],
   'src/ts-expect-bare.ts': ['// @ts-expect-error\nexport const value: string = true;\n', ['typescript(ban-ts-comment)']],
-  'src/ts-ignore.ts': [
-    "// @ts-ignore\nexport const value = 'a';\n",
-    ['typescript(ban-ts-comment)', 'typescript(prefer-ts-expect-error)'],
-  ],
+  'src/ts-ignore.ts': ["// @ts-ignore\nexport const value = 'a';\n", ['typescript(ban-ts-comment)', 'typescript(prefer-ts-expect-error)']],
   'src/type-import.ts': [
     "import { Shape } from './types';\n\nexport const shape: Shape = { kind: 'a' };\n",
     ['typescript(consistent-type-imports)'],

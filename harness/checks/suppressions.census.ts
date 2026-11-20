@@ -137,7 +137,9 @@ function disableVerdict(groups: Readonly<Record<string, string>>): Verdict {
  */
 function biomeVerdict(rest: string): Verdict {
   const rule = NAMED_BIOME.exec(rest)?.groups?.['rule'];
-  return rule === undefined ? { problem: 'a biome-ignore names its lint/... rule and ends with : <reason>' } : { rules: [rule], tool: 'biome' };
+  return rule === undefined
+    ? { problem: 'a biome-ignore names its lint/... rule and ends with : <reason>' }
+    : { rules: [rule], tool: 'biome' };
 }
 
 /**
@@ -149,7 +151,9 @@ function biomeVerdict(rest: string): Verdict {
 function typeOrCoverageVerdict(directive: string): Verdict {
   const expectError = EXPECT_ERROR.exec(directive)?.groups?.['rest'];
   if (expectError !== undefined) {
-    return REASONED.test(expectError) ? { rules: ['expect-error'], tool: 'typescript' } : { problem: 'a @ts-expect-error ends with -- <reason>' };
+    return REASONED.test(expectError)
+      ? { rules: ['expect-error'], tool: 'typescript' }
+      : { problem: 'a @ts-expect-error ends with -- <reason>' };
   }
   const refused = REFUSED_TS.exec(directive)?.groups?.['directive'];
   if (refused !== undefined) {

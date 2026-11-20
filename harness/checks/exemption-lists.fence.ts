@@ -41,7 +41,9 @@ async function subpathPatterns(): Promise<readonly (readonly [string, string])[]
   const text = await textOf('package.json');
   const manifest = object(json(text), 'package.json');
   const imports = object(manifest['imports'] ?? {}, 'imports');
-  return Object.entries(imports).flatMap(([pattern, target]: readonly [string, unknown]) => (typeof target === 'string' ? [[pattern, target] as const] : []));
+  return Object.entries(imports).flatMap(([pattern, target]: readonly [string, unknown]) =>
+    typeof target === 'string' ? [[pattern, target] as const] : [],
+  );
 }
 
 /**
@@ -100,19 +102,30 @@ function isConsulted(name: string, kind: string, users: readonly SourceFile[]): 
  * @param {readonly (readonly [string, string])[]} patterns - The root `imports` patterns, each with its target.
  * @returns {readonly Finding[]} The module's findings.
  */
-function moduleFindings(path: string, files: ReadonlyMap<string, SourceFile>, patterns: readonly (readonly [string, string])[]): readonly Finding[] {
+function moduleFindings(
+  path: string,
+  files: ReadonlyMap<string, SourceFile>,
+  patterns: readonly (readonly [string, string])[],
+): readonly Finding[] {
   const file = files.get(path);
   if (file === undefined) {
     return [];
   }
   const listed = consultedNames(file, consultingParameters(file));
-  const importers: readonly (readonly [string, SourceFile])[] = [...files].filter(([otherPath]: readonly [string, SourceFile]) => otherPath !== path);
+  const importers: readonly (readonly [string, SourceFile])[] = [...files].filter(
+    ([otherPath]: readonly [string, SourceFile]) => otherPath !== path,
+  );
   return [...moduleBindings(file)].flatMap(([name, value]: readonly [string, Expression]) => {
     const kind = declaration(value);
     if (kind === undefined) {
       return isLiteral(value) && listed.has(name) ? [{ name, path, problem: UNDECLARED }] : [];
     }
-    const users = [file, ...importers.filter(([otherPath, other]) => importsFrom(other, namesModule(otherPath, path, patterns)).has(name)).map(([, other]) => other)];
+    const users = [
+      file,
+      ...importers
+        .filter(([otherPath, other]) => importsFrom(other, namesModule(otherPath, path, patterns)).has(name))
+        .map(([, other]) => other),
+    ];
     return isConsulted(name, kind, users) ? [] : [{ name, path, problem: UNCONSULTED }];
   });
 }

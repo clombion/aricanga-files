@@ -46,7 +46,9 @@ function patternText(pattern: Readonly<RegExp>): string {
  */
 function registry(claims: readonly DeepReadonly<Claim>[]): Exemptions {
   return new Exemptions(
-    Object.fromEntries(claims.map((claim: DeepReadonly<Claim>) => [site(claim.path, claim.clause), `held by ${patternText(claim.probe.pattern)}`])),
+    Object.fromEntries(
+      claims.map((claim: DeepReadonly<Claim>) => [site(claim.path, claim.clause), `held by ${patternText(claim.probe.pattern)}`]),
+    ),
   );
 }
 
@@ -62,9 +64,7 @@ function probeProblems(probe: DeepReadonly<Probe>, texts: ReadonlyMap<string, st
     .filter(([path, text]: readonly [string, string]) => probe.roots.some((root) => path.startsWith(root)) && probe.pattern.test(text))
     .map(([path]: readonly [string, string]) => path)
     .toSorted();
-  const problems = matched.includes(probe.owner)
-    ? []
-    : [`${patternText(probe.pattern)} does not match in its owner ${probe.owner}`];
+  const problems = matched.includes(probe.owner) ? [] : [`${patternText(probe.pattern)} does not match in its owner ${probe.owner}`];
   return [
     ...problems,
     ...matched.filter((path) => path !== probe.owner).map((path) => `${patternText(probe.pattern)} matches outside its owner, in ${path}`),
@@ -89,10 +89,13 @@ describe('the repository', () => {
     expect(registry(CLAIMS).unexempted(found)).toStrictEqual([]);
   });
 
-  test.each(CLAIMS.map((claim: DeepReadonly<Claim>) => [`${claim.path}: ${claim.clause}`, claim] as const))('the claim %s holds', async (_label: string, claim: DeepReadonly<Claim>) => {
-    expect.hasAssertions();
-    expect(probeProblems(claim.probe, await sources())).toStrictEqual([]);
-  });
+  test.each(CLAIMS.map((claim: DeepReadonly<Claim>) => [`${claim.path}: ${claim.clause}`, claim] as const))(
+    'the claim %s holds',
+    async (_label: string, claim: DeepReadonly<Claim>) => {
+      expect.hasAssertions();
+      expect(probeProblems(claim.probe, await sources())).toStrictEqual([]);
+    },
+  );
 });
 
 describe('the claims check', () => {
@@ -105,7 +108,11 @@ describe('the claims check', () => {
   test('fails an entry whose claim is gone', () => {
     expect.hasAssertions();
     const gone: Claim[] = [
-      { clause: 'the only reader of the cache', path: 'src/planted.ts', probe: { owner: 'src/planted.ts', pattern: /x/u, roots: ['src/'] } },
+      {
+        clause: 'the only reader of the cache',
+        path: 'src/planted.ts',
+        probe: { owner: 'src/planted.ts', pattern: /x/u, roots: ['src/'] },
+      },
     ];
     expect(() => registry(gone).unexempted([])).toThrow(StaleExemptionError);
   });

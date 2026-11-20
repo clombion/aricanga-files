@@ -32,11 +32,8 @@ const URL_MODULES = new Accepted(['node:url', 'url']);
  * @returns {boolean} Whether an identifier names a property (`a.__dirname`, `{ __dirname: 1 }`) rather than a variable.
  */
 function isPropertyName(node: Identifier): boolean {
-  const {parent} = node;
-  return (
-    (isPropertyAccessExpression(parent) && parent.name === node) ||
-    (isPropertyAssignment(parent) && parent.name === node)
-  );
+  const { parent } = node;
+  return (isPropertyAccessExpression(parent) && parent.name === node) || (isPropertyAssignment(parent) && parent.name === node);
 }
 
 /**

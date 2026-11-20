@@ -69,9 +69,7 @@ class CountedExemptions {
   public assertExact(found: Readonly<Iterable<string>>): void {
     const mismatches = this.mismatches(found);
     if (mismatches.length > NONE) {
-      throw new StaleExemptionError(
-        `counts differ from their entries (key, found, registered): ${JSON.stringify(mismatches)}`,
-      );
+      throw new StaleExemptionError(`counts differ from their entries (key, found, registered): ${JSON.stringify(mismatches)}`);
     }
   }
 }

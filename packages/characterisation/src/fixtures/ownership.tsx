@@ -101,10 +101,7 @@ function recordDetachedRoot(): void {
   });
   record({
     id: 'ownership/run-with-owner-null-in-effect-callback',
-    note:
-      detachedThrown === undefined
-        ? 'runWithOwner(null) + createRoot in an effect callback was allowed'
-        : `refused: ${detachedThrown}`,
+    note: detachedThrown === undefined ? 'runWithOwner(null) + createRoot in an effect callback was allowed' : `refused: ${detachedThrown}`,
     ok: true,
     threw: detachedThrown !== undefined,
   });

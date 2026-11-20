@@ -235,17 +235,4 @@ function componentRule(description: string, create: Rule['create']): Rule {
 }
 
 export type { Context, Node, Rule, Visitor };
-export {
-  child,
-  children,
-  componentRule,
-  flag,
-  matches,
-  memberName,
-  moduleSource,
-  nameOf,
-  OWNERS_SCHEMA,
-  problemMeta,
-  relativeFile,
-  text,
-};
+export { child, children, componentRule, flag, matches, memberName, moduleSource, nameOf, OWNERS_SCHEMA, problemMeta, relativeFile, text };

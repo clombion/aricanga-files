@@ -1,4 +1,3 @@
-
 // The BUG-HISTORY disposition audit. Every historical bug stays dead
 // either by construction (the pure synchronous reducer removes its mechanism) or
 // by a positive regression fixture (its decision rule relocated into `reduce`).
@@ -123,7 +122,8 @@ const LEDGER: readonly LedgerEntry[] = [
     disposition: { kind: 'structurally-eliminated' },
     id: 'notification-state-lost-on-refresh',
     legacy: true,
-    rationale: 'No component-local notification mirror; one state snapshot persists/restores via the host (Persist), no split SSOT to lose.',
+    rationale:
+      'No component-local notification mirror; one state snapshot persists/restores via the host (Persist), no split SSOT to lose.',
     summary: 'Notifications/counter reset to 0 on refresh.',
   },
   {
@@ -223,7 +223,8 @@ const LEDGER: readonly LedgerEntry[] = [
     disposition: { fixture: 'typing-null-chatid', issue: '#38', kind: 'kernel-physics', predicate: 'effectsCarryChatId' },
     id: 'BUG-008',
     legacy: false,
-    rationale: 'Effects-as-data still lets a reducer construct a typing effect with an absent chatId; the guard is a reducer decision. Vacuous until #38 emits typing.',
+    rationale:
+      'Effects-as-data still lets a reducer construct a typing effect with an absent chatId; the guard is a reducer decision. Vacuous until #38 emits typing.',
     summary: 'Typing events emitted with a null chatId.',
   },
   {

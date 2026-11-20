@@ -198,7 +198,6 @@ describe('the gate check', () => {
     expect.hasAssertions();
     expect(gateProblems(planted(command))).toHaveLength(ONE_PROBLEM);
   });
-
 });
 
 describe('the gate check, followed into tasks', () => {
@@ -235,13 +234,10 @@ describe('the gate check, followed into tasks', () => {
     expect(gateProblems(shape)).toStrictEqual(['check:fast runs the tests', 'check is not check:fast plus the tests']);
   });
 
-  test.each(['npx jscpd', 'pnpm dlx knip', 'pnpx oxlint', 'bunx x', 'yarn dlx x', 'uvx ruff'])(
-    'sees the unlocked runner %s',
-    (command) => {
-      expect.hasAssertions();
-      expect(runnerProblems([command, 'oxlint'])).toStrictEqual([`unlocked runner: ${command}`]);
-    },
-  );
+  test.each(['npx jscpd', 'pnpm dlx knip', 'pnpx oxlint', 'bunx x', 'yarn dlx x', 'uvx ruff'])('sees the unlocked runner %s', (command) => {
+    expect.hasAssertions();
+    expect(runnerProblems([command, 'oxlint'])).toStrictEqual([`unlocked runner: ${command}`]);
+  });
 });
 
 describe('the hook check', () => {

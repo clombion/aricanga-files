@@ -58,9 +58,7 @@ function held(path: string): boolean {
  */
 async function heldFiles(...suffixes: readonly string[]): Promise<readonly string[]> {
   const listed = await tracked();
-  return listed.filter(
-    (path) => held(path) && (isEmpty(suffixes) || suffixes.some((suffix) => path.endsWith(suffix))),
-  );
+  return listed.filter((path) => held(path) && (isEmpty(suffixes) || suffixes.some((suffix) => path.endsWith(suffix))));
 }
 
 /**

@@ -17,11 +17,7 @@ interface System<TState, TCommand extends Command, TEffect extends Effect, TView
   readonly tags: readonly string[];
   /** Deterministic initial state. */
   readonly init: (seed: number) => TState;
-  readonly reduce: (
-    state: TState,
-    input: Input<TState, TCommand>,
-    ctx: ReduceContext,
-  ) => ReduceResult<TState, TEffect>;
+  readonly reduce: (state: TState, input: Input<TState, TCommand>, ctx: ReduceContext) => ReduceResult<TState, TEffect>;
   /** Pure: what the system is waiting for. */
   readonly status: (state: TState) => KernelStatus;
   readonly view: (state: TState, render: RenderContext) => TViewModel;

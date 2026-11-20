@@ -1,0 +1,24 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "singleQuote": true,
+  "printWidth": 140,
+  "ignorePatterns": [
+    "packages/framework/**",
+    "packages/tests/**",
+    "packages/test-utils/**",
+    "experiences/aricanga/**",
+    "utils/**",
+    "templates/**",
+    "docs/**",
+    "vitest.config.ts",
+    "**/*.json",
+    "**/*.css",
+    "**/*.md",
+    "**/*.yml",
+    "**/*.yaml",
+    "**/*.toml",
+    "**/*.html",
+    "**/*.js",
+    "**/*.mjs"
+  ]
+}

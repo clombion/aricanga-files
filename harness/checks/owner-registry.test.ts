@@ -78,11 +78,17 @@ const CANONICAL: readonly (readonly [string, string])[] = [
 const IN_A_TEST = 'packages/systems/chat/test/__in_a_test.test.ts';
 
 const NEAR_MISSES: readonly (readonly [string, string])[] = [
-  ['packages/foundation/src/__miss_type.ts', "import type { ChildProcess } from 'node:child_process';\nexport let child: ChildProcess | undefined;\nexport let store: Storage | undefined;\n"],
+  [
+    'packages/foundation/src/__miss_type.ts',
+    "import type { ChildProcess } from 'node:child_process';\nexport let child: ChildProcess | undefined;\nexport let store: Storage | undefined;\n",
+  ],
   ['packages/foundation/src/__miss_own_now.ts', 'const clock = { now: () => 1 };\nclock.now();\n'],
   ['packages/foundation/src/__miss_own_fetch.ts', "export function load() {\n  const fetch = (x: string) => x;\n  return fetch('a');\n}\n"],
   ['packages/foundation/src/__miss_pure.ts', 'new Date(0).getTime();\nDate.UTC(2020, 1);\nJSON.stringify({});\n'],
-  ['harness/lib/process.ts', "import { spawnSync } from 'node:child_process';\nexport const out = spawnSync('x');\nexport const env = process.env;\n"],
+  [
+    'harness/lib/process.ts',
+    "import { spawnSync } from 'node:child_process';\nexport const out = spawnSync('x');\nexport const env = process.env;\n",
+  ],
   ['utils/__miss_uncovered.ts', 'Math.random();\n'],
 ];
 
@@ -99,7 +105,11 @@ interface Plant {
  * @returns {readonly Plant[]} The form plants, each with its rule.
  */
 function formPlants(): readonly Plant[] {
-  return FORMS.map(([rule, text]: readonly [string, string], index) => ({ path: `packages/foundation/src/__form_${index}.ts`, rule, text }));
+  return FORMS.map(([rule, text]: readonly [string, string], index) => ({
+    path: `packages/foundation/src/__form_${index}.ts`,
+    rule,
+    text,
+  }));
 }
 
 /**
@@ -163,7 +173,9 @@ describe('the scan', () => {
     expect.hasAssertions();
     expect(CANONICAL.map(([name]) => name).toSorted()).toStrictEqual(RULES.map((rule) => rule.name).toSorted());
     const planted = [...plants.keys()].filter((path) => /__(?:form|root|in_a_test)/u.test(path));
-    const found = sitesIn(plantedScan, planted).map((site) => keyOf(site)).toSorted();
+    const found = sitesIn(plantedScan, planted)
+      .map((site) => keyOf(site))
+      .toSorted();
     expect(found).toStrictEqual(expected.map((site) => keyOf(site)).toSorted());
   });
 

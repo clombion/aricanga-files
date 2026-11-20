@@ -69,10 +69,17 @@ async function sheetProperties(all: readonly Sheet[]): Promise<readonly Properti
  * @param {Readonly<ReadonlyMap<string, string>>} modules - Each reader's text, by path.
  * @returns {Promise<readonly SheetFinding[]>} The findings.
  */
-async function customPropertyProblems(all: readonly Sheet[], modules: Readonly<ReadonlyMap<string, string>>): Promise<readonly SheetFinding[]> {
+async function customPropertyProblems(
+  all: readonly Sheet[],
+  modules: Readonly<ReadonlyMap<string, string>>,
+): Promise<readonly SheetFinding[]> {
   const sources: readonly Properties[] = [
     ...(await sheetProperties(all)),
-    ...[...modules].map(([path, text]: readonly [string, string]) => ({ defined: namesIn(text, SET_PROPERTY), path, read: namesIn(text, CUSTOM_READ) })),
+    ...[...modules].map(([path, text]: readonly [string, string]) => ({
+      defined: namesIn(text, SET_PROPERTY),
+      path,
+      read: namesIn(text, CUSTOM_READ),
+    })),
   ];
   const defined = new Map(sources.flatMap((source) => source.defined.map((name) => [name, source.path] as const)));
   const read = new Set(sources.flatMap((source) => source.read));
@@ -126,7 +133,7 @@ async function duplicateRules(sheet: Sheet): Promise<readonly SheetFinding[]> {
   const root = await parse(sheet.text);
   root.walkRules((rule) => {
     const context: string[] = [];
-    for (let { parent } = rule; parent !== undefined && parent.type !== 'root'; ({ parent } = parent)) {
+    for (let { parent } = rule; parent !== undefined && parent.type !== 'root'; { parent } = parent) {
       if (parent.type === 'atrule' && 'name' in parent && 'params' in parent) {
         context.unshift(`@${parent.name} ${parent.params}`);
       }

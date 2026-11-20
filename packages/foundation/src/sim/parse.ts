@@ -69,8 +69,7 @@ function readerOf(systemId: string): Reader {
   const refuse = (what: string, value: unknown): never => {
     throw new InputRefusedError(`system "${systemId}" refuses ${what}: ${shown(value)}`);
   };
-  const object = (value: unknown, what: string): Readonly<Record<string, unknown>> =>
-    isObject(value) ? value : refuse(what, value);
+  const object = (value: unknown, what: string): Readonly<Record<string, unknown>> => (isObject(value) ? value : refuse(what, value));
   return {
     absent: (value, what) => {
       if (value !== undefined) {
@@ -99,11 +98,7 @@ function readerOf(systemId: string): Reader {
  * @param {readonly string[]} kinds - The kinds the system accepts.
  * @returns {Command} The command's kind and its payload, for the system to read.
  */
-function commandOf<TKind extends string>(
-  read: Readonly<Reader>,
-  value: unknown,
-  kinds: readonly TKind[],
-): Command<TKind> {
+function commandOf<TKind extends string>(read: Readonly<Reader>, value: unknown, kinds: readonly TKind[]): Command<TKind> {
   const command = read.object(value, 'a command');
   const kind = kinds.find((known) => known === command['kind']);
   return kind === undefined ? read.refuse('a command', value) : { kind, payload: command['payload'] };
@@ -116,10 +111,7 @@ function commandOf<TKind extends string>(
  * @param {readonly string[]} kinds - The command kinds.
  * @returns {Function} The parser: one of the commands, or refused.
  */
-function unitCommands<TKind extends string>(
-  systemId: string,
-  kinds: readonly TKind[],
-): (value: unknown) => Command<TKind, undefined> {
+function unitCommands<TKind extends string>(systemId: string, kinds: readonly TKind[]): (value: unknown) => Command<TKind, undefined> {
   const read = readerOf(systemId);
   return (value) => {
     const command = commandOf(read, value, kinds);

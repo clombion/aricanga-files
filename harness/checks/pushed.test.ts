@@ -32,7 +32,9 @@ describe('the pushed-subjects rule', () => {
 
   test('reads the pushed refs, drops a deleted ref, and ranges a new branch against the remotes', () => {
     expect.hasAssertions();
-    const parsed = updates(`refs/heads/a aaa refs/heads/a bbb\nrefs/heads/b ${ZEROS} refs/heads/b ccc\nrefs/heads/c ddd refs/heads/c ${ZEROS}\n`);
+    const parsed = updates(
+      `refs/heads/a aaa refs/heads/a bbb\nrefs/heads/b ${ZEROS} refs/heads/b ccc\nrefs/heads/c ddd refs/heads/c ${ZEROS}\n`,
+    );
     expect(parsed).toStrictEqual([
       { localSha: 'aaa', remoteSha: 'bbb' },
       { localSha: 'ddd', remoteSha: ZEROS },
@@ -74,7 +76,11 @@ async function pushOf(subjects: readonly string[]): Promise<number> {
   const project = await Project.create({ linkModules: false });
   try {
     const [base, head] = await commitRange(project, subjects);
-    const done = await project.runWithInput(`refs/heads/main ${head} refs/heads/main ${base}\n`, 'node', fromRoot('harness/scripts/check-pushed.ts'));
+    const done = await project.runWithInput(
+      `refs/heads/main ${head} refs/heads/main ${base}\n`,
+      'node',
+      fromRoot('harness/scripts/check-pushed.ts'),
+    );
     return done.status;
   } finally {
     await project.remove();
@@ -82,7 +88,6 @@ async function pushOf(subjects: readonly string[]): Promise<number> {
 }
 
 describe('the pre-push script', () => {
-
   test('fails on a fold commit in the pushed range', async () => {
     expect.hasAssertions();
     await expect(pushOf(['feat: one', 'fixup! feat: one'])).resolves.toBe(EXIT_FINDINGS);

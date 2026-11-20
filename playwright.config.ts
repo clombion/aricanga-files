@@ -2,8 +2,8 @@ import { defineConfig, devices } from '@playwright/test';
 import { readdirSync } from 'fs';
 
 const impls = readdirSync('experiences', { withFileTypes: true })
-  .filter(d => d.isDirectory())
-  .map(d => d.name);
+  .filter((d) => d.isDirectory())
+  .map((d) => d.name);
 
 const impl = process.env.IMPL;
 if (!impl) {

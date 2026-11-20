@@ -55,14 +55,7 @@ async function verdicts(fixtures: readonly Fixture[]): Promise<ReadonlyMap<strin
   const project = await Project.create({ copies: OXLINT_CONFIG_FILES });
   try {
     await project.writeAll(fixtures.map((fixture) => [fixture.path, fixture.text] as const));
-    const outcome = await project.tool(
-      'oxlint',
-      '-c',
-      '.oxlintrc.json',
-      '-A',
-      'all',
-      ...fixtures.map((fixture) => fixture.path),
-    );
+    const outcome = await project.tool('oxlint', '-c', '.oxlintrc.json', '-A', 'all', ...fixtures.map((fixture) => fixture.path));
     if (outcome.status > EXIT_FINDINGS || outcome.stderr.trim() !== '') {
       throw new Error(`oxlint did not lint the fixtures: ${outcome.status} ${outcome.stderr}`);
     }

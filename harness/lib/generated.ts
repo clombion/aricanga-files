@@ -46,9 +46,7 @@ const END_MARKER_LINES = 1;
  */
 async function checkList(): Promise<string> {
   const modules = await checkModules();
-  return modules
-    .map((module) => `- \`${module.harnessId}\` (\`${module.path}\`): ${module.summary}`)
-    .join('\n');
+  return modules.map((module) => `- \`${module.harnessId}\` (\`${module.path}\`): ${module.summary}`).join('\n');
 }
 
 /**
@@ -123,9 +121,7 @@ async function problems(doc: Readonly<Doc>, generators: Readonly<Generators>): P
   return doc.blocks().flatMap((block): Problem[] => {
     const render = fresh.get(block.name);
     if (render === undefined) {
-      return [
-        { line: block.start, message: `no generator is named ${JSON.stringify(block.name)}`, path: doc.path, writingFixesIt: false },
-      ];
+      return [{ line: block.start, message: `no generator is named ${JSON.stringify(block.name)}`, path: doc.path, writingFixesIt: false }];
     }
     return block.body === render
       ? []

@@ -49,7 +49,6 @@ const MODULES = new Prefixes(['.ts', '.tsx']);
 /** The harness holds planted sheets and values in its checks; the scans read the product only. */
 const PLANTS = new Prefixes(['harness/']);
 
-
 /** The first line of a file or sheet. */
 const FIRST_LINE = 1;
 

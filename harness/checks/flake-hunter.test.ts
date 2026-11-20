@@ -97,11 +97,28 @@ describe('the flake hunter, on planted specs', () => {
 describe('the hunt options', () => {
   test('read the seed, copies and repeats, keep the rest as filters, and give each copy its own seed', () => {
     expect.hasAssertions();
-    const options = huntOf(['--seed', String(PLANTED_SEED), '--copies', String(PLANTED_COPIES), '--repeats', String(PLANTED_REPEATS), 'packages/foundation']);
-    expect([options.seed, options.copies, options.repeats, options.filters]).toStrictEqual([PLANTED_SEED, PLANTED_COPIES, PLANTED_REPEATS, ['packages/foundation']]);
+    const options = huntOf([
+      '--seed',
+      String(PLANTED_SEED),
+      '--copies',
+      String(PLANTED_COPIES),
+      '--repeats',
+      String(PLANTED_REPEATS),
+      'packages/foundation',
+    ]);
+    expect([options.seed, options.copies, options.repeats, options.filters]).toStrictEqual([
+      PLANTED_SEED,
+      PLANTED_COPIES,
+      PLANTED_REPEATS,
+      ['packages/foundation'],
+    ]);
   });
 
-  test.each([['--seed', '0'], ['--copies', 'x'], ['--repeats', '-1']])('refuses %s %s', (name, value) => {
+  test.each([
+    ['--seed', '0'],
+    ['--copies', 'x'],
+    ['--repeats', '-1'],
+  ])('refuses %s %s', (name, value) => {
     expect.hasAssertions();
     expect(() => huntOf([name, value])).toThrow(`${name} must be a positive integer`);
   });

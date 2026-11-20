@@ -29,7 +29,7 @@ class SkMessage extends LitElement {
     }
   `;
 
-  public declare text: string;
+  declare public text: string;
 
   public constructor() {
     super();

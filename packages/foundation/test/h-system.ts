@@ -105,8 +105,7 @@ const hSystem: System<HState, HCommand, Effect, HState> = gatedSystem<HState, HC
     parseState: parseHState,
     tags: ['h'],
   },
-  (state, input, ctx) =>
-    input.source === 'story' ? reduceLine(state, input.step.text, ctx) : reduceCommand(state, input.command, ctx),
+  (state, input, ctx) => (input.source === 'story' ? reduceLine(state, input.step.text, ctx) : reduceCommand(state, input.command, ctx)),
 );
 
 export { hSystem };

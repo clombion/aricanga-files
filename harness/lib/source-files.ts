@@ -51,10 +51,12 @@ async function isFile(root: string, listed: string): Promise<boolean> {
  */
 async function listing(stdout: string, root: string, floor: number = FLOOR): Promise<readonly string[]> {
   const candidates = [...new Set(stdout.split('\0'))];
-  const exists = await Promise.all(candidates.map(async (listed) => {
-    const found = await isFile(root, listed);
-    return found;
-  }));
+  const exists = await Promise.all(
+    candidates.map(async (listed) => {
+      const found = await isFile(root, listed);
+      return found;
+    }),
+  );
   const paths = candidates.filter((_listed, index) => exists[index] === true).toSorted();
   if (paths.length < floor) {
     throw new ListingError(`git listed ${paths.length} files under ${root}, below the floor of ${floor}`);

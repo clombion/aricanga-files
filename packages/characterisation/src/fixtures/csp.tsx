@@ -57,8 +57,18 @@ function recordStyles(page: Page, violations: readonly string[]): void {
     ok: true,
     threw: false,
   });
-  record({ id: 'csp/cssom-from-a-ref-applies', note: `ref + style.setProperty color: ${computed(page, 'cssom')}`, ok: computed(page, 'cssom') === COLOR, threw: false });
-  record({ id: 'csp/violations', note: `violations: ${violations.length > NO_VIOLATIONS ? violations.join(' | ') : 'none'}`, ok: true, threw: false });
+  record({
+    id: 'csp/cssom-from-a-ref-applies',
+    note: `ref + style.setProperty color: ${computed(page, 'cssom')}`,
+    ok: computed(page, 'cssom') === COLOR,
+    threw: false,
+  });
+  record({
+    id: 'csp/violations',
+    note: `violations: ${violations.length > NO_VIOLATIONS ? violations.join(' | ') : 'none'}`,
+    ok: true,
+    threw: false,
+  });
 }
 
 /** Render a style prop, a class and a CSSOM write from a ref, then record what applied. */

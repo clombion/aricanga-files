@@ -6,19 +6,14 @@ import { expect, test } from '@playwright/test';
 test.describe('ownership', () => {
   test(
     'connectedCallback is unowned; primitives in an effect callback are refused',
-    characterised(
-      'ownership',
-      ({ codes, state }) => {
-        expect(recorded(state, 'ownership/connected-callback-unowned').ok).toBe(true);
-        const memo = recorded(state, 'ownership/memo-in-effect-callback-refused');
-        expect(memo.threw).toBe(true);
-        expect(memo.error).toContain('[PRIMITIVE_IN_EFFECT_CALLBACK]');
-        expect(recorded(state, 'ownership/root-in-effect-callback').note).toContain('refused: [PRIMITIVE_IN_EFFECT_CALLBACK]');
-        expect(recorded(state, 'ownership/run-with-owner-null-in-effect-callback').note).toContain(
-          'refused: [PRIMITIVE_IN_EFFECT_CALLBACK]',
-        );
-        expect(codes).toContain('PRIMITIVE_IN_EFFECT_CALLBACK');
-      },
-    ),
+    characterised('ownership', ({ codes, state }) => {
+      expect(recorded(state, 'ownership/connected-callback-unowned').ok).toBe(true);
+      const memo = recorded(state, 'ownership/memo-in-effect-callback-refused');
+      expect(memo.threw).toBe(true);
+      expect(memo.error).toContain('[PRIMITIVE_IN_EFFECT_CALLBACK]');
+      expect(recorded(state, 'ownership/root-in-effect-callback').note).toContain('refused: [PRIMITIVE_IN_EFFECT_CALLBACK]');
+      expect(recorded(state, 'ownership/run-with-owner-null-in-effect-callback').note).toContain('refused: [PRIMITIVE_IN_EFFECT_CALLBACK]');
+      expect(codes).toContain('PRIMITIVE_IN_EFFECT_CALLBACK');
+    }),
   );
 });

@@ -109,10 +109,7 @@ function once(): Timing {
   const [store, setStore] = createStore<{ messages: Message[] }>({ messages: [] });
   const host = document.createElement('ol');
   document.body.append(host);
-  const dispose = render(
-    () => <For each={store.messages}>{(message) => <li>{message.text}</li>}</For>,
-    host,
-  );
+  const dispose = render(() => <For each={store.messages}>{(message) => <li>{message.text}</li>}</For>, host);
   const timing = measured(setStore);
   const count = host.children.length;
   dispose();

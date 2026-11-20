@@ -32,9 +32,27 @@ function mountedForm(): MountedForm {
   const [initial, setInitial] = createSignal('initial');
   const { host, dispose } = mount('form', () => (
     <>
-      <input id="value" value={text()} onInput={(event: ValueEvent) => { setText(event.currentTarget.value); }} />
-      <input id="checked" type="checkbox" checked={on()} onChange={(event: CheckedEvent) => { setOn(event.currentTarget.checked); }} />
-      <select id="selected" onChange={(event: ValueEvent) => { setOn(event.currentTarget.value === 'b'); }}>
+      <input
+        id="value"
+        value={text()}
+        onInput={(event: ValueEvent) => {
+          setText(event.currentTarget.value);
+        }}
+      />
+      <input
+        id="checked"
+        type="checkbox"
+        checked={on()}
+        onChange={(event: CheckedEvent) => {
+          setOn(event.currentTarget.checked);
+        }}
+      />
+      <select
+        id="selected"
+        onChange={(event: ValueEvent) => {
+          setOn(event.currentTarget.value === 'b');
+        }}
+      >
         <option value="a">a</option>
         <option value="b" selected={on()}>
           b

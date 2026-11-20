@@ -64,9 +64,32 @@ describe('the repository', () => {
   test('every generator has a block', async () => {
     expect.hasAssertions();
     const found = await blocks();
-    expect(orphans(GENERATORS, found.map((block) => block.name))).toStrictEqual([]);
+    expect(
+      orphans(
+        GENERATORS,
+        found.map((block) => block.name),
+      ),
+    ).toStrictEqual([]);
   });
 });
+
+/**
+ * The repository's generators plus one, `planted`, that no doc has a block for.
+ *
+ * @returns {typeof GENERATORS} The generators with the orphan added.
+ */
+function withOrphan(): typeof GENERATORS {
+  return new Map([
+    ...GENERATORS,
+    [
+      'planted',
+      async (): Promise<string> => {
+        const text = await Promise.resolve('x');
+        return text;
+      },
+    ],
+  ]);
+}
 
 describe('the generated-docs check', () => {
   test('sees a hand-edited block as stale, and rendering restores it', async () => {
@@ -90,12 +113,13 @@ describe('the generated-docs check', () => {
 
   test('sees a generator with no block', async () => {
     expect.hasAssertions();
-    const planted = new Map([...GENERATORS, ['planted', async (): Promise<string> => {
-      const text = await Promise.resolve('x');
-      return text;
-    }]]);
     const found = await blocks();
-    expect(orphans(planted, found.map((block) => block.name))).toStrictEqual(['planted']);
+    expect(
+      orphans(
+        withOrphan(),
+        found.map((block) => block.name),
+      ),
+    ).toStrictEqual(['planted']);
   });
 
   test.each([
@@ -107,7 +131,6 @@ describe('the generated-docs check', () => {
     expect.hasAssertions();
     expect(() => new Doc('docs/planted.md', text).blocks()).toThrow(BlockError);
   });
-
 });
 
 describe('the generated-docs run', () => {

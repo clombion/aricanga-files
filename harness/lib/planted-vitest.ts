@@ -43,9 +43,7 @@ function list(value: unknown): readonly unknown[] {
  */
 function outcomesOf(reportText: string): ReadonlyMap<string, Outcome> {
   const report = object(json(reportText), 'the Vitest report');
-  const assertions = list(report['testResults']).flatMap((file) =>
-    list(object(file, 'a test file result')['assertionResults']),
-  );
+  const assertions = list(report['testResults']).flatMap((file) => list(object(file, 'a test file result')['assertionResults']));
   return new Map(
     assertions.map((assertion) => {
       const fields = object(assertion, 'a test result');

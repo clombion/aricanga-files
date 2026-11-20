@@ -56,11 +56,7 @@ const descriptions = (): ReadonlyMap<string, string> =>
  * @param {readonly Fixture[]} found - The fixtures found on disk.
  * @returns {readonly string[]} What breaks "every rule has a fixture folder with both kinds, and every folder a rule".
  */
-function fixtureProblems(
-  rules: readonly string[],
-  folders: readonly string[],
-  found: readonly Fixture[],
-): readonly string[] {
+function fixtureProblems(rules: readonly string[], folders: readonly string[], found: readonly Fixture[]): readonly string[] {
   const problems = folders.filter((folder) => !rules.includes(folder)).map((folder) => `fixtures/${folder}: no such rule`);
   for (const rule of rules) {
     for (const kind of ['fire', 'clean'] as const) {
@@ -233,11 +229,7 @@ describe('the check', () => {
     expect.hasAssertions();
     expect(
       fixtureProblems(['env', 'json'], ['env', 'json', 'gone'], [plantedFixture('env', 'fire'), plantedFixture('json', 'clean')]),
-    ).toStrictEqual([
-      'fixtures/gone: no such rule',
-      'env: no clean fixture',
-      'json: no fire fixture',
-    ]);
+    ).toStrictEqual(['fixtures/gone: no such rule', 'env: no clean fixture', 'json: no fire fixture']);
     expect(fixtureProblems(['env'], ['env'], [plantedFixture('env', 'fire'), plantedFixture('env', 'clean')])).toStrictEqual([]);
   });
 

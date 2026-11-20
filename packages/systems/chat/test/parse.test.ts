@@ -55,9 +55,7 @@ describe('the chat command parser', () => {
 
   test('refuses a command chat does not take, an open with no chat id, and a close that carries a payload', () => {
     expect.hasAssertions();
-    expect(() => chatSystem.parseCommand(FOREIGN)).toThrow(
-      'system "chat" refuses a command: {"kind":"choose","payload":{"index":0}}',
-    );
+    expect(() => chatSystem.parseCommand(FOREIGN)).toThrow('system "chat" refuses a command: {"kind":"choose","payload":{"index":0}}');
     expect(() => chatSystem.parseCommand({ ...OPEN_PAT, payload: {} })).toThrow('system "chat" refuses chatId: undefined');
     expect(() => chatSystem.parseCommand({ ...OPEN_PAT, payload: { chatId: 7 } })).toThrow('system "chat" refuses chatId: 7');
     expect(() => chatSystem.parseCommand({ ...CLOSE, payload: 'pat' })).toThrow('system "chat" refuses the close payload: "pat"');

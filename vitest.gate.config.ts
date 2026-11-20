@@ -32,11 +32,7 @@ const config: ViteUserConfig = defineConfig({
         extends: true,
         test: {
           environment: 'happy-dom',
-          include: [
-            'packages/foundation/**/*.test.ts',
-            'packages/systems/**/*.test.ts',
-            'experiences/sandbox/**/*.test.ts',
-          ],
+          include: ['packages/foundation/**/*.test.ts', 'packages/systems/**/*.test.ts', 'experiences/sandbox/**/*.test.ts'],
           name: 'rebuild',
         },
       },

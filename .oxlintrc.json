@@ -1,20 +1,7 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": [
-    "import",
-    "jsdoc",
-    "jsx-a11y",
-    "node",
-    "oxc",
-    "promise",
-    "typescript",
-    "unicorn",
-    "vitest"
-  ],
-  "jsPlugins": [
-    "eslint-plugin-solid",
-    "./harness/lint-rules/plugin.ts"
-  ],
+  "plugins": ["import", "jsdoc", "jsx-a11y", "node", "oxc", "promise", "typescript", "unicorn", "vitest"],
+  "jsPlugins": ["eslint-plugin-solid", "./harness/lint-rules/plugin.ts"],
   "categories": {
     "correctness": "error",
     "suspicious": "error",
@@ -50,18 +37,13 @@
     "aricanga/env": [
       "error",
       {
-        "owners": [
-          "harness/lib/process.ts",
-          "harness/lib/tools.ts"
-        ]
+        "owners": ["harness/lib/process.ts", "harness/lib/tools.ts"]
       }
     ],
     "aricanga/flags": [
       "error",
       {
-        "ignore": [
-          "packages/characterisation/**"
-        ]
+        "ignore": ["packages/characterisation/**"]
       }
     ],
     "aricanga/json": "error",
@@ -69,18 +51,14 @@
     "aricanga/legacy": [
       "error",
       {
-        "ignore": [
-          "packages/characterisation/**"
-        ]
+        "ignore": ["packages/characterisation/**"]
       }
     ],
     "aricanga/mechanics": "error",
     "aricanga/mirrors": [
       "error",
       {
-        "ignore": [
-          "packages/characterisation/**"
-        ]
+        "ignore": ["packages/characterisation/**"]
       }
     ],
     "aricanga/promises": "error",
@@ -88,28 +66,21 @@
     "aricanga/store-owner": [
       "error",
       {
-        "owners": [
-          "**/snapshot-adapter.ts",
-          "packages/characterisation/**"
-        ]
+        "owners": ["**/snapshot-adapter.ts", "packages/characterisation/**"]
       }
     ],
     "aricanga/style-prop": "error",
     "aricanga/sync-parts": [
       "error",
       {
-        "ignore": [
-          "packages/characterisation/**"
-        ]
+        "ignore": ["packages/characterisation/**"]
       }
     ],
     "aricanga/view-imports": "error",
     "aricanga/vm-prop": [
       "error",
       {
-        "ignore": [
-          "packages/characterisation/**"
-        ]
+        "ignore": ["packages/characterisation/**"]
       }
     ],
     "solid/jsx-no-duplicate-props": "error",
@@ -195,10 +166,7 @@
     "vitest/no-hooks": "off",
     "vitest/require-test-timeout": "off",
     "jsx-a11y/label-has-associated-control": "off",
-    "eslint/one-var": [
-      "error",
-      "never"
-    ],
+    "eslint/one-var": ["error", "never"],
     "eslint/func-style": [
       "error",
       "declaration",
@@ -213,10 +181,7 @@
         "withinDescribe": "test"
       }
     ],
-    "import/consistent-type-specifier-style": [
-      "error",
-      "prefer-top-level"
-    ],
+    "import/consistent-type-specifier-style": ["error", "prefer-top-level"],
     "eslint/no-duplicate-imports": [
       "error",
       {
@@ -249,14 +214,7 @@
     "eslint/new-cap": [
       "error",
       {
-        "capIsNewExceptions": [
-          "BindExternalFunction",
-          "ChooseChoiceIndex",
-          "Compile",
-          "Continue",
-          "LoadJson",
-          "ToJson"
-        ]
+        "capIsNewExceptions": ["BindExternalFunction", "ChooseChoiceIndex", "Compile", "Continue", "LoadJson", "ToJson"]
       }
     ],
     "typescript/prefer-readonly-parameter-types": [
@@ -316,14 +274,7 @@
           {
             "from": "package",
             "package": "stylelint",
-            "name": [
-              "PostcssResult",
-              "RuleContext",
-              "Rule",
-              "RuleBase",
-              "Problem",
-              "PostcssResult"
-            ]
+            "name": ["PostcssResult", "RuleContext", "Rule", "RuleBase", "Problem", "PostcssResult"]
           }
         ]
       }
@@ -331,9 +282,7 @@
   },
   "overrides": [
     {
-      "files": [
-        "packages/foundation/**"
-      ],
+      "files": ["packages/foundation/**"],
       "rules": {
         "no-restricted-imports": [
           "error",
@@ -356,9 +305,7 @@
       }
     },
     {
-      "files": [
-        "packages/systems/chat/**"
-      ],
+      "files": ["packages/systems/chat/**"],
       "rules": {
         "no-restricted-imports": [
           "error",
@@ -385,9 +332,7 @@
       }
     },
     {
-      "files": [
-        "packages/systems/cards/**"
-      ],
+      "files": ["packages/systems/cards/**"],
       "rules": {
         "no-restricted-imports": [
           "error",
@@ -414,9 +359,7 @@
       }
     },
     {
-      "files": [
-        "experiences/sandbox/**"
-      ],
+      "files": ["experiences/sandbox/**"],
       "rules": {
         "no-restricted-imports": [
           "error",
@@ -439,22 +382,14 @@
       }
     },
     {
-      "files": [
-        "packages/characterisation/**",
-        "harness/**"
-      ],
+      "files": ["packages/characterisation/**", "harness/**"],
       "rules": {
         "no-restricted-imports": [
           "error",
           {
             "patterns": [
               {
-                "group": [
-                  "@narratives/framework",
-                  "@narratives/framework/*",
-                  "@narratives/test-utils",
-                  "@narratives/test-utils/*"
-                ],
+                "group": ["@narratives/framework", "@narratives/framework/*", "@narratives/test-utils", "@narratives/test-utils/*"],
                 "message": "the rebuild never imports the POC reference (ADR-0006, Scope)"
               }
             ]
@@ -463,10 +398,7 @@
       }
     },
     {
-      "files": [
-        "packages/systems/*/src/system.ts",
-        "packages/systems/*/src/model/**"
-      ],
+      "files": ["packages/systems/*/src/system.ts", "packages/systems/*/src/model/**"],
       "rules": {
         "no-restricted-globals": [
           "error",
@@ -517,17 +449,13 @@
       }
     },
     {
-      "files": [
-        "harness/lib/guards.ts"
-      ],
+      "files": ["harness/lib/guards.ts"],
       "rules": {
         "vitest/require-top-level-describe": "off"
       }
     },
     {
-      "files": [
-        "harness/lib/checker.ts"
-      ],
+      "files": ["harness/lib/checker.ts"],
       "rules": {
         "eslint/no-bitwise": "off"
       }

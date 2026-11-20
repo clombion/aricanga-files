@@ -44,10 +44,7 @@ function errorText(error: unknown): string {
  * @param {Function} view The view to render into it.
  * @returns {Mounted} The host and the disposer.
  */
-function mount<Tag extends keyof HTMLElementTagNameMap>(
-  tag: Tag,
-  view: () => JSX.Element,
-): Mounted<HTMLElementTagNameMap[Tag]> {
+function mount<Tag extends keyof HTMLElementTagNameMap>(tag: Tag, view: () => JSX.Element): Mounted<HTMLElementTagNameMap[Tag]> {
   const host = document.createElement(tag);
   document.body.append(host);
   const disposeView = render(view, host);

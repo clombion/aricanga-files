@@ -113,10 +113,12 @@ async function checkoutState(root: string): Promise<ReadonlyMap<string, string>>
       return state;
     }),
   );
-  return new Map(listed.flatMap((entry, index) => {
-    const state = states[index];
-    return state === undefined ? [] : [[entry, state] as const];
-  }));
+  return new Map(
+    listed.flatMap((entry, index) => {
+      const state = states[index];
+      return state === undefined ? [] : [[entry, state] as const];
+    }),
+  );
 }
 
 /**

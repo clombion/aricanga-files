@@ -94,10 +94,7 @@ function report(failed: boolean, message: string | undefined): PropertyReport {
  * @param {Arbitrary} streamArb - The generator of input streams.
  * @returns {Promise<PropertyReport>} The property's outcome.
  */
-async function checkDeterministic(
-  opts: Readonly<StreamOptions>,
-  streamArb: Readonly<Arbitrary<FixtureInput[]>>,
-): Promise<PropertyReport> {
+async function checkDeterministic(opts: Readonly<StreamOptions>, streamArb: Readonly<Arbitrary<FixtureInput[]>>): Promise<PropertyReport> {
   const details = await check(
     asyncProperty(streamArb, async (inputs: readonly FixtureInput[]) => {
       const first = await runStream(opts, inputs);

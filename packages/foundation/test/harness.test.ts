@@ -76,12 +76,7 @@ describe('the fixture harness', () => {
     // The trace is the correlated reduce stream, not just one effect family.
     expect(run.trace).not.toStrictEqual([]);
     expect(run.trace.every((record) => record.systemId === 'fixture')).toBe(true);
-    expect([...new Set(run.effects.map((effect) => effect.family))].toSorted()).toStrictEqual([
-      'fetch',
-      'persist',
-      'present',
-      'schedule',
-    ]);
+    expect([...new Set(run.effects.map((effect) => effect.family))].toSorted()).toStrictEqual(['fetch', 'persist', 'present', 'schedule']);
     // Suspending effects settled deterministically via the drain.
     expect(run.viewOf(fixtureSystem)).toMatchObject({ busy: false, fetched: FETCHED });
   });

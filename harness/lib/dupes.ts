@@ -39,14 +39,12 @@ interface Streams {
   readonly err: (text: string) => void;
 }
 
-
 const SMALL_FILE_LINES = 20;
 
 /** The line count of a text past the empty string after its last newline. */
 const TRAILING_LINE = 1;
 
 const TRAILING_SLASH = /\/$/u;
-
 
 /** A run's problems and its clones. */
 type RunResult = readonly [readonly string[], readonly Clone[]];
@@ -131,7 +129,13 @@ async function scan(target: Target, allowed: Readonly<Exemptions>, runner?: Runn
     }),
   );
   const problems = runs.flatMap(([runProblems]: RunResult) => runProblems);
-  return [...problems, ...cloneProblems(runs.flatMap(([, found]: RunResult) => found), allowed)];
+  return [
+    ...problems,
+    ...cloneProblems(
+      runs.flatMap(([, found]: RunResult) => found),
+      allowed,
+    ),
+  ];
 }
 
 /**

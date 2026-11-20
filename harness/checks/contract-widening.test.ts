@@ -24,7 +24,7 @@ const ALGEBRA = new Accepted(["Input['source']", 'EffectFamily', "Resume['kind']
 
 const OWNER = 'packages/foundation/src/__contract_owner.ts';
 const IMPORT = "import type { Mode, Msg } from '../foundation/src/__contract_owner';\n";
-const PICK = "declare const m: Mode;\ndeclare const x: Msg;\n";
+const PICK = 'declare const m: Mode;\ndeclare const x: Msg;\n';
 
 const PLANTS: readonly (readonly [string, ContractSite['form'], string])[] = [
   ['const s: string = m;\nexport { s };\n', 'widened', 'Mode'],
@@ -32,25 +32,40 @@ const PLANTS: readonly (readonly [string, ContractSite['form'], string])[] = [
   ['export function f(): string {\n  return m;\n}\n', 'widened', 'Mode'],
   ['export const o: { label: string } = { label: m };\n', 'widened', 'Mode'],
   ['export const s = m as string;\n', 'asserted', 'Mode'],
-  ["export const s: string = x.tag;\n", 'widened', "Msg['tag']"],
+  ['export const s: string = x.tag;\n', 'widened', "Msg['tag']"],
 ];
 
 const RESPELLED: readonly (readonly [string, string])[] = [
   ['packages/systems/__respell_0.ts', `${IMPORT}export const w = 'on';\n`],
   ['packages/systems/__respell_1.ts', `${IMPORT}export function g(s: string): boolean {\n  return s === 'off';\n}\n`],
-  ['packages/foundation/src/__respell_2.ts', "export function h(s: string): number {\n  switch (s) {\n    case 'ping':\n      return 1;\n  }\n  return 0;\n}\n"],
+  [
+    'packages/foundation/src/__respell_2.ts',
+    "export function h(s: string): number {\n  switch (s) {\n    case 'ping':\n      return 1;\n  }\n  return 0;\n}\n",
+  ],
   ['packages/systems/__respell_3.ts', `${IMPORT}export const t: Readonly<Record<string, number>> = { 'on': 1 };\n`],
   ['packages/systems/__respell_4.ts', `${IMPORT}declare const t: Readonly<Record<string, number>>;\nexport const n = t['off'];\n`],
 ];
 
 const NEAR_MISSES: readonly (readonly [string, string])[] = [
   ['packages/systems/__miss_contextual.ts', `${IMPORT}export const a: Mode = 'on';\nexport const b: Msg = { tag: 'ping' };\n`],
-  ['packages/systems/__miss_compared.ts', `${IMPORT}${PICK}export const on = m === 'off';\nexport function s(): number {\n  switch (m) {\n    case 'on':\n      return 1;\n    default:\n      return 0;\n  }\n}\n`],
+  [
+    'packages/systems/__miss_compared.ts',
+    `${IMPORT}${PICK}export const on = m === 'off';\nexport function s(): number {\n  switch (m) {\n    case 'on':\n      return 1;\n    default:\n      return 0;\n  }\n}\n`,
+  ],
   ['packages/systems/__miss_template.ts', `${IMPORT}${PICK}export const label = \`mode \${m}\`;\n`],
-  ['packages/systems/__miss_generic.ts', `${IMPORT}${PICK}function id<T extends string>(value: T): T {\n  return value;\n}\nexport const same = id(m);\n`],
+  [
+    'packages/systems/__miss_generic.ts',
+    `${IMPORT}${PICK}function id<T extends string>(value: T): T {\n  return value;\n}\nexport const same = id(m);\n`,
+  ],
   ['packages/systems/__miss_unreached.ts', "export const word = 'on';\n"],
-  ['packages/systems/__miss_keyed.ts', `${IMPORT}${PICK}const BY_MODE: { readonly [TMode in Mode]: number } = { 'off': 0, 'on': 1 };\nexport const picked = BY_MODE['on'] + BY_MODE[m];\n`],
-  ['packages/systems/__miss_expectation.ts', `${IMPORT}${PICK}declare function expect(value: unknown): { toBe(expected: unknown): void; toEqual(expected: unknown): void };\nexpect(m).toBe('on');\nexpect({ x }).toStrictEqual({ x: { tag: 'ping' } });\n`],
+  [
+    'packages/systems/__miss_keyed.ts',
+    `${IMPORT}${PICK}const BY_MODE: { readonly [TMode in Mode]: number } = { 'off': 0, 'on': 1 };\nexport const picked = BY_MODE['on'] + BY_MODE[m];\n`,
+  ],
+  [
+    'packages/systems/__miss_expectation.ts',
+    `${IMPORT}${PICK}declare function expect(value: unknown): { toBe(expected: unknown): void; toEqual(expected: unknown): void };\nexpect(m).toBe('on');\nexpect({ x }).toStrictEqual({ x: { tag: 'ping' } });\n`,
+  ],
 ];
 
 const OWNER_TEXT =
@@ -58,7 +73,9 @@ const OWNER_TEXT =
 
 const plants = new Map<string, string>([
   [OWNER, OWNER_TEXT],
-  ...PLANTS.map(([body]: readonly [string, ...unknown[]], index) => [`packages/systems/__widen_${index}.ts`, `${IMPORT}${PICK}${body}`] as const),
+  ...PLANTS.map(
+    ([body]: readonly [string, ...unknown[]], index) => [`packages/systems/__widen_${index}.ts`, `${IMPORT}${PICK}${body}`] as const,
+  ),
   ...RESPELLED,
   ...NEAR_MISSES,
 ]);

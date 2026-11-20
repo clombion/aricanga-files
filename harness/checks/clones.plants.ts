@@ -61,7 +61,10 @@ async function removePlants(): Promise<void> {
  * @returns {Promise<void>} Settles once the report is on disk.
  */
 async function writeReport(output: string, files: readonly string[]): Promise<void> {
-  await writeFile(join(output, 'jscpd-report.json'), JSON.stringify({ duplicates: [], summary: { files: files.map((path) => ({ path })) } }));
+  await writeFile(
+    join(output, 'jscpd-report.json'),
+    JSON.stringify({ duplicates: [], summary: { files: files.map((path) => ({ path })) } }),
+  );
 }
 
 /**
@@ -73,7 +76,10 @@ async function writeReport(output: string, files: readonly string[]): Promise<vo
 async function cleanRunner(argv: readonly string[]): Promise<Outcome> {
   const [, output = ''] = argv.slice(argv.indexOf('--output'));
   const files = await typescriptFiles();
-  await writeReport(output, files.map((path) => join(REPO_ROOT, path)));
+  await writeReport(
+    output,
+    files.map((path) => join(REPO_ROOT, path)),
+  );
   return { argv, kind: 'finished', status: EXIT_CLEAN, stderr: '', stdout: '' };
 }
 
@@ -94,7 +100,9 @@ async function failingRunner(argv: readonly string[]): Promise<Outcome> {
  * @param {Runner} [runner] - The runner standing in for jscpd, or the real one.
  * @returns {Promise<{ readonly status: number; readonly out: readonly string[]; readonly errors: readonly string[] }>} Its exit status and output.
  */
-async function runMain(runner?: Runner): Promise<{ readonly status: number; readonly out: readonly string[]; readonly errors: readonly string[] }> {
+async function runMain(
+  runner?: Runner,
+): Promise<{ readonly status: number; readonly out: readonly string[]; readonly errors: readonly string[] }> {
   const out: string[] = [];
   const errors: string[] = [];
   const streams = {

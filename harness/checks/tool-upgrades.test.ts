@@ -109,7 +109,6 @@ describe('the pin reader', () => {
     ]);
     expect(() => pinned([{ importer: '.', manifest: { devDependencies: { oxlint: 1 } } }], LOCK)).toThrow(/is not a string/u);
   });
-
 });
 
 describe('the pin check', () => {
@@ -120,7 +119,16 @@ describe('the pin check', () => {
       { tool: 'planted', version: '1.0.0', where: 'pnpm-lock.yaml' },
       { tool: 'unlocked', version: '', where: 'pnpm-lock.yaml' },
     ];
-    expect(pinProblems(found, new Map([['node', 'nodejs/node'], ['unlocked', 'someone/unlocked'], ['gone', 'someone/gone']]))).toStrictEqual([
+    expect(
+      pinProblems(
+        found,
+        new Map([
+          ['node', 'nodejs/node'],
+          ['unlocked', 'someone/unlocked'],
+          ['gone', 'someone/gone'],
+        ]),
+      ),
+    ).toStrictEqual([
       'planted: pinned in pnpm-lock.yaml, with no upstream repository named',
       'unlocked: pinned in pnpm-lock.yaml, with no version',
       'gone: named upstream, but nothing pins it',
@@ -129,7 +137,9 @@ describe('the pin check', () => {
 
   test('let a fully named and pinned set through', () => {
     expect.hasAssertions();
-    expect(pinProblems([{ tool: 'node', version: '>=22', where: 'package.json engines' }], new Map([['node', 'nodejs/node']]))).toStrictEqual([]);
+    expect(
+      pinProblems([{ tool: 'node', version: '>=22', where: 'package.json engines' }], new Map([['node', 'nodejs/node']])),
+    ).toStrictEqual([]);
   });
 });
 

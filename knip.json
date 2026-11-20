@@ -19,12 +19,7 @@
     "catalogReferences": "error",
     "cycles": "error"
   },
-  "ignoreWorkspaces": [
-    "packages/framework",
-    "packages/tests",
-    "packages/test-utils",
-    "experiences/aricanga"
-  ],
+  "ignoreWorkspaces": ["packages/framework", "packages/tests", "packages/test-utils", "experiences/aricanga"],
   "ignoreDependencies": [
     "@ai-sdk/anthropic",
     "@ai-sdk/google",
@@ -43,45 +38,26 @@
   ],
   "workspaces": {
     ".": {
-      "entry": [
-        "harness/scripts/*.ts",
-        "harness/checks/*.test.ts"
-      ],
-      "project": [
-        "harness/**/*.ts"
-      ],
+      "entry": ["harness/scripts/*.ts", "harness/checks/*.test.ts"],
+      "project": ["harness/**/*.ts"],
       "playwright": false
     },
     "packages/foundation": {
-      "project": [
-        "src/**/*.ts!"
-      ]
+      "project": ["src/**/*.ts!"]
     },
     "packages/systems/chat": {
-      "project": [
-        "src/**/*.ts!",
-        "test/**/*.ts"
-      ]
+      "project": ["src/**/*.ts!", "test/**/*.ts"]
     },
     "packages/systems/cards": {
-      "project": [
-        "src/**/*.ts!"
-      ]
+      "project": ["src/**/*.ts!"]
     },
     "experiences/sandbox": {
-      "project": [
-        "src/**/*.ts!"
-      ]
+      "project": ["src/**/*.ts!"]
     },
     "packages/characterisation": {
-      "project": [
-        "src/**/*.{ts,tsx}",
-        "tests/**/*.ts"
-      ],
+      "project": ["src/**/*.{ts,tsx}", "tests/**/*.ts"],
       "playwright": {
-        "config": [
-          "playwright.characterisation.config.ts"
-        ]
+        "config": ["playwright.characterisation.config.ts"]
       }
     }
   }

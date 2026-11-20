@@ -33,10 +33,7 @@ function listedExports(file: SourceFile): ReadonlySet<string> {
  * @returns {boolean} Whether the module exports it.
  */
 function isExportedType(declaration: TypeAliasDeclaration | InterfaceDeclaration, listed: Readonly<ReadonlySet<string>>): boolean {
-  return (
-    listed.has(declaration.name.text) ||
-    (declaration.modifiers ?? []).some((modifier) => modifier.kind === SyntaxKind.ExportKeyword)
-  );
+  return listed.has(declaration.name.text) || (declaration.modifiers ?? []).some((modifier) => modifier.kind === SyntaxKind.ExportKeyword);
 }
 
 export { isExportedType, listedExports };

@@ -156,8 +156,7 @@ function unread(scan: Scan): readonly ExportedType[] {
   const read = readers(scan);
   return [...exportedTypes(scan)]
     .filter(
-      ([id, type]: readonly [number, ExportedType]) =>
-        !type.isPublic && ![...(read.get(id) ?? [])].some((path) => reads(path, type.path)),
+      ([id, type]: readonly [number, ExportedType]) => !type.isPublic && ![...(read.get(id) ?? [])].some((path) => reads(path, type.path)),
     )
     .map(([, type]: readonly [number, ExportedType]) => type);
 }

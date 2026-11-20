@@ -41,11 +41,7 @@ interface ProjectOptions {
  * @returns {Record<string, string>} The environment for a child run.
  */
 function isolatedEnv(extra: Readonly<Record<string, string>> = {}): Record<string, string> {
-  const env = Object.fromEntries(
-    Object.entries(environment()).filter(
-      ([name]: readonly [string, string]) => !TIED_PREFIXES.starts(name),
-    ),
-  );
+  const env = Object.fromEntries(Object.entries(environment()).filter(([name]: readonly [string, string]) => !TIED_PREFIXES.starts(name)));
   return { ...env, ...extra };
 }
 

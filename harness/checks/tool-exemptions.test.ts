@@ -11,150 +11,21 @@
  */
 
 import { Exemptions, site } from '#lib/exemptions.ts';
+import { biomeEntries, knipEntries, oxfmtEntries, oxlintEntries, stylelintEntries, vitestEntries } from './tool-exemptions.readers.ts';
 import { dead, matches } from '#lib/globs.ts';
 import { describe, expect, test } from 'vitest';
 import { json, object } from '#lib/config.ts';
 import { textOf, tracked } from '#lib/source-files.ts';
+import type { Entry } from './tool-exemptions.readers.ts';
 import { fromRoot } from '#lib/paths.ts';
 
 const HARNESS_ID = 'tool-exemptions';
-
-/** A glob of a tool's configuration, with where it was read. */
-interface Entry {
-  readonly tool: string;
-  readonly glob: string;
-}
 
 /** Globs allowed to match no listed file, keyed by `site(tool, glob)`, each with its reason. */
 const POLICIES = new Exemptions({
   [site('oxlint overrides[6]', '**/*.test.tsx')]:
     'policy: a component test is a .test.tsx and runs on Node like every test; the override holds the first one when it lands',
 });
-
-function strings(value: unknown, what: string): string[] {
-  if (value === undefined) {
-    return [];
-  }
-  if (!Array.isArray(value) || !value.every((item): item is string => typeof item === 'string')) {
-    throw new TypeError(`${what} is not a list of strings`);
-  }
-  return value;
-}
-
-/**
- * oxlint's ignore patterns and override file globs.
- *
- * @param {unknown} config - The config.
- * @returns {Entry[]} oxlint's ignore patterns and override file globs.
- */
-function oxlintEntries(config: unknown): Entry[] {
-  const fields = object(config, '.oxlintrc.json');
-  const overrides = fields['overrides'] === undefined ? [] : fields['overrides'];
-  if (!Array.isArray(overrides)) {
-    throw new TypeError('.oxlintrc.json overrides is not a list');
-  }
-  return [
-    ...strings(fields['ignorePatterns'], 'ignorePatterns').map((glob) => ({ glob, tool: 'oxlint ignorePatterns' })),
-    ...overrides.flatMap((override: unknown, index) =>
-      strings(object(override, `override ${index}`)['files'], `override ${index} files`).map((glob) => ({
-        glob,
-        tool: `oxlint overrides[${index}]`,
-      })),
-    ),
-  ];
-}
-
-/**
- * The gate's Vitest config: coverage include and exclude, and each project's include.
- *
- * @param {unknown} config - The config.
- * @returns {Entry[]} The gate's Vitest config: coverage include and exclude, and each project's include.
- */
-function vitestEntries(config: unknown): Entry[] {
-  const testOptions = object(object(config, 'vitest config')['test'] ?? {}, 'test');
-  const coverage = object(testOptions['coverage'] ?? {}, 'coverage');
-  const projects = testOptions['projects'] === undefined ? [] : testOptions['projects'];
-  if (!Array.isArray(projects)) {
-    throw new TypeError('vitest projects is not a list');
-  }
-  return [
-    ...strings(coverage['include'], 'coverage.include').map((glob) => ({ glob, tool: 'vitest coverage.include' })),
-    ...strings(coverage['exclude'], 'coverage.exclude').map((glob) => ({ glob, tool: 'vitest coverage.exclude' })),
-    ...projects.flatMap((project: unknown, index) =>
-      strings(object(object(project, `project ${index}`)['test'] ?? {}, 'test')['include'], 'include').map((glob) => ({
-        glob,
-        tool: `vitest projects[${index}].include`,
-      })),
-    ),
-  ];
-}
-
-/**
- * Biome's `files.includes`, a `!` entry read as the exclusion it is.
- *
- * @param {unknown} config - The config.
- * @returns {Entry[]} Biome's `files.includes`, a `!` entry read as the exclusion it is.
- */
-function biomeEntries(config: unknown): Entry[] {
-  const files = object(object(config, 'biome.json')['files'] ?? {}, 'files');
-  return strings(files['includes'], 'files.includes').map((glob) =>
-    glob.startsWith('!') ? { glob: glob.slice('!'.length), tool: 'biome files.includes (exclusion)' } : { glob, tool: 'biome files.includes' },
-  );
-}
-
-/**
- * The ignore patterns of `oxfmt`.
- *
- * @param {unknown} config - The config.
- * @returns {Entry[]} The ignore patterns of `oxfmt`.
- */
-function oxfmtEntries(config: unknown): Entry[] {
-  return strings(object(config, '.oxfmtrc.json')['ignorePatterns'], 'ignorePatterns').map((glob) => ({
-    glob,
-    tool: 'oxfmt ignorePatterns',
-  }));
-}
-
-/**
- * The `ignore` of `knip`, at the top level and per workspace.
- *
- * @param {unknown} config - The config.
- * @returns {Entry[]} The `ignore` of `knip`, at the top level and per workspace.
- */
-function knipEntries(config: unknown): Entry[] {
-  const fields = object(config, 'knip.json');
-  const workspaces = object(fields['workspaces'] ?? {}, 'workspaces');
-  return [
-    ...strings(fields['ignore'], 'ignore').map((glob) => ({ glob, tool: 'knip ignore' })),
-    ...Object.entries(workspaces).flatMap(([workspace, settings]: readonly [string, unknown]) =>
-      strings(object(settings, workspace)['ignore'], `${workspace}.ignore`).map((glob) => ({
-        glob: workspace === '.' ? glob : `${workspace}/${glob}`,
-        tool: `knip workspaces[${workspace}].ignore`,
-      })),
-    ),
-  ];
-}
-
-/**
- * The `ignoreFiles` of `stylelint` and the lines of `.stylelintignore`.
- *
- * @param {unknown} config - The config.
- * @param {string} ignoreFile - The ignore file.
- * @returns {Entry[]} The `ignoreFiles` of `stylelint` and the lines of `.stylelintignore`.
- */
-function stylelintEntries(config: unknown, ignoreFile: string): Entry[] {
-  return [
-    ...strings(object(config, '.stylelintrc.json')['ignoreFiles'], 'ignoreFiles').map((glob) => ({
-      glob,
-      tool: 'stylelint ignoreFiles',
-    })),
-    ...ignoreFile
-      .split('\n')
-      .map((line) => line.trim())
-      .filter((line) => line !== '' && !line.startsWith('#'))
-      .map((glob) => ({ glob, tool: '.stylelintignore' })),
-  ];
-}
 
 /**
  * The entries whose glob matches none of `paths`.
@@ -164,7 +35,12 @@ function stylelintEntries(config: unknown, ignoreFile: string): Entry[] {
  * @returns {Entry[]} The entries whose glob matches none of `paths`.
  */
 function deadEntries(entries: readonly Entry[], paths: readonly string[]): Entry[] {
-  const unmatched = new Set(dead(entries.map((entry) => entry.glob), paths));
+  const unmatched = new Set(
+    dead(
+      entries.map((entry) => entry.glob),
+      paths,
+    ),
+  );
   return entries.filter((entry) => unmatched.has(entry.glob));
 }
 
@@ -217,7 +93,6 @@ describe('the matcher', () => {
     expect(matches('./docs/**', 'docs/x.md')).toBe(true);
     expect(matches('packages/*/src/*.css', 'packages/plant/src/a.ts')).toBe(false);
   });
-
 });
 
 describe('the readers', () => {
@@ -249,17 +124,18 @@ describe('the readers', () => {
       'harness/checks/**/*.test.ts',
     ]);
   });
-
 });
 
 describe('the readers of the other tools', () => {
   const LISTED = ['packages/plant/src/a.ts', 'packages/plant/src/a.test.ts', 'packages/plant/src/b.css', 'docs/x.md'];
 
-  test('reads a biome exclusion as the glob it excludes', () => {
+  test('reads a biome exclusion as the glob it excludes, and a folder exclusion as everything under it', () => {
     expect.hasAssertions();
-    expect(biomeEntries({ files: { includes: ['packages/**/*.css', '!**/gone/**'] } })).toStrictEqual([
+    expect(biomeEntries({ files: { includes: ['packages/**/*.css', '!**/gone/**', '!docs', '!**/plant'] } })).toStrictEqual([
       { glob: 'packages/**/*.css', tool: 'biome files.includes' },
       { glob: '**/gone/**', tool: 'biome files.includes (exclusion)' },
+      { glob: 'docs/**', tool: 'biome files.includes (exclusion)' },
+      { glob: '**/plant/**', tool: 'biome files.includes (exclusion)' },
     ]);
   });
 
@@ -286,4 +162,4 @@ describe('the readers of the other tools', () => {
   });
 });
 
-export { HARNESS_ID, biomeEntries, deadEntries, knipEntries, oxfmtEntries, oxlintEntries, stylelintEntries, vitestEntries };
+export { HARNESS_ID, deadEntries };

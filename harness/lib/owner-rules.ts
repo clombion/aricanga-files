@@ -92,23 +92,14 @@ const RULES: readonly Rule[] = [
       'net.connect',
       'net.createConnection',
     ]),
-    scopes: [
-      ...nobody(...KERNEL, 'harness/'),
-      { owner: 'experiences/sandbox/src/main.ts', root: 'experiences/sandbox/' },
-    ],
-    why: "data reaches the kernel through the Fetch effect; one module of a host makes the request",
+    scopes: [...nobody(...KERNEL, 'harness/'), { owner: 'experiences/sandbox/src/main.ts', root: 'experiences/sandbox/' }],
+    why: 'data reaches the kernel through the Fetch effect; one module of a host makes the request',
   },
   {
     name: 'timers',
-    names: new Accepted([
-      'setTimeout',
-      'setInterval',
-      'setImmediate',
-      'requestAnimationFrame',
-      'requestIdleCallback',
-    ]),
+    names: new Accepted(['setTimeout', 'setInterval', 'setImmediate', 'requestAnimationFrame', 'requestIdleCallback']),
     scopes: nobody(...KERNEL, 'experiences/sandbox/', 'harness/'),
-    why: "time passes through the injected Scheduler, so a test drives it",
+    why: 'time passes through the injected Scheduler, so a test drives it',
   },
   {
     name: 'storage',

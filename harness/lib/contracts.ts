@@ -57,7 +57,14 @@ function discriminants(checker: Readonly<Checker>, type: Type, declared: Readonl
     });
     const complete = words.flatMap((word) => (word === undefined ? [] : [word]));
     return complete.length === words.length
-      ? [{ name: `${declared.name}['${property.name}']`, owner: declared.path, ownerPackage: packageOf(declared.path), words: new Set(complete) }]
+      ? [
+          {
+            name: `${declared.name}['${property.name}']`,
+            owner: declared.path,
+            ownerPackage: packageOf(declared.path),
+            words: new Set(complete),
+          },
+        ]
       : [];
   });
 }

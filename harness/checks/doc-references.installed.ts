@@ -28,11 +28,10 @@ const PLANTS = new Prefixes(['harness/checks/']);
 async function workspaces(): Promise<readonly (readonly [string, string])[]> {
   const listed = await tracked();
   const texts = await textsOf(listed.filter((path) => path.endsWith('package.json') && !path.includes('node_modules/')));
-  return texts
-    .flatMap(([path, text]: readonly [string, string]) => {
-      const { name } = object(json(text), path);
-      return typeof name === 'string' ? [[name, dirname(path)] as const] : [];
-    });
+  return texts.flatMap(([path, text]: readonly [string, string]) => {
+    const { name } = object(json(text), path);
+    return typeof name === 'string' ? [[name, dirname(path)] as const] : [];
+  });
 }
 
 /**

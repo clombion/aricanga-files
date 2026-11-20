@@ -1,12 +1,7 @@
 {
   "compilerOptions": {
-    "types": [
-      "node"
-    ]
+    "types": ["node"]
   },
   "extends": "./tsconfig.base.json",
-  "include": [
-    "vitest.gate.config.ts",
-    "vite.config.ts"
-  ]
+  "include": ["vitest.gate.config.ts", "vite.config.ts"]
 }

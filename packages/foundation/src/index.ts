@@ -11,14 +11,7 @@ export type { InkFixtures, NameResolver, DataResolver } from './ink/ink-runtime'
 // Simulation contracts.
 export type { Tag, Choice, ExternalCall, InkStatus, InkStep } from './sim/story';
 export { parseTag } from './sim/story';
-export type {
-  Effect,
-  EffectFamily,
-  CommitToken,
-  ScheduleCommit,
-  DataRequest,
-  DriveInkOp,
-} from './sim/effect';
+export type { Effect, EffectFamily, CommitToken, ScheduleCommit, DataRequest, DriveInkOp } from './sim/effect';
 export { EffectPayloadError, field, fx, hasField, text } from './sim/effect';
 export type { Command, Resume, Lifecycle, Input } from './sim/input';
 export type { KernelStatus, ReduceContext, ReduceResult, RenderContext } from './sim/context';

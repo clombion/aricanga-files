@@ -40,11 +40,13 @@ interface StepGenOptions {
  * @returns {Arbitrary<Tag>} The generator.
  */
 function tagArb(keys: readonly string[]): Arbitrary<Tag> {
-  return tuple(constantFrom(...keys), string({ maxLength: MAX_TAG_VALUE, minLength: MIN_TEXT })).map(([key, value]: readonly [string, string]) => ({
-    key,
-    raw: `${key}: ${value}`,
-    value,
-  }));
+  return tuple(constantFrom(...keys), string({ maxLength: MAX_TAG_VALUE, minLength: MIN_TEXT })).map(
+    ([key, value]: readonly [string, string]) => ({
+      key,
+      raw: `${key}: ${value}`,
+      value,
+    }),
+  );
 }
 
 /**
@@ -56,13 +58,15 @@ function tagArb(keys: readonly string[]): Arbitrary<Tag> {
 function inkStepArb(opts: Readonly<StepGenOptions> = {}): Arbitrary<InkStep> {
   const keys = opts.tagKeys ?? ['speaker'];
   const textArb = opts.texts ? constantFrom(...opts.texts) : string({ maxLength: MAX_TEXT, minLength: MIN_TEXT });
-  return record({ tags: array(tagArb(keys), { maxLength: opts.maxTags ?? MAX_TAGS }), text: textArb }).map(({ tags, text }: Readonly<{ tags: readonly Tag[]; text: string }>) => ({
-    choices: [],
-    externalCalls: [],
-    status: 'continue' as const,
-    tags,
-    text,
-  }));
+  return record({ tags: array(tagArb(keys), { maxLength: opts.maxTags ?? MAX_TAGS }), text: textArb }).map(
+    ({ tags, text }: Readonly<{ tags: readonly Tag[]; text: string }>) => ({
+      choices: [],
+      externalCalls: [],
+      status: 'continue' as const,
+      tags,
+      text,
+    }),
+  );
 }
 
 /**

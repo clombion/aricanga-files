@@ -6,16 +6,13 @@ import { expect, test } from '@playwright/test';
 test.describe('measurement', () => {
   test(
     'apply, flush, then measure; flush in an effect is a no-op, in onSettled it throws',
-    characterised(
-      'measurement',
-      ({ codes, state }) => {
-        expect(recorded(state, 'measurement/apply-flush-layout').ok).toBe(true);
-        expect(recorded(state, 'measurement/flush-in-effect-callback').threw).toBe(false);
-        expect(codes).toContain('FLUSH_IN_EFFECT_CALLBACK');
-        const settled = recorded(state, 'measurement/flush-in-on-settled');
-        expect(settled.threw).toBe(true);
-        expect(settled.note).toContain('Cannot call flush() from inside onSettled');
-      },
-    ),
+    characterised('measurement', ({ codes, state }) => {
+      expect(recorded(state, 'measurement/apply-flush-layout').ok).toBe(true);
+      expect(recorded(state, 'measurement/flush-in-effect-callback').threw).toBe(false);
+      expect(codes).toContain('FLUSH_IN_EFFECT_CALLBACK');
+      const settled = recorded(state, 'measurement/flush-in-on-settled');
+      expect(settled.threw).toBe(true);
+      expect(settled.note).toContain('Cannot call flush() from inside onSettled');
+    }),
   );
 });

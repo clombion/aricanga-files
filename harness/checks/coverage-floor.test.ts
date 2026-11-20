@@ -21,7 +21,7 @@ import { tracked } from '#lib/source-files.ts';
 const HARNESS_ID = 'coverage-floor';
 
 const BRANCHY = "export function sign(value: number): string {\n  if (value < 0) {\n    return 'negative';\n  }\n  return 'positive';\n}\n";
-const UNCALLED = "export function used(): number {\n  return 1;\n}\nexport function unused(): number {\n  return 2;\n}\n";
+const UNCALLED = 'export function used(): number {\n  return 1;\n}\nexport function unused(): number {\n  return 2;\n}\n';
 const CONFIG = `export default {
   test: {
     include: ['tests/**/*.test.ts'],
@@ -68,12 +68,10 @@ const THREE_QUARTER_FLOOR = 75;
 /** The problems the script writes for the planted shortfall: its statements and its lines. */
 const PLANTED_PROBLEMS = 2;
 /** The debt the debt tests register. */
-const DEBT_OF_A = new CountedExemptions(
-  {
-    [site('src/a.ts', 'lines')]: { count: 1, reason: 'planted' },
-    [site('src/a.ts', 'statements')]: { count: 2, reason: 'planted' },
-  },
-);
+const DEBT_OF_A = new CountedExemptions({
+  [site('src/a.ts', 'lines')]: { count: 1, reason: 'planted' },
+  [site('src/a.ts', 'statements')]: { count: 2, reason: 'planted' },
+});
 
 /**
  * The file a debt key names.
@@ -97,9 +95,13 @@ async function runScript(report: (root: string) => unknown): Promise<readonly [n
   try {
     await project.write('coverage-final.json', JSON.stringify(report(project.root)));
     const errors: string[] = [];
-    const status = await main((text) => {
-      errors.push(text);
-    }, NONE, project.root);
+    const status = await main(
+      (text) => {
+        errors.push(text);
+      },
+      NONE,
+      project.root,
+    );
     return [status, errors];
   } finally {
     await project.remove();

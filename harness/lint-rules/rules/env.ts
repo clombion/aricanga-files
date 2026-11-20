@@ -16,9 +16,7 @@ function importsEnv(node: Node): boolean {
   return (
     source !== undefined &&
     PROCESS.has(source) &&
-    children(node, 'specifiers').some(
-      (specifier) => specifier.type === 'ImportSpecifier' && nameOf(child(specifier, 'imported')) === 'env',
-    )
+    children(node, 'specifiers').some((specifier) => specifier.type === 'ImportSpecifier' && nameOf(child(specifier, 'imported')) === 'env')
   );
 }
 

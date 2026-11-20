@@ -122,7 +122,8 @@ function refusedUses(terms: Terms, prose: readonly Prose[], spans: readonly Span
   const refusals = [
     ...[...terms.refused].map(([pattern, why]: readonly [string, string]) => [pattern, why, [...prose, ...spans]] as const),
     ...[...terms.refusedInCode].map(
-      ([pattern, why]: readonly [string, string]) => [pattern, why, [...prose, ...spans].filter((line) => !MARKDOWN.ends(line.path))] as const,
+      ([pattern, why]: readonly [string, string]) =>
+        [pattern, why, [...prose, ...spans].filter((line) => !MARKDOWN.ends(line.path))] as const,
     ),
   ];
   const found: Use[] = [];

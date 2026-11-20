@@ -2,21 +2,9 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "jsx": "preserve",
-    "lib": [
-      "ES2023",
-      "ES2024.Promise",
-      "DOM",
-      "DOM.Iterable"
-    ],
+    "lib": ["ES2023", "ES2024.Promise", "DOM", "DOM.Iterable"],
     "jsxImportSource": "@solidjs/web",
-    "types": [
-      "vite/client"
-    ]
+    "types": ["vite/client"]
   },
-  "include": [
-    "src",
-    "tests",
-    "vite.config.ts",
-    "playwright.characterisation.config.ts"
-  ]
+  "include": ["src", "tests", "vite.config.ts", "playwright.characterisation.config.ts"]
 }

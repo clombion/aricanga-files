@@ -27,30 +27,31 @@ const UNREACHED = Exemptions.grouped({
     'experiences/sandbox/vite.config.ts: coverage',
     'vitest.gate.config.ts: coverage',
   ],
-  'adopting: the project lint-rules plugin runs inside oxlint; include harness/lint-rules in coverage and load its rules in-process from the lint-rules check': [
-    'harness/lint-rules/ast.ts: coverage',
-    'harness/lint-rules/jsx.ts: coverage',
-    'harness/lint-rules/plugin.ts: coverage',
-    'harness/lint-rules/rules/autofocus.ts: coverage',
-    'harness/lint-rules/rules/controlled.ts: coverage',
-    'harness/lint-rules/rules/env.ts: coverage',
-    'harness/lint-rules/rules/flags.ts: coverage',
-    'harness/lint-rules/rules/imports.ts: coverage',
-    'harness/lint-rules/rules/json.ts: coverage',
-    'harness/lint-rules/rules/jsx-rules.ts: coverage',
-    'harness/lint-rules/rules/labels.ts: coverage',
-    'harness/lint-rules/rules/legacy.ts: coverage',
-    'harness/lint-rules/rules/mechanics.ts: coverage',
-    'harness/lint-rules/rules/mirrors.ts: coverage',
-    'harness/lint-rules/rules/module-rules.ts: coverage',
-    'harness/lint-rules/rules/promises.ts: coverage',
-    'harness/lint-rules/rules/statics.ts: coverage',
-    'harness/lint-rules/rules/store-owner.ts: coverage',
-    'harness/lint-rules/rules/style-prop.ts: coverage',
-    'harness/lint-rules/rules/sync-parts.ts: coverage',
-    'harness/lint-rules/rules/view-imports.ts: coverage',
-    'harness/lint-rules/rules/vm-prop.ts: coverage',
-  ],
+  'adopting: the project lint-rules plugin runs inside oxlint; include harness/lint-rules in coverage and load its rules in-process from the lint-rules check':
+    [
+      'harness/lint-rules/ast.ts: coverage',
+      'harness/lint-rules/jsx.ts: coverage',
+      'harness/lint-rules/plugin.ts: coverage',
+      'harness/lint-rules/rules/autofocus.ts: coverage',
+      'harness/lint-rules/rules/controlled.ts: coverage',
+      'harness/lint-rules/rules/env.ts: coverage',
+      'harness/lint-rules/rules/flags.ts: coverage',
+      'harness/lint-rules/rules/imports.ts: coverage',
+      'harness/lint-rules/rules/json.ts: coverage',
+      'harness/lint-rules/rules/jsx-rules.ts: coverage',
+      'harness/lint-rules/rules/labels.ts: coverage',
+      'harness/lint-rules/rules/legacy.ts: coverage',
+      'harness/lint-rules/rules/mechanics.ts: coverage',
+      'harness/lint-rules/rules/mirrors.ts: coverage',
+      'harness/lint-rules/rules/module-rules.ts: coverage',
+      'harness/lint-rules/rules/promises.ts: coverage',
+      'harness/lint-rules/rules/statics.ts: coverage',
+      'harness/lint-rules/rules/store-owner.ts: coverage',
+      'harness/lint-rules/rules/style-prop.ts: coverage',
+      'harness/lint-rules/rules/sync-parts.ts: coverage',
+      'harness/lint-rules/rules/view-imports.ts: coverage',
+      'harness/lint-rules/rules/vm-prop.ts: coverage',
+    ],
 });
 
 /** Project problems carried while the gap is being closed, keyed by the problem. */
@@ -104,7 +105,12 @@ function fileProblems(path: string, holding: readonly string[]): readonly string
  */
 function projectProblems(files: readonly string[], members: ReadonlyMap<string, ReadonlySet<string>>): readonly string[] {
   const projectsOf: readonly (readonly [string, ReadonlySet<string>])[] = [...members];
-  return files.flatMap((path) => fileProblems(path, projectsOf.filter(([, set]) => set.has(path)).map(([project]) => project)));
+  return files.flatMap((path) =>
+    fileProblems(
+      path,
+      projectsOf.filter(([, set]) => set.has(path)).map(([project]) => project),
+    ),
+  );
 }
 
 describe('the listing', () => {
@@ -167,7 +173,10 @@ describe('the repository', () => {
 describe('the scan-set checks', () => {
   test('a project holds the files under its own directory', () => {
     expect.hasAssertions();
-    expect([projectDirectory('tsconfig.json'), projectDirectory('packages/foundation/test/tsconfig.json')]).toStrictEqual(['', 'packages/foundation/test/']);
+    expect([projectDirectory('tsconfig.json'), projectDirectory('packages/foundation/test/tsconfig.json')]).toStrictEqual([
+      '',
+      'packages/foundation/test/',
+    ]);
   });
 
   test('see a file a planted scan set misses', () => {
@@ -184,7 +193,13 @@ describe('the scan-set checks', () => {
     ]);
     expect(
       projectProblems(
-        ['packages/foundation/src/a.ts', 'packages/foundation/src/a.test.ts', 'packages/foundation/test/b.test.ts', 'shared.ts', 'loose.ts'],
+        [
+          'packages/foundation/src/a.ts',
+          'packages/foundation/src/a.test.ts',
+          'packages/foundation/test/b.test.ts',
+          'shared.ts',
+          'loose.ts',
+        ],
         members,
       ),
     ).toStrictEqual([

@@ -36,9 +36,7 @@ function updates(stdin: string): readonly Update[] {
  * @returns {readonly string[]} The revision arguments.
  */
 function revisions(update: Update): readonly string[] {
-  return ZERO.test(update.remoteSha)
-    ? [update.localSha, '--not', '--remotes']
-    : [`${update.remoteSha}..${update.localSha}`];
+  return ZERO.test(update.remoteSha) ? [update.localSha, '--not', '--remotes'] : [`${update.remoteSha}..${update.localSha}`];
 }
 
 /**

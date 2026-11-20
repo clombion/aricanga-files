@@ -50,9 +50,7 @@ interface RunOptions {
  */
 function environment(): Record<string, string> {
   return Object.fromEntries(
-    Object.entries(env).flatMap(([name, value]: readonly [string, string | undefined]) =>
-      value === undefined ? [] : [[name, value]],
-    ),
+    Object.entries(env).flatMap(([name, value]: readonly [string, string | undefined]) => (value === undefined ? [] : [[name, value]])),
   );
 }
 

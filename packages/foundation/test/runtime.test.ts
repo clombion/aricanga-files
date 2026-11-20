@@ -128,7 +128,6 @@ describe('the runtime pump', () => {
     runtime.send({ resume: { kind: 'commit-fired', token: STALE_TOKEN }, source: 'resume' }, 'h');
     expect(hView(runtime).lines).toStrictEqual(['Hello']);
   });
-
 });
 
 describe('the runtime effects', () => {
@@ -157,7 +156,6 @@ describe('the runtime effects', () => {
     runtime.send(player('present-ok'), 'h');
     expect(presented).toStrictEqual(['ping']);
   });
-
 });
 
 describe('the runtime routing and ids', () => {
