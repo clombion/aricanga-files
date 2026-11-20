@@ -1,12 +1,12 @@
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { defineConfig } from 'vitest/config';
+import { defineConfig, type ViteUserConfig } from 'vitest/config';
 
 // The gate's test run: the rebuild's tests and the harness's checks. Every test starts from a clean
 // slate (mocks restored, globals and env unstubbed), runs in a shuffled order, must assert, and is
 // bounded. Coverage is written outside the checkout, so the gate writes no file.
-export default defineConfig({
+const config: ViteUserConfig = defineConfig({
   test: {
     globals: false,
     restoreMocks: true,
@@ -55,3 +55,5 @@ export default defineConfig({
     ],
   },
 });
+
+export default config;

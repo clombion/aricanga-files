@@ -44,6 +44,12 @@ export const RULES: Readonly<Record<string, Rule>> = {
   'vm-prop': vmProp,
 };
 
-const plugin = { meta: { name: PLUGIN_NAME }, rules: RULES };
+/** The plugin oxlint loads: its name and its rules. */
+export interface Plugin {
+  readonly meta: { readonly name: string };
+  readonly rules: typeof RULES;
+}
+
+const plugin: Plugin = { meta: { name: PLUGIN_NAME }, rules: RULES };
 
 export default plugin;
