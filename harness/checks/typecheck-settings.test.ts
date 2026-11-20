@@ -1,5 +1,5 @@
 /**
- * tsc, under this project's settings, fails each planted typing hole a setting closes, and passes it once that setting is removed.
+ * `tsc`, under this project's settings, fails each planted typing hole a setting closes, and passes it once that setting is removed.
  *
  * Each run is the locked tsc over a planted project holding a copy of `tsconfig.base.json`. Every
  * plant is a file that must fail with its own diagnostic under the base config, and pass when only
@@ -23,8 +23,14 @@ interface Plant {
   readonly path: string;
   readonly text: string;
   readonly codes: readonly string[];
-  readonly removal: Readonly<Record<string, boolean | null>>;
+  readonly removal: Readonly<Record<string, Setting>>;
 }
+
+/** A setting's value in a planted config: on, off, or reset to tsc's own default. */
+type Setting = boolean | typeof TSC_DEFAULT;
+
+/** A setting reset to tsc's default, written into the planted config as JSON `null`. */
+const TSC_DEFAULT = 'tsc-default';
 
 const WITHOUT_NULL_CHECKS = { exactOptionalPropertyTypes: false };
 
@@ -110,13 +116,13 @@ const PLANTS: readonly Plant[] = [
   {
     codes: ['TS7027'],
     path: 'src/unreachable.ts',
-    removal: { allowUnreachableCode: null },
+    removal: { allowUnreachableCode: TSC_DEFAULT },
     text: 'export function one(): number {\n  return 1;\n  console.log("never");\n}\n',
   },
   {
     codes: ['TS7028'],
     path: 'src/unused-label.ts',
-    removal: { allowUnusedLabels: null },
+    removal: { allowUnusedLabels: TSC_DEFAULT },
     text: 'export function loop(): void {\n  outer: for (;;) {\n    break;\n  }\n}\n',
   },
   {
@@ -171,7 +177,7 @@ const SUPPORT: Readonly<Record<string, string>> = {
   'src/types.ts': 'export type Shape = { readonly kind: string };\n',
 };
 
-const DIAGNOSTIC = /^(src\/[\w.-]+)\(\d+,\d+\): error (TS\d+):/u;
+const DIAGNOSTIC = /^(?<file>src\/[\w.-]+)\(\d+,\d+\): error (?<code>TS\d+):/u;
 
 /**
  * The diagnostic codes of a tsc run, by planted file.
@@ -182,43 +188,59 @@ const DIAGNOSTIC = /^(src\/[\w.-]+)\(\d+,\d+\): error (TS\d+):/u;
 function codesByFile(stdout: string): ReadonlyMap<string, readonly string[]> {
   const found = new Map<string, string[]>();
   for (const line of stdout.split('\n')) {
-    const match = DIAGNOSTIC.exec(line);
-    if (match?.[1] !== undefined && match[2] !== undefined) {
-      found.set(match[1], [...new Set([...(found.get(match[1]) ?? []), match[2]])].toSorted());
+    const groups = DIAGNOSTIC.exec(line)?.groups;
+    const file = groups?.['file'];
+    const code = groups?.['code'];
+    if (file !== undefined && code !== undefined) {
+      found.set(file, [...new Set([...(found.get(file) ?? []), code])].toSorted());
     }
   }
   return found;
 }
 
 /**
+ * The planted `tsconfig.json`: the base config with `overrides` applied, a reset setting written as JSON `null`.
+ *
+ * @param {Readonly<Record<string, Setting>>} overrides - The settings to override.
+ * @returns {string} The config's text.
+ */
+function plantedConfig(overrides: Readonly<Record<string, Setting>>): string {
+  const config = { compilerOptions: { allowImportingTsExtensions: true, types: [], ...overrides }, extends: './tsconfig.base.json', include: ['src'] };
+  return JSON.stringify(config).replaceAll(JSON.stringify(TSC_DEFAULT), 'null');
+}
+
+/**
+ * Write every plant, its support and the planted config into a project.
+ *
+ * @param {Project} project - The planted project.
+ * @param {Readonly<Record<string, Setting>>} overrides - The settings to override.
+ */
+function plantAll(project: Project, overrides: Readonly<Record<string, Setting>>): void {
+  project.write('node_modules/@typescript/lib-dom/package.json', JSON.stringify({ name: '@typescript/lib-dom', types: 'index.d.ts', version: '0.0.0' }));
+  project.write('node_modules/@typescript/lib-dom/index.d.ts', 'declare const replacedLib: number;\n');
+  project.write('src/exemptions.ts', textOf('harness/lib/exemptions.ts'));
+  for (const [path, text] of Object.entries(SUPPORT)) {
+    project.write(path, text);
+  }
+  for (const plant of [...PLANTS, ...SHAPES]) {
+    project.write(plant.path, plant.text);
+  }
+  project.write('tsconfig.json', plantedConfig(overrides));
+}
+
+/**
  * Run the locked tsc over every plant under the base config with `overrides` applied.
  *
- * @param {Readonly<Record<string, boolean | null>>} overrides - The overrides.
- * @returns {ReadonlyMap<string, readonly string[]>} Run the locked tsc over every plant under the base config with `overrides` applied.
+ * @param {Readonly<Record<string, Setting>>} overrides - The settings to override.
+ * @returns {ReadonlyMap<string, readonly string[]>} The diagnostic codes, by planted file.
  */
-function typecheck(overrides: Readonly<Record<string, boolean | null>>): ReadonlyMap<string, readonly string[]> {
+function typecheck(overrides: Readonly<Record<string, Setting>>): ReadonlyMap<string, readonly string[]> {
   const project = new Project({ copies: ['tsconfig.base.json'], linkModules: false });
-    project.write('node_modules/@typescript/lib-dom/package.json', JSON.stringify({ name: '@typescript/lib-dom', types: 'index.d.ts', version: '0.0.0' }));
-    project.write('node_modules/@typescript/lib-dom/index.d.ts', 'declare const replacedLib: number;\n');
   try {
-    project.write('src/exemptions.ts', textOf('harness/lib/exemptions.ts'));
-    for (const [path, text] of Object.entries(SUPPORT)) {
-      project.write(path, text);
-    }
-    for (const plant of [...PLANTS, ...SHAPES]) {
-      project.write(plant.path, plant.text);
-    }
-    project.write(
-      'tsconfig.json',
-      JSON.stringify({
-        compilerOptions: { allowImportingTsExtensions: true, types: [], ...overrides },
-        extends: './tsconfig.base.json',
-        include: ['src'],
-      }),
-    );
+    plantAll(project, overrides);
     const done = project.tool('tsc', '--noEmit', '-p', 'tsconfig.json', '--pretty', 'false');
     const configErrors = done.stdout.split('\n').filter((line) => line.startsWith('tsconfig.json'));
-    if (configErrors.length > 0) {
+    if (configErrors.some(Boolean)) {
       throw new Error(`the planted config is refused: ${configErrors.join('; ')}`);
     }
     return codesByFile(done.stdout);
@@ -227,12 +249,23 @@ function typecheck(overrides: Readonly<Record<string, boolean | null>>): Readonl
   }
 }
 
+/**
+ * The codes a run reports for one plant.
+ *
+ * @param {ReadonlyMap<string, readonly string[]>} found - A run's codes, by planted file.
+ * @param {string} path - The plant.
+ * @returns {readonly string[]} Its codes, none when the run reported nothing for it.
+ */
+function codesOf(found: ReadonlyMap<string, readonly string[]>, path: string): readonly string[] {
+  return found.get(path) ?? [];
+}
+
 describe('the base config', () => {
   test('fails each planted hole with its own diagnostic and passes the clean plant', () => {
     expect.hasAssertions();
     const found = typecheck({});
     const plants = [...PLANTS, ...SHAPES];
-    expect(Object.fromEntries(plants.map((plant) => [plant.path, found.get(plant.path) ?? []]))).toStrictEqual(
+    expect(Object.fromEntries(plants.map((plant) => [plant.path, codesOf(found, plant.path)]))).toStrictEqual(
       Object.fromEntries(plants.map((plant) => [plant.path, plant.codes])),
     );
     expect([found.get('src/clean.ts'), found.get('src/types.ts')]).toStrictEqual([undefined, undefined]);
@@ -241,7 +274,8 @@ describe('the base config', () => {
 
 describe('each setting', () => {
   test.for(PLANTS)('is what fails $path: removing it lets the plant through', (plant) => {
-    expect(typecheck(plant.removal).get(plant.path) ?? []).toStrictEqual([]);
+    expect.hasAssertions();
+    expect(codesOf(typecheck(plant.removal), plant.path)).toStrictEqual([]);
   });
 
   test('isolatedModules is implied by verbatimModuleSyntax: removing it alone keeps its plant failing', () => {
@@ -250,4 +284,4 @@ describe('each setting', () => {
   });
 });
 
-export { HARNESS_ID, codesByFile };
+export { HARNESS_ID };
