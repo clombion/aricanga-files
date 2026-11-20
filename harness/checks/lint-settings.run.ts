@@ -119,5 +119,5 @@ function plantedCodes(): readonly [Options, Options] {
   ];
 }
 
-export type { Lint, Options };
-export { codesByFile, config, lint, plantedCodes, repoConfig };
+export type { Options };
+export { config, lint, plantedCodes, repoConfig };

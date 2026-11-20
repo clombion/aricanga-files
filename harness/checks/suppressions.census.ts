@@ -199,5 +199,5 @@ function census(path: string, text: string): Census {
   return { problems, sites };
 }
 
-export type { Census, Problem };
-export { census, cssComments, suffix };
+export type { Census };
+export { census, suffix };

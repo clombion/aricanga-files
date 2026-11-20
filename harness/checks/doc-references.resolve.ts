@@ -289,5 +289,5 @@ function fenceProblems(doc: Doc): readonly Unresolved[] {
   return found;
 }
 
-export type { Resolver, Unresolved };
+export type { Resolver };
 export { adrProblems, fenceProblems, key, linkProblems, spanProblems };

@@ -26,7 +26,10 @@ interface Entry {
 }
 
 /** Globs allowed to match no listed file, keyed by `site(tool, glob)`, each with its reason. */
-const POLICIES = new Exemptions({});
+const POLICIES = new Exemptions({
+  [site('oxlint overrides[6]', '**/*.test.tsx')]:
+    'policy: a component test is a .test.tsx and runs on Node like every test; the override holds the first one when it lands',
+});
 
 function strings(value: unknown, what: string): string[] {
   if (value === undefined) {

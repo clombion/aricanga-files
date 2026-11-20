@@ -16,5 +16,4 @@ function counted(entries: Readonly<Record<string, Counted>>): Readonly<Record<st
   return Object.fromEntries(Object.entries(entries).map(([key, entry]: readonly [string, Counted]) => [key, [entry.count, entry.reason] as const]));
 }
 
-export type { Counted };
 export { counted };

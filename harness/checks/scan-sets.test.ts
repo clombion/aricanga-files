@@ -29,6 +29,7 @@ const UNREACHED = Exemptions.grouped({
   ],
   'adopting: the project lint-rules plugin runs inside oxlint; include harness/lint-rules in coverage and load its rules in-process from the lint-rules check': [
     'harness/lint-rules/ast.ts: coverage',
+    'harness/lint-rules/jsx.ts: coverage',
     'harness/lint-rules/plugin.ts: coverage',
     'harness/lint-rules/rules/autofocus.ts: coverage',
     'harness/lint-rules/rules/controlled.ts: coverage',
@@ -36,10 +37,12 @@ const UNREACHED = Exemptions.grouped({
     'harness/lint-rules/rules/flags.ts: coverage',
     'harness/lint-rules/rules/imports.ts: coverage',
     'harness/lint-rules/rules/json.ts: coverage',
+    'harness/lint-rules/rules/jsx-rules.ts: coverage',
     'harness/lint-rules/rules/labels.ts: coverage',
     'harness/lint-rules/rules/legacy.ts: coverage',
     'harness/lint-rules/rules/mechanics.ts: coverage',
     'harness/lint-rules/rules/mirrors.ts: coverage',
+    'harness/lint-rules/rules/module-rules.ts: coverage',
     'harness/lint-rules/rules/promises.ts: coverage',
     'harness/lint-rules/rules/statics.ts: coverage',
     'harness/lint-rules/rules/store-owner.ts: coverage',
@@ -164,7 +167,7 @@ describe('the repository', () => {
 describe('the scan-set checks', () => {
   test('a project holds the files under its own directory', () => {
     expect.hasAssertions();
-    expect([projectDirectory('tsconfig.json'), projectDirectory('packages/foundation/tsconfig.test.json')]).toStrictEqual(['', 'packages/foundation/']);
+    expect([projectDirectory('tsconfig.json'), projectDirectory('packages/foundation/test/tsconfig.json')]).toStrictEqual(['', 'packages/foundation/test/']);
   });
 
   test('see a file a planted scan set misses', () => {
@@ -177,11 +180,11 @@ describe('the scan-set checks', () => {
     const members = new Map([
       ['packages/foundation/tsconfig.json', new Set(['packages/foundation/src/a.ts', 'packages/foundation/src/a.test.ts', 'shared.ts'])],
       ['packages/systems/chat/tsconfig.json', new Set(['shared.ts'])],
-      ['packages/foundation/tsconfig.test.json', new Set(['packages/foundation/src/a.ts', 'packages/foundation/src/b.test.ts'])],
+      ['packages/foundation/test/tsconfig.json', new Set(['packages/foundation/src/a.ts', 'packages/foundation/test/b.test.ts'])],
     ]);
     expect(
       projectProblems(
-        ['packages/foundation/src/a.ts', 'packages/foundation/src/a.test.ts', 'packages/foundation/src/b.test.ts', 'shared.ts', 'loose.ts'],
+        ['packages/foundation/src/a.ts', 'packages/foundation/src/a.test.ts', 'packages/foundation/test/b.test.ts', 'shared.ts', 'loose.ts'],
         members,
       ),
     ).toStrictEqual([

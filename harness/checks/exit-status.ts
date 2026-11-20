@@ -1,4 +1,4 @@
-/** The exit statuses the checks read off a tool's run: the one place their numbers are written. */
+/** The exit statuses the checks read off a tool's run, named. */
 
 /** A run that found nothing. */
 const EXIT_CLEAN = 0;

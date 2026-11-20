@@ -14,10 +14,7 @@ import type { Pin } from '#lib/pins.ts';
 const HARNESS_ID = 'tool-upgrades';
 
 /** Pin problems the repository carries while the fix is pending, keyed by the problem. */
-const PENDING = new Exemptions({
-  'pnpm: pinned in package.json packageManager, with no version':
-    'adopting: add "packageManager": "pnpm@10.28.0" to package.json, so the pnpm the gate runs is pinned',
-});
+const PENDING = new Exemptions({});
 
 /**
  * A pin with no upstream or no version, and an upstream entry that pins nothing.

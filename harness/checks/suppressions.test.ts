@@ -36,15 +36,13 @@ const SCANNED = new Accepted(['.ts', '.tsx', '.js', '.mjs', '.css']);
 const SUPPRESSIONS = new CountedExemptions(
   counted({
   [site('packages/foundation/src/sim/system.ts', 'oxlint:typescript/no-unsafe-type-assertion')]: { count: 2, reason: 'stateOf and viewOf: the erasure owner reads a system value back after proving the owner id matches' },
-  [site('packages/foundation/src/testing/harness.ts', 'oxlint:eslint/no-await-in-loop')]: { count: 3, reason: 'the fixture drain settles each pass and each input in order; the order is the trace' },
-  [site('packages/foundation/src/sim/exhaustive.test.ts', 'oxlint:typescript/switch-exhaustiveness-check')]: { count: 1, reason: 'the planted non-exhaustive switch the test proves the compiler refuses' },
-  [site('packages/foundation/src/sim/exhaustive.test.ts', 'typescript:expect-error')]: { count: 1, reason: 'the planted missing case: the expected error is the proof' },
+  [site('packages/foundation/test/exhaustive.test.ts', 'oxlint:typescript/switch-exhaustiveness-check')]: { count: 1, reason: 'the planted non-exhaustive switch the test proves the compiler refuses' },
+  [site('packages/foundation/test/exhaustive.test.ts', 'typescript:expect-error')]: { count: 1, reason: 'the planted missing case: the expected error is the proof' },
   [site('packages/characterisation/src/fixtures/adapter.tsx', 'oxlint:solid/reactivity')]: { count: 1, reason: 'the read forces the planted memo whose store write the fixture records' },
   [site('packages/characterisation/src/fixtures/ownership.tsx', 'oxlint:solid/reactivity')]: { count: 2, reason: 'the planted memos created where Solid refuses a primitive; the fixture records the refusal' },
   [site('packages/characterisation/src/fixtures/ownership.tsx', 'oxlint:unicorn/no-null')]: { count: 1, reason: "the planted runWithOwner(null, …): Solid's API takes null for no owner" },
   [site('packages/characterisation/src/fixtures/props.tsx', 'oxlint:solid/no-destructure')]: { count: 1, reason: 'the planted destructured part whose staleness the fixture records' },
   [site('packages/characterisation/src/fixtures/csp.tsx', 'oxlint:aricanga/style-prop')]: { count: 1, reason: 'the planted style prop whose CSP effect the fixture records' },
-  [site('packages/foundation/src/host/runtime.test.ts', 'oxlint:typescript/unbound-method')]: { count: 1, reason: 'isMockFunction inspects the function and never calls it' },
   }),
 );
 

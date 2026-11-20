@@ -1,8 +1,9 @@
 /**
- * What the `doc-references` check reads off disk and code: the installed `node_modules/` paths the
- * spans ask about, and the string values held code quotes.
+ * What the `doc-references` check reads off disk, code and tools: the installed `node_modules/`
+ * paths the spans ask about, the string values held code quotes, and the rule ids oxlint knows.
  */
 
+import { REPO_ROOT, fromRoot } from '#lib/paths.ts';
 import { json, object } from '#lib/config.ts';
 import { textOf, tracked } from '#lib/source-files.ts';
 import { Prefixes } from '#lib/exemptions.ts';
@@ -10,7 +11,7 @@ import type { Resolver } from './doc-references.resolve.ts';
 import type { Span } from '#lib/docs.ts';
 import { access } from 'node:fs/promises';
 import { dirname } from 'node:path/posix';
-import { fromRoot } from '#lib/paths.ts';
+import { finished } from '#lib/tools.ts';
 import { heldFiles } from '#lib/scope.ts';
 import { spanProblems } from './doc-references.resolve.ts';
 
@@ -118,4 +119,21 @@ function quotedValues(): ReadonlySet<string> {
   return found;
 }
 
-export { installedPaths, quotedValues };
+/**
+ * The rule ids the locked oxlint knows, as `plugin/rule` (`node/no-process-env`), read from its own listing.
+ *
+ * @returns {ReadonlySet<string>} The rule ids.
+ */
+function oxlintRuleIds(): ReadonlySet<string> {
+  const done = finished([fromRoot('node_modules', '.bin', 'oxlint'), '--rules', '--format=json'], { cwd: REPO_ROOT });
+  const listed: unknown = json(done.stdout);
+  const rules: readonly unknown[] = Array.isArray(listed) ? listed : [];
+  return new Set(
+    rules.map((entry) => {
+      const fields = object(entry, 'oxlint rule');
+      return `${String(fields['scope']).replaceAll('_', '-')}/${String(fields['value'])}`;
+    }),
+  );
+}
+
+export { installedPaths, oxlintRuleIds, quotedValues };

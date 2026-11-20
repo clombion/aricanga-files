@@ -10,7 +10,8 @@
  *   file and a package span (`@solidjs/web`) an installed or workspace package;
  * - `pnpm run <task>` names a script of the root `package.json`;
  * - a span with no file suffix that is no listed path resolves as a named value (a lint rule id, an
- *   effect kind) when held code or config outside the checks quotes it as a string;
+ *   effect kind) when held code or config outside the checks quotes it as a string, or is the id of
+ *   a rule the locked oxlint knows (`node/no-process-env`);
  * - `ADR-NNNN` names a decision record under `docs/roadmap/decisions/`;
  * - in a shell fence, a locked tool runs through `pnpm exec` or `pnpm run`, never bare and never
  *   through an unlocked runner.
@@ -22,7 +23,7 @@ import { Accepted, Exemptions, site } from '#lib/exemptions.ts';
 import { Doc, currentSpans, currentText, markdown, markdownPaths } from '#lib/docs.ts';
 import { adrProblems, fenceProblems, key, linkProblems, spanProblems } from './doc-references.resolve.ts';
 import { describe, expect, test } from 'vitest';
-import { installedPaths, quotedValues } from './doc-references.installed.ts';
+import { installedPaths, oxlintRuleIds, quotedValues } from './doc-references.installed.ts';
 import type { Resolver } from './doc-references.resolve.ts';
 import { repoTasks } from '#lib/config.ts';
 import { tracked } from '#lib/source-files.ts';
@@ -49,7 +50,9 @@ const ADRS_EXEMPT = Exemptions.grouped({});
  */
 async function repoResolver(): Promise<Resolver> {
   const quoted = quotedValues();
-  const base = { files: tracked(), named: (value: string): boolean => quoted.has(value), taskNames: new Set(repoTasks().keys()) };
+  const rules = oxlintRuleIds();
+  const named = (value: string): boolean => quoted.has(value) || rules.has(value);
+  const base = { files: tracked(), named, taskNames: new Set(repoTasks().keys()) };
   const installed = await installedPaths(currentSpans(), base);
   return { ...base, installed: (path) => installed.has(path) };
 }
