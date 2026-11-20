@@ -68,11 +68,7 @@ async function runPlanted(specs: Readonly<Record<string, string>>): Promise<Read
   const project = await Project.create({ copies: ['harness/lib'] });
   try {
     await project.write('vitest.config.ts', CONFIG);
-    await Promise.all(
-      Object.entries(specs).map(async ([path, text]: readonly [string, string]) => {
-        await project.write(`planted/${path}`, text);
-      }),
-    );
+    await project.writeAll(Object.entries(specs).map(([path, text]: readonly [string, string]) => [`planted/${path}`, text] as const));
     await project.tool('vitest', 'run', '--reporter=json', '--outputFile=report.json');
     const report = await project.read('report.json');
     return outcomesOf(report);

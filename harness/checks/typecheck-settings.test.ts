@@ -232,11 +232,7 @@ async function plantAll(project: Project, overrides: Readonly<Record<string, Set
     ...[...PLANTS, ...SHAPES].map((plant) => [plant.path, plant.text] as const),
     ['tsconfig.json', plantedConfig(overrides)],
   ];
-  await Promise.all(
-    files.map(async ([path, text]: readonly [string, string]) => {
-      await project.write(path, text);
-    }),
-  );
+  await project.writeAll(files);
 }
 
 /**

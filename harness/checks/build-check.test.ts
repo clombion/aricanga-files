@@ -30,11 +30,11 @@ async function plantedBuild(main: string, config: string): ReturnType<typeof che
   const project = await Project.create();
   try {
     await project.run('git', 'init', '-q');
-    await Promise.all([
-      project.write('.gitignore', 'node_modules\n'),
-      project.write('app/index.html', INDEX),
-      project.write('app/main.ts', main),
-      project.write('app/vite.config.ts', config),
+    await project.writeAll([
+      ['.gitignore', 'node_modules\n'],
+      ['app/index.html', INDEX],
+      ['app/main.ts', main],
+      ['app/vite.config.ts', config],
     ]);
     const result = await checkBuild('app', project.root);
     return result;

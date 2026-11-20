@@ -134,11 +134,7 @@ describe('the listing', () => {
     const project = await Project.create({ linkModules: false });
     try {
       const names = Array.from({ length: FLOOR }, (_value, index) => `f${index}.ts`);
-      await Promise.all(
-        names.map(async (name) => {
-          await project.write(name, '');
-        }),
-      );
+      await project.writeAll(names.map((name) => [name, ''] as const));
       await expect(listing([...names, 'deleted.ts', ''].join('\0'), project.root)).resolves.toStrictEqual(names.toSorted());
     } finally {
       await project.remove();

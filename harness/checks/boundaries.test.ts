@@ -54,11 +54,7 @@ const BOUNDARY_RULES = ['no-restricted-imports', 'no-restricted-globals', 'no-re
 async function verdicts(fixtures: readonly Fixture[]): Promise<ReadonlyMap<string, boolean>> {
   const project = await Project.create({ copies: OXLINT_CONFIG_FILES });
   try {
-    await Promise.all(
-      fixtures.map(async (fixture) => {
-        await project.write(fixture.path, fixture.text);
-      }),
-    );
+    await project.writeAll(fixtures.map((fixture) => [fixture.path, fixture.text] as const));
     const outcome = await project.tool(
       'oxlint',
       '-c',

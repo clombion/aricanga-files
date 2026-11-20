@@ -79,11 +79,7 @@ async function plantedRuns(files: Readonly<Record<string, string>>, config: obje
   try {
     await project.write('package.json', JSON.stringify({ name: 'plant', private: true, type: 'module', version: '0.0.0' }));
     await project.write('knip.json', JSON.stringify(config));
-    await Promise.all(
-      Object.entries(files).map(async ([path, text]: readonly [string, string]) => {
-        await project.write(path, text);
-      }),
-    );
+    await project.writeAll(Object.entries(files));
     const runs = await deadcodeRuns();
     const done = await inSequence(runs, async (args) => {
       const run = await knip(project.root, args);

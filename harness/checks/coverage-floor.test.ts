@@ -46,11 +46,11 @@ test('all', () => {
 async function planted(tests: string): Promise<readonly FileCoverage[]> {
   const project = await Project.create();
   try {
-    await Promise.all([
-      project.write('vitest.config.ts', CONFIG),
-      project.write('src/branchy.ts', BRANCHY),
-      project.write('src/uncalled.ts', UNCALLED),
-      project.write('tests/plant.test.ts', tests),
+    await project.writeAll([
+      ['vitest.config.ts', CONFIG],
+      ['src/branchy.ts', BRANCHY],
+      ['src/uncalled.ts', UNCALLED],
+      ['tests/plant.test.ts', tests],
     ]);
     const done = await project.tool('vitest', 'run', '--coverage');
     expect(done.status, done.stdout + done.stderr).toBe(EXIT_CLEAN);

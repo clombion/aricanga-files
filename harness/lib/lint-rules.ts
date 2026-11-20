@@ -174,11 +174,7 @@ async function lintFixtures(planted: readonly Fixture[]): Promise<readonly Diagn
   const project = await Project.create({ copies: [...OXLINT_CONFIG_FILES, 'tsconfig.base.json'] });
   try {
     await project.write('tsconfig.json', PLANTED_TSCONFIG);
-    await Promise.all(
-      planted.map(async (fixture) => {
-        await project.write(fixture.path, fixture.source);
-      }),
-    );
+    await project.writeAll(planted.map((fixture) => [fixture.path, fixture.source] as const));
     const found = await lintPlanted(project, paths);
     return found;
   } finally {

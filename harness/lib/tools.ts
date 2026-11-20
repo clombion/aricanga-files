@@ -136,6 +136,20 @@ class Project {
   }
 
   /**
+   * Write several files of the planted project at once.
+   *
+   * @param {Iterable<readonly [string, string]>} files - Each file's path in the project and its text.
+   * @returns {Promise<void>} Settles once every file is written.
+   */
+  public async writeAll(files: Iterable<readonly [string, string]>): Promise<void> {
+    await Promise.all(
+      [...files].map(async ([file, text]: readonly [string, string]) => {
+        await this.write(file, text);
+      }),
+    );
+  }
+
+  /**
    * Run a locked tool of the repository in the planted project.
    *
    * @param {string} name - The tool's binary name.

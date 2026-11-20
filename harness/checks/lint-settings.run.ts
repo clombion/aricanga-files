@@ -95,11 +95,7 @@ async function lint(files: Readonly<Record<string, string>>, configText: string)
   try {
     await project.write('.oxlintrc.json', configText);
     await project.write('tsconfig.json', JSON.stringify({ compilerOptions: { jsx: 'preserve', types: [] }, extends: './tsconfig.base.json', include: ['src'] }));
-    await Promise.all(
-      Object.entries(files).map(async ([path, text]: readonly [string, string]) => {
-        await project.write(path, text);
-      }),
-    );
+    await project.writeAll(Object.entries(files));
     const done = await project.tool('oxlint', '-c', '.oxlintrc.json', '--format', 'json', ...Object.keys(files));
     return { codes: codesByFile(json(done.stdout)), status: done.status };
   } finally {

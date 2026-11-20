@@ -62,11 +62,7 @@ async function plainAndHunted(file: string): Promise<readonly [number, readonly 
   const project = await Project.create();
   try {
     await project.write('vitest.config.ts', CONFIG);
-    await Promise.all(
-      Object.entries(PLANTS).map(async ([path, text]: readonly [string, string]) => {
-        await project.write(path, text);
-      }),
-    );
+    await project.writeAll(Object.entries(PLANTS));
     const plain = await project.tool('vitest', 'run', '--root', project.root, '--config', 'vitest.config.ts', file);
     const options: Hunt = { config: 'vitest.config.ts', copies: COPIES, filters: [file], repeats: REPEATS, root: project.root, seed: SEED };
     const hunted = await hunt(options);

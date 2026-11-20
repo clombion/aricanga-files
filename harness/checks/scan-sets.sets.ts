@@ -55,11 +55,7 @@ async function oxfmtFiles(files: readonly string[]): Promise<ReadonlySet<string>
   const project = await Project.create({ copies: ignores });
   try {
     const texts = await textsOf(files);
-    await Promise.all(
-      texts.map(async ([path, text]: readonly [string, string]) => {
-        await project.write(path, text + UNFORMATTED);
-      }),
-    );
+    await project.writeAll(texts.map(([path, text]: readonly [string, string]) => [path, text + UNFORMATTED] as const));
     const done = await project.tool('oxfmt', '--list-different');
     return new Set(lines(done.stdout));
   } finally {
