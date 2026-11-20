@@ -1,13 +1,12 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "outDir": "dist",
-    "rootDir": "src"
+    "types": []
   },
-  "include": ["src"],
-  "exclude": ["**/*.test.ts"],
-  "references": [
-    { "path": "../../packages/foundation" },
-    { "path": "../../packages/systems/chat" }
+  "include": [
+    "src"
+  ],
+  "exclude": [
+    "src/**/*.test.ts"
   ]
 }

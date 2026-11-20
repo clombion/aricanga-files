@@ -8,7 +8,8 @@ export type { FixtureOptions, FixtureInput, FixtureRun } from './harness';
 export { canonical } from './serialize';
 export { tagArb, inkStepArb, storyInputArb, storyStreamArb } from './generators';
 export type { StepGenOptions } from './generators';
-export { runStream, assertDeterministic, assertInvariant } from './property';
+export { runStream, checkDeterministic, checkInvariant } from './property';
+export type { PropertyReport } from './property';
 export type { Violation, Predicate, StreamOptions } from './property';
 export {
   fixtureSystem,

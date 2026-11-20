@@ -1,5 +1,5 @@
 import { erase, parseTag } from '@narratives/foundation';
-import { type FixtureInput, type FixtureRun, assertInvariant, runStream } from '@narratives/foundation/testing';
+import { type FixtureInput, type FixtureRun, checkInvariant, runStream } from '@narratives/foundation/testing';
 import { forwardOnlyTime } from '@narratives/system-chat/testing';
 import fc from 'fast-check';
 import { expect, test } from 'vitest';
@@ -89,5 +89,6 @@ test('forwardOnlyTime holds over generated time-tag streams (#4, #5)', async () 
     timeArb.map((t): FixtureInput => story('m', { tags: [`time: ${t}`] })),
     { maxLength: 10 },
   );
-  await assertInvariant({ systems: [erase(chatSystem)], foreground: 'chat' }, streamArb, forwardOnlyTime);
+  const result = await checkInvariant({ systems: [erase(chatSystem)], foreground: 'chat' }, streamArb, forwardOnlyTime);
+  expect(result.failed, result.message).toBe(false);
 });

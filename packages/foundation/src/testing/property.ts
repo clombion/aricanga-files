@@ -1,4 +1,4 @@
-import fc from 'fast-check';
+import * as fc from 'fast-check';
 import type { DataRequest } from '../sim/effect';
 import type { SystemId } from '../sim/snapshot';
 import type { AnySystem } from '../sim/system';
@@ -39,37 +39,57 @@ export function runStream(opts: StreamOptions, inputs: readonly FixtureInput[]):
   });
 }
 
-// The standing determinism guard (testing-strategy.md): the same input stream,
-// replayed, yields a byte-identical canonical trace. Generators feeding this must
-// exclude data-request steps (fetch resumes via microtask — scheduling-ordered).
-export async function assertDeterministic(
+/**
+ * The outcome of a property run. A test asserts on it (`expect(report.failed, report.message)`), so
+ * a property is an assertion of the test that runs it, and a shrunk counterexample is its message.
+ */
+export interface PropertyReport {
+  readonly failed: boolean;
+  readonly message: string;
+}
+
+function report(details: fc.RunDetails<[FixtureInput[]]>): PropertyReport {
+  return { failed: details.failed, message: fc.defaultReportMessage(details) ?? 'the property held' };
+}
+
+/**
+ * The standing determinism guard (testing-strategy.md): the same input stream, replayed, yields a
+ * byte-identical canonical trace. Generators feeding this exclude data-request steps (a fetch
+ * resumes through a microtask, so its order depends on scheduling).
+ */
+export async function checkDeterministic(
   opts: StreamOptions,
   streamArb: fc.Arbitrary<FixtureInput[]>,
   runs = 30,
-): Promise<void> {
-  await fc.assert(
+): Promise<PropertyReport> {
+  const details = await fc.check(
     fc.asyncProperty(streamArb, async (inputs) => {
-      const a = await runStream(opts, inputs);
-      const b = await runStream(opts, inputs);
-      return canonical(a.trace) === canonical(b.trace);
+      const first = await runStream(opts, inputs);
+      const second = await runStream(opts, inputs);
+      return canonical(first.trace) === canonical(second.trace);
     }),
     { numRuns: runs },
   );
+  return report(details);
 }
 
-/** Assert a predicate holds over every generated stream (shrinks on failure). */
-export async function assertInvariant(
+/** Check that a predicate holds over every generated stream, shrinking a failure to its smallest. */
+export async function checkInvariant(
   opts: StreamOptions,
   streamArb: fc.Arbitrary<FixtureInput[]>,
   predicate: Predicate,
   runs = 50,
-): Promise<void> {
-  await fc.assert(
+): Promise<PropertyReport> {
+  const details = await fc.check(
     fc.asyncProperty(streamArb, async (inputs) => {
       const violation = predicate(await runStream(opts, inputs));
-      if (violation) throw new Error(`${violation.rule}: ${violation.detail}${violation.at !== undefined ? ` @${violation.at}` : ''}`);
+      if (violation !== null) {
+        const at = violation.at === undefined ? '' : ` @${violation.at}`;
+        throw new Error(`${violation.rule}: ${violation.detail}${at}`);
+      }
       return true;
     }),
     { numRuns: runs },
   );
+  return report(details);
 }

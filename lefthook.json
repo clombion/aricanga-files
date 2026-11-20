@@ -1,0 +1,18 @@
+{
+  "pre-commit": {
+    "commands": {
+      "check-fast": { "run": "pnpm run check:fast" }
+    }
+  },
+  "pre-push": {
+    "commands": {
+      "check": { "run": "pnpm run check" },
+      "pushed-subjects": { "run": "node harness/scripts/check-pushed.ts", "use_stdin": true }
+    }
+  },
+  "commit-msg": {
+    "commands": {
+      "commitlint": { "run": "pnpm exec commitlint --edit {1}" }
+    }
+  }
+}

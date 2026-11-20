@@ -1,34 +1,15 @@
 import type { Page } from '@playwright/test';
 
-export interface ChxRecord {
-  id: string;
-  ok: boolean;
-  threw: boolean;
-  error?: string;
-  note?: string;
-}
+import { diagnosticCodes, type ChxRecord, type ChxState } from '../src/harness';
 
-export interface ChxState {
-  records: ChxRecord[];
-  diagnostics: string[];
-  done: boolean;
-}
-
-/** Console [CODE] strings seen by Playwright directly (second source of truth). */
+/** Console `[CODE]` diagnostics as Playwright sees them: the second source of truth. */
 export function captureConsoleCodes(page: Page): string[] {
   const codes: string[] = [];
-  const re = /\[([A-Z0-9_]+)\]/g;
-  page.on('console', (msg) => {
-    const text = msg.text();
-    let m: RegExpExecArray | null;
-    while ((m = re.exec(text)) !== null) {
-      const code = m[1];
-      if (code && code === code.toUpperCase() && code.includes('_')) codes.push(code);
-    }
+  page.on('console', (message) => {
+    codes.push(...diagnosticCodes(message.text()));
   });
-  page.on('pageerror', (err) => {
-    const m = /\[([A-Z0-9_]+)\]/.exec(err.message);
-    if (m?.[1]) codes.push(m[1]);
+  page.on('pageerror', (error) => {
+    codes.push(...diagnosticCodes(error.message));
   });
   return codes;
 }
@@ -36,20 +17,14 @@ export function captureConsoleCodes(page: Page): string[] {
 /** Navigate to a fixture and wait until it signals completion. */
 export async function runFixture(page: Page, name: string): Promise<ChxState> {
   await page.goto(`/?fixture=${name}`);
-  await page.waitForFunction(() => window.__chx?.done === true, null, { timeout: 15_000 });
-  return page.evaluate(() => ({
-    records: window.__chx.records,
-    diagnostics: window.__chx.diagnostics,
-    done: window.__chx.done,
-  }));
+  await page.waitForFunction(() => window.chxResults?.done === true, null, { timeout: 15_000 });
+  const state = await page.evaluate(() => window.chxResults);
+  if (state === undefined) {
+    throw new Error(`fixture ${name} finished without a result bus`);
+  }
+  return state;
 }
 
 export function rec(state: ChxState, id: string): ChxRecord | undefined {
-  return state.records.find((r) => r.id === id);
-}
-
-declare global {
-  interface Window {
-    __chx: ChxState;
-  }
+  return state.records.find((entry) => entry.id === id);
 }

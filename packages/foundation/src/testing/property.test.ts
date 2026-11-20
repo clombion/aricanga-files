@@ -5,10 +5,11 @@ import type { Command } from '../sim/input';
 import { type System, erase } from '../sim/system';
 import { fixtureSystemErased } from './fixture-system';
 import { storyStreamArb } from './generators';
-import { assertDeterministic } from './property';
+import { checkDeterministic } from './property';
 
 test('determinism: same stream replays to an identical canonical trace (#2)', async () => {
-  await assertDeterministic({ systems: [fixtureSystemErased] }, storyStreamArb({ tagKeys: ['note'] }));
+  const result = await checkDeterministic({ systems: [fixtureSystemErased] }, storyStreamArb({ tagKeys: ['note'] }));
+  expect(result.failed, result.message).toBe(false);
 });
 
 test('the determinism property rejects a nondeterministic reducer (#2)', async () => {
@@ -23,7 +24,6 @@ test('the determinism property rejects a nondeterministic reducer (#2)', async (
     status: () => 'free',
     view: (state) => state,
   };
-  await expect(
-    assertDeterministic({ systems: [erase(flaky)] }, storyStreamArb({ tagKeys: ['note'] })),
-  ).rejects.toThrow();
+  const result = await checkDeterministic({ systems: [erase(flaky)] }, storyStreamArb({ tagKeys: ['note'] }));
+  expect(result.failed, 'a reducer reading hidden state must fail the determinism property').toBe(true);
 });

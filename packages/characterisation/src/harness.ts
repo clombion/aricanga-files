@@ -1,87 +1,100 @@
-// Characterisation harness: a tiny result bus the fixtures write to and the
-// Playwright specs read back. Results land in three places so a spec can assert
-// whichever is most robust for the behaviour under test:
-//   1. window.__chx.records  — structured array, read via page.evaluate
-//   2. a <pre id="results">  — JSON mirror in the DOM (survives navigation waits)
-//   3. the console           — Solid's own [CODE] diagnostics, captured by page.on('console')
+/**
+ * The characterisation result bus: fixtures write to it and the Playwright specs read it back.
+ * Results land in three places, so a spec asserts whichever is most robust for the behaviour:
+ *   1. `window.chxResults`: structured records, read through `page.evaluate`;
+ *   2. a `<pre id="results">`: a JSON mirror in the DOM;
+ *   3. the console: Solid's own `[CODE]` diagnostics, also captured by Playwright.
+ */
 
 export interface ChxRecord {
   readonly id: string;
-  /** Did the behaviour match the expectation the fixture encodes? */
+  /** Whether the behaviour matched the expectation the fixture encodes. */
   readonly ok: boolean;
-  /** Did the operation throw synchronously (dev-mode refusal)? */
+  /** Whether the operation threw synchronously (a dev-mode refusal). */
   readonly threw: boolean;
-  /** The thrown error's message / diagnostic code, if any. */
+  /** The thrown error's message, if any. */
   readonly error?: string;
-  /** Free-form evidence for the ADR-0009 write-up. */
+  /** Evidence for ADR-0009. */
   readonly note?: string;
+}
+
+export interface ChxState {
+  readonly records: ChxRecord[];
+  /** Diagnostic `[CODE]` strings seen by the in-page console hook. */
+  readonly diagnostics: string[];
+  done: boolean;
 }
 
 declare global {
   interface Window {
-    __chx: {
-      records: ChxRecord[];
-      /** Diagnostic [CODE] strings seen by the in-page console hook. */
-      diagnostics: string[];
-      done: boolean;
-    };
+    chxResults?: ChxState;
   }
 }
 
-function bus() {
-  if (!window.__chx) {
-    window.__chx = { records: [], diagnostics: [], done: false };
-    hookConsole();
-  }
-  return window.__chx;
+const DIAGNOSTIC = /\[([A-Z0-9_]+)\]/g;
+
+/** The `[CODE]` diagnostic codes in a console line: upper case with an underscore. */
+export function diagnosticCodes(text: string): string[] {
+  return [...text.matchAll(DIAGNOSTIC)]
+    .map((match) => match[1] ?? '')
+    .filter((code) => code.includes('_') && code === code.toUpperCase());
 }
 
-// Solid's dev diagnostics print `[CODE] message`. Capture the codes in-page as
-// well as via Playwright's console listener, so a fixture can assert on them
-// synchronously and a spec has a second source of truth.
-function hookConsole(): void {
-  const codeRe = /\[([A-Z0-9_]+)\]/g;
+// Solid's dev build prints `[CODE] message`. The codes are captured in the page as well as by
+// Playwright's console listener, so a fixture can assert on them synchronously.
+function hookConsole(state: ChxState): void {
   for (const level of ['error', 'warn', 'log'] as const) {
-    const orig = console[level].bind(console);
+    const original = console[level].bind(console);
     console[level] = (...args: unknown[]) => {
-      const text = args.map((a) => (typeof a === 'string' ? a : String(a))).join(' ');
-      let m: RegExpExecArray | null;
-      while ((m = codeRe.exec(text)) !== null) {
-        const code = m[1];
-        if (code && code === code.toUpperCase() && code.includes('_')) {
-          window.__chx.diagnostics.push(code);
-        }
-      }
-      orig(...args);
+      state.diagnostics.push(...diagnosticCodes(args.map(String).join(' ')));
+      original(...args);
     };
   }
 }
 
-export function record(r: ChxRecord): void {
-  const b = bus();
-  b.records.push(r);
+function bus(): ChxState {
+  if (window.chxResults === undefined) {
+    const state: ChxState = { records: [], diagnostics: [], done: false };
+    window.chxResults = state;
+    hookConsole(state);
+    return state;
+  }
+  return window.chxResults;
+}
+
+function paint(): void {
+  const state = bus();
+  let pre = document.getElementById('results');
+  if (pre === null) {
+    pre = document.createElement('pre');
+    pre.id = 'results';
+    document.body.append(pre);
+  }
+  pre.textContent = JSON.stringify(state, null, 2);
+}
+
+export function record(entry: ChxRecord): void {
+  bus().records.push(entry);
   paint();
 }
 
-/** Run `fn`, recording whether it threw and the error/diagnostic-code it produced. */
-export function expectRefused(id: string, fn: () => void, note?: string): void {
+/** Run `fn`; the record is ok when it throws (an expected refusal). */
+export function expectRefused(id: string, fn: () => void, note = 'expected a refusal'): void {
   try {
     fn();
-    record({ id, ok: false, threw: false, note: note ?? 'did NOT throw (expected refusal)' });
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    record({ id, ok: true, threw: true, error: msg, note });
+    record({ id, ok: false, threw: false, note: `did not throw: ${note}` });
+  } catch (error) {
+    record({ id, ok: true, threw: true, error: error instanceof Error ? error.message : String(error), note });
   }
 }
 
-/** Run `fn`, recording whether it completed without throwing (expected to be allowed). */
-export function expectAllowed(id: string, fn: () => void, note?: string): void {
+/** Run `fn`; the record is ok when it completes without throwing. */
+export function expectAllowed(id: string, fn: () => void, note = 'expected to be allowed'): void {
   try {
     fn();
     record({ id, ok: true, threw: false, note });
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    record({ id, ok: false, threw: true, error: msg, note: note ?? 'threw (expected allowed)' });
+  } catch (error) {
+    record({ id, ok: false, threw: true, error: error instanceof Error ? error.message : String(error), note });
   }
 }
 
@@ -92,15 +105,4 @@ export function markDone(): void {
 
 export function sawDiagnostic(code: string): boolean {
   return bus().diagnostics.includes(code);
-}
-
-function paint(): void {
-  const b = bus();
-  let pre = document.getElementById('results');
-  if (!pre) {
-    pre = document.createElement('pre');
-    pre.id = 'results';
-    document.body.appendChild(pre);
-  }
-  pre.textContent = JSON.stringify({ records: b.records, diagnostics: b.diagnostics, done: b.done }, null, 2);
 }

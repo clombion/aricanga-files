@@ -1,9 +1,12 @@
 {
-  "files": [],
-  "references": [
-    { "path": "packages/foundation" },
-    { "path": "packages/systems/chat" },
-    { "path": "packages/systems/cards" },
-    { "path": "experiences/sandbox" }
+  "compilerOptions": {
+    "types": [
+      "node"
+    ]
+  },
+  "extends": "./tsconfig.base.json",
+  "include": [
+    "vitest.gate.config.ts",
+    "vite.config.ts"
   ]
 }

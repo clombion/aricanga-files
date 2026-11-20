@@ -3,10 +3,14 @@
   "compilerOptions": {
     "jsx": "preserve",
     "jsxImportSource": "@solidjs/web",
-    "types": ["vite/client"],
-    "composite": false,
-    "declaration": false,
-    "noEmit": true
+    "types": [
+      "vite/client"
+    ]
   },
-  "include": ["src", "tests", "vite.config.ts", "playwright.characterisation.config.ts"]
+  "include": [
+    "src",
+    "tests",
+    "vite.config.ts",
+    "playwright.characterisation.config.ts"
+  ]
 }

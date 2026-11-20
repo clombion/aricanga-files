@@ -50,6 +50,16 @@ export const FIXTURES: Readonly<Record<string, readonly FixtureInput[]>> = {
   ],
 };
 
+/** The recorded stream of a named regression; an unknown name fails the test that asked for it. */
+export function fixture(name: string): readonly FixtureInput[] {
+  const found = FIXTURES[name];
+  if (found === undefined) {
+    throw new Error(`no regression fixture named ${JSON.stringify(name)}`);
+  }
+  return found;
+}
+
+
 export const LEDGER: readonly LedgerEntry[] = [
   // --- legacy date-based entries (19, frozen) ---
   {
