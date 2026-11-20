@@ -17,12 +17,12 @@ Aricanga builds for en + fr from TOML + ink under schema validation; outputs are
 
 ## Subtasks
 
-- [ ] task-042 — Config schema (Zod) as the single source of truth (characters, chats↔knots, theme, timings, locales)
-- [ ] task-043 — Per-locale ink compile to JSON
-- [ ] task-044 — Seed extraction → `Lifecycle(Init)` payload
-- [ ] task-045 — i18n/data fixture generation (host-injected `name`/`data` lookups, locale-pinned)
-- [ ] task-046 — Image optimization + content-hashed artifacts
-- [ ] task-047 — Retire parity linters in favour of the schema; wire CI
+- [ ] [#22](https://github.com/clombion/aricanga-files/issues/22) — Config schema (Zod) as the single source of truth (characters, chats↔knots, theme, timings, locales)
+- [ ] [#25](https://github.com/clombion/aricanga-files/issues/25) — Per-locale ink compile to JSON
+- [ ] [#27](https://github.com/clombion/aricanga-files/issues/27) — Seed extraction → `Lifecycle(Init)` payload
+- [ ] [#26](https://github.com/clombion/aricanga-files/issues/26) — i18n/data fixture generation (host-injected `name`/`data` lookups, locale-pinned)
+- [ ] [#16](https://github.com/clombion/aricanga-files/issues/16) — Image optimization + content-hashed artifacts
+- [ ] [#29](https://github.com/clombion/aricanga-files/issues/29) — Retire parity linters in favour of the schema; wire CI
 
 ## Non-goals
 

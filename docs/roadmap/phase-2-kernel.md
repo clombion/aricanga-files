@@ -26,7 +26,7 @@ The chat kernel reproduces a reviewed, deterministic golden of Aricanga's `Input
 
 ## Subtasks
 
-See [`tasks/`](tasks/README.md). TDD-led: contract + runtime + suites first (red), then the physics body.
+Done work: [`tasks/`](tasks/README.md); open work: the sub-issues of the kernel epic, [#6](https://github.com/clombion/aricanga-files/issues/6). TDD-led: contract + runtime + suites first (red), then the physics body.
 
 - [x] task-040 — Foundation algebra contract (`Input`/`Effect`/`InkStep` types, `reduce(input)`, `status`, drop `ctx.now`, `RenderContext`)
 - [x] task-041 — Generic Sans-IO host runtime (pump-gate, effect executor, resume handshakes, validation, commit epoch)
@@ -38,10 +38,10 @@ See [`tasks/`](tasks/README.md). TDD-led: contract + runtime + suites first (red
 - [x] task-021 — Deferred queue and emergent (atomic) notifications
 - [x] task-022 — HWM read cursors and unread boundary
 - [x] task-023 — Forward-only simulation time
-- [ ] task-024 — Read receipts (unified backward-walk)
-- [ ] task-025 — Seeds
-- [ ] task-026 — Message grouping derivation (view-side, simulation-time keyed)
-- [ ] task-027 — Golden replay of Aricanga (phase proof)
+- [ ] [#13](https://github.com/clombion/aricanga-files/issues/13) — Read receipts (unified backward-walk)
+- [ ] [#14](https://github.com/clombion/aricanga-files/issues/14) — Seeds
+- [ ] [#15](https://github.com/clombion/aricanga-files/issues/15) — Message grouping derivation (view-side, simulation-time keyed)
+- [ ] [#23](https://github.com/clombion/aricanga-files/issues/23) — Golden replay of Aricanga (phase proof)
 
 ## Non-goals
 

@@ -23,11 +23,11 @@ cards-on-phone runs; phone reused unchanged; building cards touches zero `founda
 
 ## Subtasks
 
-- [ ] task-052 — Cards `Input`/`Effect` algebra + completeness check (swipe/stat vocabulary)
-- [ ] task-053 — Cards `reduce` + `view` (deck, stats, game-over) — pure
-- [ ] task-054 — Cards content (a thin deck, two stats, ink-driven)
-- [ ] task-055 — Cards view components + phone composition
-- [ ] task-056 — Vocabulary-agnostic proof (cards on the same runtime + phone, zero foundation edits)
+- [ ] [#36](https://github.com/clombion/aricanga-files/issues/36) — Cards `Input`/`Effect` algebra + completeness check (swipe/stat vocabulary)
+- [ ] [#42](https://github.com/clombion/aricanga-files/issues/42) — Cards `reduce` + `view` (deck, stats, game-over) — pure
+- [ ] [#43](https://github.com/clombion/aricanga-files/issues/43) — Cards content (a thin deck, two stats, ink-driven)
+- [ ] [#46](https://github.com/clombion/aricanga-files/issues/46) — Cards view components + phone composition
+- [ ] [#49](https://github.com/clombion/aricanga-files/issues/49) — Vocabulary-agnostic proof (cards on the same runtime + phone, zero foundation edits)
 
 ## Non-goals
 

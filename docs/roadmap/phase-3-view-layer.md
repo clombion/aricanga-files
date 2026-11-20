@@ -51,18 +51,18 @@ The view is the dual of the kernel under the algebra:
 1. **Characterisation (hard gate).** Every claim about Solid's runtime that the
    view layer relies on is a real-browser test against the pinned versions, in
    Chromium, Firefox and WebKit, desktop and mobile emulation. ADR-0009 is
-   written from the results. A contradicted claim changes the design. (task-063)
+   written from the results. A contradicted claim changes the design. ([#20](https://github.com/clombion/aricanga-files/issues/20))
 2. **Toolchain.** oxlint for `.ts`/`.tsx` with `eslint-plugin-solid` v2-strict,
    Biome for CSS and JSON, oxfmt for formatting, under the correctness harness of
    ADR-0006; TypeScript 7 once the boundary lint has fixture parity on oxlint.
-   (task-064)
+   ([#12](https://github.com/clombion/aricanga-files/issues/12))
 3. **View layer.** Adapter, mount and shell first, with the project lint rules
    (each with a must-fire and a must-stay-clean fixture); then parts with axe per
-   part; then the sweep and the parity proof. (task-003, task-028…039)
+   part; then the sweep and the parity proof ([#47](https://github.com/clombion/aricanga-files/issues/47)).
 
 ## Proof / Definition of Done
 
-- Aricanga's golden replay matches the reference (task-027) and the composed
+- Aricanga's golden replay matches the reference ([#23](https://github.com/clombion/aricanga-files/issues/23)) and the composed
   experience plays at behavioural parity.
 - The a11y suite passes.
 - The whole suite, including CSP, characterisation and performance, passes in
@@ -72,7 +72,7 @@ The view is the dual of the kernel under the algebra:
 
 ## Subtasks
 
-See [`tasks/`](tasks/README.md): task-063, task-064, task-003, task-028…039.
+Tracked as the sub-issues of the view-layer epic, [#7](https://github.com/clombion/aricanga-files/issues/7), with the harness port [#12](https://github.com/clombion/aricanga-files/issues/12) under [#8](https://github.com/clombion/aricanga-files/issues/8).
 
 ## Non-goals
 

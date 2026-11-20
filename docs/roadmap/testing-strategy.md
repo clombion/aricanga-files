@@ -60,17 +60,17 @@ the kernel), not on a schedule.
 - **PR** (CI on every pull request — the merge gate; see task-006): integration, contract, a11y, e2e, full property, acceptance, golden replay, the Solid characterisation suite and the view performance budget (fails on a regression over 25 %).
 - **on-demand** (pre-release / manual `workflow_dispatch`): mutation, fuzz, deep property / deep e2e.
 
-## How tasks tag tests
+## How issues tag tests
 
-Each task's `## Tests` section lists, under an intent-**Classes** summary, one
+Each issue's `## Details` section lists, under an intent-**Classes** summary, one
 bullet per test in the form:
 
 ```
 scope/technique (gate): #ACs — what it checks
 ```
 
-Gates: `pre-commit`/local, `CI` (the PR merge gate), `on-demand` (pre-release).
-See [`TASK-TEMPLATE.md`](TASK-TEMPLATE.md).
+Gates: `gate` (the local gate and its git hooks), `CI`/`PR` (the PR merge gate),
+`on-demand` (pre-release).
 
 ## Algebra guards (ADR-0007)
 

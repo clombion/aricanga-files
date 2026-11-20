@@ -17,11 +17,11 @@ All systems and experiences pass the standing guards on one foundation; analytic
 
 ## Subtasks
 
-- [ ] task-057 — Standing CI guards: exhaustiveness, purity lint, determinism, boundary lint, a11y
-- [ ] task-058 — Event-sourced analytics sink over the `Effect` stream
-- [ ] task-059 — Save snapshot versioning + migrations
-- [ ] task-060 — Docs consolidation to the algebra contract
-- [ ] task-061 — Delete the POC reference branch
+- [ ] [#21](https://github.com/clombion/aricanga-files/issues/21) — Standing CI guards: exhaustiveness, purity lint, determinism, boundary lint, a11y
+- [ ] [#17](https://github.com/clombion/aricanga-files/issues/17) — Event-sourced analytics sink over the `Effect` stream
+- [ ] [#18](https://github.com/clombion/aricanga-files/issues/18) — Save snapshot versioning + migrations
+- [ ] [#19](https://github.com/clombion/aricanga-files/issues/19) — Docs consolidation to the algebra contract
+- [ ] [#50](https://github.com/clombion/aricanga-files/issues/50) — Delete the POC reference branch
 
 ## Non-goals
 

@@ -17,10 +17,10 @@ Desktop chat runs reusing `systems/chat` unchanged; the only new code is a deskt
 
 ## Subtasks
 
-- [ ] task-048 — Desktop host shell + effect executor (no phone `Present` effects)
-- [ ] task-049 — Desktop view components (consume chat view-models, emit intents)
-- [ ] task-050 — Desktop experience composition + a minimal story
-- [ ] task-051 — Shell-independence proof (chat system byte-identical to its phone use)
+- [ ] [#35](https://github.com/clombion/aricanga-files/issues/35) — Desktop host shell + effect executor (no phone `Present` effects)
+- [ ] [#41](https://github.com/clombion/aricanga-files/issues/41) — Desktop view components (consume chat view-models, emit intents)
+- [ ] [#45](https://github.com/clombion/aricanga-files/issues/45) — Desktop experience composition + a minimal story
+- [ ] [#48](https://github.com/clombion/aricanga-files/issues/48) — Shell-independence proof (chat system byte-identical to its phone use)
 
 ## Non-goals
 

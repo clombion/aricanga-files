@@ -25,7 +25,7 @@ See [`tasks/`](tasks/README.md) for the full task files with acceptance criteria
 
 - [x] task-001 — Monorepo and TypeScript project-reference scaffolding
 - [x] task-002 — Vite build and dev pipeline
-- [ ] task-003 — Solid component baseline (delivered in Phase 3, Step 3)
+- [ ] [#24](https://github.com/clombion/aricanga-files/issues/24) — Solid component baseline (delivered in Phase 3, Step 3)
 - [x] task-004 — Vitest unit-test harness
 - [x] task-005 — Module boundary lint
 - [x] task-006 — CI workflow (typecheck, lint, test, build)

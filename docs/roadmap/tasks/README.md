@@ -1,13 +1,9 @@
-# Tasks
+# Tasks (closed)
 
-Backlog.md-format task files (format convention only — no CLI). See
-[`../TASK-TEMPLATE.md`](../TASK-TEMPLATE.md) and the Task format section in
-[`../README.md`](../README.md).
-
-IDs are globally sequential. **Next ID: `task-063`.**
-
-Every task carries a `## Tests` section tagging its tests by the
-[test taxonomy](../testing-strategy.md); we work test-first (ADR-0006).
+The task records of work finished before the project moved to
+[GitHub Issues](https://github.com/clombion/aricanga-files/issues). Open work,
+including the rest of each phase below, is tracked there; see
+[`../issues.md`](../issues.md).
 
 ## Phase 0 — Walking skeleton & toolchain
 
@@ -15,14 +11,11 @@ Every task carries a `## Tests` section tagging its tests by the
 |----|-------|--------|------------|
 | task-001 | Monorepo and TypeScript project-reference scaffolding | Done | — |
 | task-002 | Vite build and dev pipeline | Done | 001 |
-| task-003 | Solid component baseline (Phase 3, Step 3) | To Do | 063, 064 |
 | task-004 | Vitest unit-test harness | Done | 001 |
 | task-005 | Module boundary lint | Done | 001 |
 | task-006 | CI workflow (typecheck, lint, test, build) | Done | 001, 002, 004, 005 |
 | task-007 | Walking skeleton — ink → kernel stub → render | Done | 001–006 |
 
-Suggested order: **001 → (002, 004, 005 in parallel) → 003 → 006 → 007**.
-task-007 is the integrating proof for the phase.
 
 ## Phase 1 — Foundation contracts
 
@@ -41,8 +34,6 @@ Decisions: [`../decisions/`](../decisions/)
 | task-014 | Cards system stub | Done | 011 |
 | task-015 | Two-vocabulary proof | Done | 012, 013, 014, 016 |
 
-Suggested order: **008 → (009, 010) → 011 → 016 → (012, 013, 014) → 015**.
-task-015 is the integrating proof for the phase.
 
 ## Phase 2 — Chat simulation kernel (headless)
 
@@ -62,87 +53,4 @@ invariant/regression suites come first (red), then the physics slices to green.
 | task-021 | Deferred queue and emergent notifications | Done | 020 |
 | task-022 | HWM read cursors and unread separator | Done | 021 |
 | task-023 | Forward-only time coherence | Done | 017, 018 |
-| task-024 | Read receipts | To Do | 020 |
-| task-025 | Seeds | To Do | 020 |
-| task-026 | Message grouping derivation | To Do | 020 |
-| task-027 | Golden replay of Aricanga (phase proof) | To Do | 020–026 |
 
-Suggested order: **040 → 041 → 062 → 017 → 018 → 019 → 020 → 021 → 022 → (023, 024, 025, 026) → 027**.
-task-040/041 establish the generic algebra + runtime, task-062 migrates the
-merged Phase 1 foundation onto them, and task-027 is the phase proof.
-
-## Phase 3 — Chat + phone view layer (Solid)
-
-Epic: [`../phase-3-view-layer.md`](../phase-3-view-layer.md). Gated: the
-correctness harness and toolchain, then the Solid characterisation suite (ADR-0009),
-then the view layer — adapter + a11y harness first, then parts (axe in each), then
-the a11y sweep and the Aricanga parity proof.
-
-| ID | Title | Status | Depends on |
-|----|-------|--------|------------|
-| task-064 | Correctness harness and view toolchain | In Progress | — |
-| task-063 | Solid runtime characterisation suite | In Progress | 064 |
-| task-003 | Solid component baseline | To Do | 063, 064 |
-| task-028 | View-model contracts and snapshot adapter | To Do | 003, 011, 012 |
-| task-029 | Component and a11y test harness | To Do | 063, 028 |
-| task-030 | chat-thread and message rendering | To Do | 028, 029 |
-| task-031 | Rich message bubbles | To Do | 030 |
-| task-032 | Receipts, typing, and choice buttons | To Do | 030 |
-| task-033 | chat-hub | To Do | 028, 029 |
-| task-034 | Notifications view (drawer + popup) | To Do | 028, 029 |
-| task-035 | systems/phone — status bar, home indicator, overlay | To Do | 028, 029 |
-| task-036 | Lock screen and battery context | To Do | 035 |
-| task-037 | Navigation and view transitions | To Do | 030, 033 |
-| task-038 | Accessibility acceptance sweep | To Do | 030–037 |
-| task-039 | Aricanga view parity (phase proof) | To Do | 030–038 |
-
-Suggested order: **064 → 063 → 003 → 028 → 029 → 030 → (031, 032, 033, 034, 035) → 036 → 037 → 038 → 039**.
-task-039 is the integrating proof for the phase.
-
-## Phase 4 — Build pipeline & config
-
-Epic: [`../phase-4-build-pipeline.md`](../phase-4-build-pipeline.md). The build emits the host-injected world (story, seeds, i18n/data fixtures, validated config).
-
-| ID | Title | Status | Depends on |
-|----|-------|--------|------------|
-| task-042 | Config schema (Zod) — single source of truth | To Do | — |
-| task-043 | Per-locale ink compile to JSON | To Do | 042 |
-| task-044 | Seed extraction → `Lifecycle(Init)` payload | To Do | 043 |
-| task-045 | i18n/data fixtures (host-injected `name`/`data`, locale-pinned) | To Do | 042 |
-| task-046 | Image optimization + content-hashed artifacts | To Do | — |
-| task-047 | Retire parity linters in favour of the schema; wire CI | To Do | 042–046 |
-
-## Phase 5 — Desktop chat experience
-
-Epic: [`../phase-5-desktop-chat.md`](../phase-5-desktop-chat.md). Same chat algebra, different shell (seam by subtraction).
-
-| ID | Title | Status | Depends on |
-|----|-------|--------|------------|
-| task-048 | Desktop host shell + effect executor | To Do | Phase 3, 4 |
-| task-049 | Desktop view components | To Do | 048 |
-| task-050 | Desktop experience composition + minimal story | To Do | 048, 049 |
-| task-051 | Shell-independence proof | To Do | 050 |
-
-## Phase 6 — Cards-on-phone experience
-
-Epic: [`../phase-6-cards-on-phone.md`](../phase-6-cards-on-phone.md). A second closed algebra on one runtime (seam by recombination).
-
-| ID | Title | Status | Depends on |
-|----|-------|--------|------------|
-| task-052 | Cards `Input`/`Effect` algebra + completeness check | To Do | Phase 3, 4 |
-| task-053 | Cards `reduce` + `view` (pure) | To Do | 052 |
-| task-054 | Cards content (thin deck, two stats) | To Do | 052 |
-| task-055 | Cards view components + phone composition | To Do | 053, 054 |
-| task-056 | Vocabulary-agnostic proof (zero foundation edits) | To Do | 055 |
-
-## Phase 7 — Hardening & standing guards
-
-Epic: [`../phase-7-hardening.md`](../phase-7-hardening.md). Make the algebra's guarantees standing CI gates; retire the reference.
-
-| ID | Title | Status | Depends on |
-|----|-------|--------|------------|
-| task-057 | Standing CI guards (exhaustiveness, purity, determinism, boundary, a11y) | To Do | Phases 5, 6 |
-| task-058 | Event-sourced analytics over the `Effect` stream | To Do | — |
-| task-059 | Save snapshot versioning + migrations | To Do | — |
-| task-060 | Docs consolidation to the algebra contract | To Do | — |
-| task-061 | Delete the POC reference branch | To Do | all |
