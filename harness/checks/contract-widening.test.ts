@@ -50,24 +50,30 @@ const NEAR_MISSES: readonly (readonly [string, string])[] = [
   ['packages/systems/__miss_expectation.ts', `${IMPORT}${PICK}declare function expect(value: unknown): { toBe(expected: unknown): void; toEqual(expected: unknown): void };\nexpect(m).toBe('on');\nexpect({ x }).toStrictEqual({ x: { tag: 'ping' } });\n`],
 ];
 
+const OWNER_TEXT =
+  "export type Mode = 'on' | 'off';\nexport type Msg = { readonly tag: 'ping' } | { readonly tag: 'pong'; readonly n: number };\nexport const DEFAULT = 'on';\n";
+
 const plants = new Map<string, string>([
-  [
-    OWNER,
-    "export type Mode = 'on' | 'off';\nexport type Msg = { readonly tag: 'ping' } | { readonly tag: 'pong'; readonly n: number };\nexport const DEFAULT = 'on';\n",
-  ],
+  [OWNER, OWNER_TEXT],
+  ...PLANTS.map(([body]: readonly [string, ...unknown[]], index) => [`packages/systems/__widen_${index}.ts`, `${IMPORT}${PICK}${body}`] as const),
+  ...RESPELLED,
+  ...NEAR_MISSES,
 ]);
-PLANTS.forEach(([body], index) => {
-  plants.set(`packages/systems/__widen_${index}.ts`, `${IMPORT}${PICK}${body}`);
-});
-for (const [path, text] of [...RESPELLED, ...NEAR_MISSES]) {
-  plants.set(path, text);
-}
 
 const plantedScan = usePlanted(plants);
 const repoScan = useScan();
 const planted = (): readonly Contract[] => contracts(plantedScan(), [OWNER]);
 
-function lost(scan: Scan, known: readonly Contract[], path: string): ContractSite[] {
+/**
+ * The sites in one module where a known contract is widened or respelled.
+ *
+ * @param {() => Scan} scanOf - The hook that hands out the open scan.
+ * @param {readonly Contract[]} known - The contracts derived from their owners.
+ * @param {string} path - The module.
+ * @returns {ContractSite[]} Its widening and respelling sites.
+ */
+function lost(scanOf: () => Scan, known: readonly Contract[], path: string): ContractSite[] {
+  const scan = scanOf();
   const file = sourceOf(scan, path);
   return [...widenings(scan, file, known), ...respellings(scan, file, known)];
 }
@@ -82,7 +88,7 @@ describe('the repository', () => {
   test('no contract is widened or respelled', () => {
     expect.hasAssertions();
     const known = contracts(repoScan(), scannedFiles());
-    const found = scannedFiles().flatMap((path) => lost(repoScan(), known, path));
+    const found = scannedFiles().flatMap((path) => lost(repoScan, known, path));
     expect(found).toStrictEqual([]);
   });
 });
@@ -100,19 +106,19 @@ describe('the scan', () => {
     'sees planted widening %i (%s %s)',
     (index, form, contract) => {
       expect.hasAssertions();
-      const found = lost(plantedScan(), planted(), `packages/systems/__widen_${index}.ts`);
+      const found = lost(plantedScan, planted(), `packages/systems/__widen_${index}.ts`);
       expect(found.map((entry) => [entry.form, entry.contract])).toStrictEqual([[form, contract]]);
     },
   );
 
   test.each(RESPELLED.map(([path]) => path))('sees the planted respelling in %s', (path) => {
     expect.hasAssertions();
-    expect(lost(plantedScan(), planted(), path).map((entry) => entry.form)).toStrictEqual(['respelled']);
+    expect(lost(plantedScan, planted(), path).map((entry) => entry.form)).toStrictEqual(['respelled']);
   });
 
   test.each([...NEAR_MISSES.map(([path]) => path), OWNER])('lets the near miss %s through', (path) => {
     expect.hasAssertions();
-    expect(lost(plantedScan(), planted(), path)).toStrictEqual([]);
+    expect(lost(plantedScan, planted(), path)).toStrictEqual([]);
   });
 });
 
