@@ -41,7 +41,8 @@
     "**/dist/**",
     "**/vendor/**",
     "vite.config.js",
-    "playwright.config.ts"
+    "playwright.config.ts",
+    "vitest.config.ts"
   ],
   "rules": {
     "aricanga/autofocus": "error",
