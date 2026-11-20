@@ -1,7 +1,7 @@
-import type { ReduceResult } from '../sim/context';
+import type { ReduceContext, ReduceResult } from '../sim/context';
 import { type Effect, fx } from '../sim/effect';
 import { assertNever } from '../sim/exhaustive';
-import type { Command } from '../sim/input';
+import type { Command, Input } from '../sim/input';
 import { type System, erase } from '../sim/system';
 import type { AnySystem } from '../sim/system';
 
@@ -28,61 +28,84 @@ export type FixtureCommand =
 
 export const FIXTURE_TAG = 'fx';
 
-export const fixtureSystem: System<FixtureState, FixtureCommand, Effect, FixtureState> = {
-  id: 'fixture',
-  tags: [FIXTURE_TAG],
-  init: () => ({ lines: [], busy: false, token: 1, fetched: null, saved: false }),
-  reduce(state, input): ReduceResult<FixtureState> {
-    switch (input.source) {
-      case 'story': {
-        const lines = [...state.lines, input.step.text];
-        // A `commit` tag turns the line into a scheduled commit (exercises the gate).
-        if (input.step.tags.some((t) => t.key === 'commit')) {
-          return {
-            state: { ...state, lines, busy: true },
-            effects: [fx.schedule({ delayMs: 1, token: state.token })],
-          };
-        }
-        return { state: { ...state, lines }, effects: [fx.present('fixture/line', { text: input.step.text })] };
+/** The part of a fixture system's state its resumes write: the commit gate and the fetched data. */
+interface Gated {
+  readonly busy: boolean;
+  readonly token: number;
+  readonly fetched: unknown;
+}
+
+/**
+ * A fixture system's reduction of a resume or lifecycle input: a commit fired with the current token
+ * opens the gate (a stale token is a no-op), arrived data is kept, and anything else changes nothing.
+ */
+function reduceResume<S extends Gated>(state: S, input: Input<S>): ReduceResult<S> {
+  if (input.source !== 'resume') {
+    return { state, effects: [] };
+  }
+  switch (input.resume.kind) {
+    case 'commit-fired':
+      return input.resume.token === state.token ? { state: { ...state, busy: false }, effects: [] } : { state, effects: [] };
+    case 'data-arrived':
+      return { state: { ...state, fetched: input.resume.value }, effects: [] };
+    case 'story-loaded':
+    case 'restored':
+      return { state, effects: [] };
+    default:
+      return assertNever(input.resume);
+  }
+}
+
+/** The inputs a fixture system shapes itself: its story lines and player commands. */
+type OwnInput<S, C extends Command> = Extract<Input<S, C>, { readonly source: 'story' | 'player' }>;
+
+/**
+ * A fixture system over a commit gate. `own` reduces its story lines and player commands; a resume or
+ * lifecycle input goes through `reduceResume`; the gate is its status and its state is its view.
+ */
+export function gatedSystem<S extends Gated, C extends Command>(
+  identity: { readonly id: string; readonly tags: readonly string[]; readonly init: (seed: number) => S },
+  own: (state: S, input: OwnInput<S, C>, ctx: ReduceContext) => ReduceResult<S>,
+): System<S, C, Effect, S> {
+  return {
+    ...identity,
+    reduce: (state, input, ctx) =>
+      input.source === 'story' || input.source === 'player' ? own(state, input, ctx) : reduceResume(state, input),
+    status: (state) => (state.busy ? 'busy-commit' : 'free'),
+    view: (state) => state,
+  };
+}
+
+export const fixtureSystem: System<FixtureState, FixtureCommand, Effect, FixtureState> = gatedSystem<FixtureState, FixtureCommand>(
+  { id: 'fixture', tags: [FIXTURE_TAG], init: () => ({ lines: [], busy: false, token: 1, fetched: null, saved: false }) },
+  (state, input): ReduceResult<FixtureState> => {
+    if (input.source === 'story') {
+      const lines = [...state.lines, input.step.text];
+      // A `commit` tag turns the line into a scheduled commit (exercises the gate).
+      if (input.step.tags.some((t) => t.key === 'commit')) {
+        return {
+          state: { ...state, lines, busy: true },
+          effects: [fx.schedule({ delayMs: 1, token: state.token })],
+        };
       }
-      case 'player':
-        switch (input.command.kind) {
-          case 'schedule':
-            return { state: { ...state, busy: true }, effects: [fx.schedule({ delayMs: 1, token: state.token })] };
-          case 'fetch':
-            return { state, effects: [fx.fetch({ source: 's', query: 'q' })] };
-          case 'present':
-            return { state, effects: [fx.present('fixture/ping', {})] };
-          case 'persist':
-            return { state, effects: [fx.persist()] };
-          case 'choose':
-            return { state, effects: [fx.driveInk({ op: 'choose', index: input.command.payload.index })] };
-          default:
-            return { state, effects: [] };
-        }
-      case 'resume':
-        switch (input.resume.kind) {
-          case 'commit-fired':
-            return input.resume.token === state.token
-              ? { state: { ...state, busy: false }, effects: [] }
-              : { state, effects: [] };
-          case 'data-arrived':
-            return { state: { ...state, fetched: input.resume.value }, effects: [] };
-          case 'story-loaded':
-          case 'restored':
-            return { state, effects: [] };
-          default:
-            return assertNever(input.resume);
-        }
-      case 'lifecycle':
-        return { state, effects: [] };
+      return { state: { ...state, lines }, effects: [fx.present('fixture/line', { text: input.step.text })] };
+    }
+    switch (input.command.kind) {
+      case 'schedule':
+        return { state: { ...state, busy: true }, effects: [fx.schedule({ delayMs: 1, token: state.token })] };
+      case 'fetch':
+        return { state, effects: [fx.fetch({ source: 's', query: 'q' })] };
+      case 'present':
+        return { state, effects: [fx.present('fixture/ping', {})] };
+      case 'persist':
+        return { state, effects: [fx.persist()] };
+      case 'choose':
+        return { state, effects: [fx.driveInk({ op: 'choose', index: input.command.payload.index })] };
       default:
         return { state, effects: [] };
     }
   },
-  status: (state) => (state.busy ? 'busy-commit' : 'free'),
-  view: (state) => state,
-};
+);
 
 /** The fixture system, erased for the runtime registry. */
 export const fixtureSystemErased: AnySystem = erase(fixtureSystem);

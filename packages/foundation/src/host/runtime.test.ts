@@ -3,10 +3,10 @@ import { beforeEach, expect, test, vi } from 'vitest';
 import { InkRuntime } from '../ink/ink-runtime';
 import type { ReduceResult } from '../sim/context';
 import { type Effect, fx } from '../sim/effect';
-import { assertNever } from '../sim/exhaustive';
 import type { Command, Input } from '../sim/input';
 import { type AnySystem, type System, erase, viewOf } from '../sim/system';
 import type { SaveStore, Scheduler } from '../services/services';
+import { gatedSystem } from '../testing/fixture-system';
 import { type Host, Runtime } from './runtime';
 
 // --- a synthetic system that exercises every status, effect family, and resume ---
@@ -14,7 +14,7 @@ import { type Host, Runtime } from './runtime';
 interface HState {
   readonly lines: readonly string[];
   readonly ids: readonly string[];
-  readonly busyCommit: boolean;
+  readonly busy: boolean;
   readonly token: number;
   readonly fetched: unknown;
 }
@@ -27,61 +27,36 @@ type HCommand =
 
 const COMMIT_TOKEN = 1;
 
-const harness: System<HState, HCommand, Effect, HState> = {
-  id: 'h',
-  tags: ['h'],
-  init: () => ({ lines: [], ids: [], busyCommit: false, token: COMMIT_TOKEN, fetched: null }),
-  reduce(state, input, ctx): ReduceResult<HState> {
-    switch (input.source) {
-      case 'story': {
-        const id = ctx.nextId();
-        const lines = [...state.lines, input.step.text];
-        const ids = [...state.ids, id];
-        // Schedule a commit on the first line so the pump gate is exercised.
-        if (input.step.text === 'Hello') {
-          return {
-            state: { ...state, lines, ids, busyCommit: true },
-            effects: [fx.schedule({ delayMs: 10, token: state.token })],
-          };
-        }
-        return { state: { ...state, lines, ids }, effects: [] };
+const harness: System<HState, HCommand, Effect, HState> = gatedSystem<HState, HCommand>(
+  { id: 'h', tags: ['h'], init: () => ({ lines: [], ids: [], busy: false, token: COMMIT_TOKEN, fetched: null }) },
+  (state, input, ctx): ReduceResult<HState> => {
+    if (input.source === 'story') {
+      const id = ctx.nextId();
+      const lines = [...state.lines, input.step.text];
+      const ids = [...state.ids, id];
+      // Schedule a commit on the first line so the pump gate is exercised.
+      if (input.step.text === 'Hello') {
+        return {
+          state: { ...state, lines, ids, busy: true },
+          effects: [fx.schedule({ delayMs: 10, token: state.token })],
+        };
       }
-      case 'player':
-        switch (input.command.kind) {
-          case 'fetch':
-            return { state, effects: [fx.fetch({ source: 's', query: 'q' })] };
-          case 'present-ok':
-            return { state, effects: [fx.present('ping', {})] };
-          case 'present-bad':
-            return { state, effects: [fx.present('explode', {})] };
-          case 'mint':
-            return { state: { ...state, ids: [...state.ids, ctx.nextId()] }, effects: [] };
-          default:
-            return { state, effects: [] };
-        }
-      case 'resume':
-        switch (input.resume.kind) {
-          case 'commit-fired':
-            return input.resume.token === state.token
-              ? { state: { ...state, busyCommit: false }, effects: [] }
-              : { state, effects: [] }; // stale token — no-op
-          case 'data-arrived':
-            return { state: { ...state, fetched: input.resume.value }, effects: [] };
-          case 'story-loaded':
-          case 'restored':
-            return { state, effects: [] };
-          default:
-            return assertNever(input.resume);
-        }
-      case 'lifecycle':
-        return { state, effects: [] };
+      return { state: { ...state, lines, ids }, effects: [] };
+    }
+    switch (input.command.kind) {
+      case 'fetch':
+        return { state, effects: [fx.fetch({ source: 's', query: 'q' })] };
+      case 'present-ok':
+        return { state, effects: [fx.present('ping', {})] };
+      case 'present-bad':
+        return { state, effects: [fx.present('explode', {})] };
+      case 'mint':
+        return { state: { ...state, ids: [...state.ids, ctx.nextId()] }, effects: [] };
       default:
         return { state, effects: [] };
     }
   },
-  status: (state) => (state.busyCommit ? 'busy-commit' : 'free'),
-  view: (state) => state,
-};
+);
 
 const hView = (rt: Runtime): HState =>
   viewOf(harness, { systemId: 'h', value: rt.view('h', { now: 0, locale: 'en' }) });
