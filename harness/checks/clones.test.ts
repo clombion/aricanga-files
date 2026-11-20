@@ -54,6 +54,9 @@ const NONE = new Exemptions({});
 
 const roots: string[] = [];
 
+/** A runner whose jscpd exits 2. */
+const failingRunner: Runner = (argv) => ({ kind: 'finished', argv, status: 2, stdout: '', stderr: 'planted' });
+
 function plant(files: Readonly<Record<string, string>>): { readonly root: string; readonly listed: readonly string[] } {
   const root = mkdtempSync(join(tmpdir(), 'clones-'));
   roots.push(root);
@@ -79,8 +82,7 @@ describe('the repository', () => {
 
   test('main reports each problem and exits 1', () => {
     const errors: string[] = [];
-    const runner: Runner = (argv) => ({ kind: 'finished', argv, status: 2, stdout: '', stderr: 'planted' });
-    expect([main({ out: () => undefined, err: (text) => errors.push(text) }, runner), errors]).toEqual([
+    expect([main({ out: () => undefined, err: (text) => errors.push(text) }, failingRunner), errors]).toEqual([
       1,
       ['exact: jscpd exited 2: planted\n', 'cross-file: jscpd exited 2: planted\n'],
     ]);

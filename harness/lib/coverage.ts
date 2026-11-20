@@ -21,7 +21,7 @@ import { relativeTo } from './relative.ts';
 export const FLOOR = 100;
 
 /** Where the gate's coverage run writes its reports. */
-export const COVERAGE_DIR = join(tmpdir(), 'aricanga-coverage');
+export const COVERAGE_DIR: string = join(tmpdir(), 'aricanga-coverage');
 
 export const METRICS = ['statements', 'branches', 'functions', 'lines'] as const;
 export type Metric = (typeof METRICS)[number];
@@ -44,11 +44,15 @@ function lines(statementMap: unknown, statements: unknown): { readonly total: nu
   const hits = object(statements ?? {}, 'statements');
   const byLine = new Map<number, number>();
   for (const [id, location] of Object.entries(object(statementMap ?? {}, 'statementMap'))) {
-    const line = Number(object(object(location, 'location').start, 'start').line);
+    const line = Number(object(object(location, 'location')['start'], 'start')['line']);
     byLine.set(line, Math.max(byLine.get(line) ?? 0, Number(hits[id] ?? 0)));
   }
   const values = [...byLine.values()];
   return { total: values.length, covered: values.filter((count) => count > 0).length };
+}
+
+function reached(values: readonly number[]): number {
+  return values.filter((count) => count > 0).length;
 }
 
 /** The coverage of every file of a parsed `coverage-final.json`, relative to `root`. */
@@ -56,11 +60,10 @@ export function fileCoverage(report: unknown, root: string = REPO_ROOT): readonl
   return Object.entries(object(report, 'coverage report'))
     .map(([file, entry]) => {
       const fields = object(entry, file);
-      const statements = counts(fields.s, 'statements');
-      const branches = counts(fields.b, 'branches');
-      const functions = counts(fields.f, 'functions');
-      const lineCounts = lines(fields.statementMap, fields.s);
-      const reached = (values: readonly number[]): number => values.filter((count) => count > 0).length;
+      const statements = counts(fields['s'], 'statements');
+      const branches = counts(fields['b'], 'branches');
+      const functions = counts(fields['f'], 'functions');
+      const lineCounts = lines(fields['statementMap'], fields['s']);
       return {
         path: relativeTo(root, file),
         total: { statements: statements.length, branches: branches.length, functions: functions.length, lines: lineCounts.total },
@@ -87,7 +90,7 @@ export function shortfalls(files: readonly FileCoverage[], floor: number = FLOOR
 }
 
 /** The shortfall the project carries while it adopts the floor, per file and metric. */
-export const DEBT = new CountedExemptions({});
+export const DEBT: CountedExemptions = new CountedExemptions({});
 
 /** The floor's problems: every file and metric whose shortfall differs from its debt. */
 export function floorProblems(files: readonly FileCoverage[], debt: CountedExemptions = DEBT): readonly string[] {

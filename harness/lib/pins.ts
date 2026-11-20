@@ -135,8 +135,8 @@ export function pinned(manifests: readonly Manifest[], lockText: string): readon
       }
     }
     if (importer === '.') {
-      found.push({ tool: 'node', where: 'package.json engines', version: strings(fields.engines, 'engines').node ?? '' });
-      const manager = typeof fields.packageManager === 'string' ? fields.packageManager : '';
+      found.push({ tool: 'node', where: 'package.json engines', version: strings(fields['engines'], 'engines')['node'] ?? '' });
+      const manager = typeof fields['packageManager'] === 'string' ? fields['packageManager'] : '';
       found.push({ tool: 'pnpm', where: 'package.json packageManager', version: manager.replace(/^pnpm@/, '') });
     }
   }

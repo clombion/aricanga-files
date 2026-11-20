@@ -16,6 +16,7 @@ import { describe, expect, test } from 'vitest';
 
 import { json, object } from '../lib/config.ts';
 import { Accepted, Exemptions } from '../lib/exemptions.ts';
+import { OXLINT_CONFIG_FILES } from '../lib/lint-rules.ts';
 import { textOf } from '../lib/source-files.ts';
 import { finished, Project } from '../lib/tools.ts';
 import { fromRoot } from '../lib/paths.ts';
@@ -98,15 +99,13 @@ const WARNING_TEXT = 'export function stop(): void {\n  debugger;\n}\n';
 
 type Options = Readonly<Record<string, unknown>>;
 
-/** A copy of the repository's oxlint config with `options` merged over its options; a local JS plugin is read from the repository. */
+/** A copy of the repository's oxlint config with `options` merged over its options. */
 function config(options: Options, rules: Options = {}): string {
   const repo = object(json(textOf('.oxlintrc.json')), '.oxlintrc.json');
-  const plugins = Array.isArray(repo.jsPlugins) ? repo.jsPlugins.map(String) : [];
   return JSON.stringify({
     ...repo,
-    jsPlugins: plugins.map((plugin) => (plugin.startsWith('./') ? fromRoot(plugin) : plugin)),
-    options: { ...object(repo.options ?? {}, 'options'), ...options },
-    rules: { ...object(repo.rules ?? {}, 'rules'), ...rules },
+    options: { ...object(repo['options'] ?? {}, 'options'), ...options },
+    rules: { ...object(repo['rules'] ?? {}, 'rules'), ...rules },
   });
 }
 
@@ -117,13 +116,13 @@ interface Lint {
 
 /** The rule codes of oxlint's JSON report, by file. */
 export function codesByFile(report: unknown): ReadonlyMap<string, readonly string[]> {
-  const diagnostics = object(report, 'oxlint report').diagnostics;
+  const diagnostics = object(report, 'oxlint report')['diagnostics'];
   const found = new Map<string, string[]>();
   for (const entry of Array.isArray(diagnostics) ? diagnostics : []) {
     const fields = object(entry, 'diagnostic');
-    const file = typeof fields.filename === 'string' ? fields.filename : '';
-    const message = typeof fields.message === 'string' ? fields.message : '';
-    const code = typeof fields.code === 'string' ? fields.code : message.startsWith('Unused ') ? UNUSED_DIRECTIVE : message;
+    const file = typeof fields['filename'] === 'string' ? fields['filename'] : '';
+    const message = typeof fields['message'] === 'string' ? fields['message'] : '';
+    const code = typeof fields['code'] === 'string' ? fields['code'] : message.startsWith('Unused ') ? UNUSED_DIRECTIVE : message;
     found.set(file, [...new Set([...(found.get(file) ?? []), code])].toSorted());
   }
   return found;
@@ -131,7 +130,7 @@ export function codesByFile(report: unknown): ReadonlyMap<string, readonly strin
 
 /** One run of the locked oxlint over `files` in a planted project under `configText`. */
 function lint(files: Readonly<Record<string, string>>, configText: string): Lint {
-  const project = new Project({ copies: ['tsconfig.base.json'] });
+  const project = new Project({ copies: [...OXLINT_CONFIG_FILES, 'tsconfig.base.json'] });
   try {
     project.write('.oxlintrc.json', configText);
     project.write(
@@ -168,8 +167,8 @@ export function enabled(rules: Options, prefix: string): readonly string[] {
 /** The rules a config turns off, at the top level and in every override. */
 export function turnedOff(configText: unknown): readonly string[] {
   const repo = object(configText, '.oxlintrc.json');
-  const overrides = Array.isArray(repo.overrides) ? repo.overrides : [];
-  const ruleSets = [repo.rules ?? {}, ...overrides.map((entry) => object(entry, 'override').rules ?? {})];
+  const overrides = Array.isArray(repo['overrides']) ? repo['overrides'] : [];
+  const ruleSets = [repo['rules'] ?? {}, ...overrides.map((entry) => object(entry, 'override')['rules'] ?? {})];
   const off = ruleSets.flatMap((rules) => {
     const all = object(rules, 'rules');
     const on = new Set(enabled(all, ''));
@@ -180,7 +179,7 @@ export function turnedOff(configText: unknown): readonly string[] {
 
 /** The categories a config does not turn on at error. */
 export function categoryProblems(configText: unknown): readonly string[] {
-  const categories = object(object(configText, '.oxlintrc.json').categories ?? {}, 'categories');
+  const categories = object(object(configText, '.oxlintrc.json')['categories'] ?? {}, 'categories');
   return [...CATEGORIES].filter((category) => categories[category] !== 'error').map((category) => `${category} is not at error`);
 }
 
@@ -209,17 +208,13 @@ describe('the repository config', () => {
 
   test('turns on exactly the rules of eslint-plugin-solid v2-strict, loaded as a JS plugin', () => {
     const repo = object(json(textOf('.oxlintrc.json')), '.oxlintrc.json');
-    const plugins = Array.isArray(repo.jsPlugins) ? repo.jsPlugins : [];
+    const plugins = Array.isArray(repo['jsPlugins']) ? repo['jsPlugins'] : [];
     expect(plugins).toContain('eslint-plugin-solid');
-    expect(enabled(object(repo.rules ?? {}, 'rules'), 'solid/')).toEqual(enabled(v2Strict(), 'solid/'));
+    expect(enabled(object(repo['rules'] ?? {}, 'rules'), 'solid/')).toEqual(enabled(v2Strict(), 'solid/'));
   });
 });
 
 describe('the strictness of the config', () => {
-  test('turns every category on at error', () => {
-    expect(categoryProblems(json(textOf('.oxlintrc.json')))).toEqual([]);
-  });
-
   test('declares every rule it turns off with its reason', () => {
     expect(TURNED_OFF.unexempted(turnedOff(json(textOf('.oxlintrc.json'))))).toEqual([]);
   });

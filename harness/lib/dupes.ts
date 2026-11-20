@@ -32,7 +32,7 @@ import { ROOTS, typescriptFiles } from './scope.ts';
 
 export const MAX_SIZE_MB = 100;
 /** jscpd's `--max-size` in bytes (its megabytes are MiB). */
-export const MAX_SIZE = MAX_SIZE_MB * 1024 * 1024;
+export const MAX_SIZE: number = MAX_SIZE_MB * 1024 * 1024;
 export const SMALL_FILE_LINES = 20;
 export const TIMEOUT_MS = 300_000;
 
@@ -69,7 +69,7 @@ export function cloneKey(clone: Clone): string {
 }
 
 /** The clones the project accepts, each with its reason. */
-export const ALLOWED = Exemptions.grouped({});
+export const ALLOWED: Exemptions = Exemptions.grouped({});
 
 /** The jscpd command line of one run: the run's flags, the common flags, the report folder, the roots. */
 export function command(binary: string, flags: readonly string[], roots: readonly string[], output: string): readonly string[] {
@@ -87,14 +87,14 @@ function relativeTo(name: unknown, root: string): string {
 /** The clones of a parsed jscpd JSON report; the cross-file run keeps the pairs in two files. */
 export function clones(runName: string, report: unknown, root: string): readonly Clone[] {
   const found: Clone[] = [];
-  for (const entry of list(object(report, "jscpd's report").duplicates)) {
+  for (const entry of list(object(report, "jscpd's report")['duplicates'])) {
     const fields = object(entry, 'a duplicate');
-    const first = relativeTo(object(fields.firstFile, 'firstFile').name, root);
-    const second = relativeTo(object(fields.secondFile, 'secondFile').name, root);
+    const first = relativeTo(object(fields['firstFile'], 'firstFile')['name'], root);
+    const second = relativeTo(object(fields['secondFile'], 'secondFile')['name'], root);
     if (runName === 'cross-file' && first === second) {
       continue;
     }
-    const fragment = createHash('sha256').update(String(fields.fragment)).digest('hex').slice(0, 12);
+    const fragment = createHash('sha256').update(String(fields['fragment'])).digest('hex').slice(0, 12);
     const [low = first, high = second] = [first, second].toSorted();
     found.push({ run: runName, first: low, second: high, fragment });
   }
@@ -103,8 +103,8 @@ export function clones(runName: string, report: unknown, root: string): readonly
 
 /** The files a parsed jscpd JSON report's summary lists, relative to the root. */
 export function scanned(report: unknown, root: string): ReadonlySet<string> {
-  const summary = object(object(report, "jscpd's report").summary ?? {}, 'summary');
-  return new Set(list(summary.files).map((entry) => relativeTo(object(entry, 'a summary file').path, root)));
+  const summary = object(object(report, "jscpd's report")['summary'] ?? {}, 'summary');
+  return new Set(list(summary['files']).map((entry) => relativeTo(object(entry, 'a summary file')['path'], root)));
 }
 
 /** The listed files jscpd should have scanned and did not, or cannot scan. */

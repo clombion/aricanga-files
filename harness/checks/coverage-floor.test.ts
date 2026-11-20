@@ -132,9 +132,9 @@ describe('the debt', () => {
 
 describe('the gate', () => {
   test('writes the Istanbul JSON report the script reads, outside the checkout', () => {
-    const coverage = object(object(object(gate, 'vitest.gate.config.ts').test ?? {}, 'test').coverage ?? {}, 'coverage');
-    const reporters = Array.isArray(coverage.reporter) ? coverage.reporter : [];
-    expect([coverage.reportsDirectory, reporters.includes('json')]).toEqual([COVERAGE_DIR, true]);
+    const coverage = object(object(object(gate, 'vitest.gate.config.ts')['test'] ?? {}, 'test')['coverage'] ?? {}, 'coverage');
+    const reporters = Array.isArray(coverage['reporter']) ? coverage['reporter'] : [];
+    expect([coverage['reportsDirectory'], reporters.includes('json')]).toEqual([COVERAGE_DIR, true]);
   });
 
   test('the script exits 1 on a report with a shortfall and writes each problem', () => {

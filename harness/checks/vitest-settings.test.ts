@@ -135,8 +135,8 @@ describe('the defaults the gate keeps', () => {
   });
 
   test('the test timeout is set and bounded', () => {
-    const settings = object(object(gate, 'vitest.gate.config.ts').test ?? {}, 'test');
-    const timeout = settings.testTimeout;
+    const settings = object(object(gate, 'vitest.gate.config.ts')['test'] ?? {}, 'test');
+    const timeout = settings['testTimeout'];
     expect(typeof timeout === 'number' && timeout > 0 && timeout <= 60_000).toBe(true);
   });
 });

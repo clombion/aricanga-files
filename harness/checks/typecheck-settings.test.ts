@@ -6,7 +6,8 @@
  * the setting it rests on is turned off or, for `allowUnreachableCode` and `allowUnusedLabels`,
  * reset to tsc's default (`null`), which reports without failing (`exactOptionalPropertyTypes` goes
  * with `strictNullChecks`, which tsc refuses it without). `skipLibCheck: false` is held by a broken
- * declaration file. `isolatedModules` is implied by `verbatimModuleSyntax`: its plant
+ * declaration file, `isolatedDeclarations` by an exported constant whose type tsc must infer, and
+ * `libReplacement: false` by a `@typescript/lib-dom` package the plant can only see when it is on. `isolatedModules` is implied by `verbatimModuleSyntax`: its plant
  * passes only when both are off, and the check holds that redundancy. Two plants hold the
  * exemption declarations' shapes: a membership test on `Prefixes` and a prefix match on `Accepted`
  * are type errors. The clean plant must pass.
@@ -31,7 +32,7 @@ const WITHOUT_NULL_CHECKS = { exactOptionalPropertyTypes: false };
 const PLANTS: readonly Plant[] = [
   {
     path: 'src/implicit-any.ts',
-    text: 'export function echo(value) {\n  return value;\n}\n',
+    text: 'function echo(value) {\n  return value;\n}\nexport const echoed: unknown = echo(1);\n',
     codes: ['TS7006'],
     removal: { noImplicitAny: false },
   },
@@ -91,7 +92,7 @@ const PLANTS: readonly Plant[] = [
   },
   {
     path: 'src/index-signature.ts',
-    text: 'const bag: Record<string, number> = {};\nexport const count = bag.count;\n',
+    text: 'const bag: Record<string, number> = {};\nexport const count: number | undefined = bag.count;\n',
     codes: ['TS4111'],
     removal: { noPropertyAccessFromIndexSignature: false },
   },
@@ -132,6 +133,18 @@ const PLANTS: readonly Plant[] = [
     removal: { skipLibCheck: true },
   },
   {
+    path: 'src/declarations.ts',
+    text: 'function make(): { readonly size: number } {\n  return { size: 1 };\n}\nexport const made = make();\n',
+    codes: ['TS9010'],
+    removal: { isolatedDeclarations: false },
+  },
+  {
+    path: 'src/lib-replacement.ts',
+    text: 'export const replaced: number = replacedLib;\n',
+    codes: ['TS2552'],
+    removal: { libReplacement: true },
+  },
+  {
     path: 'src/erasable.ts',
     text: 'export enum Colour {\n  Red,\n}\n',
     codes: ['TS1294'],
@@ -142,13 +155,13 @@ const PLANTS: readonly Plant[] = [
 const SHAPES: readonly Plant[] = [
   {
     path: 'src/prefixes-membership.ts',
-    text: 'import { Prefixes } from "./exemptions.ts";\nexport const found = new Prefixes(["a"]).has("a");\n',
+    text: 'import { Prefixes } from "./exemptions.ts";\nexport const found: boolean = new Prefixes(["a"]).has("a");\n',
     codes: ['TS2339'],
     removal: {},
   },
   {
     path: 'src/accepted-prefix.ts',
-    text: 'import { Accepted } from "./exemptions.ts";\nexport const found = new Accepted(["a"]).starts("ab");\n',
+    text: 'import { Accepted } from "./exemptions.ts";\nexport const found: boolean = new Accepted(["a"]).starts("ab");\n',
     codes: ['TS2339'],
     removal: {},
   },
@@ -175,7 +188,9 @@ export function codesByFile(stdout: string): ReadonlyMap<string, readonly string
 
 /** Run the locked tsc over every plant under the base config with `overrides` applied. */
 function typecheck(overrides: Readonly<Record<string, boolean | null>>): ReadonlyMap<string, readonly string[]> {
-  const project = new Project({ copies: ['tsconfig.base.json'] });
+  const project = new Project({ copies: ['tsconfig.base.json'], linkModules: false });
+    project.write('node_modules/@typescript/lib-dom/package.json', JSON.stringify({ name: '@typescript/lib-dom', version: '0.0.0', types: 'index.d.ts' }));
+    project.write('node_modules/@typescript/lib-dom/index.d.ts', 'declare const replacedLib: number;\n');
   try {
     project.write('src/exemptions.ts', textOf('harness/lib/exemptions.ts'));
     for (const [path, text] of Object.entries(SUPPORT)) {
