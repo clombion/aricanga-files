@@ -9,7 +9,7 @@ import type { Runner } from '#lib/dupes.ts';
 import { main } from '#lib/dupes.ts';
 import { tmpdir } from 'node:os';
 import { typescriptFiles } from '#lib/scope.ts';
-import { writeFileSync } from 'node:fs';
+import { writeFile } from 'node:fs/promises';
 
 /** The planted roots not yet removed. */
 const roots = new Set<string>();
@@ -57,25 +57,24 @@ async function removePlants(): Promise<void> {
 /**
  * Write a report listing `files` as scanned and no clone into `output`.
  *
- * The `Runner` a stand-in implements is synchronous, as the script's real runner is, so the report
- * is on disk when it returns: the write cannot be asynchronous without changing that contract.
- *
  * @param {string} output - The report's folder.
  * @param {readonly string[]} files - The absolute paths the report lists as scanned.
+ * @returns {Promise<void>} Settles once the report is on disk.
  */
-function writeReport(output: string, files: readonly string[]): void {
-  writeFileSync(join(output, 'jscpd-report.json'), JSON.stringify({ duplicates: [], summary: { files: files.map((path) => ({ path })) } }));
+async function writeReport(output: string, files: readonly string[]): Promise<void> {
+  await writeFile(join(output, 'jscpd-report.json'), JSON.stringify({ duplicates: [], summary: { files: files.map((path) => ({ path })) } }));
 }
 
 /**
  * A runner standing in for a clean jscpd: its report lists every held file and no clone.
  *
  * @param {readonly string[]} argv - The run's arguments, naming the report's folder after `--output`.
- * @returns {Outcome} A clean finished run.
+ * @returns {Promise<Outcome>} A clean finished run.
  */
-function cleanRunner(argv: readonly string[]): Outcome {
+async function cleanRunner(argv: readonly string[]): Promise<Outcome> {
   const [, output = ''] = argv.slice(argv.indexOf('--output'));
-  writeReport(output, typescriptFiles().map((path) => join(REPO_ROOT, path)));
+  const files = await typescriptFiles();
+  await writeReport(output, files.map((path) => join(REPO_ROOT, path)));
   return { argv, kind: 'finished', status: EXIT_CLEAN, stderr: '', stdout: '' };
 }
 

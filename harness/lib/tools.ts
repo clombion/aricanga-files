@@ -5,7 +5,7 @@
  */
 
 import { REPO_ROOT, fromRoot } from './paths.ts';
-import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { cp, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises';
 import { environment, run } from './process.ts';
 import type { Finished } from './process.ts';
 import { Prefixes } from './exemptions.ts';
@@ -54,10 +54,10 @@ function isolatedEnv(extra: Readonly<Record<string, string>> = {}): Record<strin
  *
  * @param {readonly string[]} argv - The command and its arguments.
  * @param {ToolOptions} options - Where it runs and what it reads; the environment defaults to `isolatedEnv()`.
- * @returns {Finished} The finished run.
+ * @returns {Promise<Finished>} The finished run.
  */
-function finished(argv: readonly string[], options: ToolOptions): Finished {
-  const outcome = run(argv, { env: options.env ?? isolatedEnv(), timeoutMs: TIMEOUT_MS, ...options });
+async function finished(argv: readonly string[], options: ToolOptions): Promise<Finished> {
+  const outcome = await run(argv, { env: options.env ?? isolatedEnv(), timeoutMs: TIMEOUT_MS, ...options });
   if (outcome.kind !== 'finished') {
     throw new ToolError(`${argv.join(' ')} did not finish: ${JSON.stringify(outcome)}`);
   }
@@ -82,29 +82,43 @@ class Project {
   public readonly root: string;
 
   /**
+   * Hold a planted project's directory; `Project.create` makes one.
+   *
+   * @param {string} root - The project's directory.
+   */
+  private constructor(root: string) {
+    this.root = root;
+  }
+
+  /**
    * Make a planted project.
    *
    * @param {ProjectOptions} options - What it copies and whether it links `node_modules`.
+   * @returns {Promise<Project>} The project.
    */
-  public constructor(options: ProjectOptions = {}) {
-    this.root = mkdtempSync(path.join(tmpdir(), 'harness-plant-'));
+  public static async create(options: ProjectOptions = {}): Promise<Project> {
+    const root = await mkdtemp(path.join(tmpdir(), 'harness-plant-'));
     if (options.linkModules ?? true) {
-      symlinkSync(path.join(REPO_ROOT, 'node_modules'), path.join(this.root, 'node_modules'), 'dir');
+      await symlink(path.join(REPO_ROOT, 'node_modules'), path.join(root, 'node_modules'), 'dir');
     }
-    for (const copied of options.copies ?? []) {
-      mkdirSync(path.dirname(path.join(this.root, copied)), { recursive: true });
-      cpSync(path.join(REPO_ROOT, copied), path.join(this.root, copied), { recursive: true });
-    }
+    await Promise.all(
+      (options.copies ?? []).map(async (copied) => {
+        await mkdir(path.dirname(path.join(root, copied)), { recursive: true });
+        await cp(path.join(REPO_ROOT, copied), path.join(root, copied), { recursive: true });
+      }),
+    );
+    return new Project(root);
   }
 
   /**
    * Read a file of the planted project.
    *
    * @param {string} file - The file's path in the project.
-   * @returns {string} Its text.
+   * @returns {Promise<string>} Its text.
    */
-  public read(file: string): string {
-    return readFileSync(path.join(this.root, file), 'utf8');
+  public async read(file: string): Promise<string> {
+    const text = await readFile(path.join(this.root, file), 'utf8');
+    return text;
   }
 
   /**
@@ -112,12 +126,12 @@ class Project {
    *
    * @param {string} file - The file's path in the project.
    * @param {string} text - Its text.
-   * @returns {string} The file's absolute path.
+   * @returns {Promise<string>} The file's absolute path.
    */
-  public write(file: string, text: string): string {
+  public async write(file: string, text: string): Promise<string> {
     const target = path.join(this.root, file);
-    mkdirSync(path.dirname(target), { recursive: true });
-    writeFileSync(target, text, 'utf8');
+    await mkdir(path.dirname(target), { recursive: true });
+    await writeFile(target, text, 'utf8');
     return target;
   }
 
@@ -126,20 +140,22 @@ class Project {
    *
    * @param {string} name - The tool's binary name.
    * @param {readonly string[]} args - Its arguments.
-   * @returns {Finished} The finished run.
+   * @returns {Promise<Finished>} The finished run.
    */
-  public tool(name: string, ...args: readonly string[]): Finished {
-    return finished([bin(name), ...args], { cwd: this.root });
+  public async tool(name: string, ...args: readonly string[]): Promise<Finished> {
+    const done = await finished([bin(name), ...args], { cwd: this.root });
+    return done;
   }
 
   /**
    * Run a command in the planted project.
    *
    * @param {readonly string[]} argv - The command and its arguments.
-   * @returns {Finished} The finished run.
+   * @returns {Promise<Finished>} The finished run.
    */
-  public run(...argv: readonly string[]): Finished {
-    return finished(argv, { cwd: this.root });
+  public async run(...argv: readonly string[]): Promise<Finished> {
+    const done = await finished(argv, { cwd: this.root });
+    return done;
   }
 
   /**
@@ -147,15 +163,20 @@ class Project {
    *
    * @param {string} input - The command's standard input.
    * @param {readonly string[]} argv - The command and its arguments.
-   * @returns {Finished} The finished run.
+   * @returns {Promise<Finished>} The finished run.
    */
-  public runWithInput(input: string, ...argv: readonly string[]): Finished {
-    return finished(argv, { cwd: this.root, input });
+  public async runWithInput(input: string, ...argv: readonly string[]): Promise<Finished> {
+    const done = await finished(argv, { cwd: this.root, input });
+    return done;
   }
 
-  /** Delete the planted project. */
-  public remove(): void {
-    rmSync(this.root, { force: true, recursive: true });
+  /**
+   * Delete the planted project.
+   *
+   * @returns {Promise<void>} Settles once it is deleted.
+   */
+  public async remove(): Promise<void> {
+    await rm(this.root, { force: true, recursive: true });
   }
 }
 
