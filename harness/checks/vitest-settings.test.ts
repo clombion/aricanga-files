@@ -12,9 +12,10 @@
  * bounded.
  */
 
+import { EXIT_CLEAN, EXIT_FINDINGS } from './exit-status.ts';
 import { describe, expect, test } from 'vitest';
 import { Project } from '#lib/tools.ts';
-import gate from '../../vitest.gate.config.ts';
+import { gateTest } from './gate-config.ts';
 import { object } from '#lib/config.ts';
 
 const HARNESS_ID = 'vitest-settings';
@@ -87,6 +88,10 @@ const DEFAULTS: readonly Plant[] = [
 
 const SHUFFLE_OFF: Overrides = { sequence: { shuffle: false } };
 const SEEDED: Overrides = { sequence: { seed: 1, shuffle: true } };
+/** The longest test timeout the gate may set. */
+const TIMEOUT_BOUND = 60_000;
+/** A timeout of zero is none. */
+const NO_TIMEOUT = 0;
 
 function merge(...layers: readonly Overrides[]): Overrides {
   const merged: Record<string, unknown> = {};
@@ -124,33 +129,65 @@ function status(plant: Plant, overrides: Overrides): number {
   }
 }
 
+/**
+ * The sequence a plant runs in: seeded for the order plant, unshuffled for one leaning on order.
+ *
+ * @param {Plant} plant - The plant.
+ * @returns {Overrides} The sequence overrides.
+ */
 function order(plant: Plant): Overrides {
-  return plant.name === 'order' ? SEEDED : (plant.ordered ? SHUFFLE_OFF : {});
+  if (plant.name === 'order') {
+    return SEEDED;
+  }
+  return plant.ordered ? SHUFFLE_OFF : {};
+}
+
+/**
+ * A plant's exit statuses under the gate config, then with its setting reverted.
+ *
+ * @param {Plant} plant - The plant.
+ * @returns {readonly [number, number]} The two exit statuses.
+ */
+function underGateAndReverted(plant: Plant): readonly [number, number] {
+  const sequence = order(plant);
+  return [status(plant, sequence), status(plant, merge(sequence, plant.revert))];
+}
+
+/**
+ * Whether the gate's test timeout is a number above zero and within the bound.
+ *
+ * @returns {Promise<boolean>} Whether the timeout is set and bounded.
+ */
+async function timeoutBounded(): Promise<boolean> {
+  const settings = await gateTest();
+  const timeout = settings['testTimeout'];
+  return typeof timeout === 'number' && timeout > NO_TIMEOUT && timeout <= TIMEOUT_BOUND;
 }
 
 describe('each setting', () => {
   test.for(PLANTS)('fails the $name plant, and passes it once reverted', (plant) => {
-    expect([status(plant, order(plant)), status(plant, merge(order(plant), plant.revert))]).toStrictEqual([1, 0]);
+    expect.hasAssertions();
+    expect(underGateAndReverted(plant)).toStrictEqual([EXIT_FINDINGS, EXIT_CLEAN]);
   });
 });
 
 describe('the defaults the gate keeps', () => {
   test.for(DEFAULTS)('fail the $name plant', (plant) => {
-    expect(status(plant, {})).toBe(1);
+    expect.hasAssertions();
+    expect(status(plant, {})).toBe(EXIT_FINDINGS);
   });
 
-  test('the test timeout is set and bounded', () => {
+  test('the test timeout is set and bounded', async () => {
     expect.hasAssertions();
-    const settings = object(object(gate, 'vitest.gate.config.ts')['test'] ?? {}, 'test');
-    const timeout = settings['testTimeout'];
-    expect(typeof timeout === 'number' && timeout > 0 && timeout <= 60_000).toBe(true);
+    await expect(timeoutBounded()).resolves.toBe(true);
   });
 });
 
 describe('the plants', () => {
   test('a clean spec passes under the gate config', () => {
     expect.hasAssertions();
-    expect(status({ name: 'clean', ordered: false, revert: {}, text: `${IMPORTS}test('a', () => {\n  expect(1).toBe(1);\n});\n` }, {})).toBe(0);
+    const clean = { name: 'clean', ordered: false, revert: {}, text: `${IMPORTS}test('a', () => {\n  expect(1).toBe(1);\n});\n` };
+    expect(status(clean, {})).toBe(EXIT_CLEAN);
   });
 });
 

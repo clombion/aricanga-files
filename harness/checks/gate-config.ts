@@ -39,4 +39,4 @@ async function gateCoverage(): Promise<Section> {
   return object(test['coverage'] ?? {}, 'coverage');
 }
 
-export { gateCoverage };
+export { gateCoverage, gateTest };
