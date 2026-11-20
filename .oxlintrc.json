@@ -262,7 +262,70 @@
     "typescript/prefer-readonly-parameter-types": [
       "error",
       {
-        "treatMethodsAsReadonly": true
+        "treatMethodsAsReadonly": true,
+        "allow": [
+          {
+            "from": "package",
+            "package": "typescript",
+            "name": [
+              "Node",
+              "SourceFile",
+              "Symbol",
+              "Type",
+              "CommentRange",
+              "Statement",
+              "Expression",
+              "TypeChecker",
+              "Program",
+              "Identifier",
+              "Declaration",
+              "ImportDeclaration",
+              "TypeAliasDeclaration",
+              "InterfaceDeclaration",
+              "CallExpression",
+              "ExportDeclaration",
+              "VariableStatement",
+              "FunctionDeclaration",
+              "ClassDeclaration",
+              "PropertyAccessExpression",
+              "StringLiteral",
+              "JsxAttribute",
+              "Signature",
+              "NodeHandle"
+            ]
+          },
+          {
+            "from": "package",
+            "package": "postcss",
+            "name": [
+              "Root",
+              "Rule",
+              "Declaration",
+              "AtRule",
+              "Node",
+              "Container",
+              "Result",
+              "Root_",
+              "Rule_",
+              "Declaration_",
+              "AtRule_",
+              "Result_",
+              "Container_"
+            ]
+          },
+          {
+            "from": "package",
+            "package": "stylelint",
+            "name": [
+              "PostcssResult",
+              "RuleContext",
+              "Rule",
+              "RuleBase",
+              "Problem",
+              "PostcssResult"
+            ]
+          }
+        ]
       }
     ]
   },
@@ -446,10 +509,27 @@
         "harness/lint-rules/plugin.ts",
         "**/vite.config.ts",
         "**/playwright.*.config.ts",
-        "vitest.gate.config.ts"
+        "vitest.gate.config.ts",
+        "harness/lib/design-tokens.ts"
       ],
       "rules": {
         "import/no-default-export": "off"
+      }
+    },
+    {
+      "files": [
+        "harness/lib/guards.ts"
+      ],
+      "rules": {
+        "vitest/require-top-level-describe": "off"
+      }
+    },
+    {
+      "files": [
+        "harness/lib/checker.ts"
+      ],
+      "rules": {
+        "eslint/no-bitwise": "off"
       }
     }
   ],
