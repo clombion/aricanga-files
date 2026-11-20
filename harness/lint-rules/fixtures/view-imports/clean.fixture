@@ -1,0 +1,4 @@
+// path: packages/systems/chat/src/view/view-imports-clean.ts
+import type { ChatViewModel } from '@narratives/system-chat';
+
+export type Shown = readonly ChatViewModel[];

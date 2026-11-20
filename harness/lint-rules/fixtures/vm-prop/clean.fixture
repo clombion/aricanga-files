@@ -1,0 +1,12 @@
+// path: packages/systems/chat/src/view/vm-prop-clean.tsx
+export function Bubble(props: { vm: { text: string } }) {
+  return <p>{props.vm.text}</p>;
+}
+
+export const Divider = () => <hr />;
+
+function formatTime(minutes: number): string {
+  return `${Math.floor(minutes / 60)}:${minutes % 60}`;
+}
+
+export const Stamp = (props: { vm: { minutes: number } }) => <time>{formatTime(props.vm.minutes)}</time>;

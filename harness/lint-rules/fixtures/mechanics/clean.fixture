@@ -1,0 +1,4 @@
+// path: packages/systems/chat/src/view/mechanics-clean.ts
+import { createSignal } from 'solid-js';
+
+export const counter = (): ReturnType<typeof createSignal<number>> => createSignal(0);

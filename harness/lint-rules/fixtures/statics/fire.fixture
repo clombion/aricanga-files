@@ -1,0 +1,8 @@
+// path: harness/lib/statics-fire.ts
+export class Clock {
+  static readonly origin = 0;
+
+  static start(): number {
+    return this.origin;
+  }
+}

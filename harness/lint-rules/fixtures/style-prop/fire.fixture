@@ -1,0 +1,4 @@
+// path: packages/systems/chat/src/view/style-prop-fire.tsx
+export function Bubble(props: { vm: { text: string } }) {
+  return <p style={{ color: 'red' }}>{props.vm.text}</p>;
+}

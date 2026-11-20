@@ -1,0 +1,11 @@
+// path: packages/systems/chat/src/view/mirrors-fire.tsx
+import { createEffect, createSignal } from 'solid-js';
+
+export function Title(props: { vm: { title: string } }) {
+  const [shown, setShown] = createSignal('');
+  createEffect(
+    () => props.vm.title,
+    (title) => setShown(title),
+  );
+  return <h1>{shown()}</h1>;
+}
