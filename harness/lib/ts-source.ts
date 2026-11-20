@@ -154,15 +154,15 @@ export function body(comment: string): string {
     .trim();
 }
 
-/** The local names a module imports from `module`, mapped to the names they import. */
-export function importsFrom(file: SourceFile, module: string): ReadonlyMap<string, string> {
+/**
+ * The local names a module imports from `module`, mapped to the names they import. `module` is a
+ * specifier, or a test of the specifier as the module writes it.
+ */
+export function importsFrom(file: SourceFile, module: string | ((specifier: string) => boolean)): ReadonlyMap<string, string> {
+  const named = typeof module === 'string' ? (specifier: string): boolean => specifier === module : module;
   const found = new Map<string, string>();
   for (const statement of file.statements) {
-    if (
-      isImportDeclaration(statement) &&
-      isStringLiteral(statement.moduleSpecifier) &&
-      statement.moduleSpecifier.text === module
-    ) {
+    if (isImportDeclaration(statement) && isStringLiteral(statement.moduleSpecifier) && named(statement.moduleSpecifier.text)) {
       const bindings = statement.importClause?.namedBindings;
       if (bindings !== undefined && isNamedImports(bindings)) {
         for (const element of bindings.elements) {
