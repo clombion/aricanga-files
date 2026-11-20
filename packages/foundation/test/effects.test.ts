@@ -1,9 +1,10 @@
 import { EffectPayloadError, fx, parseDataRequest, parseDriveInkOp } from '#src/sim/effect';
 import { describe, expect, test } from 'vitest';
-import { heldScheduler, memoryStore } from '#src/testing/host-ports';
+import type { DriveInkOp } from '#src/sim/effect';
 import type { EffectTarget } from '#src/host/effects';
 import type { Snapshot } from '#src/sim/snapshot';
 import { execute } from '#src/host/effects';
+import { refusingHost } from '#test/refusing-host';
 import { storyOf } from '#src/testing/compile';
 
 /** A story offering one choice after its first line. */
@@ -11,6 +12,18 @@ const STORY = 'Start.\n* Left\n  Went left.\n* Right\n  Went right.\n';
 
 /** The index ink gives the second choice. */
 const RIGHT = 1;
+
+/** A goto instruction, written as the contract types it. */
+const GOTO = { knot: 'k', op: 'goto' } satisfies DriveInkOp;
+
+/** A save instruction. */
+const SAVE = { id: 's', op: 'save-snap' } satisfies DriveInkOp;
+
+/** A load instruction. */
+const LOAD = { id: 's', op: 'load-snap' } satisfies DriveInkOp;
+
+/** A choose instruction. */
+const CHOOSE = { index: RIGHT, op: 'choose' } satisfies DriveInkOp;
 
 /** The snapshot a persist effect would save; drive-ink never reads it. */
 const SNAPSHOT: Snapshot = { idSeq: 0, ink: '{}', state: {}, version: 1 };
@@ -24,18 +37,7 @@ function target(): EffectTarget {
   const ink = storyOf(STORY);
   ink.continue();
   return {
-    host: {
-      fetchData: (request) => {
-        throw new Error(`no fetch expected: ${JSON.stringify(request)}`);
-      },
-      present: (effect) => {
-        throw new Error(`no present expected: ${effect.kind}`);
-      },
-      scheduler: heldScheduler(() => {
-        throw new Error('no timer expected');
-      }),
-      store: memoryStore(),
-    },
+    host: refusingHost(),
     ink,
     resume: (resume) => {
       throw new Error(`no resume expected: ${resume.kind}`);
@@ -78,18 +80,18 @@ describe('the drive-ink executor', () => {
 describe('the effect payload parsers', () => {
   test('read each drive-ink op back from its payload', () => {
     expect.hasAssertions();
-    expect(parseDriveInkOp({ knot: 'k', op: 'goto' })).toStrictEqual({ knot: 'k', op: 'goto' });
-    expect(parseDriveInkOp({ id: 's', op: 'save-snap' })).toStrictEqual({ id: 's', op: 'save-snap' });
-    expect(parseDriveInkOp({ id: 's', op: 'load-snap' })).toStrictEqual({ id: 's', op: 'load-snap' });
+    for (const op of [GOTO, SAVE, LOAD]) {
+      expect(parseDriveInkOp(op)).toStrictEqual(op);
+    }
   });
 
   test('refuse an unknown op, a missing field, a field of the wrong type, and a payload that is no object', () => {
     expect.hasAssertions();
     expect(() => parseDriveInkOp({ op: 'jump' })).toThrow(new EffectPayloadError('unknown drive-ink op jump'));
-    expect(() => parseDriveInkOp({ op: 'goto' })).toThrow(new EffectPayloadError('effect payload has no knot: {"op":"goto"}'));
-    expect(() => parseDriveInkOp({ index: '1', op: 'choose' })).toThrow(new EffectPayloadError('effect payload index is not a number'));
+    expect(() => parseDriveInkOp({ op: GOTO.op })).toThrow(new EffectPayloadError(`effect payload has no knot: {"op":"${GOTO.op}"}`));
+    expect(() => parseDriveInkOp({ index: '1', op: CHOOSE.op })).toThrow(new EffectPayloadError('effect payload index is not a number'));
     expect(() => parseDriveInkOp({ op: 1 })).toThrow(new EffectPayloadError('effect payload op is not a string'));
-    expect(() => parseDriveInkOp('goto')).toThrow(new EffectPayloadError('effect payload has no op: "goto"'));
+    expect(() => parseDriveInkOp(GOTO.op)).toThrow(new EffectPayloadError(`effect payload has no op: "${GOTO.op}"`));
   });
 
   test('read a data request with its params and without', () => {

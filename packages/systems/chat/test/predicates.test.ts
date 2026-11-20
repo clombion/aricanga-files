@@ -12,6 +12,7 @@ import {
 import { fx, parseTag } from '@narratives/foundation';
 import type { ChatState } from '#src/state';
 import { initChatState } from '#src/state';
+import { open } from '#test/support';
 import { showNotification } from '#src/effects';
 
 /** The chat slice a run starts from. */
@@ -47,7 +48,7 @@ function line(text: string, tags: readonly string[] = []): Input<unknown> {
 }
 
 /** The player opens a chat. */
-const OPEN_PAT: Input<unknown> = { command: { kind: 'open', payload: { chatId: 'pat' } }, source: 'player' };
+const OPEN_PAT: Input<unknown> = open('pat').input;
 
 /** A notification for Pat's chat. */
 const NOTIFY_PAT = showNotification({ chatId: 'pat', preview: 'hi' });
@@ -69,7 +70,7 @@ describe('routing ownership', () => {
     const emptyTargeted = record(line('', ['targetChat: pat']));
     const untargeted = record(line('hi'));
     const lost = record(line('hi', ['targetChat: pat']));
-    expect(routingOwnership({ effects: [], trace: [emptyTargeted, untargeted] })).toBeUndefined();
+    expect(routingOwnership({ effects: [], trace: [emptyTargeted, untargeted, record(OPEN_PAT)] })).toBeUndefined();
     expect(routingOwnership({ effects: [], trace: [lost] })).toStrictEqual({
       at: 0,
       detail: 'message for "pat" reached neither history nor deferred',

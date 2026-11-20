@@ -1,6 +1,7 @@
 // The sandbox's boot: it fetches the compiled story into the page's #app, and shows a failure there.
 
 import { describe, expect, test, vi } from 'vitest';
+import type { MockInstance } from 'vitest';
 import { SkMessage } from '#src/sk-message';
 import { compileInk } from '@narratives/foundation/testing';
 import { start } from '#src/main';
@@ -25,16 +26,10 @@ function page(): HTMLElement {
  * Stub the platform's fetch with a function answering every request.
  *
  * @param {Function} answer - What each request resolves or rejects with.
- * @returns {string[]} The URLs requested, filled as the boot runs.
+ * @returns {MockInstance} The stub, which records the requests.
  */
-function stubFetch(answer: () => Promise<Response>): string[] {
-  const requested: string[] = [];
-  vi.stubGlobal('fetch', async (url: string): Promise<Response> => {
-    requested.push(url);
-    const response = await answer();
-    return response;
-  });
-  return requested;
+function stubFetch(answer: () => Promise<Response>): MockInstance<typeof fetch> {
+  return vi.spyOn(globalThis, 'fetch').mockImplementation(answer);
 }
 
 /**
@@ -64,7 +59,7 @@ describe('the sandbox boot', () => {
     const root = page();
     await start(root);
     const texts = messageTexts(root);
-    expect(requested).toStrictEqual(['/story.json']);
+    expect(requested).toHaveBeenCalledWith('/story.json');
     expect(texts).toStrictEqual(['Narrated.', 'Pat: Spoken.']);
   });
 
@@ -87,7 +82,7 @@ describe('the sandbox boot', () => {
     });
     const root = document.createElement('main');
     await start(root);
-    expect(requested).toStrictEqual([]);
+    expect(requested).not.toHaveBeenCalled();
     expect(root.hasChildNodes()).toBe(false);
   });
 });

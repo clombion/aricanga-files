@@ -6,6 +6,7 @@ import { sample, constant as single } from 'fast-check';
 import type { Command } from '#src/sim/input';
 import type { Effect } from '#src/sim/effect';
 import type { FixtureInput } from '#src/testing/harness';
+import type { HCommand } from '#test/h-system';
 import type { System } from '#src/sim/system';
 import { fx } from '#src/sim/effect';
 import { hSystem } from '#test/h-system';
@@ -58,7 +59,7 @@ const loopSystem: System<LoopState, Command<'start', undefined>, Effect, LoopSta
 const START: FixtureInput = { input: { command: { kind: 'start', payload: undefined }, source: 'player' }, target: 'loop' };
 
 /** The player asks the synthetic system to fetch. */
-const FETCH: FixtureInput = { input: { command: { kind: 'fetch', payload: undefined }, source: 'player' }, target: 'h' };
+const FETCH: FixtureInput = { input: { command: { kind: 'fetch', payload: undefined } satisfies HCommand, source: 'player' }, target: 'h' };
 
 describe('the fixture harness', () => {
   test('refuses a run whose timers never drain', async () => {

@@ -1,36 +1,15 @@
 import { describe, expect, test } from 'vitest';
-import { heldScheduler, memoryStore } from '#src/testing/host-ports';
 import type { AnySystem } from '#src/sim/system';
-import type { Host } from '#src/host/runtime';
 import { InkRuntime } from '#src/ink/ink-runtime';
 import { Runtime } from '#src/host/runtime';
 import { compileInk } from '#src/testing/compile';
 import { erase } from '#src/sim/system';
 import { fixtureSystemErased } from '#src/testing/fixture-system';
 import { hSystem } from '#test/h-system';
+import { refusingHost } from '#test/refusing-host';
 
 /** The context a view renders with. */
 const RENDER = { locale: 'en', now: 0 };
-
-/**
- * A host that keeps its timers and saves in memory and refuses anything else.
- *
- * @returns {Host} The host.
- */
-function host(): Host {
-  return {
-    fetchData: (request) => {
-      throw new Error(`no fetch expected: ${JSON.stringify(request)}`);
-    },
-    present: (effect) => {
-      throw new Error(`no present expected: ${effect.kind}`);
-    },
-    scheduler: heldScheduler(() => {
-      throw new Error('no timer expected');
-    }),
-    store: memoryStore(),
-  };
-}
 
 /**
  * A runtime over the given systems and a one-line story.
@@ -41,7 +20,7 @@ function host(): Host {
  */
 function runtimeOf(systems: readonly AnySystem[], observe?: (reduced: string) => void): Runtime {
   return new Runtime({
-    host: host(),
+    host: refusingHost(),
     ink: new InkRuntime(compileInk('Only line.\n')),
     observer: {
       observe: (record) => {
@@ -52,7 +31,7 @@ function runtimeOf(systems: readonly AnySystem[], observe?: (reduced: string) =>
   });
 }
 
-describe('the runtime at its edges', () => {
+describe('the runtime at its start', () => {
   test('delivers a lifecycle input to every registered system', () => {
     expect.hasAssertions();
     const reduced: string[] = [];
@@ -71,10 +50,18 @@ describe('the runtime at its edges', () => {
   test('refuses a named foreground system it does not hold', () => {
     expect.hasAssertions();
     expect(
-      () => new Runtime({ foreground: 'ghost', host: host(), ink: new InkRuntime(compileInk('Only line.\n')), systems: [erase(hSystem)] }),
+      () =>
+        new Runtime({
+          foreground: 'ghost',
+          host: refusingHost(),
+          ink: new InkRuntime(compileInk('Only line.\n')),
+          systems: [erase(hSystem)],
+        }),
     ).toThrow('foreground system "ghost" is not registered');
   });
+});
 
+describe('the runtime once running', () => {
   test('refuses a player input that names no target system', () => {
     expect.hasAssertions();
     const runtime = runtimeOf([erase(hSystem)]);

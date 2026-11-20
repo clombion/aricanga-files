@@ -1,10 +1,10 @@
 import { FIXTURE_TAG, fixtureSystem, fixtureSystemErased, runFixture } from '#src/testing/index';
 import { describe, expect, test } from 'vitest';
 import { erase, stateOf } from '#src/sim/system';
-import { heldScheduler, memoryStore } from '#src/testing/host-ports';
 import type { FixtureInput } from '#src/testing/harness';
 import { createExperience } from '#src/core/create-experience';
 import { hSystem } from '#test/h-system';
+import { refusingHost } from '#test/refusing-host';
 import { storyOf } from '#src/testing/compile';
 
 /** The context a view renders with. */
@@ -73,18 +73,11 @@ describe('an experience', () => {
   test('steps, sends, snapshots, restores and renders through its runtime', () => {
     expect.hasAssertions();
     const experience = createExperience({
-      host: {
-        fetchData: (request) => {
-          throw new Error(`no fetch expected: ${JSON.stringify(request)}`);
-        },
+      host: refusingHost({
         present: () => {
           // The experience presents its lines; the test reads the view instead.
         },
-        scheduler: heldScheduler(() => {
-          throw new Error('no timer expected');
-        }),
-        store: memoryStore(),
-      },
+      }),
       ink: storyOf(`One. # ${FIXTURE_TAG}: on\nTwo. # ${FIXTURE_TAG}: on\n`),
       systems: [fixtureSystemErased],
     });
