@@ -21,12 +21,13 @@
 import { createHash } from 'node:crypto';
 import { existsSync, mkdtempSync, readFileSync, rmSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, relative, sep } from 'node:path';
+import { join } from 'node:path';
 
 import { json, object } from './config.ts';
 import { Exemptions, StaleExemptionError } from './exemptions.ts';
 import { fromRoot } from './paths.ts';
 import { type Outcome, run } from './process.ts';
+import { relativeTo as posixRelative } from './relative.ts';
 
 export const MAX_SIZE_MB = 100;
 /** jscpd's `--max-size` in bytes (its megabytes are MiB). */
@@ -96,7 +97,7 @@ function list(value: unknown): readonly unknown[] {
 }
 
 function relativeTo(name: unknown, root: string): string {
-  return relative(root, String(name)).split(sep).join('/');
+  return posixRelative(root, String(name));
 }
 
 /** The clones of a parsed jscpd JSON report; the cross-file run keeps the pairs in two files. */
