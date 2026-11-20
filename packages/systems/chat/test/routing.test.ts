@@ -1,22 +1,5 @@
-import { erase, parseTag } from '@narratives/foundation';
-import { type FixtureInput, type FixtureRun, runStream } from '@narratives/foundation/testing';
 import { expect, test } from 'vitest';
-import { chatSystem } from '../src/system';
-import type { ChatMessageVM } from '../src/reduce';
-
-const story = (text: string, rawTags: string[] = []): FixtureInput => ({
-  input: {
-    source: 'story',
-    step: { text, tags: rawTags.map(parseTag), choices: [], externalCalls: [], status: 'continue' },
-  },
-});
-
-const run = (inputs: FixtureInput[]): Promise<FixtureRun> =>
-  runStream({ systems: [erase(chatSystem)], foreground: 'chat' }, inputs);
-
-const messagesOf = (r: FixtureRun, chatId: string): readonly ChatMessageVM[] => {
-  return r.viewOf(chatSystem).messages[chatId] ?? [];
-};
+import { messagesOf, run, story } from './support';
 
 test('a # chat: tag sets the default route for subsequent messages (#1)', async () => {
   const r = await run([story('', ['chat: pat']), story('Hey there', ['speaker: Pat'])]);

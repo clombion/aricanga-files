@@ -1,6 +1,6 @@
 /** No effect that only copies a value into a signal: derive it (a memo or a plain function) instead. */
 
-import { child, children, heldComponentFile, IGNORE_SCHEMA, nameOf, type Node, type Rule } from '../ast.ts';
+import { child, children, componentRule, nameOf, type Node, type Rule } from '../ast.ts';
 
 const EFFECTS = new Set(['createEffect', 'createRenderEffect']);
 const SETTER = /^set[A-Z]/;
@@ -17,28 +17,18 @@ function onlyCall(fn: Node): Node | undefined {
   return statements.length === 1 && only?.type === 'ExpressionStatement' ? child(only, 'expression') : undefined;
 }
 
-export const mirrors: Rule = {
-  meta: {
-    type: 'problem',
-    docs: { description: 'No effect whose only work is calling a setter; derive the value.' },
-    schema: IGNORE_SCHEMA,
-  },
-  create(context) {
-    if (!heldComponentFile(context)) {
-      return {};
-    }
-    return {
-      CallExpression(node) {
-        if (!EFFECTS.has(nameOf(child(node, 'callee')) ?? '')) {
-          return;
-        }
-        const effect = children(node, 'arguments').at(-1);
-        const call = effect !== undefined && FUNCTIONS.has(effect.type) ? onlyCall(effect) : undefined;
-        const setter = call?.type === 'CallExpression' ? nameOf(child(call, 'callee')) : undefined;
-        if (setter !== undefined && SETTER.test(setter)) {
-          context.report({ message: `an effect that only calls ${setter} mirrors a value: derive it instead`, node });
-        }
-      },
-    };
-  },
-};
+export const mirrors: Rule = componentRule('No effect whose only work is calling a setter; derive the value.', (context) => {
+  return {
+    CallExpression(node) {
+      if (!EFFECTS.has(nameOf(child(node, 'callee')) ?? '')) {
+        return;
+      }
+      const effect = children(node, 'arguments').at(-1);
+      const call = effect !== undefined && FUNCTIONS.has(effect.type) ? onlyCall(effect) : undefined;
+      const setter = call?.type === 'CallExpression' ? nameOf(child(call, 'callee')) : undefined;
+      if (setter !== undefined && SETTER.test(setter)) {
+        context.report({ message: `an effect that only calls ${setter} mirrors a value: derive it instead`, node });
+      }
+    },
+  };
+});

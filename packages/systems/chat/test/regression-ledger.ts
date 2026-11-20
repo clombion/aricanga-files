@@ -1,5 +1,6 @@
-import { parseTag } from '@narratives/foundation';
 import type { FixtureInput } from '@narratives/foundation/testing';
+
+import { story } from './support';
 
 // The BUG-HISTORY disposition audit. Every historical bug stays dead
 // either by construction (the pure synchronous reducer removes its mechanism) or
@@ -35,13 +36,6 @@ interface LedgerEntry {
   readonly rationale: string;
 }
 
-const story = (text: string, rawTags: string[] = []): FixtureInput => ({
-  input: {
-    source: 'story',
-    step: { text, tags: rawTags.map(parseTag), choices: [], externalCalls: [], status: 'continue' },
-  },
-});
-
 // Recorded Input streams for the kernel-physics regressions. The routing scenario
 // is asserted green now; the rest carry the durable repro data, asserted green by
 // their consuming physics task.
@@ -70,7 +64,6 @@ export function fixture(name: string): readonly FixtureInput[] {
   }
   return found;
 }
-
 
 export const LEDGER: readonly LedgerEntry[] = [
   // --- legacy date-based entries (19, frozen) ---

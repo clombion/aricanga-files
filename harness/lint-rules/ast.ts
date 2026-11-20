@@ -166,6 +166,34 @@ export function matches(context: Context, key: string): boolean {
 }
 
 /** Whether the linted file is a `.tsx` module the rule holds (not under its `ignore` globs). */
-export function heldComponentFile(context: Context): boolean {
+function heldComponentFile(context: Context): boolean {
   return context.filename.endsWith('.tsx') && !matches(context, 'ignore');
+}
+
+/** A rule's meta: every project rule reports a problem. */
+export function problemMeta(description: string, schema: readonly unknown[] = []): Rule['meta'] {
+  return { type: 'problem', docs: { description }, schema };
+}
+
+/** A rule that holds component modules only: `.tsx` files outside its `ignore` globs. */
+export function componentRule(description: string, create: (context: Context) => Visitor): Rule {
+  return {
+    meta: problemMeta(description, IGNORE_SCHEMA),
+    create: (context) => (heldComponentFile(context) ? create(context) : {}),
+  };
+}
+
+/** A rule refusing every JSX attribute whose name `refused` holds. */
+export function attributeRule(description: string, refused: (name: string) => boolean, message: string): Rule {
+  return {
+    meta: problemMeta(description),
+    create: (context) => ({
+      JSXAttribute(node) {
+        const name = nameOf(child(node, 'name'));
+        if (name !== undefined && refused(name)) {
+          context.report({ message, node });
+        }
+      },
+    }),
+  };
 }

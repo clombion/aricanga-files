@@ -1,15 +1,11 @@
 /** The environment is read in one place: no `process.env` outside the settings owners. */
 
-import { child, children, matches, memberName, moduleSource, nameOf, OWNERS_SCHEMA, type Rule } from '../ast.ts';
+import { child, children, matches, memberName, moduleSource, nameOf, OWNERS_SCHEMA, problemMeta, type Rule } from '../ast.ts';
 
 const PROCESS = new Set(['process', 'node:process']);
 
 export const env: Rule = {
-  meta: {
-    type: 'problem',
-    docs: { description: 'No process.env read outside the settings owners (the `owners` globs).' },
-    schema: OWNERS_SCHEMA,
-  },
+  meta: problemMeta('No process.env read outside the settings owners (the `owners` globs).', OWNERS_SCHEMA),
   create(context) {
     if (matches(context, 'owners')) {
       return {};

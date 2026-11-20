@@ -1,16 +1,12 @@
 /** One module owns the view store: `createStore` and `reconcile` are imported only by its owners. */
 
-import { matches, OWNERS_SCHEMA, type Rule } from '../ast.ts';
+import { matches, OWNERS_SCHEMA, problemMeta, type Rule } from '../ast.ts';
 import { onImports, refuse } from './imports.ts';
 
 const OWNED = new Set(['createStore', 'reconcile']);
 
 export const storeOwner: Rule = {
-  meta: {
-    type: 'problem',
-    docs: { description: 'createStore and reconcile only in the snapshot adapter (the `owners` globs).' },
-    schema: OWNERS_SCHEMA,
-  },
+  meta: problemMeta('createStore and reconcile only in the snapshot adapter (the `owners` globs).', OWNERS_SCHEMA),
   create(context) {
     if (matches(context, 'owners')) {
       return {};

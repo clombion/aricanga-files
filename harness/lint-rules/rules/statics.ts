@@ -1,13 +1,9 @@
 /** No `this` in a static member: it names the class, which a subclass or a detached call changes. */
 
-import { child, flag, type Node, type Rule } from '../ast.ts';
+import { child, flag, type Node, problemMeta, type Rule } from '../ast.ts';
 
 export const statics: Rule = {
-  meta: {
-    type: 'problem',
-    docs: { description: 'No this inside a static method, static field or static block; name the class.' },
-    schema: [],
-  },
+  meta: problemMeta('No this inside a static method, static field or static block; name the class.'),
   create(context) {
     // A stack of `this` contexts: true while `this` would be the class.
     const stack: boolean[] = [];
