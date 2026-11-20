@@ -25,6 +25,8 @@ import {
   type Runner,
 } from '../lib/dupes.ts';
 import { Exemptions } from '../lib/exemptions.ts';
+import { REPO_ROOT } from '../lib/paths.ts';
+import { typescriptFiles } from '../lib/scope.ts';
 import { tracked } from '../lib/source-files.ts';
 
 export const HARNESS_ID = 'clones';
@@ -54,6 +56,14 @@ const NONE = new Exemptions({});
 
 const roots: string[] = [];
 
+/** A runner standing in for a clean jscpd: its report lists every held file and no clone. */
+const cleanRunner: Runner = (argv) => {
+  const output = argv[argv.indexOf('--output') + 1] ?? '';
+  const files = typescriptFiles().map((path) => ({ path: join(REPO_ROOT, path) }));
+  writeFileSync(join(output, 'jscpd-report.json'), JSON.stringify({ duplicates: [], summary: { files } }));
+  return { kind: 'finished', argv, status: 0, stdout: '', stderr: '' };
+};
+
 /** A runner whose jscpd exits 2. */
 const failingRunner: Runner = (argv) => ({ kind: 'finished', argv, status: 2, stdout: '', stderr: 'planted' });
 
@@ -78,6 +88,13 @@ describe('the repository', () => {
     const errors: string[] = [];
     const status = main({ out: () => undefined, err: (text) => errors.push(text) });
     expect([status, errors]).toEqual([0, []]);
+  });
+
+  test('main reports a clean scan and exits 0', () => {
+    const out: string[] = [];
+    const errors: string[] = [];
+    expect([main({ out: (text) => out.push(text), err: (text) => errors.push(text) }, cleanRunner), errors]).toEqual([0, []]);
+    expect(out).toEqual([`no copied code in the ${typescriptFiles().length} held TypeScript files\n`]);
   });
 
   test('main reports each problem and exits 1', () => {
@@ -130,7 +147,7 @@ describe('the scan', () => {
     const allowed = new Exemptions(Object.fromEntries(both.map((clone) => [cloneKey(clone), 'planted'])));
     expect(scan(root, ['a', 'b'], listed, allowed)).toEqual([]);
     const stale = new Exemptions({ 'exact a/gone.ts a/one.ts 000000000000': 'planted' });
-    expect(scan(root, ['a'], ['a/one.ts'], stale).at(-1)).toMatch(/^stale exemptions/);
+    expect(scan(root, ['a'], ['a/one.ts'], stale).at(-1)).toMatch(/^StaleExemptionError: stale exemptions/);
   });
 
   test('fails a listed file jscpd did not scan, and lets a short one through', () => {
@@ -164,5 +181,6 @@ describe('a run that gives no report', () => {
 
   test('the report reader refuses a report of another shape', () => {
     expect(() => clones('exact', [], tmpdir())).toThrow(/is not an object/);
+    expect(() => clones('exact', { duplicates: 1 }, tmpdir())).toThrow(/where the duplicates list belongs/);
   });
 });

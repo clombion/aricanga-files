@@ -8,7 +8,7 @@
  * `harness/lib/generated.ts` renders the table of `harness.md`.
  */
 
-import { object, json } from './config.ts';
+import { ConfigError, json, object } from './config.ts';
 import { held } from './scope.ts';
 import { textOf, tracked } from './source-files.ts';
 
@@ -107,9 +107,10 @@ export function locked(lockText: string, importer: string): ReadonlyMap<string, 
 function strings(value: unknown, what: string): Readonly<Record<string, string>> {
   const found: Record<string, string> = {};
   for (const [key, entry] of Object.entries(object(value ?? {}, what))) {
-    if (typeof entry === 'string') {
-      found[key] = entry;
+    if (typeof entry !== 'string') {
+      throw new ConfigError(`${what}.${key} is not a string: ${JSON.stringify(entry)}`);
     }
+    found[key] = entry;
   }
   return found;
 }

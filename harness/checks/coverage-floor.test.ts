@@ -65,6 +65,12 @@ function planted(tests: string): readonly FileCoverage[] {
 
 const NONE = new CountedExemptions({});
 
+/** The files a debt names that the listing does not hold. */
+function unlisted(debt: CountedExemptions): readonly string[] {
+  const files = new Set(tracked());
+  return [...debt.entries.keys()].map((key) => key.split(' :: ')[0] ?? key).filter((path) => !files.has(path));
+}
+
 describe('the floor', () => {
   test('passes every line, branch and function taken', () => {
     const files = planted(FULL);
@@ -125,8 +131,7 @@ describe('the debt', () => {
   });
 
   test('names only files the listing holds', () => {
-    const files = new Set(tracked());
-    expect([...DEBT.entries.keys()].map((key) => key.split(' :: ')[0]).filter((path) => path !== undefined && !files.has(path))).toEqual([]);
+    expect(unlisted(DEBT)).toEqual([]);
   });
 });
 
@@ -135,6 +140,17 @@ describe('the gate', () => {
     const coverage = object(object(object(gate, 'vitest.gate.config.ts')['test'] ?? {}, 'test')['coverage'] ?? {}, 'coverage');
     const reporters = Array.isArray(coverage['reporter']) ? coverage['reporter'] : [];
     expect([coverage['reportsDirectory'], reporters.includes('json')]).toEqual([COVERAGE_DIR, true]);
+  });
+
+  test('the script exits 0 on a report with no shortfall', () => {
+    const project = new Project({ linkModules: false });
+    try {
+      project.write('coverage-final.json', JSON.stringify({}));
+      const errors: string[] = [];
+      expect([main((text) => errors.push(text), NONE, project.root), errors]).toEqual([0, []]);
+    } finally {
+      project.remove();
+    }
   });
 
   test('the script exits 1 on a report with a shortfall and writes each problem', () => {
@@ -147,7 +163,7 @@ describe('the gate', () => {
         }),
       );
       const errors: string[] = [];
-      expect([main((text) => errors.push(text), project.root), errors.length]).toEqual([1, 2]);
+      expect([main((text) => errors.push(text), NONE, project.root), errors.length]).toEqual([1, 2]);
     } finally {
       project.remove();
     }

@@ -43,6 +43,9 @@ const TURNED_OFF = Exemptions.grouped({
 
 const UNUSED_DIRECTIVE = 'unused-disable-directive';
 
+const UNUSED_DIRECTIVE_TEXT = '// oxlint-disable-next-line no-console\nexport const value = 1;\n';
+const ESLINT_DIRECTIVE_TEXT = "export function say(): void {\n  // eslint-disable-next-line no-console\n  console.log('x');\n}\n";
+
 /** Each plant's text and the rule codes oxlint must report for it, exactly. */
 const PLANTS: Readonly<Record<string, readonly [string, readonly string[]]>> = {
   'src/explicit-any.ts': ['export const value: any = 1;\n', ['typescript(no-explicit-any)']],
@@ -80,11 +83,8 @@ const PLANTS: Readonly<Record<string, readonly [string, readonly string[]]>> = {
     "import { expect, test } from 'vitest';\ntest.skip('a', () => {\n  expect(1).toBe(1);\n});\n",
     ['vitest(no-disabled-tests)'],
   ],
-  'src/unused-directive.ts': ['// oxlint-disable-next-line no-console\nexport const value = 1;\n', [UNUSED_DIRECTIVE]],
-  'src/eslint-directive.ts': [
-    "export function say(): void {\n  // eslint-disable-next-line no-console\n  console.log('x');\n}\n",
-    ['eslint(no-console)'],
-  ],
+  'src/unused-directive.ts': [UNUSED_DIRECTIVE_TEXT, [UNUSED_DIRECTIVE]],
+  'src/eslint-directive.ts': [ESLINT_DIRECTIVE_TEXT, ['eslint(no-console)']],
   'src/destructure.tsx': [
     'export function Bubble({ vm }: { vm: { text: string } }): unknown {\n  return <p>{vm.text}</p>;\n}\n',
     ['aricanga(vm-prop)', 'solid(no-destructure)'],
@@ -240,13 +240,11 @@ describe('each option, by removal', () => {
   });
 
   test('reportUnusedDisableDirectives: an unused directive passes without it', () => {
-    const [text] = PLANTS['src/unused-directive.ts'] ?? ['', []];
-    expect(lint({ 'src/unused-directive.ts': text }, config({ reportUnusedDisableDirectives: 'off' })).status).toBe(0);
+    expect(lint({ 'src/unused-directive.ts': UNUSED_DIRECTIVE_TEXT }, config({ reportUnusedDisableDirectives: 'off' })).status).toBe(0);
   });
 
   test('respectEslintDisableDirectives: false, an eslint-disable comment silences its rule once respected', () => {
-    const [text] = PLANTS['src/eslint-directive.ts'] ?? ['', []];
-    expect(lint({ 'src/eslint-directive.ts': text }, config({ respectEslintDisableDirectives: true })).status).toBe(0);
+    expect(lint({ 'src/eslint-directive.ts': ESLINT_DIRECTIVE_TEXT }, config({ respectEslintDisableDirectives: true })).status).toBe(0);
   });
 });
 

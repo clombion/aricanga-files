@@ -24,7 +24,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { json, object } from './config.ts';
-import { Exemptions, StaleExemptionError } from './exemptions.ts';
+import { Exemptions } from './exemptions.ts';
 import { fromRoot, REPO_ROOT } from './paths.ts';
 import { type Outcome, run } from './process.ts';
 import { relativeTo as posixRelative } from './relative.ts';
@@ -76,8 +76,11 @@ export function command(binary: string, flags: readonly string[], roots: readonl
   return [binary, ...flags, ...COMMON, '--output', output, ...roots];
 }
 
-function list(value: unknown): readonly unknown[] {
-  return Array.isArray(value) ? value : [];
+function list(value: unknown, what: string): readonly unknown[] {
+  if (!Array.isArray(value)) {
+    throw new TypeError(`jscpd's report holds ${JSON.stringify(value)} where the ${what} list belongs`);
+  }
+  return value;
 }
 
 function relativeTo(name: unknown, root: string): string {
@@ -87,7 +90,7 @@ function relativeTo(name: unknown, root: string): string {
 /** The clones of a parsed jscpd JSON report; the cross-file run keeps the pairs in two files. */
 export function clones(runName: string, report: unknown, root: string): readonly Clone[] {
   const found: Clone[] = [];
-  for (const entry of list(object(report, "jscpd's report")['duplicates'])) {
+  for (const entry of list(object(report, "jscpd's report")['duplicates'], 'duplicates')) {
     const fields = object(entry, 'a duplicate');
     const first = relativeTo(object(fields['firstFile'], 'firstFile')['name'], root);
     const second = relativeTo(object(fields['secondFile'], 'secondFile')['name'], root);
@@ -103,8 +106,8 @@ export function clones(runName: string, report: unknown, root: string): readonly
 
 /** The files a parsed jscpd JSON report's summary lists, relative to the root. */
 export function scanned(report: unknown, root: string): ReadonlySet<string> {
-  const summary = object(object(report, "jscpd's report")['summary'] ?? {}, 'summary');
-  return new Set(list(summary['files']).map((entry) => relativeTo(object(entry, 'a summary file')['path'], root)));
+  const summary = object(object(report, "jscpd's report")['summary'], 'summary');
+  return new Set(list(summary['files'], 'summary files').map((entry) => relativeTo(object(entry, 'a summary file')['path'], root)));
 }
 
 /** The listed files jscpd should have scanned and did not, or cannot scan. */
@@ -178,11 +181,8 @@ export function scan(
     problems.push(
       ...allowed.unexemptedBy(found, cloneKey).map((clone) => `clone (${clone.run}): ${clone.first} and ${clone.second}`),
     );
-  } catch (error) {
-    if (!(error instanceof StaleExemptionError)) {
-      throw error;
-    }
-    problems.push(error.message);
+  } catch (stale) {
+    problems.push(String(stale));
   }
   return problems;
 }

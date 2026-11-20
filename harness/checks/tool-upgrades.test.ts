@@ -95,6 +95,14 @@ describe('the pin reader and the pin check', () => {
     ]);
   });
 
+  test('read a pinned packageManager and a manifest with no engines, and refuse a dependency that is not a string', () => {
+    expect(pinned([{ importer: '.', manifest: { packageManager: 'pnpm@10.28.0' } }], LOCK)).toEqual([
+      { tool: 'node', where: 'package.json engines', version: '' },
+      { tool: 'pnpm', where: 'package.json packageManager', version: '10.28.0' },
+    ]);
+    expect(() => pinned([{ importer: '.', manifest: { devDependencies: { oxlint: 1 } } }], LOCK)).toThrow(/is not a string/);
+  });
+
   test('see a new pin without a row, a pin without a version, and a row without a pin', () => {
     const found: readonly Pin[] = [
       { tool: 'node', where: 'package.json engines', version: '>=22.18.0' },
