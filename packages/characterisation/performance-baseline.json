@@ -1,0 +1,22 @@
+{
+  "chromium": {
+    "render": 17.200000000186265,
+    "updates": 136.8999999994412
+  },
+  "firefox": {
+    "render": 55,
+    "updates": 401
+  },
+  "mobile-chrome": {
+    "render": 21.09999999962747,
+    "updates": 164.1000000005588
+  },
+  "mobile-safari": {
+    "render": 49,
+    "updates": 191
+  },
+  "webkit": {
+    "render": 31,
+    "updates": 167
+  }
+}

@@ -1,6 +1,7 @@
 /**
  * Performance: render 1,000 messages, then apply 100 snapshot updates through the adapter, each
- * flushed. The median of five repetitions is recorded; the spec compares it with the baseline.
+ * flushed. Two warm-up runs are discarded and the fastest of nine is recorded: the minimum is the
+ * intrinsic cost with scheduler noise removed, the stable statistic a regression is judged on.
  */
 
 import { render } from '@solidjs/web';
@@ -15,15 +16,15 @@ interface Message {
 
 const MESSAGES = 1000;
 const UPDATES = 100;
-const REPETITIONS = 5;
+const WARM_UPS = 2;
+const REPETITIONS = 9;
 
 function messages(round: number): Message[] {
   return Array.from({ length: MESSAGES }, (_, index) => ({ id: `m${index}`, text: `message ${index} round ${round}` }));
 }
 
-function median(values: readonly number[]): number {
-  const sorted = values.toSorted((a, b) => a - b);
-  return sorted[Math.floor(sorted.length / 2)] ?? Number.NaN;
+function fastest(values: readonly number[]): number {
+  return Math.min(...values);
 }
 
 function once(): { readonly render: number; readonly updates: number } {
@@ -60,8 +61,9 @@ function once(): { readonly render: number; readonly updates: number } {
 }
 
 export function run(): void {
+  Array.from({ length: WARM_UPS }, once);
   const runs = Array.from({ length: REPETITIONS }, once);
-  const result = { render: median(runs.map((entry) => entry.render)), updates: median(runs.map((entry) => entry.updates)) };
+  const result = { render: fastest(runs.map((entry) => entry.render)), updates: fastest(runs.map((entry) => entry.updates)) };
   record({ id: 'performance/messages', ok: true, threw: false, note: JSON.stringify(result) });
   markDone();
 }

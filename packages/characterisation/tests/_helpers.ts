@@ -28,3 +28,23 @@ export async function runFixture(page: Page, name: string): Promise<ChxState> {
 export function rec(state: ChxState, id: string): ChxRecord | undefined {
   return state.records.find((entry) => entry.id === id);
 }
+
+/** The policy the experiences ship under: scripts and styles from the page's own origin only. */
+export const POLICY = "script-src 'self'; style-src 'self'";
+
+/** Serve the fixture page under `POLICY`. */
+export async function servePolicy(page: Page, fixture: string): Promise<void> {
+  await page.route(`**/?fixture=${fixture}`, async (route) => {
+    const response = await route.fetch();
+    await route.fulfill({ response, headers: { ...response.headers(), 'content-security-policy': POLICY } });
+  });
+}
+
+/** A record the fixture must have written. */
+export function recorded(state: ChxState, id: string): ChxRecord {
+  const found = rec(state, id);
+  if (found === undefined) {
+    throw new Error(`the fixture wrote no record ${id}: ${JSON.stringify(state.records.map((entry) => entry.id))}`);
+  }
+  return found;
+}
