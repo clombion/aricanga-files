@@ -35,9 +35,17 @@ export const OPTIONS = {
 /** The virtual project file a scan opens; it never exists on disk. */
 const CONFIG = join(REPO_ROOT, '.harness-scan', 'tsconfig.json');
 
-/** A held module that ships: TypeScript, not a Vitest test or a Playwright spec. */
+/**
+ * A held module that ships: TypeScript, not a Vitest test, a Playwright spec, or test support under a
+ * `test/`, `tests/` or `testing/` directory.
+ */
 export function isProduction(path: string): boolean {
-  return /\.tsx?$/.test(path) && !/\.(test|spec)\.tsx?$/.test(path) && !path.endsWith('.d.ts');
+  return (
+    /\.tsx?$/.test(path) &&
+    !/\.(test|spec)\.tsx?$/.test(path) &&
+    !path.endsWith('.d.ts') &&
+    !/(^|\/)(test|tests|testing)\//.test(path)
+  );
 }
 
 /** The held production modules the repository scan covers. */
