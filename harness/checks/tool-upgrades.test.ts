@@ -1,0 +1,120 @@
+/**
+ * Every pinned tool has its upstream repository named, and every named repository pins a tool.
+ *
+ * The pins come from the root `package.json`, the held workspace packages' devDependencies and
+ * `pnpm-lock.yaml` (`harness/lib/pins.ts`). `harness.md`'s table of them is generated, so a bump the
+ * fix task has not rendered fails the generated-docs check.
+ */
+
+import { describe, expect, test } from 'vitest';
+
+import { Exemptions } from '../lib/exemptions.ts';
+import { type Pin, pinned, pins, pinsTable, UPSTREAM } from '../lib/pins.ts';
+
+export const HARNESS_ID = 'tool-upgrades';
+
+/** Pin problems the repository carries while the fix is pending, keyed by the problem. */
+const PENDING = new Exemptions({
+  'pnpm: pinned in package.json packageManager, with no version':
+    'adopting: add "packageManager": "pnpm@10.28.0" to package.json, so the pnpm the gate runs is pinned',
+});
+
+/** A pin with no upstream or no version, and an upstream entry that pins nothing. */
+export function pinProblems(found: readonly Pin[], upstream: Readonly<Record<string, string>>): readonly string[] {
+  const problems = found
+    .filter((pin) => (upstream[pin.tool] ?? '') === '')
+    .map((pin) => `${pin.tool}: pinned in ${pin.where}, with no upstream repository named`);
+  problems.push(...found.filter((pin) => pin.version === '').map((pin) => `${pin.tool}: pinned in ${pin.where}, with no version`));
+  const named = new Set(found.map((pin) => pin.tool));
+  problems.push(
+    ...Object.keys(upstream)
+      .toSorted()
+      .filter((tool) => !named.has(tool))
+      .map((tool) => `${tool}: named upstream, but nothing pins it`),
+  );
+  return problems;
+}
+
+const LOCK = `lockfileVersion: '9.0'
+
+importers:
+
+  .:
+    devDependencies:
+      oxlint:
+        specifier: 1.94.0
+        version: 1.94.0
+      planted:
+        specifier: ^1.0.0
+        version: 1.0.3(peer@2.0.0)
+      '@scope/tool':
+        specifier: ^2.0.0
+        version: 2.1.0
+
+  packages/app:
+    devDependencies:
+      vite:
+        specifier: ^8.0.0
+        version: 8.3.8
+
+packages:
+
+  oxlint@1.94.0:
+    resolution: {integrity: sha512-x}
+`;
+
+describe('the repository', () => {
+  test('every pin has its upstream and every upstream a pin', () => {
+    expect(PENDING.unexempted(pinProblems(pins(), UPSTREAM))).toEqual([]);
+  });
+
+  test('the pins table renders a row per pin', () => {
+    const table = pinsTable().split('\n');
+    expect(table.slice(0, 2)).toEqual(['| Tool | Upstream | Pinned in | Pin |', '| --- | --- | --- | --- |']);
+    expect(table).toHaveLength(pins().length + 2);
+  });
+});
+
+describe('the pin reader and the pin check', () => {
+  test('read each importer of the lockfile, strip peer suffixes and skip workspace links', () => {
+    const found = pinned(
+      [
+        {
+          importer: '.',
+          manifest: {
+            devDependencies: { oxlint: '1.94.0', planted: '^1.0.0', '@scope/tool': '^2.0.0', unlocked: '^1', local: 'workspace:*' },
+            engines: { node: '>=22.18.0' },
+          },
+        },
+        { importer: 'packages/app', manifest: { devDependencies: { vite: '^8.0.0' }, dependencies: { solid: '2.0.3' } } },
+      ],
+      LOCK,
+    );
+    expect(found).toEqual([
+      { tool: '@scope/tool', where: 'pnpm-lock.yaml', version: '2.1.0' },
+      { tool: 'node', where: 'package.json engines', version: '>=22.18.0' },
+      { tool: 'oxlint', where: 'pnpm-lock.yaml', version: '1.94.0' },
+      { tool: 'planted', where: 'pnpm-lock.yaml', version: '1.0.3' },
+      { tool: 'pnpm', where: 'package.json packageManager', version: '' },
+      { tool: 'unlocked', where: 'pnpm-lock.yaml', version: '' },
+      { tool: 'vite', where: 'pnpm-lock.yaml', version: '8.3.8' },
+    ]);
+  });
+
+  test('see a new pin without a row, a pin without a version, and a row without a pin', () => {
+    const found: readonly Pin[] = [
+      { tool: 'node', where: 'package.json engines', version: '>=22.18.0' },
+      { tool: 'planted', where: 'pnpm-lock.yaml', version: '1.0.0' },
+      { tool: 'unlocked', where: 'pnpm-lock.yaml', version: '' },
+    ];
+    expect(pinProblems(found, { node: 'nodejs/node', unlocked: 'someone/unlocked', gone: 'someone/gone' })).toEqual([
+      'planted: pinned in pnpm-lock.yaml, with no upstream repository named',
+      'unlocked: pinned in pnpm-lock.yaml, with no version',
+      'gone: named upstream, but nothing pins it',
+    ]);
+  });
+
+  test('let a fully named and pinned set through', () => {
+    expect(pinProblems([{ tool: 'node', where: 'package.json engines', version: '>=22' }], { node: 'nodejs/node' })).toEqual([]);
+  });
+});
