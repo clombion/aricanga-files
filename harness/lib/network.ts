@@ -93,7 +93,7 @@ function lookupHost(args: readonly unknown[]): string {
  */
 function refuse(call: string, host: string | undefined): void {
   if (!isLocalHost(host)) {
-    trip(`a test opened a non-local connection (${call} to ${host ?? ''})`);
+    trip(`a test opened a non-local connection (${call} to ${String(host)})`);
   }
 }
 
