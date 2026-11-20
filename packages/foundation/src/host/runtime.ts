@@ -1,8 +1,8 @@
+import type { EffectTarget, Host } from './effects';
 import type { ReduceContext, RenderContext } from '#src/sim/context';
 import type { Snapshot, SystemId } from '#src/sim/snapshot';
 import type { AnySystem } from '#src/sim/system';
 import type { Effect } from '#src/sim/effect';
-import type { Host } from './effects';
 import type { InkRuntime } from '#src/ink/ink-runtime';
 import type { Input } from '#src/sim/input';
 import type { ReduceObserver } from '#src/sim/trace';
@@ -210,14 +210,15 @@ class Runtime {
   }
 
   private execute(originId: SystemId, effect: Effect): void {
-    execute(effect, {
+    const target: EffectTarget = {
       host: this.host,
       ink: this.ink,
       resume: (resume) => {
         this.send({ resume, source: 'resume' }, originId);
       },
       snapshot: () => this.snapshot(),
-    });
+    };
+    execute(effect, target);
   }
 
   private routeContext(): { readonly foreground: SystemId; readonly systems: ReadonlyMap<SystemId, Readonly<AnySystem>> } {

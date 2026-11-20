@@ -120,5 +120,5 @@ const chatSystem: System<ChatState, ChatCommand, Effect, ChatViewModel> = {
   }),
 };
 
-export { CHAT_TAGS, chatSystem, openedChat, parseChatCommand };
+export { CHAT_TAGS, chatSystem, openedChat };
 export type { ChatCommand, ChatViewModel };
