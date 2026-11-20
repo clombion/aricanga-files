@@ -1,5 +1,5 @@
 /**
- * knip, at its strictest, finds no unused file, dependency or export in production mode or default mode, and every ignore entry carries its reason.
+ * `knip`, at its strictest, finds no unused file, dependency or export in production mode or default mode, and every ignore entry carries its reason.
  *
  * The `deadcode` task runs knip twice, each run treating a configuration hint as an error: in
  * production mode, where only `!` entries and project files count, an export only a test reads is
@@ -8,6 +8,7 @@
  * ignore, so it fails. Each entry of `knip.json`'s ignore lists is held here with its reason.
  */
 
+import { EXIT_CLEAN, EXIT_FINDINGS } from './exit-status.ts';
 import {
   deadcodeRuns,
   ignoreEntries,
@@ -25,20 +26,19 @@ import { textOf } from '#lib/source-files.ts';
 
 const HARNESS_ID = 'deadcode';
 
-const POC = 'poc: the POC reference uses it until it is deleted (#50)';
-
 /**
  * The ignore entries of knip.json, keyed as `ignoreEntries` keys them. Each covers something knip
  * cannot see: code outside the harness's scope, or a package loaded by a tool rather than imported.
  */
 const KNIP_IGNORES = Exemptions.grouped({
+  'pinned by the view-layer brief; loaded by @solidjs/vite-plugin, not imported': ['ignoreDependencies:@solidjs/compiler'],
   'poc: the POC reference is outside the harness until it is deleted (#50)': [
     'ignoreWorkspaces:packages/framework',
     'ignoreWorkspaces:packages/tests',
     'ignoreWorkspaces:packages/test-utils',
     'ignoreWorkspaces:experiences/aricanga',
   ],
-  [POC]: [
+  'poc: the POC reference uses it until it is deleted (#50)': [
     'ignoreDependencies:@ai-sdk/anthropic',
     'ignoreDependencies:@ai-sdk/google',
     'ignoreDependencies:@ai-sdk/openai',
@@ -53,8 +53,13 @@ const KNIP_IGNORES = Exemptions.grouped({
     'ignoreDependencies:zod',
   ],
   'run by harness/scripts/dupes.ts through tools.bin, which knip cannot see': ['ignoreDependencies:jscpd'],
-  'pinned by the view-layer brief; loaded by @solidjs/vite-plugin, not imported': ['ignoreDependencies:@solidjs/compiler'],
 });
+
+/** A planted package's run: its exit status and output. */
+interface Run {
+  readonly status: number;
+  readonly output: string;
+}
 
 const PLANT_CONFIG = {
   entry: ['src/index.ts!', 'src/**/*.test.ts'],
@@ -66,12 +71,9 @@ const PLANT_CONFIG = {
  *
  * @param {Readonly<Record<string, string>>} files - The files.
  * @param {object} config - The config.
- * @returns {readonly { status: number; output: string }[]} Each run's exit status and output.
+ * @returns {readonly Run[]} Each run's exit status and output.
  */
-function plantedRuns(
-  files: Readonly<Record<string, string>>,
-  config: object = PLANT_CONFIG,
-): readonly { status: number; output: string }[] {
+function plantedRuns(files: Readonly<Record<string, string>>, config: object = PLANT_CONFIG): readonly Run[] {
   const project = new Project();
   try {
     project.write('package.json', JSON.stringify({ name: 'plant', private: true, type: 'module', version: '0.0.0' }));
@@ -86,6 +88,29 @@ function plantedRuns(
   } finally {
     project.remove();
   }
+}
+
+/**
+ * Each run's exit status, and whether its output names `name`.
+ *
+ * @param {readonly Run[]} runs - The runs.
+ * @param {string} name - The name the output should hold.
+ * @returns {readonly (readonly [number, boolean])[]} Each run's status and whether it named `name`.
+ */
+function statusAndNamed(runs: readonly Run[], name: string): readonly (readonly [number, boolean])[] {
+  return runs.map((run) => [run.status, run.output.includes(name)] as const);
+}
+
+/**
+ * The output of every repository run of knip that did not exit clean.
+ *
+ * @returns {readonly string[]} Each failed run's output.
+ */
+function failedRepoRuns(): readonly string[] {
+  return deadcodeRuns()
+    .map((args) => knip(REPO_ROOT, args))
+    .filter((run) => run.status !== EXIT_CLEAN)
+    .map((run) => run.stdout + run.stderr);
 }
 
 const CLEAN = {
@@ -105,11 +130,7 @@ describe('the repository', () => {
 
   test('knip finds nothing unused in either mode', () => {
     expect.hasAssertions();
-    const failed = deadcodeRuns()
-      .map((args) => knip(REPO_ROOT, args))
-      .filter((run) => run.status !== 0)
-      .map((run) => run.stdout + run.stderr);
-    expect(failed).toStrictEqual([]);
+    expect(failedRepoRuns()).toStrictEqual([]);
   });
 
   test('every ignore entry of knip.json carries its reason', () => {
@@ -120,22 +141,26 @@ describe('the repository', () => {
   test('knip.json is at the strictest: every issue type an error, no file excused', () => {
     expect.hasAssertions();
     expect(issueTypes()).toContain('exports');
-    expect(strictnessProblems(json(textOf('knip.json')), issueTypes())).toStrictEqual([]);
+    const config = json(textOf('knip.json'));
+    expect(strictnessProblems(config, issueTypes())).toStrictEqual([]);
   });
 });
 
 describe('the deadcode check, on a planted package', () => {
   test('passes a package whose every export is read by production code', () => {
     expect.hasAssertions();
-    expect(plantedRuns(CLEAN).map((run) => run.status)).toStrictEqual([0, 0]);
+    expect(statusAndNamed(plantedRuns(CLEAN), 'unread')).toStrictEqual([
+      [EXIT_CLEAN, false],
+      [EXIT_CLEAN, false],
+    ]);
   });
 
   test('fails an export nothing reads, in both modes', () => {
     expect.hasAssertions();
     const runs = plantedRuns({ ...CLEAN, 'src/lib.ts': 'export const a = 1;\nexport const unread = 2;\n' });
-    expect(runs.map((run) => [run.status, run.output.includes('unread')])).toStrictEqual([
-      [1, true],
-      [1, true],
+    expect(statusAndNamed(runs, 'unread')).toStrictEqual([
+      [EXIT_FINDINGS, true],
+      [EXIT_FINDINGS, true],
     ]);
   });
 
@@ -146,21 +171,24 @@ describe('the deadcode check, on a planted package', () => {
       'src/lib.test.ts': "import { a, testOnly } from './lib.ts';\nconsole.assert(a + testOnly === 3);\n",
       'src/lib.ts': 'export const a = 1;\nexport const testOnly = 2;\n',
     });
-    expect(runs.map((run) => [run.status, run.output.includes('testOnly')])).toStrictEqual([
-      [1, true],
-      [0, false],
+    expect(statusAndNamed(runs, 'testOnly')).toStrictEqual([
+      [EXIT_FINDINGS, true],
+      [EXIT_CLEAN, false],
     ]);
   });
 
   test('fails a stale dependency ignore, which knip hints in default mode', () => {
     expect.hasAssertions();
     const runs = plantedRuns(CLEAN, { ...PLANT_CONFIG, ignoreDependencies: ['no-such-package'] });
-    expect(runs.map((run) => [run.status, run.output.includes('no-such-package')])).toStrictEqual([
-      [0, false],
-      [1, true],
+    expect(statusAndNamed(runs, 'no-such-package')).toStrictEqual([
+      [EXIT_CLEAN, false],
+      [EXIT_FINDINGS, true],
     ]);
   });
 
+});
+
+describe('the deadcode check, on planted configs', () => {
   test('refuses an issue type below error and a file excused from an issue type', () => {
     expect.hasAssertions();
     const strict = { rules: { exports: 'error', types: 'error' } };
