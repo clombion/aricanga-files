@@ -24,7 +24,7 @@ export const FLOOR = 100;
 export const COVERAGE_DIR: string = join(tmpdir(), 'aricanga-coverage');
 
 export const METRICS = ['statements', 'branches', 'functions', 'lines'] as const;
-export type Metric = (typeof METRICS)[number];
+type Metric = (typeof METRICS)[number];
 
 /** One file's coverage: how many items of each metric it has, and how many the run reached. */
 export interface FileCoverage {

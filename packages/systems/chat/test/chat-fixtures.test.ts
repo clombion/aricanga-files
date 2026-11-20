@@ -15,7 +15,7 @@ const ink = (name: string): string =>
 test('single-chat fixture drives a Present-only trace', async () => {
   const run = await runFixture({ story: ink('single-chat'), systems: [erase(chatSystem)] });
   expect(run.trace.length).toBe(2); // two messages
-  expect(new Set(run.effects.map((e) => e.family))).toEqual(new Set(['present']));
+  expect([...new Set(run.effects.map((e) => e.family))]).toEqual(['present']);
   expect(run.effects.every((e) => e.kind === 'chat/showNotification')).toBe(true);
 });
 

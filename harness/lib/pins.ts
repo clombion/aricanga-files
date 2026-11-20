@@ -116,7 +116,7 @@ function strings(value: unknown, what: string): Readonly<Record<string, string>>
 }
 
 /** A workspace package's manifest, keyed by its directory (`.` for the root). */
-export interface Manifest {
+interface Manifest {
   readonly importer: string;
   readonly manifest: unknown;
 }

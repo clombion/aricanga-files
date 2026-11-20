@@ -3,7 +3,7 @@
  * `/?fixture=<key>` and reads the result bus (`window.chxResults`), the DOM and the console.
  */
 
-export interface Fixture {
+interface Fixture {
   readonly run: () => void | Promise<void>;
 }
 

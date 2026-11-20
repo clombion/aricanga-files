@@ -5,7 +5,7 @@
 export const CHAT_SYSTEM_ID = 'chat';
 
 export { chatSystem, CHAT_TAGS } from './system';
-export type { ChatViewModel } from './system';
+export type { ChatCommand, ChatViewModel } from './system';
 export { initChatState } from './state';
 export type { ChatState, ChatView } from './state';
 export { reduceStep } from './reduce';

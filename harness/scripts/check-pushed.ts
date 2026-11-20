@@ -5,6 +5,7 @@
 
 import { readFileSync } from 'node:fs';
 
+import { complain } from '../lib/output.ts';
 import { refused, revisions, updates } from '../lib/pushed.ts';
 import { finished } from '../lib/tools.ts';
 
@@ -13,6 +14,6 @@ const found = updates(readFileSync(0, 'utf8')).flatMap((update) => {
   return refused(log.stdout.split('\n').filter((subject) => subject !== ''));
 });
 if (found.length > 0) {
-  process.stderr.write(`fold these commits before pushing:\n${found.join('\n')}\n`);
+  complain(`fold these commits before pushing:\n${found.join('\n')}`);
 }
 process.exitCode = found.length === 0 ? 0 : 1;

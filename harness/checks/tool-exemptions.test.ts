@@ -21,7 +21,7 @@ import { textOf, tracked } from '../lib/source-files.ts';
 export const HARNESS_ID = 'tool-exemptions';
 
 /** A glob of a tool's configuration, with where it was read. */
-export interface Entry {
+interface Entry {
   readonly tool: string;
   readonly glob: string;
 }

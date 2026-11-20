@@ -97,7 +97,7 @@ const ADRS_EXEMPT = Exemptions.grouped({
 });
 
 /** A reference that names nothing. */
-export interface Unresolved {
+interface Unresolved {
   readonly path: string;
   readonly line: number;
   readonly reference: string;
@@ -166,7 +166,7 @@ function listed(path: string, files: readonly string[]): boolean {
 }
 
 /** What a span resolves against. */
-export interface Resolver {
+interface Resolver {
   /** The listed files. */
   readonly files: readonly string[];
   /** The root script names. */

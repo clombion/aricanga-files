@@ -1,8 +1,10 @@
 import {
   type Command,
   type Effect,
+  hasField,
   type ReduceResult,
   type System,
+  text,
 } from '@narratives/foundation';
 import { isImmediate, placeMessage } from './model/defer';
 import { closeWithReadState, openWithReadState } from './model/read-state';
@@ -12,6 +14,7 @@ import { type ChatState, initChatState } from './state';
 
 // The chat player commands: open a chat (focus + clear-notified + replay) or
 // close back to the hub.
+/** @public */
 export type ChatCommand =
   | Command<'open', { readonly chatId: string }>
   | Command<'close', undefined>;
@@ -27,6 +30,7 @@ export const CHAT_TAGS = [
   'immediate',
 ] as const;
 
+/** @public */
 export interface ChatViewModel {
   readonly view: ChatState['currentView'];
   readonly messages: ChatState['messageHistory'];
@@ -38,6 +42,14 @@ export interface ChatViewModel {
 // Chat kernel (Phase 2). Routing (`# chat:` context, `# targetChat`
 // override, owning-chat identity). Emergent notifications (notify-once),
 // the deferred queue, `# immediate`, and the open/close lifecycle.
+/**
+ * The chat a recorded command opens, if it is an open command: a trace holds commands erased to
+ * `Command`, so the module that owns `ChatCommand` reads one back.
+ */
+export function openedChat(command: Command): string | undefined {
+  return command.kind === 'open' && hasField(command.payload, 'chatId') ? text(command.payload, 'chatId') : undefined;
+}
+
 export const chatSystem: System<ChatState, ChatCommand, Effect, ChatViewModel> = {
   id: 'chat',
   tags: [...CHAT_TAGS],

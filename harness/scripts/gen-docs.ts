@@ -4,9 +4,10 @@
  */
 
 import { run } from '../lib/generated.ts';
+import { complain } from '../lib/output.ts';
 
 const left = run(process.argv.includes('--check'));
 for (const problem of left) {
-  process.stderr.write(`${problem.path}:${problem.line}: ${problem.message}\n`);
+  complain(`${problem.path}:${problem.line}: ${problem.message}`);
 }
 process.exitCode = left.length === 0 ? 0 : 1;

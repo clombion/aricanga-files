@@ -3,7 +3,7 @@ import { type FixtureInput, type FixtureRun, runStream } from '@narratives/found
 import { hwmMonotonic } from '@narratives/system-chat/testing';
 import { expect, test } from 'vitest';
 import type { ChatMessageVM } from '../src/reduce';
-import { type ChatViewModel, chatSystem } from '../src/system';
+import { type ChatCommand, type ChatViewModel, chatSystem } from '../src/system';
 
 const story = (text: string, rawTags: string[] = []): FixtureInput => ({
   input: {
@@ -12,11 +12,11 @@ const story = (text: string, rawTags: string[] = []): FixtureInput => ({
   },
 });
 const open = (chatId: string): FixtureInput => ({
-  input: { source: 'player', command: { kind: 'open', payload: { chatId } } },
+  input: { source: 'player', command: { kind: 'open', payload: { chatId } } satisfies ChatCommand },
   target: 'chat',
 });
 const close = (): FixtureInput => ({
-  input: { source: 'player', command: { kind: 'close', payload: undefined } },
+  input: { source: 'player', command: { kind: 'close', payload: undefined } satisfies ChatCommand },
   target: 'chat',
 });
 

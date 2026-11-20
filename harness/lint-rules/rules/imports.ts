@@ -3,7 +3,7 @@
 import { child, children, type Context, moduleSource, nameOf, type Node, type Visitor } from '../ast.ts';
 
 /** A module a file names, with the names it imports from it (empty for a bare or dynamic import). */
-export interface Imported {
+interface Imported {
   readonly source: string;
   readonly names: readonly string[];
   readonly node: Node;

@@ -154,7 +154,7 @@ test('a stale commit token is a no-op (#3)', () => {
 
 test('a Fetch effect round-trips to a DataArrived resume (#2)', async () => {
   const rt = makeRuntime();
-  rt.send({ source: 'player', command: { kind: 'fetch', payload: undefined } }, 'h');
+  rt.send({ source: 'player', command: { kind: 'fetch', payload: undefined } satisfies HCommand }, 'h');
   await Promise.resolve(); // let fetchData's microtask resolve and re-enter send
   expect(hView(rt).fetched).toBe('VALUE');
 });

@@ -6,6 +6,7 @@ import type { Router } from '../sim/router';
 import type { Snapshot, SystemId } from '../sim/snapshot';
 import type { AnySystem } from '../sim/system';
 
+/** @public */
 export interface ExperienceConfig {
   readonly ink: InkRuntime;
   readonly systems: ReadonlyArray<AnySystem>;
@@ -15,6 +16,7 @@ export interface ExperienceConfig {
   readonly seed?: number;
 }
 
+/** @public */
 export interface Experience {
   /** Inject an inbound value (story routed by tag; player/resume by target). */
   send(input: Input<unknown>, target?: SystemId): void;

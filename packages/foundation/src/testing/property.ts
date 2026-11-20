@@ -14,12 +14,14 @@ export interface Violation {
 
 // An invariant: a pure check over a completed run's observable stream. The chat
 // predicates are of this shape; each physics slice asserts its own green.
+/** @public */
 export type Predicate = (run: FixtureRun) => Violation | null;
 
 // A story with no authored content: the pump can advance it at most to `end`, so a
 // generated `Story(InkStep)` stream never interleaves with authored ink lines.
 const ENDED_STORY = '-> END';
 
+/** @public */
 export interface StreamOptions {
   readonly systems: readonly AnySystem[];
   readonly foreground?: SystemId;
@@ -42,6 +44,8 @@ export function runStream(opts: StreamOptions, inputs: readonly FixtureInput[]):
 /**
  * The outcome of a property run. A test asserts on it (`expect(report.failed, report.message)`), so
  * a property is an assertion of the test that runs it, and a shrunk counterexample is its message.
+ *
+ * @public
  */
 export interface PropertyReport {
   readonly failed: boolean;

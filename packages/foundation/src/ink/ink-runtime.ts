@@ -13,9 +13,12 @@ import {
 // the line text host-side (via injected fixtures); the four drain-class externals
 // are captured into `InkStep.externalCalls`, and `request_data` flips the step to
 // `await-data` so the pump suspends until `Resume(DataArrived)`.
+/** @public */
 export type NameResolver = (id: string) => string;
+/** @public */
 export type DataResolver = (key: string) => string;
 
+/** @public */
 export interface InkFixtures {
   readonly name?: NameResolver;
   readonly data?: DataResolver;
@@ -33,6 +36,9 @@ function inkNumber(value: unknown): number {
   return typeof value === 'number' ? value : Number(inkText(value));
 }
 
+/** The ink externals the runtime binds: the two lookups and every external call it drains. */
+type InkExternal = 'name' | 'data' | ExternalCall['fn'];
+
 export class InkRuntime {
   private readonly story: Story;
   private drained: ExternalCall[] = [];
@@ -45,7 +51,7 @@ export class InkRuntime {
 
   private bindExternals(fixtures: InkFixtures): void {
     // ink hands an external its arguments untyped, so each handler takes `unknown` and converts.
-    const bind = (name: string, fn: (...args: unknown[]) => unknown): void => {
+    const bind = (name: InkExternal, fn: (...args: unknown[]) => unknown): void => {
       // A story that doesn't declare the external simply never calls it; binding
       // an undeclared name is harmless. Guard so a missing declaration can't throw.
       try {

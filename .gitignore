@@ -19,6 +19,7 @@ tests/.tmp-translation-cli/
 
 # Generated artifacts (graphs, coverage reports)
 experiences/*/generated/
+coverage/
 
 # Node
 node_modules/

@@ -4,7 +4,7 @@ import { notifyOnce } from '@narratives/system-chat/testing';
 import { expect, test } from 'vitest';
 import type { ChatMessageVM } from '../src/reduce';
 import { notificationOf } from '../src/effects';
-import { chatSystem } from '../src/system';
+import { type ChatCommand, chatSystem } from '../src/system';
 
 const story = (text: string, rawTags: string[] = []): FixtureInput => ({
   input: {
@@ -13,7 +13,7 @@ const story = (text: string, rawTags: string[] = []): FixtureInput => ({
   },
 });
 const open = (chatId: string): FixtureInput => ({
-  input: { source: 'player', command: { kind: 'open', payload: { chatId } } },
+  input: { source: 'player', command: { kind: 'open', payload: { chatId } } satisfies ChatCommand },
   target: 'chat',
 });
 

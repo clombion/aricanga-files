@@ -37,14 +37,19 @@ list.
 <!-- generated: checks -->
 - `boundaries` (`harness/checks/boundaries.test.ts`): The module boundaries hold under oxlint: one import that must fail and one that must pass per boundary.
 - `clones` (`harness/checks/clones.test.ts`): `harness/scripts/dupes.ts` finds a planted clone at its floor and past it, and fails when jscpd scans less than git lists.
+- `contract-widening` (`harness/checks/contract-widening.test.ts`): A contract union is never widened to `string`, and its words are not respelled outside its owner.
 - `coverage-floor` (`harness/checks/coverage-floor.test.ts`): The coverage floor fails an untaken branch, an uncalled function and an unrun line, on all four metrics, and its debt fails both ways.
 - `doc-references` (`harness/checks/doc-references.test.ts`): Every reference in current text resolves: links and anchors, backticked paths, tasks, ADRs and commands.
+- `doubles` (`harness/checks/doubles.test.ts`): A scripted double fails its test on an unscripted call, even when the code under test catches it.
 - `exemption-lists` (`harness/checks/exemption-lists.test.ts`): Every literal list a check consults is an exemption declaration, and every declaration is consulted.
 - `gate` (`harness/checks/gate.test.ts`): The gate writes no file, runs only locked tools, and the git hooks run the gate's own tasks.
 - `generated-docs` (`harness/checks/generated-docs.test.ts`): Every generated block of the docs equals a fresh render, names a known generator, and every generator has a block.
 - `history-narration` (`harness/checks/history-narration.test.ts`): Current text describes the project as it is: no comment or doc narrates how it got there.
+- `isolation` (`harness/checks/isolation.test.ts`): A test that leaves a timer pending when it ends fails, and the next test starts clean.
 - `lint-settings` (`harness/checks/lint-settings.test.ts`): oxlint, under this project's settings, fails each planted violation of a rule the harness rests on.
+- `network-guard` (`harness/checks/network-guard.test.ts`): A test that connects to, looks up or fetches a host other than this machine trips the network guard.
 - `one-claims` (`harness/checks/one-claims.test.ts`): Every claim of a single owner in current text is registered, and its probe holds it.
+- `owner-registry` (`harness/checks/owner-registry.test.ts`): Each guarded API is used only by its owner module; the scan is proven on planted modules.
 - `project-lint-rules` (`harness/checks/project-lint-rules.test.ts`): Every project lint rule fires on its must-fire fixtures and passes its must-stay-clean ones under the repository's oxlint.
 - `pushed-subjects` (`harness/checks/pushed.test.ts`): The pre-push hook refuses a `fixup!`, `squash!` or `amend!` commit in the pushed range.
 - `repo-paths` (`harness/checks/repo-paths.test.ts`): No harness module but `harness/lib/paths.ts` computes the repository root or a path from its own location.
@@ -55,6 +60,7 @@ list.
 - `terms` (`harness/checks/terms.test.ts`): No current text uses a retired term or a refused pattern of `docs/terms.toml`.
 - `tool-exemptions` (`harness/checks/tool-exemptions.test.ts`): Every tool exemption is live: each ignore, override, include and exclude glob matches a listed file.
 - `tool-upgrades` (`harness/checks/tool-upgrades.test.ts`): Every pinned tool has its upstream repository named, and every named repository pins a tool.
+- `type-exports` (`harness/checks/type-exports.test.ts`): An exported type is read by another production module (or a harness check) or carries `@public`.
 - `typecheck-settings` (`harness/checks/typecheck-settings.test.ts`): tsc, under this project's settings, fails each planted typing hole a setting closes, and passes it once that setting is removed.
 - `vitest-settings` (`harness/checks/vitest-settings.test.ts`): Vitest, under this project's settings, fails each planted test a bare configuration would pass.
 <!-- end: checks -->

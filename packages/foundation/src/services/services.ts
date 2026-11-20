@@ -3,6 +3,7 @@ import type { DomainEvent } from './event-bus';
 // Instance-scoped services injected at the composition root (no module singletons).
 // `SaveStore` is named to avoid shadowing the DOM `Storage` global.
 
+/** @public */
 export interface Clock {
   now(): number;
 }
@@ -12,6 +13,7 @@ export interface SaveStore {
   save(data: string): void;
 }
 
+/** @public */
 export interface AnalyticsSink {
   record(event: DomainEvent): void;
 }

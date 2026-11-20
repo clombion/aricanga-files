@@ -12,6 +12,7 @@ export function tagArb(keys: readonly string[]): fc.Arbitrary<Tag> {
     .map(([key, value]) => ({ key, value, raw: `${key}: ${value}` }));
 }
 
+/** @public */
 export interface StepGenOptions {
   /** Tag keys the generated step may carry. */
   readonly tagKeys?: readonly string[];

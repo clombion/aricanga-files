@@ -188,7 +188,7 @@ export function scan(
 }
 
 /** The output streams `main` writes to; a check passes its own. */
-export interface Streams {
+interface Streams {
   readonly out: (text: string) => void;
   readonly err: (text: string) => void;
 }

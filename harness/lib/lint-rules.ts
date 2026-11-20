@@ -72,7 +72,7 @@ export function fixtureFolders(): readonly string[] {
 }
 
 /** A diagnostic of the planted run: the rule code (`aricanga(env)`) and the planted file. */
-export interface Diagnostic {
+interface Diagnostic {
   readonly code: string;
   readonly file: string;
   readonly message: string;

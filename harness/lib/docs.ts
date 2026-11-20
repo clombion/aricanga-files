@@ -48,7 +48,7 @@ export interface Span {
 }
 
 /** A fenced code block: its info string and its lines. */
-export interface Fence {
+interface Fence {
   readonly path: string;
   readonly line: number;
   readonly info: string;
@@ -63,7 +63,7 @@ export interface Link {
 }
 
 /** A Markdown heading. */
-export interface Heading {
+interface Heading {
   readonly line: number;
   readonly level: number;
   readonly text: string;

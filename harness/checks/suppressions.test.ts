@@ -97,14 +97,14 @@ const REFUSED_TS = /^@ts-(ignore|nocheck)\b/;
 const COVERAGE = /^(v8|c8|istanbul)\s+ignore\b/;
 
 /** A suppression comment the census refuses. */
-export interface Problem {
+interface Problem {
   readonly path: string;
   readonly line: number;
   readonly problem: string;
 }
 
 /** What the census finds in one module: the refused comments and the counted sites. */
-export interface Census {
+interface Census {
   readonly problems: readonly Problem[];
   readonly sites: readonly string[];
 }

@@ -12,7 +12,7 @@ export interface Node {
   readonly [key: string]: unknown;
 }
 
-export interface Report {
+interface Report {
   readonly message: string;
   readonly node: Node;
 }

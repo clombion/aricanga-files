@@ -8,13 +8,13 @@ import type { FixtureInput } from '@narratives/foundation/testing';
 // is dispositioned and that each kernel-physics bug keeps its fixture alive.
 
 /** A GitHub issue of this repository, such as `#13`. */
-export type IssueRef = `#${number}`;
+type IssueRef = `#${number}`;
 
 /**
  * Where a historical bug is held. A kernel-physics bug names the open issue that turns its
  * predicate green, and none once the predicate holds; a deferred bug names the issue it waits on.
  */
-export type Disposition =
+type Disposition =
   | {
       readonly kind: 'kernel-physics';
       readonly predicate: string;
@@ -26,7 +26,7 @@ export type Disposition =
   | { readonly kind: 'view'; readonly phase: 'Phase 3' }
   | { readonly kind: 'build'; readonly phase: 'Phase 4' };
 
-export interface LedgerEntry {
+interface LedgerEntry {
   /** `BUG-NNN` for numbered entries; a stable slug for the 19 legacy date entries. */
   readonly id: string;
   readonly legacy: boolean;

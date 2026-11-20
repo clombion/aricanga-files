@@ -4,7 +4,7 @@ const ZERO = /^0+$/;
 const FOLD = /^(fixup|squash|amend)! /;
 
 /** A ref update git hands the pre-push hook on its standard input. */
-export interface Update {
+interface Update {
   readonly localSha: string;
   readonly remoteSha: string;
 }

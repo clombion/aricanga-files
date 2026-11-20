@@ -13,6 +13,7 @@ export interface FixtureInput {
   readonly target?: SystemId;
 }
 
+/** @public */
 export interface FixtureOptions {
   /** Ink source — compiled in-harness, so fixtures are authored as `.ink` text. */
   readonly story: string;

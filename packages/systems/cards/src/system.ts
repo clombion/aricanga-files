@@ -10,12 +10,14 @@ export const CARD_TAGS = ['card', 'stat'] as const;
 
 // A genuinely different vocabulary from chat — no message/read/deferral concepts.
 // The forcing function that keeps foundation honest (ADR-0004/0005).
+/** @public */
 export interface CardsState {
   readonly deckCursor: number;
   readonly stats: Readonly<Record<string, number>>;
   readonly history: readonly { readonly cardId: string; readonly delta: number }[];
 }
 
+/** @public */
 export interface CardsViewModel {
   readonly cursor: number;
   readonly stats: Readonly<Record<string, number>>;

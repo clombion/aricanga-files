@@ -1,5 +1,6 @@
 import type { ChatMessageVM } from './reduce';
 
+/** @public */
 export interface ChatView {
   readonly type: 'hub' | 'chat';
   readonly chatId?: string;

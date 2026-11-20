@@ -66,6 +66,11 @@ export const CLAIMS: readonly Claim[] = [
     probe: probe(/^function reclaim\(/m, 'packages/foundation/src/sim/system.ts', ['packages/']),
   },
   {
+    path: 'harness/lib/output.ts',
+    clause: "The one module of the harness's scripts that writes to the standard streams",
+    probe: probe(/\bprocess\.(?:stdout|stderr)\b/, 'harness/lib/output.ts', ['harness/lib/', 'harness/scripts/']),
+  },
+  {
     path: 'harness/lib/process.ts',
     clause: 'The one owner of starting a child process',
     probe: probe(/^import .* from 'node:child_process';$/m, 'harness/lib/process.ts'),

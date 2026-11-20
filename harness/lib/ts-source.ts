@@ -42,7 +42,23 @@ const virtual = new Map<string, string>();
 let session: API | undefined;
 let parsed = 0;
 
-function api(): API {
+/**
+ * Serve `files` ({absolute path: text}) through the session's virtual file system until the returned
+ * function is called. A mounted path need not exist on disk; a mounted real path reads as its text.
+ */
+export function mount(files: ReadonlyMap<string, string>): () => void {
+  for (const [name, text] of files) {
+    virtual.set(name, text);
+  }
+  return () => {
+    for (const name of files.keys()) {
+      virtual.delete(name);
+    }
+  };
+}
+
+/** The process's one TypeScript API session; type-aware scans open their projects on it. */
+export function api(): API {
   if (session === undefined) {
     const started = new API({
       cwd: REPO_ROOT,
@@ -90,7 +106,7 @@ export function nodes(root: Node): Node[] {
 }
 
 /** A comment of a module: its text (delimiters included), its 1-based line and the code before it. */
-export interface Comment {
+interface Comment {
   readonly text: string;
   readonly line: number;
   readonly code: string;

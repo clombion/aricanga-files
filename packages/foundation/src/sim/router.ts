@@ -2,6 +2,7 @@ import type { SystemId } from './snapshot';
 import type { AnySystem } from './system';
 import type { InkStep } from './story';
 
+/** @public */
 export interface RouteContext {
   readonly foreground: SystemId;
   readonly systems: ReadonlyMap<SystemId, AnySystem>;
