@@ -4,11 +4,11 @@
  * pending fails.
  */
 
-import { Slot, isEmpty } from '#lib/lists.ts';
+import { Slot, isEmpty } from './lists.ts';
 import { afterEach, beforeEach } from 'vitest';
-import { checkTrips } from '#lib/doubles.ts';
-import { install as guardNetwork } from '#lib/network.ts';
-import { install as guardTimers } from '#lib/timers.ts';
+import { checkTrips } from './doubles.ts';
+import { install as guardNetwork } from './network.ts';
+import { install as guardTimers } from './timers.ts';
 
 /** What the current test's guards release when it ends. */
 interface Releases {

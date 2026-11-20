@@ -8,6 +8,7 @@ import { REPO_ROOT, fromRoot } from './paths.ts';
 import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { environment, run } from './process.ts';
 import type { Finished } from './process.ts';
+import { Prefixes } from './exemptions.ts';
 import { ToolError } from './tool-error.ts';
 import path from 'node:path';
 import { tmpdir } from 'node:os';
@@ -16,7 +17,7 @@ import { tmpdir } from 'node:os';
 const TIMEOUT_MS = 300_000;
 
 /** The variables that tie a child run to this one. */
-const TIED_PREFIXES: readonly string[] = ['VITEST', 'NODE_V8_COVERAGE'];
+const TIED_PREFIXES = new Prefixes(['VITEST', 'NODE_V8_COVERAGE']);
 
 /** Where a tool runs, and what it reads. */
 interface ToolOptions {
@@ -42,7 +43,7 @@ interface ProjectOptions {
 function isolatedEnv(extra: Readonly<Record<string, string>> = {}): Record<string, string> {
   const env = Object.fromEntries(
     Object.entries(environment()).filter(
-      ([name]: readonly [string, string]) => !TIED_PREFIXES.some((prefix) => name.startsWith(prefix)),
+      ([name]: readonly [string, string]) => !TIED_PREFIXES.starts(name),
     ),
   );
   return { ...env, ...extra };

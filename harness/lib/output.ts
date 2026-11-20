@@ -1,4 +1,4 @@
-/** The one module of the harness's scripts that writes to the standard streams, and how a script ends. */
+/** The one module of the harness's scripts that writes to the standard streams. A script ends through `exitCode`. */
 
 /** The exit code of a run that found nothing wrong. */
 const EXIT_SUCCESS = 0;

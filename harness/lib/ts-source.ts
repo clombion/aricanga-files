@@ -3,12 +3,14 @@
  * `typescript/unstable/ast` and the parser of `typescript/unstable/sync`. Every scan that reads
  * TypeScript structure asks this module.
  *
- * TypeScript 7 parses in its native compiler, reached through one API session per process. Text is
- * handed to it through a virtual file system, so a planted module is parsed exactly as a listed one,
- * by extension: a `.tsx` path parses as JSX.
+ * TypeScript 7 parses in its native compiler, reached through one API session per process
+ * (`ts-session.ts`). Text is handed to it through a virtual file system, so a planted module is
+ * parsed exactly as a listed one, by extension: a `.tsx` path parses as JSX.
  */
 
-import type { CommentRange, Expression, Node, SourceFile } from 'typescript/unstable/ast';
+import type { CommentRange, Expression, ImportDeclaration, Node, SourceFile } from 'typescript/unstable/ast';
+import { api, mount } from './ts-session.ts';
+import { getLeadingCommentRanges, getTrailingCommentRanges } from 'typescript/unstable/ast/scanner';
 import {
   isIdentifier,
   isImportDeclaration,
@@ -17,91 +19,11 @@ import {
   isPropertyAccessExpression,
   isStringLiteral,
 } from 'typescript/unstable/ast/is';
-import { getLeadingCommentRanges, getTrailingCommentRanges } from 'typescript/unstable/ast/scanner';
-import { API } from 'typescript/unstable/sync';
+import { randomUUID } from 'node:crypto';
 
-import { REPO_ROOT } from './paths.ts';
-
-export type { Expression, Node, SourceFile };
-
+/** A module TypeScript could not parse. */
 class ParseError extends Error {
-  override readonly name = 'ParseError';
-}
-
-const VIRTUAL_ROOT = '/harness-virtual';
-const virtual = new Map<string, string>();
-let session: API | undefined;
-let parsed = 0;
-
-/**
- * Serve `files` ({absolute path: text}) through the session's virtual file system until the returned
- * function is called. A mounted path need not exist on disk; a mounted real path reads as its text.
- */
-export function mount(files: ReadonlyMap<string, string>): () => void {
-  for (const [name, text] of files) {
-    virtual.set(name, text);
-  }
-  return () => {
-    for (const name of files.keys()) {
-      virtual.delete(name);
-    }
-  };
-}
-
-/**
- * Close the open session, if there is one. Idempotent: the session is forgotten before it is closed,
- * so a second call (or the exit hook after an explicit close) finds nothing to close, and a later
- * `api()` starts a fresh session instead of handing out a closed one.
- */
-export function closeSession(): void {
-  const open = session;
-  session = undefined;
-  open?.close();
-}
-
-/** The process's one TypeScript API session; type-aware scans open their projects on it. */
-export function api(): API {
-  if (session === undefined) {
-    session = new API({
-      cwd: REPO_ROOT,
-      fs: {
-        fileExists: (fileName) => (virtual.has(fileName) ? true : undefined),
-        readFile: (fileName) => virtual.get(fileName),
-      },
-    });
-    process.once('exit', closeSession);
-  }
-  return session;
-}
-
-/** Parse one module's text under its path; the extension decides the language (`.tsx` is JSX). */
-export function parse(path: string, text: string): SourceFile {
-  parsed += 1;
-  const fileName = `${VIRTUAL_ROOT}/${parsed}/${path}`;
-  virtual.set(fileName, text);
-  try {
-    const snapshot = api().updateSnapshot({ openFiles: [fileName] });
-    const file = snapshot.getDefaultProjectForFile(fileName)?.program.getSourceFile(fileName);
-    api().updateSnapshot({ closeFiles: [fileName] });
-    if (file === undefined) {
-      throw new ParseError(`TypeScript returned no source file for ${path}`);
-    }
-    return file;
-  } finally {
-    virtual.delete(fileName);
-  }
-}
-
-/** Every node of a tree, depth first, the tree itself included. */
-export function nodes(root: Node): Node[] {
-  const found: Node[] = [];
-  const visit = (node: Node): undefined => {
-    found.push(node);
-    node.forEachChild(visit);
-    return;
-  };
-  visit(root);
-  return found;
+  public override readonly name = 'ParseError';
 }
 
 /** A comment of a module: its text (delimiters included), its 1-based line and the code before it. */
@@ -111,77 +33,168 @@ interface Comment {
   readonly code: string;
 }
 
-/** Every comment of a module, in order; comment-like text inside strings and templates is not one. */
-export function comments(file: SourceFile): Comment[] {
-  const {text} = file;
+const VIRTUAL_ROOT = '/harness-virtual';
+
+/** The difference between TypeScript's 0-based lines and a reader's 1-based ones. */
+const FIRST_LINE = 1;
+
+/** The length of the brace that opens a JSX expression. */
+const BRACE_LENGTH = 1;
+
+/** The column a line starts at. */
+const LINE_START = 0;
+
+/** The opening of a line comment. */
+const LINE_COMMENT = '//';
+
+const BLOCK_OPENING = /^\/\*+/u;
+const BLOCK_CLOSING = /\*+\/$/u;
+const BLOCK_LINE_STAR = /^\s*\*?\s?/u;
+
+/**
+ * Parse one module's text under its path; the extension decides the language (`.tsx` is JSX).
+ *
+ * @param {string} path - The module's repository-relative path.
+ * @param {string} text - Its text.
+ * @returns {SourceFile} The parsed module.
+ */
+function parse(path: string, text: string): SourceFile {
+  const fileName = `${VIRTUAL_ROOT}/${randomUUID()}/${path}`;
+  const unmount = mount(new Map([[fileName, text]]));
+  try {
+    const snapshot = api().updateSnapshot({ openFiles: [fileName] });
+    const file = snapshot.getDefaultProjectForFile(fileName)?.program.getSourceFile(fileName);
+    api().updateSnapshot({ closeFiles: [fileName] });
+    if (file === undefined) {
+      throw new ParseError(`TypeScript returned no source file for ${path}`);
+    }
+    return file;
+  } finally {
+    unmount();
+  }
+}
+
+/**
+ * Every node of a tree, depth first, the tree itself included.
+ *
+ * @param {Node} root - The tree.
+ * @returns {Node[]} Its nodes.
+ */
+function nodes(root: Node): Node[] {
+  const found: Node[] = [];
+  const visit = (node: Node): void => {
+    found.push(node);
+    node.forEachChild(visit);
+  };
+  visit(root);
+  return found;
+}
+
+/**
+ * The comment ranges around one node: the trivia before and after it, and, for a JSX comment
+ * (`{/* … *\/}`, an empty JSX expression no child node carries the trivia of), the trivia inside it.
+ *
+ * @param {string} text - The module's text.
+ * @param {Node} node - The node.
+ * @returns {readonly CommentRange[]} The ranges.
+ */
+function rangesAround(text: string, node: Node): readonly CommentRange[] {
+  const around = [...(getLeadingCommentRanges(text, node.pos) ?? []), ...(getTrailingCommentRanges(text, node.end) ?? [])];
+  if (!isJsxExpression(node) || node.expression !== undefined) {
+    return around;
+  }
+  const inside = text.indexOf('{', node.pos) + BRACE_LENGTH;
+  return [...around, ...(getLeadingCommentRanges(text, inside) ?? []), ...(getTrailingCommentRanges(text, inside) ?? [])];
+}
+
+/**
+ * Every comment of a module, in order; comment-like text inside strings and templates is not one.
+ *
+ * @param {SourceFile} file - The module.
+ * @returns {Comment[]} Its comments.
+ */
+function comments(file: SourceFile): Comment[] {
+  const { text } = file;
   const lines = text.split('\n');
   const seen = new Map<number, CommentRange>();
-  const collect = (ranges: readonly CommentRange[] | undefined): void => {
-    for (const range of ranges ?? []) {
-      seen.set(range.pos, range);
-    }
-  };
   for (const node of [...nodes(file), file.endOfFileToken]) {
-    collect(getLeadingCommentRanges(text, node.pos));
-    collect(getTrailingCommentRanges(text, node.end));
-    // A JSX comment, `{/* … */}`, is an empty JSX expression: no child node carries its trivia.
-    if (isJsxExpression(node) && node.expression === undefined) {
-      const inside = text.indexOf('{', node.pos) + 1;
-      collect(getLeadingCommentRanges(text, inside));
-      collect(getTrailingCommentRanges(text, inside));
+    for (const range of rangesAround(text, node)) {
+      seen.set(range.pos, range);
     }
   }
   return [...seen.values()]
-    .toSorted((a, b) => a.pos - b.pos)
+    .toSorted((left, right) => left.pos - right.pos)
     .map((range) => {
       const { line, character } = file.getLineAndCharacterOfPosition(range.pos);
       return {
-        code: (lines[line] ?? '').slice(0, character).trim(),
-        line: line + 1,
+        code: (lines[line] ?? '').slice(LINE_START, character).trim(),
+        line: line + FIRST_LINE,
         text: text.slice(range.pos, range.end),
       };
     });
 }
 
-/** A comment's body without its delimiters and the leading stars of a block comment's lines. */
-export function body(comment: string): string {
-  if (comment.startsWith('//')) {
-    return comment.slice(2).trim();
+/**
+ * A comment's body without its delimiters and the leading stars of a block comment's lines.
+ *
+ * @param {string} comment - The comment, delimiters included.
+ * @returns {string} Its body.
+ */
+function body(comment: string): string {
+  if (comment.startsWith(LINE_COMMENT)) {
+    return comment.slice(LINE_COMMENT.length).trim();
   }
   return comment
-    .replace(/^\/\*+/, '')
-    .replace(/\*+\/$/, '')
+    .replace(BLOCK_OPENING, '')
+    .replace(BLOCK_CLOSING, '')
     .split('\n')
-    .map((line) => line.replace(/^\s*\*?\s?/, ''))
+    .map((line) => line.replace(BLOCK_LINE_STAR, ''))
     .join('\n')
     .trim();
 }
 
 /**
- * The local names a module imports from `module`, mapped to the names they import. `module` is a
- * specifier, or a test of the specifier as the module writes it.
+ * The names one import declaration binds, mapped to the names they import.
+ *
+ * @param {ImportDeclaration} statement - The import declaration.
+ * @returns {readonly (readonly [string, string])[]} Each local name and the name it imports.
  */
-export function importsFrom(file: SourceFile, module: string | ((specifier: string) => boolean)): ReadonlyMap<string, string> {
-  const named = typeof module === 'string' ? (specifier: string): boolean => specifier === module : module;
-  const found = new Map<string, string>();
-  for (const statement of file.statements) {
-    if (isImportDeclaration(statement) && isStringLiteral(statement.moduleSpecifier) && named(statement.moduleSpecifier.text)) {
-      const bindings = statement.importClause?.namedBindings;
-      if (bindings !== undefined && isNamedImports(bindings)) {
-        for (const element of bindings.elements) {
-          const imported = element.propertyName ?? element.name;
-          if (isIdentifier(imported)) {
-            found.set(element.name.text, imported.text);
-          }
-        }
-      }
-    }
+function namedImports(statement: ImportDeclaration): readonly (readonly [string, string])[] {
+  const bindings = statement.importClause?.namedBindings;
+  if (bindings === undefined || !isNamedImports(bindings)) {
+    return [];
   }
-  return found;
+  return bindings.elements.flatMap((element) => {
+    const imported = element.propertyName ?? element.name;
+    return isIdentifier(imported) ? [[element.name.text, imported.text] as const] : [];
+  });
 }
 
-/** The names of a property-access chain from its root, such as `test.describe.skip`. */
-export function chain(node: Expression): string[] | undefined {
+/**
+ * The local names a module imports from `module`, mapped to the names they import.
+ *
+ * @param {SourceFile} file - The module.
+ * @param {string | ((specifier: string) => boolean)} module - A specifier, or a test of the specifier as the module writes it.
+ * @returns {ReadonlyMap<string, string>} Each local name and the name it imports.
+ */
+function importsFrom(file: SourceFile, module: string | ((specifier: string) => boolean)): ReadonlyMap<string, string> {
+  const named = typeof module === 'string' ? (specifier: string): boolean => specifier === module : module;
+  return new Map(
+    file.statements.flatMap((statement) =>
+      isImportDeclaration(statement) && isStringLiteral(statement.moduleSpecifier) && named(statement.moduleSpecifier.text)
+        ? namedImports(statement)
+        : [],
+    ),
+  );
+}
+
+/**
+ * The names of a property-access chain from its root, such as `test.describe.skip`.
+ *
+ * @param {Expression} node - The expression.
+ * @returns {string[] | undefined} The names, or undefined when it is not a chain of names.
+ */
+function chain(node: Expression): string[] | undefined {
   if (isIdentifier(node)) {
     return [node.text];
   }
@@ -191,3 +204,8 @@ export function chain(node: Expression): string[] | undefined {
   }
   return undefined;
 }
+
+export { closeSession } from './ts-session.ts';
+export type { Expression, Node, SourceFile } from 'typescript/unstable/ast';
+export { body, chain, comments, importsFrom, nodes, parse };
+export type { Comment };

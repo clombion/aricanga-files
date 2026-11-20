@@ -6,6 +6,7 @@
  */
 
 import { bin, isolatedEnv } from './tools.ts';
+import { Accepted } from './exemptions.ts';
 import { REPO_ROOT } from './paths.ts';
 import { randomInt } from 'node:crypto';
 import { runConcurrently } from './process.ts';
@@ -48,7 +49,7 @@ const DEFAULT_REPEATS = 2;
 const SEED_BOUND = 1_000_000;
 
 /** The flags a hunt reads; every other argument is a file filter. */
-const FLAGS: ReadonlySet<string> = new Set(['--seed', '--copies', '--repeats']);
+const FLAGS = new Accepted(['--seed', '--copies', '--repeats']);
 
 /**
  * The Vitest invocation of one copy of a hunt.

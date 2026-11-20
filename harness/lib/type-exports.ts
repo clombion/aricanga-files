@@ -6,20 +6,25 @@
  * test-support module's types are read by any other module.
  */
 
-import * as ast from 'typescript/unstable/ast';
-import type { Symbol as TsSymbol } from 'typescript/unstable/sync';
-
+import type { Checker, Symbol as TsSymbol } from 'typescript/unstable/sync';
+import type { Identifier, InterfaceDeclaration, Node, TypeAliasDeclaration } from 'typescript/unstable/ast';
+import {
+  SyntaxKind,
+  isExportAssignment,
+  isExportDeclaration,
+  isIdentifier,
+  isImportDeclaration,
+  isInterfaceDeclaration,
+  isSourceFile,
+  isTypeAliasDeclaration,
+} from 'typescript/unstable/ast';
 import { isProduction, nodes, resolved, sourceOf } from './checker.ts';
-import type { Scan } from './checker.ts';
 import { Prefixes } from './exemptions.ts';
+import type { Scan } from './checker.ts';
+import { isEmpty } from './lists.ts';
 
 /** Modules that read the harness library's types without being production modules themselves. */
 const CHECK_ROOTS = new Prefixes(['harness/checks/']);
-
-/** Whether `reader` counts as a reader of a type `declarer` exports. */
-function reads(reader: string, declarer: string): boolean {
-  return reader !== declarer && (!isProduction(declarer) || isProduction(reader) || CHECK_ROOTS.starts(reader));
-}
 
 /** An exported type and whether its doc comment carries `@public`. */
 interface ExportedType {
@@ -28,71 +33,140 @@ interface ExportedType {
   readonly isPublic: boolean;
 }
 
-function exported(declaration: ast.TypeAliasDeclaration | ast.InterfaceDeclaration): boolean {
-  return (declaration.modifiers ?? []).some((modifier) => modifier.kind === ast.SyntaxKind.ExportKeyword);
+/**
+ * Whether `reader` counts as a reader of a type `declarer` exports.
+ *
+ * @param {string} reader - The module that names the type.
+ * @param {string} declarer - The module that exports it.
+ * @returns {boolean} Whether the naming counts as a read.
+ */
+function reads(reader: string, declarer: string): boolean {
+  return reader !== declarer && (!isProduction(declarer) || isProduction(reader) || CHECK_ROOTS.starts(reader));
 }
 
-function inImportOrExport(node: ast.Node): boolean {
-  for (let current: ast.Node | undefined = node.parent; current !== undefined; current = current.parent) {
-    if (ast.isImportDeclaration(current) || ast.isExportDeclaration(current) || ast.isExportAssignment(current)) {
+/**
+ * Whether a type declaration is exported.
+ *
+ * @param {TypeAliasDeclaration | InterfaceDeclaration} declaration - The declaration.
+ * @returns {boolean} Whether it carries `export`.
+ */
+function exported(declaration: TypeAliasDeclaration | InterfaceDeclaration): boolean {
+  return (declaration.modifiers ?? []).some((modifier) => modifier.kind === SyntaxKind.ExportKeyword);
+}
+
+/**
+ * Whether a node sits in an import or export declaration.
+ *
+ * @param {Node} node - The node.
+ * @returns {boolean} Whether an enclosing node imports or exports.
+ */
+function inImportOrExport(node: Node): boolean {
+  for (let current = node.parent; !isSourceFile(current); current = current.parent) {
+    if (isImportDeclaration(current) || isExportDeclaration(current) || isExportAssignment(current)) {
       return true;
-    }
-    if (ast.isSourceFile(current)) {
-      return false;
     }
   }
   return false;
 }
 
-/** The exported types of the covered production modules, by symbol id. */
+/**
+ * The exported types of the covered production modules.
+ *
+ * @param {Scan} scan - The open scan.
+ * @returns {ReadonlyMap<number, ExportedType>} Each exported type, by symbol id.
+ */
 function exportedTypes(scan: Scan): ReadonlyMap<number, ExportedType> {
   const found = new Map<number, ExportedType>();
   for (const path of scan.paths) {
     for (const statement of sourceOf(scan, path).statements) {
-      if ((ast.isTypeAliasDeclaration(statement) || ast.isInterfaceDeclaration(statement)) && exported(statement)) {
-        const symbol = scan.checker.getSymbolAtLocation(statement.name);
-        if (symbol !== undefined) {
-          const isPublic = scan.checker.getJsDocTagsOfSymbol(symbol).some((tag) => tag.name === 'public');
-          found.set(symbol.id, { isPublic, name: statement.name.text, path });
-        }
+      const symbol =
+        (isTypeAliasDeclaration(statement) || isInterfaceDeclaration(statement)) && exported(statement)
+          ? scan.checker.getSymbolAtLocation(statement.name)
+          : undefined;
+      if (symbol !== undefined && (isTypeAliasDeclaration(statement) || isInterfaceDeclaration(statement))) {
+        const isPublic = scan.checker.getJsDocTagsOfSymbol(symbol).some((tag) => tag.name === 'public');
+        found.set(symbol.id, { isPublic, name: statement.name.text, path });
       }
     }
   }
   return found;
 }
 
-/** For each symbol id, the covered reader modules that name it. */
+/**
+ * The names a module reads: its identifiers outside import and export declarations.
+ *
+ * @param {Scan} scan - The open scan.
+ * @param {string} path - The module.
+ * @returns {readonly Identifier[]} The identifiers.
+ */
+function namesIn(scan: Scan, path: string): readonly Identifier[] {
+  return nodes(sourceOf(scan, path)).filter((node): node is Identifier => isIdentifier(node) && !inImportOrExport(node));
+}
+
+/** The symbols each read name resolves to, resolved once per symbol across the scan. */
+class Targets {
+  private readonly aliases = new Map<number, TsSymbol | undefined>();
+
+  private readonly checker: Readonly<Checker>;
+
+  /**
+   * A resolver over one checker.
+   *
+   * @param {Readonly<Checker>} checker - The scan's checker.
+   */
+  public constructor(checker: Readonly<Checker>) {
+    this.checker = checker;
+  }
+
+  /**
+   * The symbol a name's symbol resolves to through its aliases.
+   *
+   * @param {TsSymbol} symbol - The name's symbol.
+   * @returns {TsSymbol | undefined} The resolved symbol, or undefined.
+   */
+  public of(symbol: TsSymbol): TsSymbol | undefined {
+    if (!this.aliases.has(symbol.id)) {
+      this.aliases.set(symbol.id, resolved(this.checker, symbol));
+    }
+    return this.aliases.get(symbol.id);
+  }
+}
+
+/**
+ * For each symbol, the covered reader modules that name it.
+ *
+ * @param {Scan} scan - The open scan.
+ * @returns {ReadonlyMap<number, ReadonlySet<string>>} The reader modules, by symbol id.
+ */
 function readers(scan: Scan): ReadonlyMap<number, ReadonlySet<string>> {
-  const { checker } = scan;
   const found = new Map<number, Set<string>>();
-  const aliases = new Map<number, TsSymbol | undefined>();
+  const targets = new Targets(scan.checker);
   for (const path of scan.paths) {
-    const names = nodes(sourceOf(scan, path)).filter(
-      (node): node is ast.Identifier => ast.isIdentifier(node) && !inImportOrExport(node),
-    );
-    const symbols = names.length === 0 ? [] : checker.getSymbolAtLocation(names);
-    for (const symbol of symbols) {
-      if (symbol === undefined) {
-        continue;
-      }
-      if (!aliases.has(symbol.id)) {
-        aliases.set(symbol.id, resolved(checker, symbol));
-      }
-      const target = aliases.get(symbol.id);
+    const names = namesIn(scan, path);
+    const symbols = isEmpty(names) ? [] : scan.checker.getSymbolAtLocation(names);
+    for (const target of symbols.flatMap((symbol) => (symbol === undefined ? [] : [targets.of(symbol)]))) {
       if (target !== undefined) {
-        const files = found.get(target.id) ?? new Set<string>();
-        files.add(path);
-        found.set(target.id, files);
+        found.set(target.id, new Set([...(found.get(target.id) ?? []), path]));
       }
     }
   }
   return found;
 }
 
-/** The exported types no other reader module names and that are not marked `@public`. */
-export function unread(scan: Scan): readonly ExportedType[] {
+/**
+ * The exported types no other reader module names and that are not marked `@public`.
+ *
+ * @param {Scan} scan - The open scan.
+ * @returns {readonly ExportedType[]} The unread types.
+ */
+function unread(scan: Scan): readonly ExportedType[] {
   const read = readers(scan);
   return [...exportedTypes(scan)]
-    .filter(([id, type]) => !type.isPublic && ![...(read.get(id) ?? [])].some((path) => reads(path, type.path)))
-    .map(([, type]) => type);
+    .filter(
+      ([id, type]: readonly [number, ExportedType]) =>
+        !type.isPublic && ![...(read.get(id) ?? [])].some((path) => reads(path, type.path)),
+    )
+    .map(([, type]: readonly [number, ExportedType]) => type);
 }
+
+export { unread };

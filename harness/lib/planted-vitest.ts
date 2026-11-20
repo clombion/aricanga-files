@@ -8,7 +8,7 @@ import { json, object } from './config.ts';
 import { Project } from './tools.ts';
 
 /** The setup module the gate's Vitest config loads for every test. */
-const GUARDS = 'harness/lib/vitest-setup/guards.ts';
+const GUARDS = 'harness/lib/guards.ts';
 
 /** What a planted test ended as, and why it failed if it did. */
 interface Outcome {

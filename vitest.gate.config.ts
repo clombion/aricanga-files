@@ -51,7 +51,7 @@ const config: ViteUserConfig = defineConfig({
     ],
     restoreMocks: true,
     sequence: { shuffle: true },
-    setupFiles: ['./harness/lib/vitest-setup/guards.ts'],
+    setupFiles: ['./harness/lib/guards.ts'],
     testTimeout: 30_000,
     unstubEnvs: true,
     unstubGlobals: true,

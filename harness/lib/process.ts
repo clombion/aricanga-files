@@ -4,6 +4,7 @@
  */
 
 import { spawn, spawnSync } from 'node:child_process';
+import { env } from 'node:process';
 import { once } from 'node:events';
 import { text } from 'node:stream/consumers';
 
@@ -56,7 +57,7 @@ const MAX_OUTPUT_BYTES = MAX_OUTPUT_MIB * BYTES_PER_MIB;
  */
 function environment(): Record<string, string> {
   return Object.fromEntries(
-    Object.entries(process.env).flatMap(([name, value]: readonly [string, string | undefined]) =>
+    Object.entries(env).flatMap(([name, value]: readonly [string, string | undefined]) =>
       value === undefined ? [] : [[name, value]],
     ),
   );
