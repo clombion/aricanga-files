@@ -45,6 +45,7 @@ const TURNED_OFF = Exemptions.grouped({
   'contradicts typescript/prefer-optional-chain': ['oxc/no-optional-chaining'],
   'contradicts unicorn/no-null: absence is written undefined, the form exactOptionalPropertyTypes types': ['eslint/no-undefined'],
   'contradicts unicorn/prefer-ternary': ['eslint/no-ternary'],
+  'contradicts unicorn/prefer-top-level-await; the browser entries are ES modules': ['node/no-top-level-await'],
   'contradicts vitest/prefer-importing-vitest-globals': ['vitest/no-importing-vitest-globals'],
   'contradicts vitest/require-hook': ['vitest/no-hooks'],
   "has no setting for Solid's `for`; label association is the project rule aricanga/labels (ADR-0008)": [
@@ -57,7 +58,9 @@ const TURNED_OFF = Exemptions.grouped({
     'solid/no-proxy-apis',
     'solid/prefer-classlist',
   ],
-  'oxlint loads a JS plugin through its default export, so the project plugin module alone must have one': ['import/no-default-export'],
+  'oxlint, Vite, Playwright and Vitest load the plugin and config modules through their default export; the override holds only those': [
+    'import/no-default-export',
+  ],
   "restates the gate config's one testTimeout, which the vitest-settings check holds": ['vitest/require-test-timeout'],
 });
 

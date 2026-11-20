@@ -24,9 +24,9 @@ const MARKDOWN = new Prefixes(['.md']);
 const EXEMPT = Exemptions.grouped({
   'the sandbox Lit component exists until #24 replaces it with a Solid part': [
     site('experiences/sandbox/src/main.ts', 'Lit'),
-    site('experiences/sandbox/src/sk-message.test.ts', 'Lit'),
+    site('experiences/sandbox/test/sk-message.test.ts', 'Lit'),
     site('experiences/sandbox/src/sk-message.ts', 'Lit'),
-    site('experiences/sandbox/src/skeleton.test.ts', 'Lit'),
+    site('experiences/sandbox/test/skeleton.test.ts', 'Lit'),
   ],
 });
 
