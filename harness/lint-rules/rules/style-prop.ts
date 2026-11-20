@@ -1,7 +1,7 @@
 /** No `style` prop: the compiler writes an inline style attribute, which the CSP refuses. */
 
-import { attributeRule } from '../ast.ts';
-import type { Rule } from '../ast.ts';
+import type { Rule } from '#lint-rules/ast.ts';
+import { attributeRule } from '#lint-rules/jsx.ts';
 
 export const styleProp: Rule = attributeRule(
   'No style prop in JSX; set dynamic values with a class or a ref.',

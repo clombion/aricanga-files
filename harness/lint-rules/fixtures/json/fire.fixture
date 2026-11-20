@@ -1,4 +1,4 @@
-// path: harness/scripts/json-fire.ts
-import config from '../../tsconfig.json';
+// path: json-fire.ts
+import config from './tsconfig.json';
 
 export const planted: unknown = config;

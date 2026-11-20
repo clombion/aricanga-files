@@ -1,18 +1,18 @@
 // path: harness/lib/statics-clean.ts
 export class Clock {
-  static readonly origin = 0;
+  public static readonly origin: number = Number.MIN_SAFE_INTEGER;
 
-  readonly offset: number;
+  public readonly offset: number;
 
-  constructor(offset: number) {
+  public constructor(offset: number) {
     this.offset = offset;
   }
 
-  static start(): number {
+  public static start(): number {
     return Clock.origin;
   }
 
-  read(): number {
+  public read(): number {
     return Clock.origin + this.offset;
   }
 }

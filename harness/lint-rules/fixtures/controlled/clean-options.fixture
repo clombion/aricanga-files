@@ -1,7 +1,13 @@
 // path: packages/systems/chat/src/view/controlled-options.tsx
-export function Picker(props: { vm: { choice: string; pick: (choice: string) => void } }) {
+import type { JSX } from 'solid-js';
+
+function Picker(props: { readonly vm: { readonly choice: string; readonly pick: (choice: string) => void } }): JSX.Element {
   return (
-    <select onChange={(event) => props.vm.pick(event.currentTarget.value)}>
+    <select
+      onChange={(event: Readonly<{ currentTarget: Readonly<{ value: string }> }>) => {
+        props.vm.pick(event.currentTarget.value);
+      }}
+    >
       <option value="a">a</option>
       <option value="b" selected={props.vm.choice === 'b'}>
         b
@@ -10,6 +16,8 @@ export function Picker(props: { vm: { choice: string; pick: (choice: string) => 
   );
 }
 
-export function Seeded() {
+function Seeded(): JSX.Element {
   return <input value="seed" />;
 }
+
+export { Picker, Seeded };

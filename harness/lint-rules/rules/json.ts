@@ -1,8 +1,13 @@
 /** A JSON module is imported with `with { type: 'json' }`, the form the platform requires. */
 
-import { child, children, moduleSource, nameOf, problemMeta, text } from '../ast.ts';
-import type { Node, Rule } from '../ast.ts';
+import type { Node, Rule } from '#lint-rules/ast.ts';
+import { child, children, moduleSource, nameOf, problemMeta, text } from '#lint-rules/ast.ts';
 
+/**
+ * Whether an import declares `type: 'json'` among its attributes.
+ * @param {Node} node - An `ImportDeclaration`.
+ * @returns {boolean} Whether one attribute is `type: 'json'`.
+ */
 function declaresJson(node: Node): boolean {
   return children(node, 'attributes').some(
     (attribute) => nameOf(child(attribute, 'key')) === 'type' && text(child(attribute, 'value') ?? attribute, 'value') === 'json',

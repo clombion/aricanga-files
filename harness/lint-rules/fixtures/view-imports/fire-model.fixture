@@ -1,2 +1,2 @@
 // path: packages/systems/chat/src/view/view-imports-model.ts
-export type { ReadState } from '../model/read-state';
+export type { ReadState } from '@narratives/system-chat/model/read-state';
