@@ -1,0 +1,16 @@
+# The project's vocabulary. `harness/checks/terms.test.ts` refuses each entry in current text.
+#
+# [retired]: a term the project has replaced, mapped to its replacement. It is matched as a whole
+# word, in any case, in prose outside code spans: a span quoting the old name is a quotation.
+# [refused]: a pattern that belongs elsewhere, mapped to where it belongs, matched in prose and in
+# code spans of all current text.
+# [refused-in-code]: the same, matched only in the comments of code.
+
+[retired]
+Lit = "Solid"
+LitElement = "a Solid part"
+
+[refused]
+
+[refused-in-code]
+"task-[0-9]{3}" = "task ids belong in the tracker (GitHub issues) and in commit trailers, not in code"
