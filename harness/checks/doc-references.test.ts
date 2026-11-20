@@ -18,68 +18,22 @@
  * A span holding `<`, `{`, `*`, `...` or a space is a placeholder or a pattern and is not resolved.
  */
 
-import { Accepted, Exemptions, Prefixes, site } from '#lib/exemptions.ts';
+import { Accepted, Exemptions, site } from '#lib/exemptions.ts';
 import { Doc, currentSpans, currentText, markdown, markdownPaths } from '#lib/docs.ts';
-import type { Link, Prose, Span } from '#lib/docs.ts';
+import { adrProblems, fenceProblems, key, linkProblems, spanProblems } from './doc-references.resolve.ts';
 import { describe, expect, test } from 'vitest';
-import { json, object, repoTasks } from '#lib/config.ts';
-import { textOf, tracked } from '#lib/source-files.ts';
-import { existsSync } from 'node:fs';
-import { fromRoot } from '#lib/paths.ts';
-import { heldFiles } from '#lib/scope.ts';
-import { posix } from 'node:path';
+import { installedPaths, quotedValues } from './doc-references.installed.ts';
+import type { Resolver } from './doc-references.resolve.ts';
+import { repoTasks } from '#lib/config.ts';
+import { tracked } from '#lib/source-files.ts';
 
 const HARNESS_ID = 'doc-references';
-
-const SUFFIXES = new Accepted([
-  '.ts',
-  '.tsx',
-  '.js',
-  '.mjs',
-  '.md',
-  '.json',
-  '.toml',
-  '.yaml',
-  '.yml',
-  '.lock',
-  '.css',
-  '.html',
-  '.ink',
-  '.sh',
-  '.txt',
-]);
-const SHELL_FENCES = new Accepted(['sh', 'bash', 'shell', 'console', 'zsh']);
-/** The locked tools a shell fence must run through `pnpm exec` or `pnpm run`. */
-const LOCKED_TOOLS = new Accepted([
-  'oxlint',
-  'oxfmt',
-  'biome',
-  'tsc',
-  'vitest',
-  'playwright',
-  'knip',
-  'jscpd',
-  'stylelint',
-  'lefthook',
-  'commitlint',
-  'vite',
-]);
-const UNLOCKED_RUNNERS = new Accepted(['npx', 'pnpx', 'bunx', 'dlx']);
-const DECISIONS = 'docs/roadmap/decisions/';
-const ADR = /\bADR-(\d{4})\b/gu;
-const PNPM_RUN = /\bpnpm run ([\w:.-]+)/gu;
-/** A scoped package specifier, with or without a subpath (`@solidjs/web`). */
-const PACKAGE = /^(@[\w.-]+\/[\w.-]+)(?:\/.*)?$/u;
 
 /** Links that are right though they do not resolve, keyed by `site(path, target)`. */
 const LINKS_EXEMPT = Exemptions.grouped({});
 
 /** Backticked paths and tasks that are right though they do not resolve, keyed by `site(path, span)`. */
 const SPANS_EXEMPT = Exemptions.grouped({
-  'HARNESS_STATUS.md is written with the harness-status check; the entries go when it exists': [
-    site('docs/roadmap/decisions/0006-test-first-and-correctness-harness.md', 'HARNESS_STATUS.md'),
-    site('harness.md', 'HARNESS_STATUS.md'),
-  ],
   'systems/phone is created by the phone-chrome issue (#34); the entry goes when it exists': [
     site('docs/roadmap/phase-3-view-layer.md', 'systems/phone'),
   ],
@@ -88,187 +42,16 @@ const SPANS_EXEMPT = Exemptions.grouped({
 /** ADR numbers named before their record exists, keyed by `site(path, ADR-NNNN)`. */
 const ADRS_EXEMPT = Exemptions.grouped({});
 
-/** A reference that names nothing. */
-interface Unresolved {
-  readonly path: string;
-  readonly line: number;
-  readonly reference: string;
-  readonly problem: string;
-}
-
-function key(found: Unresolved): string {
-  return site(found.path, found.reference);
-}
-
-function directories(files: readonly string[]): ReadonlySet<string> {
-  const found = new Set<string>();
-  for (const file of files) {
-    let parent = posix.dirname(file);
-    while (parent !== '.' && !found.has(parent)) {
-      found.add(parent);
-      parent = posix.dirname(parent);
-    }
-  }
-  return found;
-}
-
-/** A relative link whose file or anchor is missing. */
-function linkProblems(link: Link, files: readonly string[], docs: ReadonlyMap<string, Doc>): Unresolved[] {
-  if (/^[a-z]+:/u.test(link.target)) {
-    return [];
-  }
-  const [target = '', fragment = ''] = link.target.split('#', 2);
-  const resolved = target === '' ? link.path : posix.normalize(posix.join(posix.dirname(link.path), decodeURI(target)));
-  const dirs = directories(files);
-  if (!files.includes(resolved) && !dirs.has(resolved.replace(/\/$/u, ''))) {
-    return [{ line: link.line, path: link.path, problem: 'the linked file is not listed', reference: link.target }];
-  }
-  if (fragment !== '' && !(docs.get(resolved)?.anchors().has(fragment) ?? false)) {
-    return [
-      { line: link.line, path: link.path, problem: 'the anchor is not a heading of the linked file', reference: link.target },
-    ];
-  }
-  return [];
-}
-
-function looksLikePath(text: string): boolean {
-  if (
-    text.replaceAll('/', '') === '' ||
-    /[<{* ]/u.test(text) ||
-    text.includes('...') ||
-    text.includes('…') ||
-    text.startsWith('-') ||
-    /^[a-z]+:/u.test(text)
-  ) {
-    return false;
-  }
-  return text.includes('/') || SUFFIXES.has(posix.extname(text));
-}
-
-/** Whether `path` names a listed file or directory, or is the tail of one. */
-function listed(path: string, files: readonly string[]): boolean {
-  if (files.includes(path) || directories(files).has(path)) {
-    return true;
-  }
-  const tail = `/${path}`;
-  return path.includes('/')
-    ? files.some((file) => file.endsWith(tail)) || [...directories(files)].some((dir) => dir.endsWith(tail))
-    : files.some((file) => posix.basename(file) === path) ||
-        [...directories(files)].some((dir) => posix.basename(dir) === path);
-}
-
-/** What a span resolves against. */
-interface Resolver {
-  /** The listed files. */
-  readonly files: readonly string[];
-  /** The root script names. */
-  readonly taskNames: ReadonlySet<string>;
-  /** Whether a `node_modules/` path is installed. */
-  readonly installed: (path: string) => boolean;
-  /** Whether a value is quoted as a string in held code or config: a rule id, an effect kind. */
-  readonly named: (value: string) => boolean;
-}
-
-/** A backticked path, package, named value or task that resolves to nothing. */
-function spanProblems(span: Span, resolver: Resolver): Unresolved[] {
-  const { files, taskNames, installed, named } = resolver;
-  const {text} = span;
-  const unresolved = (problem: string): Unresolved[] => [{ line: span.line, path: span.path, problem, reference: text }];
-  for (const match of text.matchAll(PNPM_RUN)) {
-    const task = match[1] ?? '';
-    if (!taskNames.has(task)) {
-      return unresolved(`no task is named ${JSON.stringify(task)}`);
-    }
-  }
-  if (!looksLikePath(text)) {
-    return [];
-  }
-  if (PACKAGE.test(text)) {
-    const name = PACKAGE.exec(text)?.[1] ?? '';
-    return installed(`node_modules/${name}`) ? [] : unresolved('the package is not installed');
-  }
-  const path = text.replace(/\/$/u, '');
-  if (path === 'node_modules' || path.startsWith('node_modules/')) {
-    return installed(path) ? [] : unresolved('the path is not installed');
-  }
-  const fromDoc = posix.normalize(posix.join(posix.dirname(span.path), path));
-  if (listed(path, files) || files.includes(fromDoc) || directories(files).has(fromDoc)) {
-    return [];
-  }
-  const [first = ''] = path.split('/');
-  if (path.includes('/') && installed(`node_modules/${first}`)) {
-    return [];
-  }
-  return posix.extname(path) === '' && named(text) ? [] : unresolved('the path is not listed');
-}
-
-/** An `ADR-NNNN` that names no decision record. */
-function adrProblems(line: Prose, files: readonly string[]): Unresolved[] {
-  return [...line.text.matchAll(ADR)]
-    .filter((match) => !files.some((file) => file.startsWith(`${DECISIONS}${match[1] ?? ''}-`)))
-    .map((match) => ({ line: line.line, path: line.path, problem: 'no decision record has this number', reference: match[0] }));
-}
-
-/** A locked tool in a shell fence run bare or through an unlocked runner. */
-function fenceProblems(doc: Doc): Unresolved[] {
-  return doc
-    .fences()
-    .filter((fence) => SHELL_FENCES.has(fence.info.split(' ', 1)[0] ?? ''))
-    .flatMap((fence) =>
-      fence.lines.flatMap((line, offset) => {
-        const words = line.trim().replace(/^\$ /u, '').split(/\s+/u);
-        const bare = LOCKED_TOOLS.has(words[0] ?? '');
-        const unlocked = UNLOCKED_RUNNERS.has(words[0] ?? '') || (words[0] === 'pnpm' && words[1] === 'dlx');
-        return bare || unlocked
-          ? [{ line: fence.line + offset + 1, path: doc.path, problem: 'a locked tool runs through pnpm', reference: line.trim() }]
-          : [];
-      }),
-    );
-}
-
-/** The listed workspace packages: their names and folders. */
-function workspaces(): readonly (readonly [string, string])[] {
-  return tracked()
-    .filter((path) => path.endsWith('package.json') && !path.includes('node_modules/'))
-    .flatMap((path) => {
-      const {name} = object(json(textOf(path)), path);
-      return typeof name === 'string' ? [[name, posix.dirname(path)] as const] : [];
-    });
-}
-
 /**
- * Whether a `node_modules/` path is installed: at the root, or, for a package, under any workspace
- * package's own `node_modules` (pnpm links a dependency only where it is declared), or as a
- * workspace package itself.
+ * What the repository's spans resolve against, the installed paths read from disk once.
+ *
+ * @returns {Promise<Resolver>} The resolver.
  */
-function installedOnDisk(path: string): boolean {
-  if (existsSync(fromRoot(path))) {
-    return true;
-  }
-  const inner = path.replace(/^node_modules\//u, '');
-  const known = workspaces();
-  return (
-    known.some(([name]) => inner === name || inner.startsWith(`${name}/`)) ||
-    known.some(([, folder]) => existsSync(fromRoot(folder, 'node_modules', inner)))
-  );
-}
-
-const QUOTED = /['"]([^'"\n]+)['"]/gu;
-
-/** The checks' own modules: their planted strings must never resolve a reference. */
-const PLANTS = new Prefixes(['harness/checks/']);
-
-/** Every string value quoted in held TypeScript, JavaScript and JSON outside the checks. */
-function quotedValues(): ReadonlySet<string> {
-  return new Set(
-    heldFiles('.ts', '.tsx', '.js', '.mjs', '.json')
-      .filter((path) => !PLANTS.starts(path))
-      .flatMap((path) => [...textOf(path).matchAll(QUOTED)].map((match) => match[1] ?? '')),
-  );
-}
-
-function repoTaskNames(): ReadonlySet<string> {
-  return new Set(repoTasks().keys());
+async function repoResolver(): Promise<Resolver> {
+  const quoted = quotedValues();
+  const base = { files: tracked(), named: (value: string): boolean => quoted.has(value), taskNames: new Set(repoTasks().keys()) };
+  const installed = await installedPaths(currentSpans(), base);
+  return { ...base, installed: (path) => installed.has(path) };
 }
 
 describe('the repository', () => {
@@ -280,12 +63,9 @@ describe('the repository', () => {
     expect(LINKS_EXEMPT.unexemptedBy(found, key)).toStrictEqual([]);
   });
 
-  test('every backticked path and task resolves', () => {
+  test('every backticked path and task resolves', async () => {
     expect.hasAssertions();
-    const files = tracked();
-    const names = repoTaskNames();
-    const quoted = quotedValues();
-    const resolver: Resolver = { files, installed: installedOnDisk, named: (value) => quoted.has(value), taskNames: names };
+    const resolver = await repoResolver();
     const found = currentSpans().flatMap((span) => spanProblems(span, resolver));
     expect(SPANS_EXEMPT.unexemptedBy(found, key)).toStrictEqual([]);
   });
@@ -293,12 +73,14 @@ describe('the repository', () => {
   test('every ADR named has its record', () => {
     expect.hasAssertions();
     const files = tracked();
-    expect(ADRS_EXEMPT.unexemptedBy(currentText().flatMap((line) => adrProblems(line, files)), key)).toStrictEqual([]);
+    const found = currentText().flatMap((line) => adrProblems(line, files));
+    expect(ADRS_EXEMPT.unexemptedBy(found, key)).toStrictEqual([]);
   });
 
   test('every locked tool in a shell fence runs through pnpm', () => {
     expect.hasAssertions();
-    expect(markdownPaths().flatMap((path) => fenceProblems(markdown(path)))).toStrictEqual([]);
+    const found = markdownPaths().flatMap((path) => fenceProblems(markdown(path)));
+    expect(found).toStrictEqual([]);
   });
 });
 
@@ -425,4 +207,4 @@ describe('the fence check', () => {
   });
 });
 
-export { HARNESS_ID, adrProblems, fenceProblems, linkProblems, spanProblems };
+export { HARNESS_ID };

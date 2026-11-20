@@ -53,6 +53,7 @@ const TURNED_OFF = Exemptions.grouped({
     'solid/no-proxy-apis',
     'solid/prefer-classlist',
   ],
+  'oxlint loads a JS plugin through its default export, so the project plugin module alone must have one': ['import/no-default-export'],
   "restates the gate config's one testTimeout, which the vitest-settings check holds": ['vitest/require-test-timeout'],
 });
 
