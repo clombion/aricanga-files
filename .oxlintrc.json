@@ -417,6 +417,14 @@
       "rules": {
         "import/no-nodejs-modules": "off"
       }
+    },
+    {
+      "files": [
+        "harness/lint-rules/plugin.ts"
+      ],
+      "rules": {
+        "import/no-default-export": "off"
+      }
     }
   ],
   "env": {
