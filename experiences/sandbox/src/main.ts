@@ -1,4 +1,4 @@
-// Sandbox experience — the Phase 0 walking skeleton (task-007).
+// Sandbox experience — the Phase 0 walking skeleton.
 // Thread: ink (compiled to story.json by the Vite ink plugin) → InkRuntime →
 // stub reduce (system-chat) → Lit <sk-message> render. Real contracts/physics
 // arrive in Phases 1–2; the real Aricanga experience is ported in Phase 3.

@@ -1,6 +1,6 @@
 import { css, html, LitElement } from 'lit';
 
-// Baseline Lit Web Component for the Phase 0 skeleton (task-003).
+// Baseline Lit Web Component for the Phase 0 skeleton (replaced by a Solid part in #24).
 // No decorators — uses static `properties` so it compiles cleanly under strict
 // TypeScript with `useDefineForClassFields`, and proves the Lit + Shadow DOM
 // toolchain end to end.

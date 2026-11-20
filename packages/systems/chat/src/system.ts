@@ -35,8 +35,8 @@ export interface ChatViewModel {
   readonly lastRead: ChatState['lastReadMessageId'];
 }
 
-// Chat kernel (Phase 2). task-020: routing (`# chat:` context, `# targetChat`
-// override, owning-chat identity). task-021: emergent notifications (notify-once),
+// Chat kernel (Phase 2). Routing (`# chat:` context, `# targetChat`
+// override, owning-chat identity). Emergent notifications (notify-once),
 // the deferred queue, `# immediate`, and the open/close lifecycle.
 export const chatSystem: System<ChatState, ChatCommand, Effect, ChatViewModel> = {
   id: 'chat',

@@ -48,16 +48,16 @@ Shadow DOM boundary so an experience embeds anywhere.
   each new view-model touches only the nodes whose data changed; components run
   once, with no virtual-DOM diff on every step.
 - **Typed component contracts.** JSX is type-checked, so the `Parts` override
-  seam is held by the compiler. Lit's templates are tagged strings that need a
+  seam is held by the compiler. `Lit`'s templates are tagged strings that need a
   separate analyser to type-check bindings.
 - **Small runtime, real DOM.** Templates compile to DOM creation code with no
   `eval`, which keeps the strict CSP (`script-src 'self'; style-src 'self'`)
   reachable.
 
-React, Svelte and Lit all bundle for offline use and can sit behind a custom
+React, Svelte and `Lit` all bundle for offline use and can sit behind a custom
 element (Svelte compiles to custom elements directly), so embedding and offline
 play do not separate them. The deciding factors are the three above: React
-re-renders through a virtual DOM and Lit's bindings are untyped, while Svelte is
+re-renders through a virtual DOM and `Lit`'s bindings are untyped, while Svelte is
 the closest alternative and loses on the typed, overridable component contract.
 
 ## Consequences

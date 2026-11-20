@@ -4,7 +4,7 @@ import { cardsSystem } from '@narratives/system-cards';
 import { chatSystem } from '@narratives/system-chat';
 import { expect, test } from 'vitest';
 
-// task-015 — the design-for-two proof, now driven through the generic runtime.
+// The design-for-two proof, driven through the generic runtime.
 // Lives in an experience because boundary lint only permits importing two systems
 // here. Asserts tag-OWNERSHIP routing (not foreground fallback): a chat-tagged
 // step reaches chat even when cards is foreground, and a stat-tagged step reaches

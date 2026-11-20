@@ -190,7 +190,7 @@ export class Runtime {
         return;
       }
       case 'goto':
-        // Knot navigation is added with the physics that needs it (task-020).
+        // Knot navigation is added with the physics that needs it.
         return;
       default:
         assertNever(op);

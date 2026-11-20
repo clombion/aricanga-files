@@ -1,16 +1,28 @@
 import { parseTag } from '@narratives/foundation';
 import type { FixtureInput } from '@narratives/foundation/testing';
 
-// The BUG-HISTORY disposition audit (task-019). Every historical bug stays dead
+// The BUG-HISTORY disposition audit. Every historical bug stays dead
 // either by construction (the pure synchronous reducer removes its mechanism) or
 // by a positive regression fixture (its decision rule relocated into `reduce`).
 // The meta-test (regression-ledger.test.ts) enforces that every BUG-HISTORY entry
 // is dispositioned and that each kernel-physics bug keeps its fixture alive.
 
+/** A GitHub issue of this repository, such as `#13`. */
+export type IssueRef = `#${number}`;
+
+/**
+ * Where a historical bug is held. A kernel-physics bug names the open issue that turns its
+ * predicate green, and none once the predicate holds; a deferred bug names the issue it waits on.
+ */
 export type Disposition =
-  | { readonly kind: 'kernel-physics'; readonly predicate: string; readonly task: string; readonly fixture: string }
+  | {
+      readonly kind: 'kernel-physics';
+      readonly predicate: string;
+      readonly issue?: IssueRef;
+      readonly fixture: string;
+    }
   | { readonly kind: 'structurally-eliminated' }
-  | { readonly kind: 'deferred'; readonly task: string }
+  | { readonly kind: 'deferred'; readonly issue: IssueRef }
   | { readonly kind: 'view'; readonly phase: 'Phase 3' }
   | { readonly kind: 'build'; readonly phase: 'Phase 4' };
 
@@ -66,14 +78,14 @@ export const LEDGER: readonly LedgerEntry[] = [
     id: 'cross-chat-message-duplication',
     legacy: true,
     summary: 'Cross-chat messages duplicated between source and target ink.',
-    disposition: { kind: 'kernel-physics', predicate: 'routingOwnership', task: 'task-020', fixture: 'cross-chat-routing' },
+    disposition: { kind: 'kernel-physics', predicate: 'routingOwnership', fixture: 'cross-chat-routing' },
     rationale: 'Routing ownership is a live reducer decision (green now); the original content-duplication is a Phase-4 authoring lint.',
   },
   {
     id: 'duplicate-notifications-same-chat',
     legacy: true,
     summary: 'Multiple notifications fired for one chat in a single update cycle.',
-    disposition: { kind: 'kernel-physics', predicate: 'notifyOnce', task: 'task-021', fixture: 'duplicate-notifications' },
+    disposition: { kind: 'kernel-physics', predicate: 'notifyOnce', fixture: 'duplicate-notifications' },
     rationale: 'The async MARK_CHAT_NOTIFIED race is gone, but the dedup gate relocates into reduce — a real kernel decision.',
   },
   {
@@ -201,7 +213,7 @@ export const LEDGER: readonly LedgerEntry[] = [
     id: 'BUG-001',
     legacy: false,
     summary: 'Sent message stayed "delivered" instead of "read" after a reply.',
-    disposition: { kind: 'kernel-physics', predicate: 'receiptMonotonic', task: 'task-024', fixture: 'receipt-auto-upgrade' },
+    disposition: { kind: 'kernel-physics', predicate: 'receiptMonotonic', issue: '#13', fixture: 'receipt-auto-upgrade' },
     rationale: 'The XState/ChatThread state mirror is gone, but the auto-upgrade decision (delivered→read on reply) is a reducer rule.',
   },
   {
@@ -229,7 +241,7 @@ export const LEDGER: readonly LedgerEntry[] = [
     id: 'BUG-005',
     legacy: false,
     summary: 'Stale saved state missing a new seed property.',
-    disposition: { kind: 'deferred', task: 'task-059' },
+    disposition: { kind: 'deferred', issue: '#18' },
     rationale: 'Snapshot schema drift across saves — needs versioned snapshots + a migration chain (not structurally eliminated).',
   },
   {
@@ -250,8 +262,8 @@ export const LEDGER: readonly LedgerEntry[] = [
     id: 'BUG-008',
     legacy: false,
     summary: 'Typing events emitted with a null chatId.',
-    disposition: { kind: 'kernel-physics', predicate: 'effectsCarryChatId', task: 'task-032', fixture: 'typing-null-chatid' },
-    rationale: 'Effects-as-data still lets a reducer construct a typing effect with an absent chatId; the guard is a reducer decision. Vacuous until task-032 emits typing.',
+    disposition: { kind: 'kernel-physics', predicate: 'effectsCarryChatId', issue: '#38', fixture: 'typing-null-chatid' },
+    rationale: 'Effects-as-data still lets a reducer construct a typing effect with an absent chatId; the guard is a reducer decision. Vacuous until #38 emits typing.',
   },
   {
     id: 'BUG-009',

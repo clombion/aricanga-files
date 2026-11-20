@@ -20,56 +20,13 @@ export const HARNESS_ID = 'terms';
 /** The current text that is Markdown; every other line of current text is a comment of code. */
 const MARKDOWN = new Prefixes(['.md']);
 
-/** Uses of a term in its domain sense, or adopted with their fix, keyed by `site(path, term)`. */
+/** Uses of a retired term whose code cannot change yet, keyed by `site(path, term)`. */
 const EXEMPT = Exemptions.grouped({
-  'adopting: the sandbox Lit component is replaced by a Solid part (#24)': [
-    site("experiences/sandbox/src/main.ts", "Lit"),
-    site("experiences/sandbox/src/sk-message.test.ts", "Lit"),
-    site("experiences/sandbox/src/sk-message.ts", "Lit"),
-    site("experiences/sandbox/src/skeleton.test.ts", "Lit"),
-  ],
-  'adopting: quote `Lit` in a code span where ADR-0002 compares the alternatives': [
-    site("docs/roadmap/decisions/0002-typescript-and-solid.md", "Lit"),
-  ],
-  'adopting: replace the task id with the issue it became, or drop it; task ids belong in the tracker': [
-    site("experiences/sandbox/src/main.ts", "task-007"),
-    site("experiences/sandbox/src/sk-message.test.ts", "task-003"),
-    site("experiences/sandbox/src/sk-message.test.ts", "task-004"),
-    site("experiences/sandbox/src/sk-message.ts", "task-003"),
-    site("experiences/sandbox/src/skeleton.test.ts", "task-007"),
-    site("experiences/sandbox/src/two-vocabulary.test.ts", "task-015"),
-    site("experiences/sandbox/vite.config.ts", "task-007"),
-    site("packages/foundation/src/host/runtime.ts", "task-020"),
-    site("packages/foundation/src/index.test.ts", "task-004"),
-    site("packages/foundation/src/sim/trace.ts", "task-058"),
-    site("packages/foundation/src/testing/harness.ts", "task-041"),
-    site("packages/foundation/src/testing/index.ts", "task-017"),
-    site("packages/foundation/src/testing/property.ts", "task-018"),
-    site("packages/systems/chat/src/model/defer.ts", "task-021"),
-    site("packages/systems/chat/src/model/defer.ts", "task-032"),
-    site("packages/systems/chat/src/model/read-state.ts", "task-021"),
-    site("packages/systems/chat/src/model/route.ts", "task-018"),
-    site("packages/systems/chat/src/model/time.ts", "task-023"),
-    site("packages/systems/chat/src/reduce.test.ts", "task-007"),
-    site("packages/systems/chat/src/state.ts", "task-023"),
-    site("packages/systems/chat/src/system.ts", "task-020"),
-    site("packages/systems/chat/src/system.ts", "task-021"),
-    site("packages/systems/chat/src/testing/index.ts", "task-018"),
-    site("packages/systems/chat/src/testing/index.ts", "task-019"),
-    site("packages/systems/chat/src/testing/predicates.ts", "task-018"),
-    site("packages/systems/chat/src/testing/predicates.ts", "task-019"),
-    site("packages/systems/chat/src/testing/predicates.ts", "task-020"),
-    site("packages/systems/chat/src/testing/predicates.ts", "task-021"),
-    site("packages/systems/chat/src/testing/predicates.ts", "task-022"),
-    site("packages/systems/chat/src/testing/predicates.ts", "task-023"),
-    site("packages/systems/chat/src/testing/predicates.ts", "task-024"),
-    site("packages/systems/chat/src/testing/predicates.ts", "task-032"),
-    site("packages/systems/chat/test/chat-fixtures.test.ts", "task-017"),
-    site("packages/systems/chat/test/regression-ledger.test.ts", "task-021"),
-    site("packages/systems/chat/test/regression-ledger.test.ts", "task-032"),
-    site("packages/systems/chat/test/regression-ledger.ts", "task-019"),
-    site("packages/systems/chat/test/routing.property.test.ts", "task-018"),
-    site("packages/systems/chat/test/routing.property.test.ts", "task-020"),
+  'the sandbox Lit component exists until #24 replaces it with a Solid part': [
+    site('experiences/sandbox/src/main.ts', 'Lit'),
+    site('experiences/sandbox/src/sk-message.test.ts', 'Lit'),
+    site('experiences/sandbox/src/sk-message.ts', 'Lit'),
+    site('experiences/sandbox/src/skeleton.test.ts', 'Lit'),
   ],
 });
 

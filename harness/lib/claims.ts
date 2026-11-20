@@ -56,6 +56,16 @@ export const CLAIMS: readonly Claim[] = [
     probe: probe(/\bimport\.meta\.url\b/, 'harness/lib/paths.ts', ['harness/lib/', 'harness/scripts/']),
   },
   {
+    path: 'harness/checks/repo-paths.test.ts',
+    clause: 'The one module allowed to compute where the repository is',
+    probe: probe(/\bimport\.meta\.url\b/, 'harness/lib/paths.ts', ['harness/lib/', 'harness/scripts/']),
+  },
+  {
+    path: 'packages/foundation/src/sim/system.ts',
+    clause: 'the one place a',
+    probe: probe(/^function reclaim\(/m, 'packages/foundation/src/sim/system.ts', ['packages/']),
+  },
+  {
     path: 'harness/lib/process.ts',
     clause: 'The one owner of starting a child process',
     probe: probe(/^import .* from 'node:child_process';$/m, 'harness/lib/process.ts'),

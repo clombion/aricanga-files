@@ -1,4 +1,4 @@
-// @narratives/foundation/testing — the kernel test harness (task-017). Drives any
+// @narratives/foundation/testing — the kernel test harness. Drives any
 // system over an ink fixture through the real runtime, captures the reduce trace
 // via the runtime's observer port, and serializes a canonical golden. Imports no
 // concrete system; reusable by chat and cards tests.

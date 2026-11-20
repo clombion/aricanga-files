@@ -12,7 +12,7 @@
 
 import { describe, expect, test } from 'vitest';
 
-import { type Hook, hooks, repoHooks, repoTasks, type Task, tasks } from '../lib/config.ts';
+import { closure, type Hook, hooks, repoHooks, repoTasks, RUN, type Task, tasks } from '../lib/config.ts';
 import { Accepted } from '../lib/exemptions.ts';
 import { Project } from '../lib/tools.ts';
 
@@ -31,28 +31,9 @@ const WRITERS: readonly (readonly [RegExp, string])[] = [
   [/(?<![0-9&])>{1,2}(?!&)/, 'a redirection writes a file'],
 ];
 const UNLOCKED_RUNNERS = /\b(npx|pnpx|pnpm dlx|bunx|yarn dlx|uvx)\b/;
-const RUN = /^pnpm run ([\w:.-]+)$/;
 const LOCK_CHECK = 'lock:check';
 const GATE_TESTS = ['pnpm run test', 'pnpm run test:browser'];
 const HOOK_TYPES = new Accepted(['pre-commit', 'pre-push', 'commit-msg']);
-
-/** The tasks `name` runs: itself and the tasks its commands `pnpm run`, transitively. */
-export function closure(name: string, every: ReadonlyMap<string, Task>): readonly Task[] {
-  const seen = new Map<string, Task>();
-  const pending = [name];
-  while (pending.length > 0) {
-    const current = pending.pop() ?? '';
-    const task = every.get(current);
-    if (task === undefined) {
-      throw new Error(`no task named ${current}`);
-    }
-    if (!seen.has(current)) {
-      seen.set(current, task);
-      pending.push(...task.commands.flatMap((command) => RUN.exec(command)?.slice(1, 2) ?? []));
-    }
-  }
-  return [...seen.values()];
-}
 
 /** What breaks the gate's rules among the tasks `check` runs. */
 export function gateProblems(every: ReadonlyMap<string, Task>): readonly string[] {

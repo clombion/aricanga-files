@@ -10,7 +10,7 @@ const step = (text: string, rawTags: string[] = []): InkStep => ({
   status: 'continue',
 });
 
-// Stub reduce maps an ink step to a message view-model (task-007 AC #2).
+// Stub reduce maps an ink step to a message view-model.
 test('reduceStep parses the speaker tag into the view-model', () => {
   expect(reduceStep(step('Hello', ['speaker: Pat']))).toEqual({
     speaker: 'Pat',

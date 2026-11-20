@@ -46,7 +46,7 @@ export function compileInk(source: string): string {
 }
 
 // Drive a system over a compiled ink fixture and capture the reduce trace. The
-// runtime is the real one (task-041) — the harness only supplies deterministic
+// runtime is the real one — the harness only supplies deterministic
 // host fakes, a recording observer, and an explicit drain so suspending effects
 // settle in a fixed order before the trace is read.
 export async function runFixture(opts: FixtureOptions): Promise<FixtureRun> {

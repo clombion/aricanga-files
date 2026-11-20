@@ -18,7 +18,7 @@ export interface ChatState {
   // entry); the default routing target when no `# targetChat` override is present.
   readonly activeChat: string | null;
   // Simulation clock in absolute minutes (day*1440 + minuteOfDay); null until a
-  // time signal anchors it. Forward-only by construction (task-023).
+  // time signal anchors it. Forward-only by construction.
   readonly clock: number | null;
 }
 
