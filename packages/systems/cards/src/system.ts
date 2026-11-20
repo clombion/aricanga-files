@@ -1,47 +1,81 @@
-import { fx } from '@narratives/foundation';
 import type { Command, Effect, ReduceResult, System } from '@narratives/foundation';
+import { fx } from '@narratives/foundation';
 
-export const CARD_TAGS = ['card', 'stat'] as const;
+const CARD_TAGS = ['card', 'stat'] as const;
+
+/** A stat starts at zero, and a delta that is missing or not a number moves nothing. */
+const NO_CHANGE = 0;
+
+/** Each card played advances the deck by one. */
+const CARDS_PER_PLAY = 1;
 
 // A genuinely different vocabulary from chat — no message/read/deferral concepts.
 // The forcing function that keeps foundation honest (ADR-0004/0005).
 /** @public */
-export interface CardsState {
+interface CardsState {
   readonly deckCursor: number;
   readonly stats: Readonly<Record<string, number>>;
   readonly history: readonly { readonly cardId: string; readonly delta: number }[];
 }
 
 /** @public */
-export interface CardsViewModel {
+interface CardsViewModel {
   readonly cursor: number;
   readonly stats: Readonly<Record<string, number>>;
 }
 
+/**
+ * The delta a `# stat:` tag's value carries, such as `courage:+2`.
+ *
+ * @param {string | undefined} rawDelta - The text after the colon, if the tag had one.
+ * @returns {number} The delta, or no change when the text is missing or not a number.
+ */
+function deltaOf(rawDelta: string | undefined): number {
+  const delta = Number(rawDelta);
+  return Number.isNaN(delta) ? NO_CHANGE : delta;
+}
+
+/**
+ * Apply one `# stat:` tag's value to the deck: the stat moves by its delta and the deck advances.
+ *
+ * @param {CardsState} state - The deck before the card.
+ * @param {string} tagValue - The tag's value, such as `courage:+2`.
+ * @returns {ReduceResult<CardsState>} The deck after the card, and the stat change to present.
+ */
+function applyStat(state: CardsState, tagValue: string): ReduceResult<CardsState> {
+  const [rawStat, rawDelta] = tagValue.split(':');
+  const stat = rawStat?.trim() ?? 'unknown';
+  const delta = deltaOf(rawDelta);
+  const value = (state.stats[stat] ?? NO_CHANGE) + delta;
+  const effects: Effect[] = [fx.present('cards/statChanged', { delta, stat, value })];
+  return {
+    effects,
+    state: {
+      deckCursor: state.deckCursor + CARDS_PER_PLAY,
+      history: [...state.history, { cardId: `card-${state.deckCursor}`, delta }],
+      stats: { ...state.stats, [stat]: value },
+    },
+  };
+}
+
 // Phase 1 STUB system — applies a `# stat:` tag and advances the deck.
-export const cardsSystem: System<CardsState, Command, Effect, CardsViewModel> = {
+const cardsSystem: System<CardsState, Command, Effect, CardsViewModel> = {
   id: 'cards',
-  init: (_seed) => ({ deckCursor: 0, stats: {}, history: [] }),
-  reduce(state, input, _ctx): ReduceResult<CardsState> {
-    if (input.source !== 'story') return { state, effects: [] };
-    const statTag = input.step.tags.find((t) => t.key === 'stat');
-    if (statTag?.value === undefined) return { state, effects: [] };
-    // value like "courage:+2"
-    const [rawStat, rawDelta] = statTag.value.split(':');
-    const stat = rawStat?.trim() ?? 'unknown';
-    const delta = Number(rawDelta ?? 0) || 0;
-    const value = (state.stats[stat] ?? 0) + delta;
-    const effects: Effect[] = [fx.present('cards/statChanged', { stat, delta, value })];
-    return {
-      state: {
-        deckCursor: state.deckCursor + 1,
-        stats: { ...state.stats, [stat]: value },
-        history: [...state.history, { cardId: `card-${state.deckCursor}`, delta }],
-      },
-      effects,
-    };
+  init: () => ({ deckCursor: 0, history: [], stats: {} }),
+  reduce(state, input): ReduceResult<CardsState> {
+    if (input.source !== 'story') {
+      return { effects: [], state };
+    }
+    const statTag = input.step.tags.find((tag) => tag.key === 'stat');
+    if (statTag?.value === undefined) {
+      return { effects: [], state };
+    }
+    return applyStat(state, statTag.value);
   },
   status: () => 'free',
   tags: [...CARD_TAGS],
   view: (state) => ({ cursor: state.deckCursor, stats: state.stats }),
 };
+
+export { CARD_TAGS, cardsSystem };
+export type { CardsState, CardsViewModel };
