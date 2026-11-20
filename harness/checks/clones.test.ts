@@ -13,6 +13,7 @@ import { afterEach, describe, expect, test } from 'vitest';
 
 import {
   type Clone,
+  main,
   cloneKey,
   clones,
   COMMON,
@@ -24,9 +25,7 @@ import {
   type Runner,
 } from '../lib/dupes.ts';
 import { Exemptions } from '../lib/exemptions.ts';
-import { fromRoot } from '../lib/paths.ts';
 import { tracked } from '../lib/source-files.ts';
-import { finished } from '../lib/tools.ts';
 
 export const HARNESS_ID = 'clones';
 
@@ -72,9 +71,19 @@ afterEach(() => {
 });
 
 describe('the repository', () => {
-  test('has no copied code but the clones it accepts', () => {
-    const done = finished([process.execPath, fromRoot('harness/scripts/dupes.ts')], { cwd: fromRoot() });
-    expect([done.status, done.stderr]).toEqual([0, '']);
+  test('has no copied code', () => {
+    const errors: string[] = [];
+    const status = main({ out: () => undefined, err: (text) => errors.push(text) });
+    expect([status, errors]).toEqual([0, []]);
+  });
+
+  test('main reports each problem and exits 1', () => {
+    const errors: string[] = [];
+    const runner: Runner = (argv) => ({ kind: 'finished', argv, status: 2, stdout: '', stderr: 'planted' });
+    expect([main({ out: () => undefined, err: (text) => errors.push(text) }, runner), errors]).toEqual([
+      1,
+      ['exact: jscpd exited 2: planted\n', 'cross-file: jscpd exited 2: planted\n'],
+    ]);
   });
 
   test('states every flag and uses no ignore channel', () => {

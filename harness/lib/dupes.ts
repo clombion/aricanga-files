@@ -25,9 +25,10 @@ import { join } from 'node:path';
 
 import { json, object } from './config.ts';
 import { Exemptions, StaleExemptionError } from './exemptions.ts';
-import { fromRoot } from './paths.ts';
+import { fromRoot, REPO_ROOT } from './paths.ts';
 import { type Outcome, run } from './process.ts';
 import { relativeTo as posixRelative } from './relative.ts';
+import { ROOTS, typescriptFiles } from './scope.ts';
 
 export const MAX_SIZE_MB = 100;
 /** jscpd's `--max-size` in bytes (its megabytes are MiB). */
@@ -68,24 +69,7 @@ export function cloneKey(clone: Clone): string {
 }
 
 /** The clones the project accepts, each with its reason. */
-export const ALLOWED = Exemptions.grouped({
-  'adopting: move the story/open/run input builders the chat tests copy into @narratives/system-chat/testing': [
-    'exact packages/systems/chat/test/defer.test.ts packages/systems/chat/test/read-state.test.ts 5b1d76746369',
-    'exact packages/systems/chat/test/defer.test.ts packages/systems/chat/test/routing.test.ts d48e2a34f956',
-    'exact packages/systems/chat/test/defer.test.ts packages/systems/chat/test/regression-ledger.ts f5afdc07d1fb',
-    'cross-file packages/systems/chat/test/defer.test.ts packages/systems/chat/test/read-state.test.ts 5b1d76746369',
-    'cross-file packages/systems/chat/test/defer.test.ts packages/systems/chat/test/routing.test.ts d48e2a34f956',
-    'cross-file packages/systems/chat/test/defer.test.ts packages/systems/chat/test/regression-ledger.ts f5afdc07d1fb',
-    'cross-file packages/systems/chat/test/defer.test.ts packages/systems/chat/test/read-state.test.ts 38fbaadcf97a',
-    'cross-file packages/systems/chat/test/defer.test.ts packages/systems/chat/test/routing.test.ts b237992c1737',
-    'cross-file packages/systems/chat/test/routing.test.ts packages/systems/chat/test/time.test.ts 194c764d2f9b',
-  ],
-  'adopting: build the system of the host runtime test from fixtureSystem instead of restating its reducer': [
-    'exact packages/foundation/src/host/runtime.test.ts packages/foundation/src/testing/fixture-system.ts 4d262ff87ebe',
-    'cross-file packages/foundation/src/host/runtime.test.ts packages/foundation/src/testing/fixture-system.ts 4d262ff87ebe',
-    'cross-file packages/foundation/src/host/runtime.test.ts packages/foundation/src/testing/fixture-system.ts fc95b8f8a982',
-  ],
-});
+export const ALLOWED = Exemptions.grouped({});
 
 /** The jscpd command line of one run: the run's flags, the common flags, the report folder, the roots. */
 export function command(binary: string, flags: readonly string[], roots: readonly string[], output: string): readonly string[] {
@@ -201,4 +185,25 @@ export function scan(
     problems.push(error.message);
   }
   return problems;
+}
+
+/** The output streams `main` writes to; a check passes its own. */
+export interface Streams {
+  readonly out: (text: string) => void;
+  readonly err: (text: string) => void;
+}
+
+/** Scan the held TypeScript (the roots, and held files outside them); return the exit status. */
+export function main(streams: Streams, runner: Runner = defaultRunner): number {
+  const listed = typescriptFiles();
+  const directories = ROOTS.map((root) => root.replace(/\/$/, ''));
+  const rootFiles = listed.filter((path) => !ROOTS.some((root) => path.startsWith(root)));
+  const problems = scan(REPO_ROOT, [...directories, ...rootFiles], listed, ALLOWED, runner);
+  for (const problem of problems) {
+    streams.err(`${problem}\n`);
+  }
+  if (problems.length === 0) {
+    streams.out(`no copied code in the ${listed.length} held TypeScript files\n`);
+  }
+  return problems.length === 0 ? 0 : 1;
 }

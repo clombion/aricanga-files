@@ -102,3 +102,12 @@ export function floorProblems(files: readonly FileCoverage[], debt: CountedExemp
 export function gateReport(directory: string = COVERAGE_DIR): unknown {
   return json(readFileSync(join(directory, 'coverage-final.json'), 'utf8'));
 }
+
+/** Hold the floor on the coverage report in `directory`; write each problem and return the exit status. */
+export function main(err: (text: string) => void, directory: string = COVERAGE_DIR): number {
+  const problems = floorProblems(fileCoverage(gateReport(directory)));
+  for (const problem of problems) {
+    err(`${problem}\n`);
+  }
+  return problems.length === 0 ? 0 : 1;
+}
