@@ -5,6 +5,11 @@ holds. `.oxlintrc.json` loads `plugin.ts` directly: Node strips its types, so th
 TypeScript checked by the harness's own project. Every rule is on as an error, and
 `harness/checks/project-lint-rules.test.ts` proves each one on its fixtures.
 
+The modules import each other as `#lint-rules/…`. This folder's own `package.json` maps that
+prefix, so the plugin also loads where a check copies the folder into a planted project, outside
+the repository's root manifest. `ast.ts` holds the node and context helpers and `jsx.ts` the JSX
+ones; `rules/jsx-rules.ts` and `rules/module-rules.ts` collect the rules for `plugin.ts`.
+
 | Rule | Holds |
 |---|---|
 | `aricanga/autofocus` | No autofocus or autoFocus attribute; move focus on navigation instead. |
@@ -48,5 +53,9 @@ the repository's own tools never lint or compile a must-fire case.
 - jsx-a11y's `label-has-associated-control` knows only `htmlFor` and has no option for Solid's
   `for`, and its `no-autofocus` sees only `autoFocus`; `labels` and `autofocus` take their place.
 - kiz-radar's `thens` (no `.then` in components) is part of `sync-parts`.
+- Some must-fire cases are also refused by a shipped rule, and their fixtures show both:
+  `node/no-process-env` (a `process.env` read), `promise/prefer-catch` (a two-argument `.then`),
+  `promise/prefer-await-to-then` and `solid/reactivity` (promise work in a part),
+  `solid/no-react-specific-props` (`htmlFor`) and `solid/no-destructure` (destructured props).
 - kiz-radar's `markup`, `classes`, `buttons` and `clicks` are not ported: its task 4.10 may retire
   them in favour of rules Solid or oxlint already ship.

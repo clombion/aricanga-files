@@ -3,8 +3,9 @@
  * `<Loading>` in a component module. The kernel's effects carry all asynchronous work.
  */
 
-import { child, componentRule, flag, jsxName, memberName, nameOf } from '../ast.ts';
-import type { Node, Rule } from '../ast.ts';
+import type { Node, Rule } from '#lint-rules/ast.ts';
+import { child, componentRule, flag, memberName, nameOf } from '#lint-rules/ast.ts';
+import { jsxName } from '#lint-rules/jsx.ts';
 
 const CHAINS = new Set(['then', 'catch', 'finally']);
 

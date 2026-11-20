@@ -1,14 +1,15 @@
 /** No two-argument `.then(onFulfilled, onRejected)`: a rejection handler there misses errors thrown in the first. */
 
-import { child, children, memberName, problemMeta } from '../ast.ts';
-import type { Rule } from '../ast.ts';
+import { child, children, memberName, problemMeta } from '#lint-rules/ast.ts';
+import type { Rule } from '#lint-rules/ast.ts';
 
 export const promises: Rule = {
   create(context) {
     return {
       CallExpression(node) {
         const callee = child(node, 'callee');
-        if (callee !== undefined && memberName(callee) === 'then' && children(node, 'arguments').length >= 2) {
+        const [, onRejected] = children(node, 'arguments');
+        if (callee !== undefined && memberName(callee) === 'then' && onRejected !== undefined) {
           context.report({ message: 'no two-argument .then: chain .catch so it sees the first handler too', node });
         }
       },

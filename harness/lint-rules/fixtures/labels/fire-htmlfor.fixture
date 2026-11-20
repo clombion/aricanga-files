@@ -1,7 +1,11 @@
 // path: packages/systems/chat/src/view/labels-htmlfor.tsx
-export const Field = () => (
-  <div>
-    <label htmlFor="name">Name</label>
-    <input id="name" />
-  </div>
-);
+import type { JSX } from 'solid-js';
+
+export function Field(): JSX.Element {
+  return (
+    <div>
+      <label htmlFor="name">Name</label>
+      <input id="name" />
+    </div>
+  );
+}

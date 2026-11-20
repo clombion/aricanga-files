@@ -3,28 +3,37 @@
  * kernel's snapshot says and what an error boundary holds.
  */
 
-import { child, children, componentRule, nameOf } from '../ast.ts';
-import type { Rule } from '../ast.ts';
+import type { Node, Rule } from '#lint-rules/ast.ts';
+import { child, children, componentRule, nameOf } from '#lint-rules/ast.ts';
 
-const FLAG = /^(is|has)?(loading|pending|busy|error|errored|failed|failure)$/i;
+const FLAG = /^(?:is|has)?(?:loading|pending|busy|error|errored|failed|failure)$/iu;
 const SIGNALS = new Set(['createSignal', 'createStore']);
 
-export const flags: Rule = componentRule('No loading/error signal in a component; read the state from the view-model.', (context) => (
-  {
-    VariableDeclarator(node) {
-      const init = child(node, 'init');
-      const pattern = child(node, 'id');
-      if (init?.type !== 'CallExpression' || !SIGNALS.has(nameOf(child(init, 'callee')) ?? '')) {
-        return;
-      }
-      const first = pattern?.type === 'ArrayPattern' ? children(pattern, 'elements')[0] : pattern;
-      const name = nameOf(first);
-      if (name !== undefined && FLAG.test(name)) {
-        context.report({
-          message: `${name}: loading and error state come from the view-model or an error boundary, not a signal`,
-          node,
-        });
-      }
-    },
+/**
+ * The name a signal or store is bound to: the first element of an array pattern, or the identifier.
+ * @param {Node | undefined} pattern - The declarator's `id`.
+ * @returns {string | undefined} The bound name, or undefined when there is none.
+ */
+function boundName(pattern: Node | undefined): string | undefined {
+  if (pattern?.type !== 'ArrayPattern') {
+    return nameOf(pattern);
   }
-));
+  const [first] = children(pattern, 'elements');
+  return nameOf(first);
+}
+
+export const flags: Rule = componentRule('No loading/error signal in a component; read the state from the view-model.', (context) => ({
+  VariableDeclarator(node) {
+    const init = child(node, 'init');
+    if (init?.type !== 'CallExpression' || !SIGNALS.has(nameOf(child(init, 'callee')) ?? '')) {
+      return;
+    }
+    const name = boundName(child(node, 'id'));
+    if (name !== undefined && FLAG.test(name)) {
+      context.report({
+        message: `${name}: loading and error state come from the view-model or an error boundary, not a signal`,
+        node,
+      });
+    }
+  },
+}));

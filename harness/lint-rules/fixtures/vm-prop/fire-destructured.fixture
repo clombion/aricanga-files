@@ -1,2 +1,4 @@
 // path: packages/systems/chat/src/view/vm-prop-destructured.tsx
-export const Bubble = ({ vm }: { vm: { text: string } }) => <p>{vm.text}</p>;
+import type { JSX } from 'solid-js';
+
+export const Bubble = ({ vm }: { readonly vm: { readonly text: string } }): JSX.Element => <p>{vm.text}</p>;

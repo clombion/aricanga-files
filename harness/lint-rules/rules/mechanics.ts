@@ -1,11 +1,11 @@
 /** Mechanics stay free of Solid: no `solid-js` or `@solidjs/*` import in the foundation or a system's model. */
 
-import { problemMeta, relativeFile } from '../ast.ts';
-import type { Rule } from '../ast.ts';
-import { onImports, refuse } from './imports.ts';
+import { onImports, refuse } from '#lint-rules/rules/imports.ts';
+import { problemMeta, relativeFile } from '#lint-rules/ast.ts';
+import type { Rule } from '#lint-rules/ast.ts';
 
-const MECHANICS = /^packages\/(foundation\/|systems\/[^/]+\/src\/model\/)/;
-const SOLID = /^(solid-js(\/|$)|@solidjs\/)/;
+const MECHANICS = /^packages\/(?:foundation\/|systems\/[^/]+\/src\/model\/)/u;
+const SOLID = /^(?:solid-js(?:\/|$)|@solidjs\/)/u;
 
 export const mechanics: Rule = {
   create(context) {

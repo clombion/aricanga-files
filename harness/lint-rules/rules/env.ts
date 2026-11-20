@@ -1,29 +1,41 @@
 /** The environment is read in one place: no `process.env` outside the settings owners. */
 
-import { child, children, matches, memberName, moduleSource, nameOf, OWNERS_SCHEMA, problemMeta } from '../ast.ts';
-import type { Rule } from '../ast.ts';
+import type { Node, Rule } from '#lint-rules/ast.ts';
+import { OWNERS_SCHEMA, child, children, matches, memberName, moduleSource, nameOf, problemMeta } from '#lint-rules/ast.ts';
 
 const PROCESS = new Set(['process', 'node:process']);
+const MESSAGE = 'the environment is read by its settings owner: take the value from it';
+
+/**
+ * Whether an import names `env` from Node's `process` module.
+ * @param {Node} node - An `ImportDeclaration`.
+ * @returns {boolean} Whether it imports `env` from `process` or `node:process`.
+ */
+function importsEnv(node: Node): boolean {
+  const source = moduleSource(node);
+  return (
+    source !== undefined &&
+    PROCESS.has(source) &&
+    children(node, 'specifiers').some(
+      (specifier) => specifier.type === 'ImportSpecifier' && nameOf(child(specifier, 'imported')) === 'env',
+    )
+  );
+}
 
 export const env: Rule = {
   create(context) {
     if (matches(context, 'owners')) {
       return {};
     }
-    const message = 'the environment is read by its settings owner: take the value from it';
     return {
-      MemberExpression(node) {
-        if (nameOf(child(node, 'object')) === 'process' && memberName(node) === 'env') {
-          context.report({ message, node });
+      ImportDeclaration(node) {
+        if (importsEnv(node)) {
+          context.report({ message: MESSAGE, node });
         }
       },
-      ImportDeclaration(node) {
-        const source = moduleSource(node);
-        const importsEnv = children(node, 'specifiers').some(
-          (specifier) => specifier.type === 'ImportSpecifier' && nameOf(child(specifier, 'imported')) === 'env',
-        );
-        if (source !== undefined && PROCESS.has(source) && importsEnv) {
-          context.report({ message, node });
+      MemberExpression(node) {
+        if (nameOf(child(node, 'object')) === 'process' && memberName(node) === 'env') {
+          context.report({ message: MESSAGE, node });
         }
       },
     };
