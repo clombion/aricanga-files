@@ -9,7 +9,7 @@
  */
 
 import { Project, bin, finished } from './tools.ts';
-import { json, object } from './config.ts';
+import { list, object, report } from './config.ts';
 import { textsOf, tracked } from './source-files.ts';
 
 import { FixtureError } from './fixture-error.ts';
@@ -117,15 +117,11 @@ async function fixtureFolders(): Promise<readonly string[]> {
 /**
  * Parse `oxlint --format json` output into diagnostics.
  *
- * @param {string} output - The output.
+ * @param {unknown} output - The parsed output.
  * @returns {readonly Diagnostic[]} The diagnostics.
  */
-function diagnostics(output: string): readonly Diagnostic[] {
-  const found = object(json(output), 'oxlint output')['diagnostics'];
-  if (!Array.isArray(found)) {
-    throw new FixtureError('oxlint output has no diagnostics array');
-  }
-  return found.map((entry: unknown) => {
+function diagnostics(output: unknown): readonly Diagnostic[] {
+  return list(object(output, 'oxlint output')['diagnostics'], 'oxlint output diagnostics').map((entry: unknown) => {
     const fields = object(entry, 'diagnostic');
     return { code: String(fields['code']), file: String(fields['filename']), message: String(fields['message']) };
   });
@@ -152,10 +148,7 @@ function refuseDuplicates(paths: readonly string[]): void {
  */
 async function lintPlanted(project: Readonly<Project>, paths: readonly string[]): Promise<readonly Diagnostic[]> {
   const outcome = await finished([bin('oxlint'), '--format', 'json', ...paths], { cwd: project.root });
-  if (outcome.stdout.trim() === '') {
-    throw new FixtureError(`oxlint wrote no report: ${outcome.stderr}`);
-  }
-  return diagnostics(outcome.stdout).map((found) => ({
+  return diagnostics(report(outcome.stdout, `oxlint's report (it wrote to stderr: ${outcome.stderr})`)).map((found) => ({
     code: found.code,
     file: found.file.replace(`${project.root}/`, ''),
     message: found.message,

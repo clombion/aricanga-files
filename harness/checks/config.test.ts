@@ -1,6 +1,6 @@
 /** The readers of the tool configuration refuse each value of the wrong shape, naming it. */
 
-import { ConfigError, closure, hooks, tasks } from '#lib/config.ts';
+import { ConfigError, closure, hooks, list, report, tasks } from '#lib/config.ts';
 import { describe, expect, test } from 'vitest';
 
 describe('the task reader', () => {
@@ -31,5 +31,23 @@ describe('the hook reader', () => {
     expect(() => hooks({ 'pre-commit': { commands: { gate: { run: true } } } })).toThrow(
       new ConfigError('pre-commit.gate.run is not a string'),
     );
+  });
+});
+
+describe('a tool report', () => {
+  test('is read as the JSON it holds', () => {
+    expect.hasAssertions();
+    expect(report('{"diagnostics":[]}', 'the planted report')).toStrictEqual({ diagnostics: [] });
+  });
+
+  test('that is not JSON is refused, naming the report', () => {
+    expect.hasAssertions();
+    expect(() => report('', 'the planted report')).toThrow(/^the planted report is not JSON: SyntaxError/u);
+  });
+
+  test('field that is not a list is refused, naming it', () => {
+    expect.hasAssertions();
+    expect(list(['a'], 'the planted field')).toStrictEqual(['a']);
+    expect(() => list({}, 'the planted field')).toThrow(new ConfigError('the planted field is not a list: {}'));
   });
 });
