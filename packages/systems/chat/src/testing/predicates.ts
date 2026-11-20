@@ -20,7 +20,7 @@ type Run = Pick<FixtureRun, 'effects' | 'trace'>;
 const UNKNOWN_RECEIPT = -1;
 
 /** Receipt monotonic (#13): a message receipt only advances sent, then delivered, then read. */
-const RECEIPT_RANK: Readonly<Record<string, number>> = { delivered: 1, read: 2, sent: 0 };
+const RECEIPT_RANK: ReadonlyMap<string, number> = new Map(['sent', 'delivered', 'read'].map((receipt, rank) => [receipt, rank]));
 
 /**
  * The chat state a trace record holds, read back through the chat system.
@@ -197,7 +197,7 @@ function receiptMonotonic(run: Run): Violation | undefined {
   for (const change of run.effects.map((effect) => receiptChangeOf(effect))) {
     if (change !== undefined) {
       const { messageId, receipt } = change;
-      const rank = RECEIPT_RANK[receipt] ?? UNKNOWN_RECEIPT;
+      const rank = RECEIPT_RANK.get(receipt) ?? UNKNOWN_RECEIPT;
       if (rank < (seen.get(messageId) ?? UNKNOWN_RECEIPT)) {
         return { detail: `receipt for "${messageId}" regressed to "${receipt}"`, rule: 'receipt-monotonic' };
       }
