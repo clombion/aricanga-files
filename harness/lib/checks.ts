@@ -8,12 +8,12 @@ interface CheckModule {
   readonly summary: string;
 }
 
-const DECLARED = /^export const HARNESS_ID = '([a-z0-9-]+)';$/m;
+const DECLARED = /^(?:export )?const HARNESS_ID = '(?<id>[a-z0-9-]+)';$/mu;
 const LEADING_DOC = /^\/\*\*\s*\n?\s*\*?\s*(.+?)\s*(?:\n|\*\/)/;
 
 /** The `HARNESS_ID` a module's source declares, if any. */
 function declaredId(text: string): string | undefined {
-  return DECLARED.exec(text)?.[1];
+  return DECLARED.exec(text)?.groups?.['id'];
 }
 
 /** The first line of a module's leading doc comment. */

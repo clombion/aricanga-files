@@ -7,12 +7,11 @@
  * plugin writes a file into its app fails while one that writes nowhere passes.
  */
 
+import { apps, checkBuild } from '#lib/build.ts';
 import { describe, expect, test } from 'vitest';
+import { Project } from '#lib/tools.ts';
 
-import { apps, checkBuild } from '../lib/build.ts';
-import { Project } from '../lib/tools.ts';
-
-export const HARNESS_ID = 'build-check';
+const HARNESS_ID = 'build-check';
 
 const INDEX = '<!doctype html><html><body><script type="module" src="./main.ts"></script></body></html>\n';
 const QUIET_CONFIG = 'export default { logLevel: "silent" };\n';
@@ -41,26 +40,32 @@ function plantedBuild(main: string, config: string): ReturnType<typeof checkBuil
 
 describe('the repository', () => {
   test('builds every held app and writes nothing into the checkout', () => {
-    expect(apps()).toEqual(['experiences/sandbox', 'packages/characterisation']);
+    expect.hasAssertions();
+    expect(apps()).toStrictEqual(['experiences/sandbox', 'packages/characterisation']);
     const results = apps().map((app) => checkBuild(app));
-    expect(results.filter((result) => result.status !== 0).map((result) => result.output)).toEqual([]);
-    expect(results.flatMap((result) => result.written)).toEqual([]);
+    expect(results.filter((result) => result.status !== 0).map((result) => result.output)).toStrictEqual([]);
+    expect(results.flatMap((result) => result.written)).toStrictEqual([]);
   });
 });
 
 describe('the build check', () => {
   test('fails a planted broken import', () => {
+    expect.hasAssertions();
     const result = plantedBuild("import { gone } from './missing';\nexport const x = gone;\n", QUIET_CONFIG);
     expect(result.status).not.toBe(0);
   });
 
   test('passes a planted clean module', () => {
+    expect.hasAssertions();
     const result = plantedBuild('export const x = 1;\n', QUIET_CONFIG);
-    expect([result.status, result.written]).toEqual([0, []]);
+    expect([result.status, result.written]).toStrictEqual([0, []]);
   });
 
   test('sees a build that writes into its checkout', () => {
+    expect.hasAssertions();
     const result = plantedBuild('export const x = 1;\n', WRITING_CONFIG);
-    expect([result.status, result.written]).toEqual([0, ['app/made.json']]);
+    expect([result.status, result.written]).toStrictEqual([0, ['app/made.json']]);
   });
 });
+
+export { HARNESS_ID };

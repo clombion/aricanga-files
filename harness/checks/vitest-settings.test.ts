@@ -13,12 +13,11 @@
  */
 
 import { describe, expect, test } from 'vitest';
-
-import { object } from '../lib/config.ts';
-import { Project } from '../lib/tools.ts';
+import { Project } from '#lib/tools.ts';
 import gate from '../../vitest.gate.config.ts';
+import { object } from '#lib/config.ts';
 
-export const HARNESS_ID = 'vitest-settings';
+const HARNESS_ID = 'vitest-settings';
 
 type Overrides = Readonly<Record<string, unknown>>;
 
@@ -72,7 +71,7 @@ const PLANTS: readonly Plant[] = [
     name: 'order',
     ordered: false,
     revert: { sequence: { shuffle: false } },
-    text: `${IMPORTS}const ran: number[] = [];\nfor (let index = 0; index < 20; index += 1) {\n  test(\`t\${index}\`, () => {\n    ran.push(index);\n    expect(ran).toEqual(Array.from({ length: index + 1 }, (_, at) => at));\n  });\n}\n`,
+    text: `${IMPORTS}const ran: number[] = [];\nfor (let index = 0; index < 20; index += 1) {\n  test(\`t\${index}\`, () => {\n    ran.push(index);\n    expect(ran).toStrictEqual(Array.from({ length: index + 1 }, (_, at) => at));\n  });\n}\n`,
   },
 ];
 
@@ -125,7 +124,7 @@ function order(plant: Plant): Overrides {
 
 describe('each setting', () => {
   test.for(PLANTS)('fails the $name plant, and passes it once reverted', (plant) => {
-    expect([status(plant, order(plant)), status(plant, merge(order(plant), plant.revert))]).toEqual([1, 0]);
+    expect([status(plant, order(plant)), status(plant, merge(order(plant), plant.revert))]).toStrictEqual([1, 0]);
   });
 });
 
@@ -135,6 +134,7 @@ describe('the defaults the gate keeps', () => {
   });
 
   test('the test timeout is set and bounded', () => {
+    expect.hasAssertions();
     const settings = object(object(gate, 'vitest.gate.config.ts')['test'] ?? {}, 'test');
     const timeout = settings['testTimeout'];
     expect(typeof timeout === 'number' && timeout > 0 && timeout <= 60_000).toBe(true);
@@ -143,6 +143,9 @@ describe('the defaults the gate keeps', () => {
 
 describe('the plants', () => {
   test('a clean spec passes under the gate config', () => {
+    expect.hasAssertions();
     expect(status({ name: 'clean', ordered: false, revert: {}, text: `${IMPORTS}test('a', () => {\n  expect(1).toBe(1);\n});\n` }, {})).toBe(0);
   });
 });
+
+export { HARNESS_ID };

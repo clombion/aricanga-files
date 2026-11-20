@@ -7,17 +7,16 @@
  * left out, and a phrase in a code span is a quotation.
  */
 
+import { Exemptions, Prefixes, site } from '#lib/exemptions.ts';
 import { describe, expect, test } from 'vitest';
+import type { Prose } from '#lib/docs.ts';
+import { currentText } from '#lib/docs.ts';
 
-import { currentText } from '../lib/docs.ts';
-import type { Prose } from '../lib/docs.ts';
-import { Exemptions, Prefixes, site } from '../lib/exemptions.ts';
-
-export const HARNESS_ID = 'history-narration';
+const HARNESS_ID = 'history-narration';
 
 const NARRATION =
-  /\b(?:previously|originally|formerly|no longer(?! than)|for now|until\b.{1,40}\blands?|we discovered|the first time we|(?:before )?this PR)\b/gi;
-const ISO_DATE = /\b20\d\d-\d\d-\d\d\b/g;
+  /\b(?:previously|originally|formerly|no longer(?! than)|for now|until\b.{1,40}\blands?|we discovered|the first time we|(?:before )?this PR)\b/giu;
+const ISO_DATE = /\b20\d\d-\d\d-\d\d\b/gu;
 /** The current text that is Markdown; a date there is a measurement, not narration. */
 const MARKDOWN = new Prefixes(['.md']);
 
@@ -25,7 +24,7 @@ const MARKDOWN = new Prefixes(['.md']);
 const EXEMPT = Exemptions.grouped({});
 
 /** Every `site(path, phrase)` that narrates history, sorted and once each. */
-export function narration(lines: readonly Prose[]): string[] {
+function narration(lines: readonly Prose[]): string[] {
   const found = new Set<string>();
   for (const line of lines) {
     for (const match of line.text.matchAll(NARRATION)) {
@@ -42,7 +41,8 @@ export function narration(lines: readonly Prose[]): string[] {
 
 describe('the repository', () => {
   test('no current text narrates history', () => {
-    expect(EXEMPT.unexempted(narration(currentText()))).toEqual([]);
+    expect.hasAssertions();
+    expect(EXEMPT.unexempted(narration(currentText()))).toStrictEqual([]);
   });
 });
 
@@ -58,14 +58,16 @@ describe('the narration scan', () => {
     ['The first time we ran it, it hung.', 'The first time we'],
     ['Before this PR the gate wrote files.', 'Before this PR'],
   ])('sees the planted phrase in %j', (text, phrase) => {
-    expect(narration([{ line: 1, path: 'docs/planted.md', text }])).toEqual([site('docs/planted.md', phrase)]);
+    expect.hasAssertions();
+    expect(narration([{ line: 1, path: 'docs/planted.md', text }])).toStrictEqual([site('docs/planted.md', phrase)]);
   });
 
   test('sees a date in a comment of code only', () => {
-    expect(narration([{ line: 1, path: 'src/planted.ts', text: 'fixed on 2026-04-25' }])).toEqual([
+    expect.hasAssertions();
+    expect(narration([{ line: 1, path: 'src/planted.ts', text: 'fixed on 2026-04-25' }])).toStrictEqual([
       site('src/planted.ts', '2026-04-25'),
     ]);
-    expect(narration([{ line: 1, path: 'docs/planted.md', text: 'Measured on 2026-11-08.' }])).toEqual([]);
+    expect(narration([{ line: 1, path: 'docs/planted.md', text: 'Measured on 2026-11-08.' }])).toStrictEqual([]);
   });
 
   test.each([
@@ -75,6 +77,9 @@ describe('the narration scan', () => {
     'Format it for nowhere in particular.',
     'The original order is kept.',
   ])('lets the near miss %j through', (text) => {
-    expect(narration([{ line: 1, path: 'docs/planted.md', text }])).toEqual([]);
+    expect.hasAssertions();
+    expect(narration([{ line: 1, path: 'docs/planted.md', text }])).toStrictEqual([]);
   });
 });
+
+export { HARNESS_ID, narration };

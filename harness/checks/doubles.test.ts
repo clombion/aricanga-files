@@ -6,12 +6,11 @@
  * test of the file. A scripted call, and the test after a clean one, pass.
  */
 
+import { Scripted, Tripwire, checkTrips, drain, trip, tripped } from '#lib/doubles.ts';
 import { describe, expect, test } from 'vitest';
+import { runPlanted } from '#lib/planted-vitest.ts';
 
-import { Scripted, Tripwire, checkTrips, drain, trip, tripped } from '../lib/doubles.ts';
-import { runPlanted } from '../lib/planted-vitest.ts';
-
-export const HARNESS_ID = 'doubles';
+const HARNESS_ID = 'doubles';
 
 const PLANTED = `import { afterAll, describe, expect, test } from 'vitest';
 import { Scripted } from '../harness/lib/doubles.ts';
@@ -35,15 +34,18 @@ describe('first', () => {
     }
   });
   test('a caught unscripted call fails', () => {
+    expect.hasAssertions();
     expect(codeUnderTest(new Store({ scripted: 1 }))).toBe(0);
   });
   test('a scripted call passes', () => {
+    expect.hasAssertions();
     expect(new Store({ scripted: 1 }).answer('scripted')).toBe(1);
   });
 });
 
 describe('second', () => {
   test('runs after the late trip', () => {
+    expect.hasAssertions();
     expect(1).toBe(1);
   });
 });
@@ -53,12 +55,14 @@ class Weather extends Scripted<string> {}
 
 describe('a scripted double', () => {
   test('answers a scripted call and records it', () => {
+    expect.hasAssertions();
     const weather = new Weather({ Lisbon: 'sun' });
     expect(weather.answer('Lisbon')).toBe('sun');
-    expect(weather.calls).toEqual(['Lisbon']);
+    expect(weather.calls).toStrictEqual(['Lisbon']);
   });
 
   test('trips on an unscripted call, past a catch', () => {
+    expect.hasAssertions();
     const weather = new Weather({});
     let caught: unknown;
     expect(() => {
@@ -74,14 +78,16 @@ describe('a scripted double', () => {
   });
 
   test('a recorded trip fails the check, and draining clears it', () => {
+    expect.hasAssertions();
     expect(() => trip('planted')).toThrow(Tripwire);
     expect(() => {
       checkTrips('after the test');
     }).toThrow('after the test: ["planted"]');
-    expect(drain()).toEqual([]);
+    expect(drain()).toStrictEqual([]);
   });
 
   test('tripped fails when nothing tripped', () => {
+    expect.hasAssertions();
     expect(() => {
       tripped('never', () => {});
     }).toThrow('expected a trip naming "never"');
@@ -90,8 +96,9 @@ describe('a scripted double', () => {
 
 describe('the guards, through a planted Vitest run', () => {
   test('fail a caught unscripted call and the test after a late trip, and pass the rest', () => {
+    expect.hasAssertions();
     const outcomes = runPlanted({ 'doubles.test.ts': PLANTED });
-    expect([...outcomes].map(([name, outcome]) => [name, outcome.status])).toEqual([
+    expect([...outcomes].map(([name, outcome]) => [name, outcome.status])).toStrictEqual([
       ['first a caught unscripted call fails', 'failed'],
       ['first a scripted call passes', 'passed'],
       ['second runs after the late trip', 'failed'],
@@ -100,3 +107,5 @@ describe('the guards, through a planted Vitest run', () => {
     expect(outcomes.get('second runs after the late trip')?.failure).toContain('a double tripped after its test ended');
   });
 });
+
+export { HARNESS_ID };

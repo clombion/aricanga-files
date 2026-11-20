@@ -18,14 +18,13 @@
  * close is a no-op and a later parse opens a fresh session.
  */
 
+import { Accepted, CountedExemptions, Exemptions, StaleExemptionError, site } from '#lib/exemptions.ts';
+import { body, closeSession, comments, parse } from '#lib/ts-source.ts';
 import { describe, expect, test } from 'vitest';
+import { heldFiles } from '#lib/scope.ts';
+import { textOf } from '#lib/source-files.ts';
 
-import { Accepted, CountedExemptions, Exemptions, StaleExemptionError, site } from '../lib/exemptions.ts';
-import { heldFiles } from '../lib/scope.ts';
-import { textOf } from '../lib/source-files.ts';
-import { body, closeSession, comments, parse } from '../lib/ts-source.ts';
-
-export const HARNESS_ID = 'suppressions';
+const HARNESS_ID = 'suppressions';
 
 /** Which suppressing tool checks which file suffix, as `tool:suffix`. */
 const CHECKS = new Accepted([
@@ -91,12 +90,12 @@ const SUPPRESSIONS = new CountedExemptions({
 const ADOPTING = new Exemptions({});
 
 const RULES = String.raw`[@\w./-]+(?:\s*,\s*[@\w./-]+)*`;
-const DISABLE = /^(oxlint|eslint|stylelint)-disable(-next-line|-line)?\b(.*)$/s;
-const ENABLE = /^(oxlint|eslint|stylelint)-enable\b/;
-const BIOME = /^biome-ignore(?:-all|-start|-end)?\b(.*)$/s;
-const EXPECT_ERROR = /^@ts-expect-error\b(.*)$/s;
-const REFUSED_TS = /^@ts-(ignore|nocheck)\b/;
-const COVERAGE = /^(v8|c8|istanbul)\s+ignore\b/;
+const DISABLE = /^(oxlint|eslint|stylelint)-disable(-next-line|-line)?\b(.*)$/su;
+const ENABLE = /^(oxlint|eslint|stylelint)-enable\b/u;
+const BIOME = /^biome-ignore(?:-all|-start|-end)?\b(.*)$/su;
+const EXPECT_ERROR = /^@ts-expect-error\b(.*)$/su;
+const REFUSED_TS = /^@ts-(ignore|nocheck)\b/u;
+const COVERAGE = /^(v8|c8|istanbul)\s+ignore\b/u;
 
 /** A suppression comment the census refuses. */
 interface Problem {
@@ -112,11 +111,11 @@ interface Census {
 }
 
 function suffix(path: string): string {
-  return /\.[a-z]+$/.exec(path)?.[0] ?? '';
+  return /\.[a-z]+$/u.exec(path)?.[0] ?? '';
 }
 
 /** The comments of a stylesheet: every `/* … *\/` outside a quoted string. */
-export function cssComments(text: string): { readonly text: string; readonly line: number }[] {
+function cssComments(text: string): { readonly text: string; readonly line: number }[] {
   const found: { text: string; line: number }[] = [];
   let index = 0;
   let quote: string | undefined;
@@ -151,7 +150,7 @@ function commentsOf(path: string, text: string): { readonly text: string; readon
 }
 
 /** The census of one module: each suppression is refused or counted under `(path, tool:rule)`. */
-export function census(path: string, text: string): Census {
+function census(path: string, text: string): Census {
   const problems: Problem[] = [];
   const sites: string[] = [];
   const refuse = (line: number, problem: string): void => {
@@ -171,7 +170,7 @@ export function census(path: string, text: string): Census {
     const expectError = EXPECT_ERROR.exec(directive);
     if (disable !== null) {
       const [, tool = '', , rest = ''] = disable;
-      const named = new RegExp(`^\\s+(${RULES})\\s+--\\s+\\S`).exec(rest);
+      const named = new RegExp(`^\\s+(${RULES})\\s+--\\s+\\S`, 'u').exec(rest);
       if (tool === 'eslint') {
         refuse(comment.line, 'eslint-disable is not honoured: use oxlint-disable');
       } else if (named === null) {
@@ -182,20 +181,20 @@ export function census(path: string, text: string): Census {
     } else if (ENABLE.test(directive)) {
       continue;
     } else if (biome !== null) {
-      const named = /^\s+(lint\/[\w/]+)(?:\([^)]*\))?:\s*\S/.exec(biome[1] ?? '');
+      const named = /^\s+(lint\/[\w/]+)(?:\([^)]*\))?:\s*\S/u.exec(biome[1] ?? '');
       if (named === null) {
         refuse(comment.line, 'a biome-ignore names its lint/... rule and ends with : <reason>');
       } else {
         count('biome', [named[1] ?? ''], comment.line);
       }
     } else if (expectError !== null) {
-      if (/^\s+--\s+\S/.test(expectError[1] ?? '')) {
+      if (/^\s+--\s+\S/u.test(expectError[1] ?? '')) {
         count('typescript', ['expect-error'], comment.line);
       } else {
         refuse(comment.line, 'a @ts-expect-error ends with -- <reason>');
       }
     } else if (REFUSED_TS.test(directive)) {
-      refuse(comment.line, `${directive.split(/\s/)[0] ?? ''} is refused: fix the type, or expect the error with its reason`);
+      refuse(comment.line, `${directive.split(/\s/u)[0] ?? ''} is refused: fix the type, or expect the error with its reason`);
     } else if (COVERAGE.test(directive)) {
       count('coverage', ['ignore'], comment.line);
     }
@@ -213,11 +212,13 @@ function repoCensus(): Census {
 
 describe('the repository', () => {
   test('every suppression names its rule, a tool that checks the file, and its reason', () => {
-    expect(ADOPTING.unexemptedBy(repoCensus().problems, (found) => site(found.path, found.problem))).toEqual([]);
+    expect.hasAssertions();
+    expect(ADOPTING.unexemptedBy(repoCensus().problems, (found) => site(found.path, found.problem))).toStrictEqual([]);
   });
 
   test('every suppression is counted with its reason', () => {
-    expect(SUPPRESSIONS.mismatches(repoCensus().sites)).toEqual([]);
+    expect.hasAssertions();
+    expect(SUPPRESSIONS.mismatches(repoCensus().sites)).toStrictEqual([]);
   });
 });
 
@@ -234,7 +235,8 @@ describe('the census', () => {
     ['// biome-ignore lint/style/noX: why\nexport {};', 'biome does not check .ts files'],
     ['/* stylelint-disable-next-line color-named -- why */\nexport {};', 'stylelint does not check .ts files'],
   ])('refuses %j in a module', (text, problem) => {
-    expect(census('packages/plant/src/a.ts', text).problems.map((found) => found.problem)).toEqual([problem]);
+    expect.hasAssertions();
+    expect(census('packages/plant/src/a.ts', text).problems.map((found) => found.problem)).toStrictEqual([problem]);
   });
 
   test.each([
@@ -242,10 +244,12 @@ describe('the census', () => {
     ['/* biome-ignore lint/style/noX */\na { color: red; }', 'a biome-ignore names its lint/... rule and ends with : <reason>'],
     ['/* oxlint-disable no-console -- why */\na { color: red; }', 'oxlint does not check .css files'],
   ])('refuses %j in a stylesheet', (text, problem) => {
-    expect(census('packages/plant/src/a.css', text).problems.map((found) => found.problem)).toEqual([problem]);
+    expect.hasAssertions();
+    expect(census('packages/plant/src/a.css', text).problems.map((found) => found.problem)).toStrictEqual([problem]);
   });
 
   test('counts a suppression written as a JSX comment', () => {
+    expect.hasAssertions();
     const text = [
       'export const view = (',
       '  <p>',
@@ -254,13 +258,14 @@ describe('the census', () => {
       '  </p>',
       ');',
     ].join('\n');
-    expect(census('packages/plant/src/a.tsx', text)).toEqual({
+    expect(census('packages/plant/src/a.tsx', text)).toStrictEqual({
       problems: [],
       sites: [site('packages/plant/src/a.tsx', 'oxlint:aricanga/style-prop')],
     });
   });
 
   test('counts each reasoned suppression under its tool and rule', () => {
+    expect.hasAssertions();
     const text = [
       '// oxlint-disable-next-line no-console, no-alert -- the planted pair',
       'console.log(1);',
@@ -270,7 +275,7 @@ describe('the census', () => {
       'const x: number = "a";',
       '/* v8 ignore next -- an unreachable arm */',
     ].join('\n');
-    expect(census('packages/plant/src/a.ts', text)).toEqual({
+    expect(census('packages/plant/src/a.ts', text)).toStrictEqual({
       problems: [],
       sites: [
         site('packages/plant/src/a.ts', 'oxlint:no-console'),
@@ -280,7 +285,7 @@ describe('the census', () => {
         site('packages/plant/src/a.ts', 'coverage:ignore'),
       ],
     });
-    expect(census('packages/plant/src/a.css', '/* stylelint-disable-next-line color-named -- the token is the name */\na{}').sites).toEqual([
+    expect(census('packages/plant/src/a.css', '/* stylelint-disable-next-line color-named -- the token is the name */\na{}').sites).toStrictEqual([
       site('packages/plant/src/a.css', 'stylelint:color-named'),
     ]);
   });
@@ -291,17 +296,20 @@ describe('the census', () => {
     '// a note about the oxlint-disable convention, not a directive: nothing to see',
     '/** Explains that @ts-ignore is refused here. */\nexport {};',
   ])('lets a near miss through: %j', (text) => {
-    expect(census('packages/plant/src/a.ts', text)).toEqual({ problems: [], sites: [] });
+    expect.hasAssertions();
+    expect(census('packages/plant/src/a.ts', text)).toStrictEqual({ problems: [], sites: [] });
   });
 
   test('lets a comment-like string in a stylesheet through', () => {
-    expect(census('packages/plant/src/a.css', 'a::before { content: "/* stylelint-disable */"; }')).toEqual({
+    expect.hasAssertions();
+    expect(census('packages/plant/src/a.css', 'a::before { content: "/* stylelint-disable */"; }')).toStrictEqual({
       problems: [],
       sites: [],
     });
   });
 
   test('a counted suppression that went away, or a new one, fails', () => {
+    expect.hasAssertions();
     const counted = new CountedExemptions({ [site('a.ts', 'oxlint:no-console')]: [1, 'planted'] });
     expect(() =>{  counted.assertExact([]); }).toThrow(StaleExemptionError);
     expect(() =>{  counted.assertExact([site('a.ts', 'oxlint:no-console'), site('a.ts', 'oxlint:no-console')]); }).toThrow(
@@ -312,6 +320,7 @@ describe('the census', () => {
 
 describe('the source reader', () => {
   test('closes its session once, and parses on a fresh session after', () => {
+    expect.hasAssertions();
     parse('packages/plant/src/a.ts', 'export const a = 1;\n');
     closeSession();
     expect(() => {
@@ -320,3 +329,5 @@ describe('the source reader', () => {
     expect(parse('packages/plant/src/b.ts', 'export const b = 2;\n').statements).toHaveLength(1);
   });
 });
+
+export { HARNESS_ID, census, cssComments };

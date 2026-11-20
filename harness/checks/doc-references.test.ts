@@ -18,20 +18,18 @@
  * A span holding `<`, `{`, `*`, `...` or a space is a placeholder or a pattern and is not resolved.
  */
 
+import { Accepted, Exemptions, Prefixes, site } from '#lib/exemptions.ts';
+import { Doc, currentSpans, currentText, markdown, markdownPaths } from '#lib/docs.ts';
+import type { Link, Prose, Span } from '#lib/docs.ts';
+import { describe, expect, test } from 'vitest';
+import { json, object, repoTasks } from '#lib/config.ts';
+import { textOf, tracked } from '#lib/source-files.ts';
 import { existsSync } from 'node:fs';
+import { fromRoot } from '#lib/paths.ts';
+import { heldFiles } from '#lib/scope.ts';
 import { posix } from 'node:path';
 
-import { describe, expect, test } from 'vitest';
-
-import { json, object, repoTasks } from '../lib/config.ts';
-import { currentSpans, currentText, Doc, markdown, markdownPaths } from '../lib/docs.ts';
-import type { Link, Prose, Span } from '../lib/docs.ts';
-import { Accepted, Exemptions, Prefixes, site } from '../lib/exemptions.ts';
-import { fromRoot } from '../lib/paths.ts';
-import { heldFiles } from '../lib/scope.ts';
-import { textOf, tracked } from '../lib/source-files.ts';
-
-export const HARNESS_ID = 'doc-references';
+const HARNESS_ID = 'doc-references';
 
 const SUFFIXES = new Accepted([
   '.ts',
@@ -68,10 +66,10 @@ const LOCKED_TOOLS = new Accepted([
 ]);
 const UNLOCKED_RUNNERS = new Accepted(['npx', 'pnpx', 'bunx', 'dlx']);
 const DECISIONS = 'docs/roadmap/decisions/';
-const ADR = /\bADR-(\d{4})\b/g;
-const PNPM_RUN = /\bpnpm run ([\w:.-]+)/g;
+const ADR = /\bADR-(\d{4})\b/gu;
+const PNPM_RUN = /\bpnpm run ([\w:.-]+)/gu;
 /** A scoped package specifier, with or without a subpath (`@solidjs/web`). */
-const PACKAGE = /^(@[\w.-]+\/[\w.-]+)(?:\/.*)?$/;
+const PACKAGE = /^(@[\w.-]+\/[\w.-]+)(?:\/.*)?$/u;
 
 /** Links that are right though they do not resolve, keyed by `site(path, target)`. */
 const LINKS_EXEMPT = Exemptions.grouped({});
@@ -115,14 +113,14 @@ function directories(files: readonly string[]): ReadonlySet<string> {
 }
 
 /** A relative link whose file or anchor is missing. */
-export function linkProblems(link: Link, files: readonly string[], docs: ReadonlyMap<string, Doc>): Unresolved[] {
-  if (/^[a-z]+:/.test(link.target)) {
+function linkProblems(link: Link, files: readonly string[], docs: ReadonlyMap<string, Doc>): Unresolved[] {
+  if (/^[a-z]+:/u.test(link.target)) {
     return [];
   }
   const [target = '', fragment = ''] = link.target.split('#', 2);
   const resolved = target === '' ? link.path : posix.normalize(posix.join(posix.dirname(link.path), decodeURI(target)));
   const dirs = directories(files);
-  if (!files.includes(resolved) && !dirs.has(resolved.replace(/\/$/, ''))) {
+  if (!files.includes(resolved) && !dirs.has(resolved.replace(/\/$/u, ''))) {
     return [{ line: link.line, path: link.path, problem: 'the linked file is not listed', reference: link.target }];
   }
   if (fragment !== '' && !(docs.get(resolved)?.anchors().has(fragment) ?? false)) {
@@ -136,11 +134,11 @@ export function linkProblems(link: Link, files: readonly string[], docs: Readonl
 function looksLikePath(text: string): boolean {
   if (
     text.replaceAll('/', '') === '' ||
-    /[<{* ]/.test(text) ||
+    /[<{* ]/u.test(text) ||
     text.includes('...') ||
     text.includes('…') ||
     text.startsWith('-') ||
-    /^[a-z]+:/.test(text)
+    /^[a-z]+:/u.test(text)
   ) {
     return false;
   }
@@ -172,7 +170,7 @@ interface Resolver {
 }
 
 /** A backticked path, package, named value or task that resolves to nothing. */
-export function spanProblems(span: Span, resolver: Resolver): Unresolved[] {
+function spanProblems(span: Span, resolver: Resolver): Unresolved[] {
   const { files, taskNames, installed, named } = resolver;
   const {text} = span;
   const unresolved = (problem: string): Unresolved[] => [{ line: span.line, path: span.path, problem, reference: text }];
@@ -189,7 +187,7 @@ export function spanProblems(span: Span, resolver: Resolver): Unresolved[] {
     const name = PACKAGE.exec(text)?.[1] ?? '';
     return installed(`node_modules/${name}`) ? [] : unresolved('the package is not installed');
   }
-  const path = text.replace(/\/$/, '');
+  const path = text.replace(/\/$/u, '');
   if (path === 'node_modules' || path.startsWith('node_modules/')) {
     return installed(path) ? [] : unresolved('the path is not installed');
   }
@@ -205,20 +203,20 @@ export function spanProblems(span: Span, resolver: Resolver): Unresolved[] {
 }
 
 /** An `ADR-NNNN` that names no decision record. */
-export function adrProblems(line: Prose, files: readonly string[]): Unresolved[] {
+function adrProblems(line: Prose, files: readonly string[]): Unresolved[] {
   return [...line.text.matchAll(ADR)]
     .filter((match) => !files.some((file) => file.startsWith(`${DECISIONS}${match[1] ?? ''}-`)))
     .map((match) => ({ line: line.line, path: line.path, problem: 'no decision record has this number', reference: match[0] }));
 }
 
 /** A locked tool in a shell fence run bare or through an unlocked runner. */
-export function fenceProblems(doc: Doc): Unresolved[] {
+function fenceProblems(doc: Doc): Unresolved[] {
   return doc
     .fences()
     .filter((fence) => SHELL_FENCES.has(fence.info.split(' ', 1)[0] ?? ''))
     .flatMap((fence) =>
       fence.lines.flatMap((line, offset) => {
-        const words = line.trim().replace(/^\$ /, '').split(/\s+/);
+        const words = line.trim().replace(/^\$ /u, '').split(/\s+/u);
         const bare = LOCKED_TOOLS.has(words[0] ?? '');
         const unlocked = UNLOCKED_RUNNERS.has(words[0] ?? '') || (words[0] === 'pnpm' && words[1] === 'dlx');
         return bare || unlocked
@@ -247,7 +245,7 @@ function installedOnDisk(path: string): boolean {
   if (existsSync(fromRoot(path))) {
     return true;
   }
-  const inner = path.replace(/^node_modules\//, '');
+  const inner = path.replace(/^node_modules\//u, '');
   const known = workspaces();
   return (
     known.some(([name]) => inner === name || inner.startsWith(`${name}/`)) ||
@@ -255,7 +253,7 @@ function installedOnDisk(path: string): boolean {
   );
 }
 
-const QUOTED = /['"]([^'"\n]+)['"]/g;
+const QUOTED = /['"]([^'"\n]+)['"]/gu;
 
 /** The checks' own modules: their planted strings must never resolve a reference. */
 const PLANTS = new Prefixes(['harness/checks/']);
@@ -275,28 +273,32 @@ function repoTaskNames(): ReadonlySet<string> {
 
 describe('the repository', () => {
   test('every link resolves', () => {
+    expect.hasAssertions();
     const files = tracked();
     const docs = new Map(markdownPaths().map((path) => [path, markdown(path)] as const));
     const found = [...docs.values()].flatMap((doc) => doc.links().flatMap((link) => linkProblems(link, files, docs)));
-    expect(LINKS_EXEMPT.unexemptedBy(found, key)).toEqual([]);
+    expect(LINKS_EXEMPT.unexemptedBy(found, key)).toStrictEqual([]);
   });
 
   test('every backticked path and task resolves', () => {
+    expect.hasAssertions();
     const files = tracked();
     const names = repoTaskNames();
     const quoted = quotedValues();
     const resolver: Resolver = { files, installed: installedOnDisk, named: (value) => quoted.has(value), taskNames: names };
     const found = currentSpans().flatMap((span) => spanProblems(span, resolver));
-    expect(SPANS_EXEMPT.unexemptedBy(found, key)).toEqual([]);
+    expect(SPANS_EXEMPT.unexemptedBy(found, key)).toStrictEqual([]);
   });
 
   test('every ADR named has its record', () => {
+    expect.hasAssertions();
     const files = tracked();
-    expect(ADRS_EXEMPT.unexemptedBy(currentText().flatMap((line) => adrProblems(line, files)), key)).toEqual([]);
+    expect(ADRS_EXEMPT.unexemptedBy(currentText().flatMap((line) => adrProblems(line, files)), key)).toStrictEqual([]);
   });
 
   test('every locked tool in a shell fence runs through pnpm', () => {
-    expect(markdownPaths().flatMap((path) => fenceProblems(markdown(path)))).toEqual([]);
+    expect.hasAssertions();
+    expect(markdownPaths().flatMap((path) => fenceProblems(markdown(path)))).toStrictEqual([]);
   });
 });
 
@@ -310,6 +312,7 @@ See [nothing](missing.md), [no anchor](#nowhere) and [a bad anchor](other.md#now
 
 describe('the link check', () => {
   test('sees each planted link and lets the resolving ones through', () => {
+    expect.hasAssertions();
     const docs = new Map([
       ['docs/planted.md', new Doc('docs/planted.md', PLANTED_DOC)],
       ['docs/other.md', new Doc('docs/other.md', '## Its heading\n')],
@@ -320,7 +323,7 @@ describe('the link check', () => {
       ?.links()
       .flatMap((link) => linkProblems(link, files, docs))
       .map((problem) => problem.reference);
-    expect(found).toEqual(['missing.md', '#nowhere', 'other.md#nowhere']);
+    expect(found).toStrictEqual(['missing.md', '#nowhere', 'other.md#nowhere']);
   });
 });
 
@@ -354,8 +357,9 @@ describe('the span check', () => {
     ['chat/noSuchEffect', 'the path is not listed'],
     ['missing/rule.ts', 'the path is not listed'],
   ])('sees the planted span %s', (text, problem) => {
+    expect.hasAssertions();
     const found = spanProblems({ line: 1, path: 'docs/planted.md', text }, PLANTED_RESOLVER);
-    expect(found.map((unresolved) => unresolved.problem)).toEqual([problem]);
+    expect(found.map((unresolved) => unresolved.problem)).toStrictEqual([problem]);
   });
 
   test.each([
@@ -383,32 +387,36 @@ describe('the span check', () => {
     'chat/showNotification',
     'aricanga/autofocus',
   ])('lets the resolving span or placeholder %s through', (text) => {
-    expect(spanProblems({ line: 1, path: 'docs/planted.md', text }, PLANTED_RESOLVER)).toEqual([]);
+    expect.hasAssertions();
+    expect(spanProblems({ line: 1, path: 'docs/planted.md', text }, PLANTED_RESOLVER)).toStrictEqual([]);
   });
 });
 
 describe('the ADR check', () => {
   test('sees an ADR with no record and lets a recorded one through', () => {
+    expect.hasAssertions();
     const files = ['docs/roadmap/decisions/0007-system-io-algebra.md'];
     const line = { line: 1, path: 'docs/planted.md', text: 'See ADR-0007 and ADR-0042.' };
-    expect(adrProblems(line, files).map((problem) => problem.reference)).toEqual(['ADR-0042']);
+    expect(adrProblems(line, files).map((problem) => problem.reference)).toStrictEqual(['ADR-0042']);
   });
 
   test('passes an exempted reference and fails a stale exemption', () => {
+    expect.hasAssertions();
     const planted = { line: 1, path: 'docs/planted.md', problem: 'no decision record has this number', reference: 'ADR-0042' };
     const exempt = new Exemptions({ [site('docs/planted.md', 'ADR-0042')]: 'planted: written next' });
-    expect(exempt.unexemptedBy([planted], key)).toEqual([]);
-    expect(() => exempt.unexemptedBy([], key)).toThrow(/stale/);
+    expect(exempt.unexemptedBy([planted], key)).toStrictEqual([]);
+    expect(() => exempt.unexemptedBy([], key)).toThrow(/stale/u);
   });
 });
 
 describe('the fence check', () => {
   test('sees each bare or unlocked tool and lets pnpm and other fences through', () => {
+    expect.hasAssertions();
     const doc = new Doc(
       'docs/planted.md',
       '```sh\noxlint\n$ vitest run\nnpx knip\npnpm dlx jscpd\npnpm exec oxlint\npnpm run check\ngit status\n```\n\n```ts\nconst tsc = 1;\n```\n',
     );
-    expect(fenceProblems(doc).map((problem) => problem.reference)).toEqual([
+    expect(fenceProblems(doc).map((problem) => problem.reference)).toStrictEqual([
       'oxlint',
       '$ vitest run',
       'npx knip',
@@ -416,3 +424,5 @@ describe('the fence check', () => {
     ]);
   });
 });
+
+export { HARNESS_ID, adrProblems, fenceProblems, linkProblems, spanProblems };

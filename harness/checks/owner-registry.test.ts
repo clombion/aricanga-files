@@ -8,16 +8,15 @@
  * pure constructor call, the owner itself, and a root the rule does not cover.
  */
 
+import { RULES, keyOf, ownerUses, sites } from '#lib/owners.ts';
 import { describe, expect, test } from 'vitest';
+import { scannedFiles, sourceOf } from '#lib/checker.ts';
+import { usePlanted, useScan } from '#lib/scan-hooks.ts';
+import type { Scan } from '#lib/checker.ts';
+import type { Site } from '#lib/owners.ts';
+import { tracked } from '#lib/source-files.ts';
 
-import { scannedFiles, sourceOf } from '../lib/checker.ts';
-import type { Scan } from '../lib/checker.ts';
-import { keyOf, ownerUses, RULES, sites } from '../lib/owners.ts';
-import type { Site } from '../lib/owners.ts';
-import { usePlanted, useScan } from '../lib/scan-hooks.ts';
-import { tracked } from '../lib/source-files.ts';
-
-export const HARNESS_ID = 'owner-registry';
+const HARNESS_ID = 'owner-registry';
 
 /** One plant per rule and call form: [rule, source]. */
 const FORMS: readonly (readonly [string, string])[] = [
@@ -116,12 +115,14 @@ function sitesIn(scan: Scan, paths: readonly string[]): Site[] {
 
 describe('the repository', () => {
   test('no guarded API is used outside its owner', () => {
-    expect(sitesIn(repoScan(), scannedFiles())).toEqual([]);
+    expect.hasAssertions();
+    expect(sitesIn(repoScan(), scannedFiles())).toStrictEqual([]);
   });
 
   test.each(RULES.flatMap((rule) => rule.scopes.flatMap((scope) => (scope.owner === null ? [] : [[rule.name, scope.owner] as const]))))(
     'the %s owner %s exists and uses its API',
     (name, owner) => {
+      expect.hasAssertions();
       const rule = RULES.find((candidate) => candidate.name === name);
       expect(tracked()).toContain(owner);
       expect(rule !== undefined && ownerUses(repoScan(), sourceOf(repoScan(), owner), rule)).toBe(true);
@@ -131,13 +132,17 @@ describe('the repository', () => {
 
 describe('the scan', () => {
   test('sees each planted call form and each planted root', () => {
-    expect(CANONICAL.map(([name]) => name).toSorted()).toEqual(RULES.map((rule) => rule.name).toSorted());
-    const planted = [...plants.keys()].filter((path) => /__(form|root|in_a_test)/.test(path));
+    expect.hasAssertions();
+    expect(CANONICAL.map(([name]) => name).toSorted()).toStrictEqual(RULES.map((rule) => rule.name).toSorted());
+    const planted = [...plants.keys()].filter((path) => /__(form|root|in_a_test)/u.test(path));
     const found = sitesIn(plantedScan(), planted).map(keyOf).toSorted();
-    expect(found).toEqual(expected.map(keyOf).toSorted());
+    expect(found).toStrictEqual(expected.map(keyOf).toSorted());
   });
 
   test.each(NEAR_MISSES.map(([path]) => path))('lets the near miss %s through', (path) => {
-    expect(sitesIn(plantedScan(), [path])).toEqual([]);
+    expect.hasAssertions();
+    expect(sitesIn(plantedScan(), [path])).toStrictEqual([]);
   });
 });
+
+export { HARNESS_ID };

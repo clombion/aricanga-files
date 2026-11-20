@@ -12,16 +12,15 @@
  * config turns off, at the top level or in an override, is declared with its reason.
  */
 
+import { Accepted, Exemptions } from '#lib/exemptions.ts';
+import { Project, finished } from '#lib/tools.ts';
 import { describe, expect, test } from 'vitest';
+import { json, object } from '#lib/config.ts';
+import { OXLINT_CONFIG_FILES } from '#lib/lint-rules.ts';
+import { fromRoot } from '#lib/paths.ts';
+import { textOf } from '#lib/source-files.ts';
 
-import { json, object } from '../lib/config.ts';
-import { Accepted, Exemptions } from '../lib/exemptions.ts';
-import { OXLINT_CONFIG_FILES } from '../lib/lint-rules.ts';
-import { textOf } from '../lib/source-files.ts';
-import { Project, finished } from '../lib/tools.ts';
-import { fromRoot } from '../lib/paths.ts';
-
-export const HARNESS_ID = 'lint-settings';
+const HARNESS_ID = 'lint-settings';
 
 /** oxlint's rule categories: the config turns every one on at error. */
 const CATEGORIES = new Accepted(['correctness', 'suspicious', 'perf', 'pedantic', 'style', 'restriction', 'nursery']);
@@ -115,7 +114,7 @@ interface Lint {
 }
 
 /** The rule codes of oxlint's JSON report, by file. */
-export function codesByFile(report: unknown): ReadonlyMap<string, readonly string[]> {
+function codesByFile(report: unknown): ReadonlyMap<string, readonly string[]> {
   const {diagnostics} = object(report, 'oxlint report');
   const found = new Map<string, string[]>();
   for (const entry of Array.isArray(diagnostics) ? diagnostics : []) {
@@ -147,10 +146,10 @@ function lint(files: Readonly<Record<string, string>>, configText: string): Lint
   }
 }
 
-const SEVERITY = /^(?:off|0)$/;
+const SEVERITY = /^(?:off|0)$/u;
 
 /** The rules a config turns on, among those named with `prefix`. */
-export function enabled(rules: Options, prefix: string): readonly string[] {
+function enabled(rules: Options, prefix: string): readonly string[] {
   return Object.entries(rules)
     .filter(([rule, setting]) => {
       let level: unknown = setting;
@@ -165,7 +164,7 @@ export function enabled(rules: Options, prefix: string): readonly string[] {
 }
 
 /** The rules a config turns off, at the top level and in every override. */
-export function turnedOff(configText: unknown): readonly string[] {
+function turnedOff(configText: unknown): readonly string[] {
   const repo = object(configText, '.oxlintrc.json');
   const overrides = Array.isArray(repo['overrides']) ? repo['overrides'] : [];
   const ruleSets = [repo['rules'] ?? {}, ...overrides.map((entry) => object(entry, 'override')['rules'] ?? {})];
@@ -178,7 +177,7 @@ export function turnedOff(configText: unknown): readonly string[] {
 }
 
 /** The categories a config does not turn on at error. */
-export function categoryProblems(configText: unknown): readonly string[] {
+function categoryProblems(configText: unknown): readonly string[] {
   const categories = object(object(configText, '.oxlintrc.json')['categories'] ?? {}, 'categories');
   return [...CATEGORIES].filter((category) => categories[category] !== 'error').map((category) => `${category} is not at error`);
 }
@@ -199,28 +198,32 @@ function v2Strict(): Options {
 
 describe('the repository config', () => {
   test('fails each planted violation with exactly its rule, and passes the near misses', () => {
+    expect.hasAssertions();
     const files = Object.fromEntries(Object.entries(PLANTS).map(([path, [text]]) => [path, text]));
     const found = lint(files, config({})).codes;
-    expect(Object.fromEntries(Object.keys(PLANTS).map((path) => [path, found.get(path) ?? []]))).toEqual(
+    expect(Object.fromEntries(Object.keys(PLANTS).map((path) => [path, found.get(path) ?? []]))).toStrictEqual(
       Object.fromEntries(Object.entries(PLANTS).map(([path, [, codes]]) => [path, codes])),
     );
   });
 
   test('turns on exactly the rules of eslint-plugin-solid v2-strict, loaded as a JS plugin', () => {
+    expect.hasAssertions();
     const repo = object(json(textOf('.oxlintrc.json')), '.oxlintrc.json');
     const plugins = Array.isArray(repo['jsPlugins']) ? repo['jsPlugins'] : [];
     expect(plugins).toContain('eslint-plugin-solid');
-    expect(enabled(object(repo['rules'] ?? {}, 'rules'), 'solid/')).toEqual(enabled(v2Strict(), 'solid/'));
+    expect(enabled(object(repo['rules'] ?? {}, 'rules'), 'solid/')).toStrictEqual(enabled(v2Strict(), 'solid/'));
   });
 });
 
 describe('the strictness of the config', () => {
   test('declares every rule it turns off with its reason', () => {
-    expect(TURNED_OFF.unexempted(turnedOff(json(textOf('.oxlintrc.json'))))).toEqual([]);
+    expect.hasAssertions();
+    expect(TURNED_OFF.unexempted(turnedOff(json(textOf('.oxlintrc.json'))))).toStrictEqual([]);
   });
 
   test('sees a category left out or below error, and a rule turned off at the top or in an override', () => {
-    expect(categoryProblems({ categories: { correctness: 'error', style: 'warn' } })).toEqual([
+    expect.hasAssertions();
+    expect(categoryProblems({ categories: { correctness: 'error', style: 'warn' } })).toStrictEqual([
       'nursery is not at error',
       'pedantic is not at error',
       'perf is not at error',
@@ -228,33 +231,39 @@ describe('the strictness of the config', () => {
       'style is not at error',
       'suspicious is not at error',
     ]);
-    expect(turnedOff({ overrides: [{ files: ['x'], rules: { c: ['off'], d: 'warn' } }], rules: { a: 'off', b: 'error' } })).toEqual(['a', 'c']);
+    expect(turnedOff({ overrides: [{ files: ['x'], rules: { c: ['off'], d: 'warn' } }], rules: { a: 'off', b: 'error' } })).toStrictEqual(['a', 'c']);
   });
 });
 
 describe('each option, by removal', () => {
   test('denyWarnings: a lone warning fails the run, and passes without it', () => {
+    expect.hasAssertions();
     const warn = { 'eslint/no-debugger': 'warn' };
     expect(lint({ [WARNING_PLANT]: WARNING_TEXT }, config({}, warn)).status).toBe(1);
     expect(lint({ [WARNING_PLANT]: WARNING_TEXT }, config({ denyWarnings: false }, warn)).status).toBe(0);
   });
 
   test('reportUnusedDisableDirectives: an unused directive passes without it', () => {
+    expect.hasAssertions();
     expect(lint({ 'src/unused-directive.ts': UNUSED_DIRECTIVE_TEXT }, config({ reportUnusedDisableDirectives: 'off' })).status).toBe(0);
   });
 
   test('respectEslintDisableDirectives: false, an eslint-disable comment silences its rule once respected', () => {
+    expect.hasAssertions();
     expect(lint({ 'src/eslint-directive.ts': ESLINT_DIRECTIVE_TEXT }, config({ respectEslintDisableDirectives: true })).status).toBe(0);
   });
 });
 
 describe('the rule comparison', () => {
   test('sees a missing, an extra and a disabled rule, and reads severities', () => {
-    expect(enabled({ other: 'error', 'solid/a': 'error', 'solid/b': 2, 'solid/c': 'off', 'solid/d': ['warn', {}] }, 'solid/')).toEqual([
+    expect.hasAssertions();
+    expect(enabled({ other: 'error', 'solid/a': 'error', 'solid/b': 2, 'solid/c': 'off', 'solid/d': ['warn', {}] }, 'solid/')).toStrictEqual([
       'solid/a',
       'solid/b',
       'solid/d',
     ]);
-    expect(enabled({ 'solid/a': 0 }, 'solid/')).toEqual([]);
+    expect(enabled({ 'solid/a': 0 }, 'solid/')).toStrictEqual([]);
   });
 });
+
+export { HARNESS_ID, categoryProblems, codesByFile, enabled, turnedOff };

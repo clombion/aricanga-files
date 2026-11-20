@@ -8,18 +8,17 @@
  */
 
 import { describe, expect, test } from 'vitest';
+import { Prefixes } from '#lib/exemptions.ts';
+import { heldFiles } from '#lib/scope.ts';
 
-import { Prefixes } from '../lib/exemptions.ts';
-import { heldFiles } from '../lib/scope.ts';
+const HARNESS_ID = 'structure';
 
-export const HARNESS_ID = 'structure';
-
-const BUILD_DIRECTORIES = /(^|\/)(dist|coverage|\.output|node_modules)\//;
+const BUILD_DIRECTORIES = /(^|\/)(dist|coverage|\.output|node_modules)\//u;
 const BUILD_FILES = new Prefixes(['.tsbuildinfo']);
-const MODULE = /\.tsx?$/;
+const MODULE = /\.tsx?$/u;
 
 /** The module stems that exist as both `.ts` and `.tsx`. */
-export function doubleModules(paths: readonly string[]): string[] {
+function doubleModules(paths: readonly string[]): string[] {
   const stems = new Map<string, Set<string>>();
   for (const path of paths.filter((candidate) => MODULE.test(candidate))) {
     const stem = path.replace(MODULE, '');
@@ -32,22 +31,25 @@ export function doubleModules(paths: readonly string[]): string[] {
 }
 
 /** The listed files that are build output. */
-export function buildOutput(paths: readonly string[]): string[] {
+function buildOutput(paths: readonly string[]): string[] {
   return paths.filter((path) => BUILD_DIRECTORIES.test(path) || BUILD_FILES.ends(path));
 }
 
 describe('the repository', () => {
   test('no module is both .ts and .tsx', () => {
-    expect(doubleModules(heldFiles())).toEqual([]);
+    expect.hasAssertions();
+    expect(doubleModules(heldFiles())).toStrictEqual([]);
   });
 
   test('no build output is listed', () => {
-    expect(buildOutput(heldFiles())).toEqual([]);
+    expect.hasAssertions();
+    expect(buildOutput(heldFiles())).toStrictEqual([]);
   });
 });
 
 describe('the structure checks', () => {
   test('see a module written both ways, and let a test beside its module through', () => {
+    expect.hasAssertions();
     expect(
       doubleModules([
         'packages/plant/src/view.ts',
@@ -56,7 +58,7 @@ describe('the structure checks', () => {
         'packages/plant/src/part.test.tsx',
         'harness/lib/a.ts',
       ]),
-    ).toEqual(['packages/plant/src/view']);
+    ).toStrictEqual(['packages/plant/src/view']);
   });
 
   test.each([
@@ -67,13 +69,17 @@ describe('the structure checks', () => {
     'packages/plant/node_modules/x/index.js',
     'packages/plant/tsconfig.tsbuildinfo',
   ])('sees the planted build output %s', (path) => {
-    expect(buildOutput([path, 'packages/plant/src/index.ts'])).toEqual([path]);
+    expect.hasAssertions();
+    expect(buildOutput([path, 'packages/plant/src/index.ts'])).toStrictEqual([path]);
   });
 
   test.each(['packages/plant/src/distance.ts', 'packages/plant/src/coverage-floor.ts', 'docs/output.md'])(
     'lets a near miss through: %s',
     (path) => {
-      expect(buildOutput([path])).toEqual([]);
+      expect.hasAssertions();
+      expect(buildOutput([path])).toStrictEqual([]);
     },
   );
 });
+
+export { HARNESS_ID, buildOutput, doubleModules };

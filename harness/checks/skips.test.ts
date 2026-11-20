@@ -8,16 +8,15 @@
  * title of the test the skip belongs to, or `<module>`.
  */
 
+import { Accepted, Exemptions, site } from '#lib/exemptions.ts';
 import type { CallExpression, Expression, Node, SourceFile } from 'typescript/unstable/ast';
-import { isArrowFunction, isCallExpression, isFunctionExpression, isIdentifier, isNoSubstitutionTemplateLiteral, isObjectBindingPattern, isPropertyAccessExpression, isStringLiteral } from 'typescript/unstable/ast/is';
+import { chain, importsFrom, nodes, parse } from '#lib/ts-source.ts';
 import { describe, expect, test } from 'vitest';
+import { isArrowFunction, isCallExpression, isFunctionExpression, isIdentifier, isNoSubstitutionTemplateLiteral, isObjectBindingPattern, isPropertyAccessExpression, isStringLiteral } from 'typescript/unstable/ast/is';
+import { heldFiles } from '#lib/scope.ts';
+import { textOf } from '#lib/source-files.ts';
 
-import { Accepted, Exemptions, site } from '../lib/exemptions.ts';
-import { heldFiles } from '../lib/scope.ts';
-import { textOf } from '../lib/source-files.ts';
-import { chain, importsFrom, nodes, parse } from '../lib/ts-source.ts';
-
-export const HARNESS_ID = 'skips';
+const HARNESS_ID = 'skips';
 
 /** The tests allowed to skip, keyed by `site(path, owner)`. */
 const SKIPS = Exemptions.grouped({});
@@ -70,7 +69,7 @@ function contextSkips(call: CallExpression): { readonly context: Set<string>; re
 }
 
 /** The skip sites of one test module, as `site(path, owner)`. */
-export function skips(path: string, text: string): string[] {
+function skips(path: string, text: string): string[] {
   const file = parse(path, text);
   const names = runnerNames(file);
   const found = new Set<string>();
@@ -121,8 +120,9 @@ export function skips(path: string, text: string): string[] {
 
 describe('the repository', () => {
   test('every skip is listed', () => {
+    expect.hasAssertions();
     const found = heldFiles('.test.ts', '.test.tsx', '.spec.ts').flatMap((path) => skips(path, textOf(path)));
-    expect(SKIPS.unexempted(found)).toEqual([]);
+    expect(SKIPS.unexempted(found)).toStrictEqual([]);
   });
 });
 
@@ -145,7 +145,8 @@ describe('the scan', () => {
     ["import { test } from '@playwright/test';\ntest.describe.skip('group', () => {});", 'group'],
     ["import { test } from '@playwright/test';\ntest('a', () => { test.fail(); });", 'a'],
   ])('sees the planted skip in %j', (text, owner) => {
-    expect(skips(P, text)).toEqual([site(P, owner)]);
+    expect.hasAssertions();
+    expect(skips(P, text)).toStrictEqual([site(P, owner)]);
   });
 
   test.each([
@@ -154,13 +155,17 @@ describe('the scan', () => {
     "import { test } from 'vitest';\ntest.each([1])('a %s', () => {});",
     "const test = { skip: () => {} };\ntest.skip();",
   ])('lets a near miss through: %j', (text) => {
-    expect(skips(P, text)).toEqual([]);
+    expect.hasAssertions();
+    expect(skips(P, text)).toStrictEqual([]);
   });
 
   test('a listed skip passes and a stale one fails', () => {
+    expect.hasAssertions();
     const planted = skips(P, "import { test } from 'vitest';\ntest.skip('a', () => {});");
     const listed = new Exemptions({ [site(P, 'a')]: 'planted' });
-    expect(listed.unexempted(planted)).toEqual([]);
+    expect(listed.unexempted(planted)).toStrictEqual([]);
     expect(() => listed.unexempted([])).toThrow('stale');
   });
 });
+
+export { HARNESS_ID, skips };

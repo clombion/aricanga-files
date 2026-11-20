@@ -7,50 +7,57 @@
  */
 
 import { describe, expect, test } from 'vitest';
+import { runPlanted } from '#lib/planted-vitest.ts';
 
-import { runPlanted } from '../lib/planted-vitest.ts';
-
-export const HARNESS_ID = 'isolation';
+const HARNESS_ID = 'isolation';
 
 const PLANTED = `import { expect, test } from 'vitest';
 
 test('a pending timeout fails', () => {
+  expect.hasAssertions();
   setTimeout(() => undefined, 60_000);
   expect(1).toBe(1);
 });
 
 test('a pending interval fails', () => {
+  expect.hasAssertions();
   setInterval(() => undefined, 60_000);
   expect(1).toBe(1);
 });
 
 test('a timer that fires passes', async () => {
+  expect.hasAssertions();
   await new Promise((resolve) => setTimeout(resolve, 5));
   expect(1).toBe(1);
 });
 
 test('a cleared timer passes', () => {
+  expect.hasAssertions();
   clearTimeout(setTimeout(() => undefined, 60_000));
   clearInterval(setInterval(() => undefined, 60_000));
   expect(1).toBe(1);
 });
 
 test('the test after a leak starts clean', () => {
+  expect.hasAssertions();
   expect(1).toBe(1);
 });
 `;
 
 describe('the guards, through a planted Vitest run', () => {
   test('fail a pending timeout and interval, and pass a fired, a cleared and a clean test', () => {
+    expect.hasAssertions();
     const outcomes = runPlanted({ 'isolation.test.ts': PLANTED });
-    expect([...outcomes].map(([name, outcome]) => [name, outcome.status])).toEqual([
+    expect([...outcomes].map(([name, outcome]) => [name, outcome.status])).toStrictEqual([
       ['a pending timeout fails', 'failed'],
       ['a pending interval fails', 'failed'],
       ['a timer that fires passes', 'passed'],
       ['a cleared timer passes', 'passed'],
       ['the test after a leak starts clean', 'passed'],
     ]);
-    expect(outcomes.get('a pending timeout fails')?.failure).toMatch(/left 1 timer\(s\) pending: timeout set at .*isolation\.test\.ts:4/);
-    expect(outcomes.get('a pending interval fails')?.failure).toMatch(/interval set at .*isolation\.test\.ts:9/);
+    expect(outcomes.get('a pending timeout fails')?.failure).toMatch(/left 1 timer\(s\) pending: timeout set at .*isolation\.test\.ts:4/u);
+    expect(outcomes.get('a pending interval fails')?.failure).toMatch(/interval set at .*isolation\.test\.ts:9/u);
   });
 });
+
+export { HARNESS_ID };

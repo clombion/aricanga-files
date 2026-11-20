@@ -8,15 +8,14 @@
  */
 
 import * as TOML from '@iarna/toml';
+import { Exemptions, Prefixes, site } from '#lib/exemptions.ts';
+import type { Prose, Span } from '#lib/docs.ts';
+import { currentSpans, currentText } from '#lib/docs.ts';
 import { describe, expect, test } from 'vitest';
+import { object } from '#lib/config.ts';
+import { textOf } from '#lib/source-files.ts';
 
-import { object } from '../lib/config.ts';
-import { currentSpans, currentText } from '../lib/docs.ts';
-import type { Prose, Span } from '../lib/docs.ts';
-import { Exemptions, Prefixes, site } from '../lib/exemptions.ts';
-import { textOf } from '../lib/source-files.ts';
-
-export const HARNESS_ID = 'terms';
+const HARNESS_ID = 'terms';
 
 /** The current text that is Markdown; every other line of current text is a comment of code. */
 const MARKDOWN = new Prefixes(['.md']);
@@ -50,7 +49,7 @@ function strings(table: unknown, what: string): ReadonlyMap<string, string> {
 }
 
 /** Read a parsed terms file, refusing a retired term without its replacement. */
-export function termsOf(text: string): Terms {
+function termsOf(text: string): Terms {
   const data = object(TOML.parse(text), 'terms');
   const retired = strings(data['retired'], 'retired');
   const blank = [...retired].filter(([, replacement]) => replacement.trim() === '').map(([term]) => term);
@@ -75,10 +74,10 @@ interface Use {
 }
 
 /** Every use of current text that the terms file refuses. */
-export function uses(terms: Terms, prose: readonly Prose[], spans: readonly Span[]): Use[] {
+function uses(terms: Terms, prose: readonly Prose[], spans: readonly Span[]): Use[] {
   const found: Use[] = [];
   for (const [term, replacement] of terms.retired) {
-    const pattern = new RegExp(String.raw`\b${escaped(term)}\b`, 'i');
+    const pattern = new RegExp(String.raw`\b${escaped(term)}\b`, 'iu');
     found.push(
       ...prose
         .filter((line) => pattern.test(line.text))
@@ -92,7 +91,7 @@ export function uses(terms: Terms, prose: readonly Prose[], spans: readonly Span
     ),
   ];
   for (const [pattern, why, lines] of refusals) {
-    const regex = new RegExp(pattern, 'g');
+    const regex = new RegExp(pattern, 'gu');
     found.push(
       ...lines.flatMap((line) =>
         [...line.text.matchAll(regex)].map((match) => ({ line: line.line, path: line.path, term: match[0], why })),
@@ -104,7 +103,7 @@ export function uses(terms: Terms, prose: readonly Prose[], spans: readonly Span
 
 /** A term as a literal regular-expression source. */
 function escaped(term: string): string {
-  return term.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
+  return term.replaceAll(/[.*+?^${}()|[\]\\]/gu, String.raw`\$&`);
 }
 
 function key(use: Use): string {
@@ -113,8 +112,9 @@ function key(use: Use): string {
 
 describe('the repository', () => {
   test('no current text uses a refused term', () => {
+    expect.hasAssertions();
     const found = uses(termsOf(textOf('docs/terms.toml')), currentText(), currentSpans());
-    expect(EXEMPT.unexemptedBy(found, key)).toEqual([]);
+    expect(EXEMPT.unexemptedBy(found, key)).toStrictEqual([]);
   });
 });
 
@@ -128,6 +128,7 @@ sentinel = "marker"
 
 describe('the terms check', () => {
   test('sees a planted retired term, refused pattern and code-only pattern, and lets the near misses through', () => {
+    expect.hasAssertions();
     const terms = termsOf(PLANTED_TERMS);
     const prose = [
       { line: 1, path: 'docs/planted.md', text: 'A Sentinel value closes TASK-12.' },
@@ -138,7 +139,7 @@ describe('the terms check', () => {
       { line: 4, path: 'docs/planted.md', text: 'TASK-7' },
       { line: 5, path: 'docs/planted.md', text: 'sentinel' },
     ];
-    expect(uses(terms, prose, spans)).toEqual([
+    expect(uses(terms, prose, spans)).toStrictEqual([
       { line: 1, path: 'docs/planted.md', term: 'sentinel', why: 'use marker' },
       { line: 1, path: 'docs/planted.md', term: 'TASK-12', why: 'the tracker' },
       { line: 4, path: 'docs/planted.md', term: 'TASK-7', why: 'the tracker' },
@@ -147,11 +148,15 @@ describe('the terms check', () => {
   });
 
   test('refuses a retired term without its replacement', () => {
-    expect(() => termsOf('[retired]\nsentinel = " "\n')).toThrow(/without a replacement/);
+    expect.hasAssertions();
+    expect(() => termsOf('[retired]\nsentinel = " "\n')).toThrow(/without a replacement/u);
   });
 
   test('reads the repository terms file', () => {
+    expect.hasAssertions();
     const terms = termsOf(textOf('docs/terms.toml'));
     expect(terms.retired.size + terms.refused.size + terms.refusedInCode.size).toBeGreaterThan(0);
   });
 });
+
+export { HARNESS_ID, termsOf, uses };

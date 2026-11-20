@@ -9,16 +9,15 @@
  * contract may spell its words.
  */
 
+import type { Contract, ContractSite } from '#lib/contracts.ts';
+import { contracts, respellings, widenings } from '#lib/contracts.ts';
 import { describe, expect, test } from 'vitest';
+import { scannedFiles, sourceOf } from '#lib/checker.ts';
+import { usePlanted, useScan } from '#lib/scan-hooks.ts';
+import { Accepted } from '#lib/exemptions.ts';
+import type { Scan } from '#lib/checker.ts';
 
-import { scannedFiles, sourceOf } from '../lib/checker.ts';
-import type { Scan } from '../lib/checker.ts';
-import { contracts, respellings, widenings } from '../lib/contracts.ts';
-import type { Contract, ContractSite } from '../lib/contracts.ts';
-import { Accepted } from '../lib/exemptions.ts';
-import { usePlanted, useScan } from '../lib/scan-hooks.ts';
-
-export const HARNESS_ID = 'contract-widening';
+const HARNESS_ID = 'contract-widening';
 
 /** The closed sets of ADR-0007 the derivation must see, or the check holds nothing. */
 const ALGEBRA = new Accepted(["Input['source']", 'EffectFamily', "Resume['kind']", "Lifecycle['kind']", 'KernelStatus']);
@@ -48,7 +47,7 @@ const NEAR_MISSES: readonly (readonly [string, string])[] = [
   ['packages/systems/__miss_template.ts', `${IMPORT}${PICK}export const label = \`mode \${m}\`;\n`],
   ['packages/systems/__miss_generic.ts', `${IMPORT}${PICK}function id<T extends string>(value: T): T {\n  return value;\n}\nexport const same = id(m);\n`],
   ['packages/systems/__miss_unreached.ts', "export const word = 'on';\n"],
-  ['packages/systems/__miss_expectation.ts', `${IMPORT}${PICK}declare function expect(value: unknown): { toBe(expected: unknown): void; toEqual(expected: unknown): void };\nexpect(m).toBe('on');\nexpect({ x }).toEqual({ x: { tag: 'ping' } });\n`],
+  ['packages/systems/__miss_expectation.ts', `${IMPORT}${PICK}declare function expect(value: unknown): { toBe(expected: unknown): void; toEqual(expected: unknown): void };\nexpect(m).toBe('on');\nexpect({ x }).toStrictEqual({ x: { tag: 'ping' } });\n`],
 ];
 
 const plants = new Map<string, string>([
@@ -75,20 +74,23 @@ function lost(scan: Scan, known: readonly Contract[], path: string): ContractSit
 
 describe('the repository', () => {
   test('the derivation sees the algebra', () => {
+    expect.hasAssertions();
     const names = new Set(contracts(repoScan(), scannedFiles()).map((contract) => contract.name));
-    expect([...ALGEBRA].filter((name) => !names.has(name))).toEqual([]);
+    expect([...ALGEBRA].filter((name) => !names.has(name))).toStrictEqual([]);
   });
 
   test('no contract is widened or respelled', () => {
+    expect.hasAssertions();
     const known = contracts(repoScan(), scannedFiles());
     const found = scannedFiles().flatMap((path) => lost(repoScan(), known, path));
-    expect(found).toEqual([]);
+    expect(found).toStrictEqual([]);
   });
 });
 
 describe('the scan', () => {
   test('derives a literal union and a discriminant', () => {
-    expect(planted().map((contract) => [contract.name, [...contract.words].toSorted()])).toEqual([
+    expect.hasAssertions();
+    expect(planted().map((contract) => [contract.name, [...contract.words].toSorted()])).toStrictEqual([
       ['Mode', ['off', 'on']],
       ["Msg['tag']", ['ping', 'pong']],
     ]);
@@ -97,16 +99,21 @@ describe('the scan', () => {
   test.each(PLANTS.map(([body, form, contract], index) => [index, form, contract, body] as const))(
     'sees planted widening %i (%s %s)',
     (index, form, contract) => {
+      expect.hasAssertions();
       const found = lost(plantedScan(), planted(), `packages/systems/__widen_${index}.ts`);
-      expect(found.map((entry) => [entry.form, entry.contract])).toEqual([[form, contract]]);
+      expect(found.map((entry) => [entry.form, entry.contract])).toStrictEqual([[form, contract]]);
     },
   );
 
   test.each(RESPELLED.map(([path]) => path))('sees the planted respelling in %s', (path) => {
-    expect(lost(plantedScan(), planted(), path).map((entry) => entry.form)).toEqual(['respelled']);
+    expect.hasAssertions();
+    expect(lost(plantedScan(), planted(), path).map((entry) => entry.form)).toStrictEqual(['respelled']);
   });
 
   test.each([...NEAR_MISSES.map(([path]) => path), OWNER])('lets the near miss %s through', (path) => {
-    expect(lost(plantedScan(), planted(), path)).toEqual([]);
+    expect.hasAssertions();
+    expect(lost(plantedScan(), planted(), path)).toStrictEqual([]);
   });
 });
+
+export { HARNESS_ID };

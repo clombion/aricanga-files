@@ -14,11 +14,10 @@
  */
 
 import { describe, expect, test } from 'vitest';
+import { Project } from '#lib/tools.ts';
+import { textOf } from '#lib/source-files.ts';
 
-import { textOf } from '../lib/source-files.ts';
-import { Project } from '../lib/tools.ts';
-
-export const HARNESS_ID = 'typecheck-settings';
+const HARNESS_ID = 'typecheck-settings';
 
 interface Plant {
   readonly path: string;
@@ -172,10 +171,10 @@ const SUPPORT: Readonly<Record<string, string>> = {
   'src/types.ts': 'export type Shape = { readonly kind: string };\n',
 };
 
-const DIAGNOSTIC = /^(src\/[\w.-]+)\(\d+,\d+\): error (TS\d+):/;
+const DIAGNOSTIC = /^(src\/[\w.-]+)\(\d+,\d+\): error (TS\d+):/u;
 
 /** The diagnostic codes of a tsc run, by planted file. */
-export function codesByFile(stdout: string): ReadonlyMap<string, readonly string[]> {
+function codesByFile(stdout: string): ReadonlyMap<string, readonly string[]> {
   const found = new Map<string, string[]>();
   for (const line of stdout.split('\n')) {
     const match = DIAGNOSTIC.exec(line);
@@ -220,21 +219,25 @@ function typecheck(overrides: Readonly<Record<string, boolean | null>>): Readonl
 
 describe('the base config', () => {
   test('fails each planted hole with its own diagnostic and passes the clean plant', () => {
+    expect.hasAssertions();
     const found = typecheck({});
     const plants = [...PLANTS, ...SHAPES];
-    expect(Object.fromEntries(plants.map((plant) => [plant.path, found.get(plant.path) ?? []]))).toEqual(
+    expect(Object.fromEntries(plants.map((plant) => [plant.path, found.get(plant.path) ?? []]))).toStrictEqual(
       Object.fromEntries(plants.map((plant) => [plant.path, plant.codes])),
     );
-    expect([found.get('src/clean.ts'), found.get('src/types.ts')]).toEqual([undefined, undefined]);
+    expect([found.get('src/clean.ts'), found.get('src/types.ts')]).toStrictEqual([undefined, undefined]);
   });
 });
 
 describe('each setting', () => {
   test.for(PLANTS)('is what fails $path: removing it lets the plant through', (plant) => {
-    expect(typecheck(plant.removal).get(plant.path) ?? []).toEqual([]);
+    expect(typecheck(plant.removal).get(plant.path) ?? []).toStrictEqual([]);
   });
 
   test('isolatedModules is implied by verbatimModuleSyntax: removing it alone keeps its plant failing', () => {
-    expect(typecheck({ isolatedModules: false }).get('src/isolated.ts')).toEqual(['TS1205']);
+    expect.hasAssertions();
+    expect(typecheck({ isolatedModules: false }).get('src/isolated.ts')).toStrictEqual(['TS1205']);
   });
 });
+
+export { HARNESS_ID, codesByFile };

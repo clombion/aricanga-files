@@ -9,16 +9,15 @@
  * descriptions.
  */
 
+import { FixtureError, codesAt, fixtureFolders, fixtures, lintFixtures, parseFixture } from '#lib/lint-rules.ts';
+import { PLUGIN_NAME, RULES } from '#lint-rules/plugin.ts';
 import { describe, expect, test } from 'vitest';
+import { json, object } from '#lib/config.ts';
+import { Accepted } from '#lib/exemptions.ts';
+import type { Fixture } from '#lib/lint-rules.ts';
+import { textOf } from '#lib/source-files.ts';
 
-import { json, object } from '../lib/config.ts';
-import { Accepted } from '../lib/exemptions.ts';
-import { codesAt, FixtureError, fixtureFolders, fixtures, lintFixtures, parseFixture } from '../lib/lint-rules.ts';
-import type { Fixture } from '../lib/lint-rules.ts';
-import { textOf } from '../lib/source-files.ts';
-import { PLUGIN_NAME, RULES } from '../lint-rules/plugin.ts';
-
-export const HARNESS_ID = 'project-lint-rules';
+const HARNESS_ID = 'project-lint-rules';
 
 const DECLARED = new Accepted([
   'autofocus',
@@ -40,14 +39,14 @@ const DECLARED = new Accepted([
 ]);
 const PLUGIN_PATH = './harness/lint-rules/plugin.ts';
 const README = 'harness/lint-rules/README.md';
-const TABLE_ROW = /^\| `aricanga\/([a-z-]+)` \| (.+) \|$/gm;
+const TABLE_ROW = /^\| `aricanga\/([a-z-]+)` \| (.+) \|$/gmu;
 
 const ruleNames = (): readonly string[] => Object.keys(RULES).toSorted();
 const descriptions = (): ReadonlyMap<string, string> =>
   new Map(Object.entries(RULES).map(([name, rule]) => [name, rule.meta.docs.description]));
 
 /** What breaks "every rule has a fixture folder with both kinds, and every folder a rule". */
-export function fixtureProblems(
+function fixtureProblems(
   rules: readonly string[],
   folders: readonly string[],
   found: readonly Fixture[],
@@ -73,7 +72,7 @@ function level(setting: unknown): unknown {
 }
 
 /** What breaks "the config turns on exactly the plugin's rules, as errors". */
-export function configProblems(config: unknown, rules: readonly string[]): readonly string[] {
+function configProblems(config: unknown, rules: readonly string[]): readonly string[] {
   const fields = object(config, '.oxlintrc.json');
   const plugins = Array.isArray(fields['jsPlugins']) ? fields['jsPlugins'] : [];
   const problems = plugins.includes(PLUGIN_PATH) ? [] : [`jsPlugins does not load ${PLUGIN_PATH}`];
@@ -94,7 +93,7 @@ export function configProblems(config: unknown, rules: readonly string[]): reado
 }
 
 /** What breaks "the README's table lists exactly the rules, with their descriptions". */
-export function readmeProblems(readme: string, described: ReadonlyMap<string, string>): readonly string[] {
+function readmeProblems(readme: string, described: ReadonlyMap<string, string>): readonly string[] {
   const rows = new Map([...readme.matchAll(TABLE_ROW)].map((row) => [row[1] ?? '', row[2] ?? '']));
   const problems = [...rows.keys()].filter((rule) => !described.has(rule)).map((rule) => `README lists ${rule}: no such rule`);
   for (const [rule, description] of described) {
@@ -110,19 +109,23 @@ export function readmeProblems(readme: string, described: ReadonlyMap<string, st
 
 describe('the repository', () => {
   test('the plugin holds exactly the declared rules', () => {
-    expect(ruleNames()).toEqual([...DECLARED]);
+    expect.hasAssertions();
+    expect(ruleNames()).toStrictEqual([...DECLARED]);
   });
 
   test('every rule has must-fire and must-stay-clean fixtures, and every fixture folder a rule', () => {
-    expect(fixtureProblems(ruleNames(), fixtureFolders(), fixtures())).toEqual([]);
+    expect.hasAssertions();
+    expect(fixtureProblems(ruleNames(), fixtureFolders(), fixtures())).toStrictEqual([]);
   });
 
   test('the config turns on exactly the plugin rules, and the README lists them', () => {
-    expect(configProblems(json(textOf('.oxlintrc.json')), ruleNames())).toEqual([]);
-    expect(readmeProblems(textOf(README), descriptions())).toEqual([]);
+    expect.hasAssertions();
+    expect(configProblems(json(textOf('.oxlintrc.json')), ruleNames())).toStrictEqual([]);
+    expect(readmeProblems(textOf(README), descriptions())).toStrictEqual([]);
   });
 
   test('each must-fire fixture fails on its rule and each must-stay-clean fixture passes', () => {
+    expect.hasAssertions();
     const planted = fixtures();
     const found = lintFixtures(planted);
     const outcome = planted.map((fixture) => {
@@ -130,14 +133,15 @@ describe('the repository', () => {
       const held = fixture.kind === 'fire' ? codes.includes(`${PLUGIN_NAME}(${fixture.rule})`) : codes.length === 0;
       return { codes, file: fixture.file, held };
     });
-    expect(outcome.filter((entry) => !entry.held)).toEqual([]);
+    expect(outcome.filter((entry) => !entry.held)).toStrictEqual([]);
   });
 });
 
 describe('the fixture reader', () => {
   test('reads a fixture and the path it is planted at', () => {
+    expect.hasAssertions();
     const fixture = parseFixture('harness/lint-rules/fixtures/env/fire-import.fixture', '// path: a/b.ts\nexport {};\n');
-    expect(fixture).toEqual({
+    expect(fixture).toStrictEqual({
       file: 'harness/lint-rules/fixtures/env/fire-import.fixture',
       kind: 'fire',
       path: 'a/b.ts',
@@ -151,6 +155,7 @@ describe('the fixture reader', () => {
     ['harness/lint-rules/fixtures/env/fire.ts', '// path: a.ts\n'],
     ['harness/lint-rules/fixtures/env/fire.fixture', 'export {};\n'],
   ])('refuses the malformed fixture %s', (file, text) => {
+    expect.hasAssertions();
     expect(() => parseFixture(file, text)).toThrow(FixtureError);
   });
 });
@@ -161,42 +166,47 @@ function plantedFixture(rule: string, kind: 'fire' | 'clean'): Fixture {
 
 describe('the check', () => {
   test('sees a rule without a fixture of each kind, and a folder without a rule', () => {
+    expect.hasAssertions();
     expect(
       fixtureProblems(['env', 'json'], ['env', 'json', 'gone'], [plantedFixture('env', 'fire'), plantedFixture('json', 'clean')]),
-    ).toEqual([
+    ).toStrictEqual([
       'fixtures/gone: no such rule',
       'env: no clean fixture',
       'json: no fire fixture',
     ]);
-    expect(fixtureProblems(['env'], ['env'], [plantedFixture('env', 'fire'), plantedFixture('env', 'clean')])).toEqual([]);
+    expect(fixtureProblems(['env'], ['env'], [plantedFixture('env', 'fire'), plantedFixture('env', 'clean')])).toStrictEqual([]);
   });
 
   test('sees a rule the config leaves off, one it adds, one it only warns on, and a missing plugin', () => {
+    expect.hasAssertions();
     const config = {
       jsPlugins: ['eslint-plugin-solid'],
       rules: { 'aricanga/env': 'warn', 'aricanga/gone': 'error', 'solid/no-destructure': 'error' },
     };
-    expect(configProblems(config, ['env', 'json'])).toEqual([
+    expect(configProblems(config, ['env', 'json'])).toStrictEqual([
       'jsPlugins does not load ./harness/lint-rules/plugin.ts',
       'aricanga/env: is "warn", not "error"',
       'aricanga/gone: not a rule of the plugin',
       'aricanga/json: not turned on',
     ]);
     const near = { jsPlugins: [PLUGIN_PATH], rules: { 'aricanga/env': ['error', { owners: [] }], 'aricanga/json': 'error' } };
-    expect(configProblems(near, ['env', 'json'])).toEqual([]);
+    expect(configProblems(near, ['env', 'json'])).toStrictEqual([]);
   });
 
   test('sees a README row missing, extra or out of date', () => {
+    expect.hasAssertions();
     const described = new Map([
       ['env', 'one'],
       ['json', 'two'],
     ]);
     const readme = '| `aricanga/env` | stale |\n| `aricanga/gone` | x |\n';
-    expect(readmeProblems(readme, described)).toEqual([
+    expect(readmeProblems(readme, described)).toStrictEqual([
       'README lists gone: no such rule',
       'README describes env as "stale", the rule as "one"',
       'README does not list json',
     ]);
-    expect(readmeProblems('| `aricanga/env` | one |\n| `aricanga/json` | two |\n', described)).toEqual([]);
+    expect(readmeProblems('| `aricanga/env` | one |\n| `aricanga/json` | two |\n', described)).toStrictEqual([]);
   });
 });
+
+export { HARNESS_ID, configProblems, fixtureProblems, readmeProblems };

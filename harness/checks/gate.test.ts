@@ -10,34 +10,33 @@
  * check, commit-msg runs commitlint, and no other hook or remote config is declared.
  */
 
+import type { Hook, Task } from '#lib/config.ts';
+import { RUN, closure, hooks, repoHooks, repoTasks, tasks } from '#lib/config.ts';
 import { describe, expect, test } from 'vitest';
+import { Accepted } from '#lib/exemptions.ts';
+import { Project } from '#lib/tools.ts';
 
-import { closure, hooks, repoHooks, repoTasks, RUN, tasks } from '../lib/config.ts';
-import type { Hook, Task } from '../lib/config.ts';
-import { Accepted } from '../lib/exemptions.ts';
-import { Project } from '../lib/tools.ts';
-
-export const HARNESS_ID = 'gate';
+const HARNESS_ID = 'gate';
 
 const WRITERS: readonly (readonly [RegExp, string])[] = [
-  [/\b(oxlint|stylelint|knip)\b.*--fix/, 'a fixer rewrites files'],
-  [/\boxfmt\b(?!.*--check)/, 'oxfmt without --check rewrites files'],
-  [/\bbiome\b.*--(write|fix|unsafe)/, 'biome --write rewrites files'],
-  [/\bgen-docs\.ts\b(?!.*--check)/, 'gen-docs without --check rewrites the docs'],
-  [/\bvitest\b.*(\s-u\b|--update)/, 'a snapshot update rewrites snapshots'],
-  [/\btsc\b(?!.*--noEmit)/, 'tsc without --noEmit writes its output'],
-  [/\bpnpm (install|i|add|remove|rm|update|up)\b(?!.* --frozen-lockfile --lockfile-only$)/, 'pnpm rewrites the lock or node_modules'],
-  [/\blefthook install\b/, 'installing hooks writes .git/hooks'],
-  [/\bgit (add|commit|checkout|stash|reset|restore)\b/, 'a git write'],
-  [/(?<![0-9&])>{1,2}(?!&)/, 'a redirection writes a file'],
+  [/\b(oxlint|stylelint|knip)\b.*--fix/u, 'a fixer rewrites files'],
+  [/\boxfmt\b(?!.*--check)/u, 'oxfmt without --check rewrites files'],
+  [/\bbiome\b.*--(write|fix|unsafe)/u, 'biome --write rewrites files'],
+  [/\bgen-docs\.ts\b(?!.*--check)/u, 'gen-docs without --check rewrites the docs'],
+  [/\bvitest\b.*(\s-u\b|--update)/u, 'a snapshot update rewrites snapshots'],
+  [/\btsc\b(?!.*--noEmit)/u, 'tsc without --noEmit writes its output'],
+  [/\bpnpm (install|i|add|remove|rm|update|up)\b(?!.* --frozen-lockfile --lockfile-only$)/u, 'pnpm rewrites the lock or node_modules'],
+  [/\blefthook install\b/u, 'installing hooks writes .git/hooks'],
+  [/\bgit (add|commit|checkout|stash|reset|restore)\b/u, 'a git write'],
+  [/(?<![0-9&])>{1,2}(?!&)/u, 'a redirection writes a file'],
 ];
-const UNLOCKED_RUNNERS = /\b(npx|pnpx|pnpm dlx|bunx|yarn dlx|uvx)\b/;
+const UNLOCKED_RUNNERS = /\b(npx|pnpx|pnpm dlx|bunx|yarn dlx|uvx)\b/u;
 const LOCK_CHECK = 'lock:check';
 const GATE_TESTS = ['pnpm run test', 'pnpm run test:browser'];
 const HOOK_TYPES = new Accepted(['pre-commit', 'pre-push', 'commit-msg']);
 
 /** What breaks the gate's rules among the tasks `check` runs. */
-export function gateProblems(every: ReadonlyMap<string, Task>): readonly string[] {
+function gateProblems(every: ReadonlyMap<string, Task>): readonly string[] {
   const problems: string[] = [];
   for (const task of closure('check', every)) {
     for (const command of task.commands) {
@@ -63,12 +62,12 @@ export function gateProblems(every: ReadonlyMap<string, Task>): readonly string[
 }
 
 /** The commands that run an unlocked tool runner. */
-export function runnerProblems(commands: readonly string[]): readonly string[] {
+function runnerProblems(commands: readonly string[]): readonly string[] {
   return commands.filter((command) => UNLOCKED_RUNNERS.test(command)).map((command) => `unlocked runner: ${command}`);
 }
 
 /** What breaks the hook rules. */
-export function hookProblems(declared: readonly Hook[]): readonly string[] {
+function hookProblems(declared: readonly Hook[]): readonly string[] {
   const problems = declared
     .filter((hook) => !HOOK_TYPES.has(hook.hook))
     .map((hook) => `${hook.hook}.${hook.id}: not an expected hook type`);
@@ -108,16 +107,19 @@ function planted(command: string): ReadonlyMap<string, Task> {
 
 describe('the repository', () => {
   test('the gate writes nothing and runs locked tools', () => {
-    expect(gateProblems(repoTasks())).toEqual([]);
+    expect.hasAssertions();
+    expect(gateProblems(repoTasks())).toStrictEqual([]);
   });
 
   test('no task or hook runs an unlocked tool', () => {
+    expect.hasAssertions();
     const commands = [...repoTasks().values()].flatMap((task) => task.commands);
-    expect(runnerProblems([...commands, ...repoHooks().map((hook) => hook.run)])).toEqual([]);
+    expect(runnerProblems([...commands, ...repoHooks().map((hook) => hook.run)])).toStrictEqual([]);
   });
 
   test('the hooks run the gate', () => {
-    expect(hookProblems(repoHooks())).toEqual([]);
+    expect.hasAssertions();
+    expect(hookProblems(repoHooks())).toStrictEqual([]);
   });
 });
 
@@ -141,29 +143,32 @@ describe('the gate check', () => {
     'git add .',
     'vitest run > report.txt',
   ])('sees the planted writer %s', (command) => {
+    expect.hasAssertions();
     expect(gateProblems(planted(command))).toHaveLength(1);
   });
 
   test('follows pnpm run into a nested task, and lets a reader through', () => {
+    expect.hasAssertions();
     const nested = tasks({
       scripts: {
         ...Object.fromEntries([...planted('pnpm run deep')].map(([name, task]) => [name, task.script])),
         deep: 'pnpm run lock:check && oxfmt',
       },
     });
-    expect(gateProblems(nested)).toEqual(['deep: oxfmt without --check rewrites files: oxfmt']);
-    expect(gateProblems(planted('oxfmt --check 2>&1'))).toEqual([]);
-    expect(gateProblems(planted('tsc --noEmit -p harness'))).toEqual([]);
+    expect(gateProblems(nested)).toStrictEqual(['deep: oxfmt without --check rewrites files: oxfmt']);
+    expect(gateProblems(planted('oxfmt --check 2>&1'))).toStrictEqual([]);
+    expect(gateProblems(planted('tsc --noEmit -p harness'))).toStrictEqual([]);
   });
 
   test('sees a tool task without the lock check, and a gate of the wrong shape', () => {
+    expect.hasAssertions();
     const unlocked = tasks({
       scripts: {
         ...Object.fromEntries([...planted('oxlint')].map(([name, task]) => [name, task.script])),
         planted: 'oxlint',
       },
     });
-    expect(gateProblems(unlocked)).toEqual(['planted: runs a tool but does not start with lock:check']);
+    expect(gateProblems(unlocked)).toStrictEqual(['planted: runs a tool but does not start with lock:check']);
     const shape = tasks({
       scripts: {
         check: 'pnpm run check:fast',
@@ -172,25 +177,27 @@ describe('the gate check', () => {
         test: 'pnpm run lock:check && vitest run',
       },
     });
-    expect(gateProblems(shape)).toEqual(['check:fast runs the tests', 'check is not check:fast plus the tests']);
+    expect(gateProblems(shape)).toStrictEqual(['check:fast runs the tests', 'check is not check:fast plus the tests']);
   });
 
   test.each(['npx jscpd', 'pnpm dlx knip', 'pnpx oxlint', 'bunx x', 'yarn dlx x', 'uvx ruff'])(
     'sees the unlocked runner %s',
     (command) => {
-      expect(runnerProblems([command, 'oxlint'])).toEqual([`unlocked runner: ${command}`]);
+      expect.hasAssertions();
+      expect(runnerProblems([command, 'oxlint'])).toStrictEqual([`unlocked runner: ${command}`]);
     },
   );
 });
 
 describe('the hook check', () => {
   test('sees each planted hook', () => {
+    expect.hasAssertions();
     const plantedHooks = hooks({
       'post-merge': { commands: { late: { run: 'pnpm run check' } } },
       'pre-commit': { commands: { lint: { run: 'oxlint' } } },
       'pre-push': { commands: { 'pushed-subjects': { run: 'node harness/scripts/check-pushed.ts' } } },
     });
-    expect(hookProblems(plantedHooks)).toEqual([
+    expect(hookProblems(plantedHooks)).toStrictEqual([
       'post-merge.late: not an expected hook type',
       'pre-commit runs ["oxlint"], not ["pnpm run check:fast"]',
       'pre-push runs ["node harness/scripts/check-pushed.ts"], not ["node harness/scripts/check-pushed.ts","pnpm run check"]',
@@ -207,8 +214,9 @@ function manifest(version: string): string {
 
 describe('the lock check', () => {
   test('refuses a lockfile older than package.json', () => {
+    expect.hasAssertions();
     const lockCheck = repoTasks().get(LOCK_CHECK)?.commands[0]?.split(' ') ?? [];
-    expect(lockCheck).toEqual(['pnpm', 'install', '--frozen-lockfile', '--lockfile-only']);
+    expect(lockCheck).toStrictEqual(['pnpm', 'install', '--frozen-lockfile', '--lockfile-only']);
     const project = new Project({ linkModules: false });
     try {
       project.write('package.json', manifest('1.9.1'));
@@ -216,9 +224,11 @@ describe('the lock check', () => {
       expect(project.run(...lockCheck).status).toBe(0);
       project.write('package.json', manifest('1.9.0'));
       const stale = project.run(...lockCheck);
-      expect([stale.status, stale.stdout.includes('ERR_PNPM_OUTDATED_LOCKFILE')]).toEqual([1, true]);
+      expect([stale.status, stale.stdout.includes('ERR_PNPM_OUTDATED_LOCKFILE')]).toStrictEqual([1, true]);
     } finally {
       project.remove();
     }
   });
 });
+
+export { HARNESS_ID, gateProblems, hookProblems, runnerProblems };

@@ -8,12 +8,11 @@
  */
 
 import { describe, expect, test } from 'vitest';
+import { hunt, huntOf } from '#lib/stress.ts';
+import type { Hunt } from '#lib/stress.ts';
+import { Project } from '#lib/tools.ts';
 
-import { huntOf, hunt } from '../lib/stress.ts';
-import type { Hunt } from '../lib/stress.ts';
-import { Project } from '../lib/tools.ts';
-
-export const HARNESS_ID = 'flake-hunter';
+const HARNESS_ID = 'flake-hunter';
 
 const CONFIG = 'export default { test: { include: ["*.test.ts"], expect: { requireAssertions: true } } };\n';
 
@@ -21,16 +20,16 @@ const PLANTS: Readonly<Record<string, string>> = {
   'independent.test.ts': [
     "import { expect, test } from 'vitest';",
     'const later = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 20));',
-    "test('a', async () => { const mine = ['a']; await later(); expect(mine).toEqual(['a']); });",
-    "test('b', async () => { const mine = ['b']; await later(); expect(mine).toEqual(['b']); });",
+    "test('a', async () => { const mine = ['a']; await later(); expect(mine).toStrictEqual(['a']); });",
+    "test('b', async () => { const mine = ['b']; await later(); expect(mine).toStrictEqual(['b']); });",
     '',
   ].join('\n'),
   'order.test.ts': [
     "import { expect, test } from 'vitest';",
     'const seen: string[] = [];',
-    "test('one', () => { seen.push('one'); expect(seen).toEqual(['one']); });",
-    "test('two', () => { seen.push('two'); expect(seen).toEqual(['one', 'two']); });",
-    "test('three', () => { seen.push('three'); expect(seen).toEqual(['one', 'two', 'three']); });",
+    "test('one', () => { seen.push('one'); expect(seen).toStrictEqual(['one']); });",
+    "test('two', () => { seen.push('two'); expect(seen).toStrictEqual(['one', 'two']); });",
+    "test('three', () => { seen.push('three'); expect(seen).toStrictEqual(['one', 'two', 'three']); });",
     '',
   ].join('\n'),
   'timing.test.ts': [
@@ -62,29 +61,36 @@ async function plainAndHunted(file: string): Promise<readonly [number, readonly 
 
 describe('the flake hunter, on planted specs', () => {
   test('fails an order-dependent spec that a plain run passes', async () => {
+    expect.hasAssertions();
     const [plain, hunted] = await plainAndHunted('order.test.ts');
     expect(plain).toBe(0);
     expect(hunted.some((status) => status !== 0)).toBe(true);
   });
 
   test('fails a timing-dependent spec that a plain run passes', async () => {
+    expect.hasAssertions();
     const [plain, hunted] = await plainAndHunted('timing.test.ts');
     expect(plain).toBe(0);
     expect(hunted.some((status) => status !== 0)).toBe(true);
   });
 
   test('passes an independent spec in both', async () => {
-    await expect(plainAndHunted('independent.test.ts')).resolves.toEqual([0, [0, 0, 0, 0]]);
+    expect.hasAssertions();
+    await expect(plainAndHunted('independent.test.ts')).resolves.toStrictEqual([0, [0, 0, 0, 0]]);
   });
 });
 
 describe('the hunt options', () => {
   test('read the seed, copies and repeats, keep the rest as filters, and give each copy its own seed', () => {
+    expect.hasAssertions();
     const options = huntOf(['--seed', '7', '--copies', '2', '--repeats', '3', 'packages/foundation']);
-    expect([options.seed, options.copies, options.repeats, options.filters]).toEqual([7, 2, 3, ['packages/foundation']]);
+    expect([options.seed, options.copies, options.repeats, options.filters]).toStrictEqual([7, 2, 3, ['packages/foundation']]);
   });
 
   test.each([['--seed', '0'], ['--copies', 'x'], ['--repeats', '-1']])('refuses %s %s', (name, value) => {
+    expect.hasAssertions();
     expect(() => huntOf([name, value])).toThrow(`${name} must be a positive integer`);
   });
 });
+
+export { HARNESS_ID };

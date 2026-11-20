@@ -7,11 +7,10 @@
  */
 
 import { describe, expect, test } from 'vitest';
+import { usePlanted, useScan } from '#lib/scan-hooks.ts';
+import { unread } from '#lib/type-exports.ts';
 
-import { usePlanted, useScan } from '../lib/scan-hooks.ts';
-import { unread } from '../lib/type-exports.ts';
-
-export const HARNESS_ID = 'type-exports';
+const HARNESS_ID = 'type-exports';
 
 const OWNER = 'packages/foundation/src/__types_owner.ts';
 const PLANTS: Readonly<Record<string, string>> = {
@@ -39,12 +38,16 @@ const repoScan = useScan();
 
 describe('the repository', () => {
   test('every exported type is read by another module or marked @public', () => {
-    expect(unread(repoScan())).toEqual([]);
+    expect.hasAssertions();
+    expect(unread(repoScan())).toStrictEqual([]);
   });
 });
 
 describe('the scan', () => {
   test('fails a type only its own module, a re-export or a test names, and passes a read, a check read and @public', () => {
-    expect(unread(plantedScan()).map((type) => type.name).toSorted()).toEqual(['OnlyReexported', 'ReadByTest', 'Unread']);
+    expect.hasAssertions();
+    expect(unread(plantedScan()).map((type) => type.name).toSorted()).toStrictEqual(['OnlyReexported', 'ReadByTest', 'Unread']);
   });
 });
+
+export { HARNESS_ID };

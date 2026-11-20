@@ -9,13 +9,12 @@
  */
 
 import { describe, expect, test } from 'vitest';
+import { json, object } from '#lib/config.ts';
+import { textOf, tracked } from '#lib/source-files.ts';
+import { OXLINT_CONFIG_FILES } from '#lib/lint-rules.ts';
+import { Project } from '#lib/tools.ts';
 
-import { json, object } from '../lib/config.ts';
-import { OXLINT_CONFIG_FILES } from '../lib/lint-rules.ts';
-import { textOf, tracked } from '../lib/source-files.ts';
-import { Project } from '../lib/tools.ts';
-
-export const HARNESS_ID = 'boundaries';
+const HARNESS_ID = 'boundaries';
 
 interface Fixture {
   readonly path: string;
@@ -74,21 +73,25 @@ function verdicts(fixtures: readonly Fixture[]): ReadonlyMap<string, boolean> {
 
 /** The system packages of the listing. */
 function systems(): readonly string[] {
-  return [...new Set(tracked().flatMap((path) => /^packages\/systems\/([^/]+)\/package\.json$/.exec(path)?.slice(1) ?? []))];
+  return [...new Set(tracked().flatMap((path) => /^packages\/systems\/([^/]+)\/package\.json$/u.exec(path)?.slice(1) ?? []))];
 }
 
 describe('the boundary lint', () => {
   test('fails each must-fail fixture and passes each must-pass fixture', () => {
+    expect.hasAssertions();
     const found = verdicts(FIXTURES);
-    expect(FIXTURES.map((fixture) => [fixture.path, found.get(fixture.path)])).toEqual(
+    expect(FIXTURES.map((fixture) => [fixture.path, found.get(fixture.path)])).toStrictEqual(
       FIXTURES.map((fixture) => [fixture.path, fixture.fails]),
     );
   });
 
   test('every system package has its own import override', () => {
+    expect.hasAssertions();
     const {overrides} = object(json(textOf('.oxlintrc.json')), '.oxlintrc.json');
     const globs = Array.isArray(overrides) ? overrides.flatMap((entry) => object(entry, 'override')['files']) : [];
-    expect(systems().filter((name) => !globs.includes(`packages/systems/${name}/**`))).toEqual([]);
+    expect(systems().filter((name) => !globs.includes(`packages/systems/${name}/**`))).toStrictEqual([]);
     expect(systems().length).toBeGreaterThan(1);
   });
 });
+
+export { HARNESS_ID };

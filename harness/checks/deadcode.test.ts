@@ -8,9 +8,6 @@
  * ignore, so it fails. Each entry of `knip.json`'s ignore lists is held here with its reason.
  */
 
-import { describe, expect, test } from 'vitest';
-
-import { json } from '../lib/config.ts';
 import {
   deadcodeRuns,
   ignoreEntries,
@@ -18,13 +15,15 @@ import {
   knip,
   repoIgnoreEntries,
   strictnessProblems,
-} from '../lib/deadcode.ts';
-import { Exemptions } from '../lib/exemptions.ts';
-import { REPO_ROOT } from '../lib/paths.ts';
-import { textOf } from '../lib/source-files.ts';
-import { Project } from '../lib/tools.ts';
+} from '#lib/deadcode.ts';
+import { describe, expect, test } from 'vitest';
+import { Exemptions } from '#lib/exemptions.ts';
+import { Project } from '#lib/tools.ts';
+import { REPO_ROOT } from '#lib/paths.ts';
+import { json } from '#lib/config.ts';
+import { textOf } from '#lib/source-files.ts';
 
-export const HARNESS_ID = 'deadcode';
+const HARNESS_ID = 'deadcode';
 
 const POC = 'poc: the POC reference uses it until it is deleted (#50)';
 
@@ -91,72 +90,81 @@ const CLEAN = {
 
 describe('the repository', () => {
   test('the deadcode task runs knip in production mode and in default mode, treating hints as errors', () => {
-    expect(deadcodeRuns()).toEqual([
+    expect.hasAssertions();
+    expect(deadcodeRuns()).toStrictEqual([
       ['--production', '--treat-config-hints-as-errors'],
       ['--treat-config-hints-as-errors'],
     ]);
   });
 
   test('knip finds nothing unused in either mode', () => {
+    expect.hasAssertions();
     const failed = deadcodeRuns()
       .map((args) => knip(REPO_ROOT, args))
       .filter((run) => run.status !== 0)
       .map((run) => run.stdout + run.stderr);
-    expect(failed).toEqual([]);
+    expect(failed).toStrictEqual([]);
   });
 
   test('every ignore entry of knip.json carries its reason', () => {
-    expect(KNIP_IGNORES.unexempted(repoIgnoreEntries())).toEqual([]);
+    expect.hasAssertions();
+    expect(KNIP_IGNORES.unexempted(repoIgnoreEntries())).toStrictEqual([]);
   });
 
   test('knip.json is at the strictest: every issue type an error, no file excused', () => {
+    expect.hasAssertions();
     expect(issueTypes()).toContain('exports');
-    expect(strictnessProblems(json(textOf('knip.json')), issueTypes())).toEqual([]);
+    expect(strictnessProblems(json(textOf('knip.json')), issueTypes())).toStrictEqual([]);
   });
 });
 
 describe('the deadcode check, on a planted package', () => {
   test('passes a package whose every export is read by production code', () => {
-    expect(plantedRuns(CLEAN).map((run) => run.status)).toEqual([0, 0]);
+    expect.hasAssertions();
+    expect(plantedRuns(CLEAN).map((run) => run.status)).toStrictEqual([0, 0]);
   });
 
   test('fails an export nothing reads, in both modes', () => {
+    expect.hasAssertions();
     const runs = plantedRuns({ ...CLEAN, 'src/lib.ts': 'export const a = 1;\nexport const unread = 2;\n' });
-    expect(runs.map((run) => [run.status, run.output.includes('unread')])).toEqual([
+    expect(runs.map((run) => [run.status, run.output.includes('unread')])).toStrictEqual([
       [1, true],
       [1, true],
     ]);
   });
 
   test('fails an export only a test reads, in production mode only', () => {
+    expect.hasAssertions();
     const runs = plantedRuns({
       ...CLEAN,
       'src/lib.test.ts': "import { a, testOnly } from './lib.ts';\nconsole.assert(a + testOnly === 3);\n",
       'src/lib.ts': 'export const a = 1;\nexport const testOnly = 2;\n',
     });
-    expect(runs.map((run) => [run.status, run.output.includes('testOnly')])).toEqual([
+    expect(runs.map((run) => [run.status, run.output.includes('testOnly')])).toStrictEqual([
       [1, true],
       [0, false],
     ]);
   });
 
   test('fails a stale dependency ignore, which knip hints in default mode', () => {
+    expect.hasAssertions();
     const runs = plantedRuns(CLEAN, { ...PLANT_CONFIG, ignoreDependencies: ['no-such-package'] });
-    expect(runs.map((run) => [run.status, run.output.includes('no-such-package')])).toEqual([
+    expect(runs.map((run) => [run.status, run.output.includes('no-such-package')])).toStrictEqual([
       [0, false],
       [1, true],
     ]);
   });
 
   test('refuses an issue type below error and a file excused from an issue type', () => {
+    expect.hasAssertions();
     const strict = { rules: { exports: 'error', types: 'error' } };
-    expect(strictnessProblems(strict, ['exports', 'types'])).toEqual([]);
+    expect(strictnessProblems(strict, ['exports', 'types'])).toStrictEqual([]);
     expect(
       strictnessProblems(
         { ignoreFiles: ['src/y.ts'], ignoreIssues: { 'src/x.ts': ['exports'] }, rules: { exports: 'warn' } },
         ['exports', 'types'],
       ),
-    ).toEqual([
+    ).toStrictEqual([
       'rule exports is not error',
       'rule types is not error',
       'a file is excused: ignoreFiles:src/y.ts',
@@ -165,6 +173,7 @@ describe('the deadcode check, on a planted package', () => {
   });
 
   test('keys every kind of ignore entry', () => {
+    expect.hasAssertions();
     expect(
       ignoreEntries({
         ignoreBinaries: ['b'],
@@ -173,7 +182,7 @@ describe('the deadcode check, on a planted package', () => {
         ignoreIssues: { 'src/x.ts': ['exports', 'types'] },
         ignoreWorkspaces: ['w'],
       }),
-    ).toEqual([
+    ).toStrictEqual([
       'ignoreWorkspaces:w',
       'ignoreDependencies:d',
       'ignoreBinaries:b',
@@ -183,3 +192,5 @@ describe('the deadcode check, on a planted package', () => {
     ]);
   });
 });
+
+export { HARNESS_ID };

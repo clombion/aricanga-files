@@ -6,13 +6,12 @@
  * (`harness/lib/generated.ts`), so a bump the fix task has not rendered fails the generated-docs check.
  */
 
+import { UPSTREAM, pinned, pins } from '#lib/pins.ts';
 import { describe, expect, test } from 'vitest';
+import { Exemptions } from '#lib/exemptions.ts';
+import type { Pin } from '#lib/pins.ts';
 
-import { Exemptions } from '../lib/exemptions.ts';
-import { pinned, pins, UPSTREAM } from '../lib/pins.ts';
-import type { Pin } from '../lib/pins.ts';
-
-export const HARNESS_ID = 'tool-upgrades';
+const HARNESS_ID = 'tool-upgrades';
 
 /** Pin problems the repository carries while the fix is pending, keyed by the problem. */
 const PENDING = new Exemptions({
@@ -21,7 +20,7 @@ const PENDING = new Exemptions({
 });
 
 /** A pin with no upstream or no version, and an upstream entry that pins nothing. */
-export function pinProblems(found: readonly Pin[], upstream: ReadonlyMap<string, string>): readonly string[] {
+function pinProblems(found: readonly Pin[], upstream: ReadonlyMap<string, string>): readonly string[] {
   const problems = found
     .filter((pin) => (upstream.get(pin.tool) ?? '') === '')
     .map((pin) => `${pin.tool}: pinned in ${pin.where}, with no upstream repository named`);
@@ -66,12 +65,14 @@ packages:
 
 describe('the repository', () => {
   test('every pin has its upstream and every upstream a pin', () => {
-    expect(PENDING.unexempted(pinProblems(pins(), UPSTREAM))).toEqual([]);
+    expect.hasAssertions();
+    expect(PENDING.unexempted(pinProblems(pins(), UPSTREAM))).toStrictEqual([]);
   });
 });
 
 describe('the pin reader and the pin check', () => {
   test('read each importer of the lockfile, strip peer suffixes and skip workspace links', () => {
+    expect.hasAssertions();
     const found = pinned(
       [
         {
@@ -85,7 +86,7 @@ describe('the pin reader and the pin check', () => {
       ],
       LOCK,
     );
-    expect(found).toEqual([
+    expect(found).toStrictEqual([
       { tool: '@scope/tool', version: '2.1.0', where: 'pnpm-lock.yaml' },
       { tool: 'node', version: '>=22.18.0', where: 'package.json engines' },
       { tool: 'oxlint', version: '1.94.0', where: 'pnpm-lock.yaml' },
@@ -97,20 +98,22 @@ describe('the pin reader and the pin check', () => {
   });
 
   test('read a pinned packageManager and a manifest with no engines, and refuse a dependency that is not a string', () => {
-    expect(pinned([{ importer: '.', manifest: { packageManager: 'pnpm@10.28.0' } }], LOCK)).toEqual([
+    expect.hasAssertions();
+    expect(pinned([{ importer: '.', manifest: { packageManager: 'pnpm@10.28.0' } }], LOCK)).toStrictEqual([
       { tool: 'node', version: '', where: 'package.json engines' },
       { tool: 'pnpm', version: '10.28.0', where: 'package.json packageManager' },
     ]);
-    expect(() => pinned([{ importer: '.', manifest: { devDependencies: { oxlint: 1 } } }], LOCK)).toThrow(/is not a string/);
+    expect(() => pinned([{ importer: '.', manifest: { devDependencies: { oxlint: 1 } } }], LOCK)).toThrow(/is not a string/u);
   });
 
   test('see a new pin without a row, a pin without a version, and a row without a pin', () => {
+    expect.hasAssertions();
     const found: readonly Pin[] = [
       { tool: 'node', version: '>=22.18.0', where: 'package.json engines' },
       { tool: 'planted', version: '1.0.0', where: 'pnpm-lock.yaml' },
       { tool: 'unlocked', version: '', where: 'pnpm-lock.yaml' },
     ];
-    expect(pinProblems(found, new Map([['node', 'nodejs/node'], ['unlocked', 'someone/unlocked'], ['gone', 'someone/gone']]))).toEqual([
+    expect(pinProblems(found, new Map([['node', 'nodejs/node'], ['unlocked', 'someone/unlocked'], ['gone', 'someone/gone']]))).toStrictEqual([
       'planted: pinned in pnpm-lock.yaml, with no upstream repository named',
       'unlocked: pinned in pnpm-lock.yaml, with no version',
       'gone: named upstream, but nothing pins it',
@@ -118,6 +121,9 @@ describe('the pin reader and the pin check', () => {
   });
 
   test('let a fully named and pinned set through', () => {
-    expect(pinProblems([{ tool: 'node', version: '>=22', where: 'package.json engines' }], new Map([['node', 'nodejs/node']]))).toEqual([]);
+    expect.hasAssertions();
+    expect(pinProblems([{ tool: 'node', version: '>=22', where: 'package.json engines' }], new Map([['node', 'nodejs/node']]))).toStrictEqual([]);
   });
 });
+
+export { HARNESS_ID, pinProblems };

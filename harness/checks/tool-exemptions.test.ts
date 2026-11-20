@@ -10,15 +10,14 @@
  * its reason, and a declared policy that starts matching listed files fails as stale.
  */
 
+import { Exemptions, site } from '#lib/exemptions.ts';
+import { dead, matches } from '#lib/globs.ts';
 import { describe, expect, test } from 'vitest';
+import { json, object } from '#lib/config.ts';
+import { textOf, tracked } from '#lib/source-files.ts';
+import { fromRoot } from '#lib/paths.ts';
 
-import { json, object } from '../lib/config.ts';
-import { Exemptions, site } from '../lib/exemptions.ts';
-import { dead, matches } from '../lib/globs.ts';
-import { fromRoot } from '../lib/paths.ts';
-import { textOf, tracked } from '../lib/source-files.ts';
-
-export const HARNESS_ID = 'tool-exemptions';
+const HARNESS_ID = 'tool-exemptions';
 
 /** A glob of a tool's configuration, with where it was read. */
 interface Entry {
@@ -40,7 +39,7 @@ function strings(value: unknown, what: string): string[] {
 }
 
 /** oxlint's ignore patterns and override file globs. */
-export function oxlintEntries(config: unknown): Entry[] {
+function oxlintEntries(config: unknown): Entry[] {
   const fields = object(config, '.oxlintrc.json');
   const overrides = fields['overrides'] === undefined ? [] : fields['overrides'];
   if (!Array.isArray(overrides)) {
@@ -58,7 +57,7 @@ export function oxlintEntries(config: unknown): Entry[] {
 }
 
 /** The gate's Vitest config: coverage include and exclude, and each project's include. */
-export function vitestEntries(config: unknown): Entry[] {
+function vitestEntries(config: unknown): Entry[] {
   const testOptions = object(object(config, 'vitest config')['test'] ?? {}, 'test');
   const coverage = object(testOptions['coverage'] ?? {}, 'coverage');
   const projects = testOptions['projects'] === undefined ? [] : testOptions['projects'];
@@ -78,7 +77,7 @@ export function vitestEntries(config: unknown): Entry[] {
 }
 
 /** Biome's `files.includes`, a `!` entry read as the exclusion it is. */
-export function biomeEntries(config: unknown): Entry[] {
+function biomeEntries(config: unknown): Entry[] {
   const files = object(object(config, 'biome.json')['files'] ?? {}, 'files');
   return strings(files['includes'], 'files.includes').map((glob) =>
     glob.startsWith('!') ? { glob: glob.slice(1), tool: 'biome files.includes (exclusion)' } : { glob, tool: 'biome files.includes' },
@@ -86,7 +85,7 @@ export function biomeEntries(config: unknown): Entry[] {
 }
 
 /** oxfmt's ignore patterns. */
-export function oxfmtEntries(config: unknown): Entry[] {
+function oxfmtEntries(config: unknown): Entry[] {
   return strings(object(config, '.oxfmtrc.json')['ignorePatterns'], 'ignorePatterns').map((glob) => ({
     glob,
     tool: 'oxfmt ignorePatterns',
@@ -94,7 +93,7 @@ export function oxfmtEntries(config: unknown): Entry[] {
 }
 
 /** knip's `ignore`, at the top level and per workspace. */
-export function knipEntries(config: unknown): Entry[] {
+function knipEntries(config: unknown): Entry[] {
   const fields = object(config, 'knip.json');
   const workspaces = object(fields['workspaces'] ?? {}, 'workspaces');
   return [
@@ -109,7 +108,7 @@ export function knipEntries(config: unknown): Entry[] {
 }
 
 /** stylelint's `ignoreFiles` and the lines of `.stylelintignore`. */
-export function stylelintEntries(config: unknown, ignoreFile: string): Entry[] {
+function stylelintEntries(config: unknown, ignoreFile: string): Entry[] {
   return [
     ...strings(object(config, '.stylelintrc.json')['ignoreFiles'], 'ignoreFiles').map((glob) => ({
       glob,
@@ -124,7 +123,7 @@ export function stylelintEntries(config: unknown, ignoreFile: string): Entry[] {
 }
 
 /** The entries whose glob matches none of `paths`. */
-export function deadEntries(entries: readonly Entry[], paths: readonly string[]): Entry[] {
+function deadEntries(entries: readonly Entry[], paths: readonly string[]): Entry[] {
   const unmatched = new Set(dead(entries.map((entry) => entry.glob), paths));
   return entries.filter((entry) => unmatched.has(entry.glob));
 }
@@ -152,8 +151,9 @@ async function repoEntries(): Promise<Entry[]> {
 
 describe('the repository', () => {
   test('every tool glob matches a listed file, or is a declared policy', async () => {
+    expect.hasAssertions();
     const unmatched = deadEntries(await repoEntries(), tracked());
-    expect(POLICIES.unexemptedBy(unmatched, (entry) => site(entry.tool, entry.glob))).toEqual([]);
+    expect(POLICIES.unexemptedBy(unmatched, (entry) => site(entry.tool, entry.glob))).toStrictEqual([]);
   });
 });
 
@@ -161,6 +161,7 @@ describe('the readers and the matcher', () => {
   const LISTED = ['packages/plant/src/a.ts', 'packages/plant/src/a.test.ts', 'packages/plant/src/b.css', 'docs/x.md'];
 
   test('a glob matches through directories and a trailing /** matches a directory', () => {
+    expect.hasAssertions();
     expect(matches('packages/*/src/**', 'packages/plant/src/a.ts')).toBe(true);
     expect(matches('**/*.test.ts', 'packages/plant/src/a.test.ts')).toBe(true);
     expect(matches('docs/**', 'docs/x.md')).toBe(true);
@@ -169,24 +170,26 @@ describe('the readers and the matcher', () => {
   });
 
   test('sees a dead oxlint ignore and a dead override, and lets live ones through', () => {
+    expect.hasAssertions();
     const entries = oxlintEntries({
       ignorePatterns: ['docs/**', 'gone/**'],
       overrides: [{ files: ['packages/plant/**'] }, { files: ['packages/gone/**'] }],
     });
-    expect(deadEntries(entries, LISTED)).toEqual([
+    expect(deadEntries(entries, LISTED)).toStrictEqual([
       { glob: 'gone/**', tool: 'oxlint ignorePatterns' },
       { glob: 'packages/gone/**', tool: 'oxlint overrides[1]' },
     ]);
   });
 
   test('sees a dead coverage include, coverage exclude and project include', () => {
+    expect.hasAssertions();
     const entries = vitestEntries({
       test: {
         coverage: { exclude: ['**/*.test.ts', '**/*.spec.ts'], include: ['packages/plant/src/**', 'packages/gone/src/**'] },
         projects: [{ test: { include: ['packages/**/*.test.ts'] } }, { test: { include: ['harness/checks/**/*.test.ts'] } }],
       },
     });
-    expect(deadEntries(entries, LISTED).map((entry) => entry.glob)).toEqual([
+    expect(deadEntries(entries, LISTED).map((entry) => entry.glob)).toStrictEqual([
       'packages/gone/src/**',
       '**/*.spec.ts',
       'harness/checks/**/*.test.ts',
@@ -194,29 +197,34 @@ describe('the readers and the matcher', () => {
   });
 
   test('reads a biome exclusion as the glob it excludes', () => {
-    expect(biomeEntries({ files: { includes: ['packages/**/*.css', '!**/gone/**'] } })).toEqual([
+    expect.hasAssertions();
+    expect(biomeEntries({ files: { includes: ['packages/**/*.css', '!**/gone/**'] } })).toStrictEqual([
       { glob: 'packages/**/*.css', tool: 'biome files.includes' },
       { glob: '**/gone/**', tool: 'biome files.includes (exclusion)' },
     ]);
   });
 
   test('reads oxfmt, knip and stylelint ignores', () => {
-    expect(oxfmtEntries({ ignorePatterns: ['docs/**'] })).toEqual([{ glob: 'docs/**', tool: 'oxfmt ignorePatterns' }]);
-    expect(knipEntries({ ignore: ['docs/**'], workspaces: { 'packages/plant': { ignore: ['src/b.css'] } } })).toEqual([
+    expect.hasAssertions();
+    expect(oxfmtEntries({ ignorePatterns: ['docs/**'] })).toStrictEqual([{ glob: 'docs/**', tool: 'oxfmt ignorePatterns' }]);
+    expect(knipEntries({ ignore: ['docs/**'], workspaces: { 'packages/plant': { ignore: ['src/b.css'] } } })).toStrictEqual([
       { glob: 'docs/**', tool: 'knip ignore' },
       { glob: 'packages/plant/src/b.css', tool: 'knip workspaces[packages/plant].ignore' },
     ]);
-    expect(stylelintEntries({ ignoreFiles: ['**/b.css'] }, '# a comment\n\ngone/**\n')).toEqual([
+    expect(stylelintEntries({ ignoreFiles: ['**/b.css'] }, '# a comment\n\ngone/**\n')).toStrictEqual([
       { glob: '**/b.css', tool: 'stylelint ignoreFiles' },
       { glob: 'gone/**', tool: '.stylelintignore' },
     ]);
   });
 
   test('a declared policy passes while it matches nothing, and fails as stale once it matches', () => {
+    expect.hasAssertions();
     const policies = new Exemptions({ [site('oxlint ignorePatterns', '**/dist/**')]: 'planted: build output' });
     const unmatched = deadEntries([{ glob: '**/dist/**', tool: 'oxlint ignorePatterns' }], LISTED);
-    expect(policies.unexemptedBy(unmatched, (entry) => site(entry.tool, entry.glob))).toEqual([]);
+    expect(policies.unexemptedBy(unmatched, (entry) => site(entry.tool, entry.glob))).toStrictEqual([]);
     const nowMatching = deadEntries([{ glob: '**/dist/**', tool: 'oxlint ignorePatterns' }], ['a/dist/x.js']);
     expect(() => policies.unexemptedBy(nowMatching, (entry) => site(entry.tool, entry.glob))).toThrow('stale');
   });
 });
+
+export { HARNESS_ID, biomeEntries, deadEntries, knipEntries, oxfmtEntries, oxlintEntries, stylelintEntries, vitestEntries };
