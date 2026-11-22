@@ -76,7 +76,7 @@ Gates: `gate` (the local gate and its git hooks), `CI`/`PR` (the PR merge gate),
 
 A system's correctness rests on four properties the toolchain enforces directly, so completeness and purity are checked rather than reviewed:
 
-- **Boundary exhaustiveness (compile):** handling of `Input` and `Effect` is total — a `never` check makes a new boundary crossing fail to compile until it is a constructor. Closure of the boundary is a type property.
+- **Boundary exhaustiveness (compile):** handling of `Input` and `Effect` is total — each is dispatched through a handler table typed over its closed union, so a new boundary crossing fails to compile until its handler exists (`packages/foundation/test/exhaustive.test.ts` plants a table missing a kind). Closure of the boundary is a type property.
 - **Reducer purity (lint, pre-commit):** a rule refusing `Date.now`, `Math.random` and locale reads over every system's reducer (`model`) package; the kernel reads time/ids only from `ReduceContext`/the input, locale only in `view` via `RenderContext`.
 - **Determinism (property, CI):** a run-twice deep-equality invariant over `reduce` for generated input streams.
 - **Golden (golden, CI):** the recorded `Input→Effect`+`state` stream (kernel-observable, never opaque ink JSON), serialized canonically (sorted keys). A regression lock, not the correctness oracle — each behaviour is independently asserted by the invariant/regression/example suites.

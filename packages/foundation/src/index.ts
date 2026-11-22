@@ -21,7 +21,6 @@ export { erase, stateOf, viewOf } from './sim/system';
 export type { Item, Reader } from './sim/parse';
 export { commandOf, InputRefusedError, readerOf, unitCommands } from './sim/parse';
 export type { ReduceRecord, ReduceObserver } from './sim/trace';
-export { assertNever } from './sim/exhaustive';
 export type { Router, RouteContext } from './sim/router';
 export { createTagOwnershipRouter } from './sim/router';
 
