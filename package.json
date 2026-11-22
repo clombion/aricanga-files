@@ -3,12 +3,18 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "imports": {
+    "#lib/*": "./harness/lib/*",
+    "#checks/*": "./harness/checks/*",
+    "#lint-rules/*": "./harness/lint-rules/*",
+    "#scripts/*": "./harness/scripts/*"
+  },
   "scripts": {
     "setup": "pnpm install --frozen-lockfile && lefthook install && node harness/scripts/gen-docs.ts",
     "check": "pnpm run check:fast && pnpm run test && pnpm run test:browser",
     "check:fast": "pnpm run lock:check && pnpm run lint && pnpm run format:check && pnpm run typecheck && pnpm run dupes && pnpm run docs:check && pnpm run deadcode && pnpm run build:check",
     "lock:check": "pnpm install --frozen-lockfile --lockfile-only",
-    "lint": "pnpm run lock:check && oxlint && biome ci --error-on-warnings && stylelint \"**/*.css\" --max-warnings 0",
+    "lint": "pnpm run lock:check && oxlint && stylelint \"**/*.css\" --max-warnings 0",
     "format:check": "pnpm run lock:check && oxfmt --check",
     "typecheck": "pnpm run lock:check && node harness/scripts/typecheck.ts",
     "dupes": "pnpm run lock:check && node harness/scripts/dupes.ts",
@@ -18,7 +24,7 @@
     "test": "pnpm run lock:check && vitest run --config vitest.gate.config.ts --coverage && node harness/scripts/coverage-floor.ts",
     "test:browser": "pnpm run lock:check && playwright test -c packages/characterisation/playwright.characterisation.config.ts --grep-invert @performance && playwright test -c packages/characterisation/playwright.characterisation.config.ts --grep @performance --workers=1",
     "test:stress": "pnpm run lock:check && node harness/scripts/stress.ts",
-    "fix": "oxlint --fix && oxfmt && biome check --write && node harness/scripts/gen-docs.ts",
+    "fix": "oxlint --fix && oxfmt && node harness/scripts/gen-docs.ts",
     "characterise:baseline": "node harness/scripts/performance-baseline.ts",
     "vite": "vite",
     "vite:build": "vite build",
@@ -33,7 +39,6 @@
     "test:unit": "vitest run",
     "test:unit:watch": "vitest",
     "playwright:install": "playwright install",
-    "lint:js": "biome check packages/framework/src/ experiences/",
     "lint:tags": "bash experiences/aricanga/utils/ink/lint-tags.sh",
     "lint:image-paths": "bash experiences/aricanga/utils/ink/lint-image-paths.sh",
     "lint:ink-comments": "bash experiences/aricanga/utils/ink/lint-ink-comments.sh",
@@ -79,11 +84,16 @@
     "lint:tags:compiled": "node experiences/aricanga/utils/qa/ink-tag-audit.js",
     "test:poc": "playwright test"
   },
+  "dependencies": {
+    "@ai-sdk/google": "^4.0.122",
+    "@viz-js/viz": "^3.31.0",
+    "xstate": "^5.33.4",
+    "zod": "^4.6.7"
+  },
   "devDependencies": {
     "@ai-sdk/anthropic": "^4.0.106",
     "@ai-sdk/openai": "^4.0.121",
     "@axe-core/playwright": "^4.14.0",
-    "@biomejs/biome": "^2.6.8",
     "@commitlint/cli": "21.2.4",
     "@commitlint/config-conventional": "21.2.4",
     "@double-great/stylelint-a11y": "3.8.3",
@@ -119,25 +129,13 @@
     "vite": "^8.3.8",
     "vitest": "^5.1.1"
   },
+  "engines": {
+    "node": ">=22.18.0"
+  },
+  "packageManager": "pnpm@10.28.0",
   "pnpm": {
     "onlyBuiltDependencies": [
       "sharp"
     ]
-  },
-  "dependencies": {
-    "@ai-sdk/google": "^4.0.122",
-    "@viz-js/viz": "^3.31.0",
-    "xstate": "^5.33.4",
-    "zod": "^4.6.7"
-  },
-  "engines": {
-    "node": ">=22.18.0"
-  },
-  "imports": {
-    "#lib/*": "./harness/lib/*",
-    "#checks/*": "./harness/checks/*",
-    "#lint-rules/*": "./harness/lint-rules/*",
-    "#scripts/*": "./harness/scripts/*"
-  },
-  "packageManager": "pnpm@10.28.0"
+  }
 }

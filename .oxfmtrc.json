@@ -11,14 +11,13 @@
     "templates/**",
     "docs/**",
     "vitest.config.ts",
-    "**/*.json",
-    "**/*.css",
     "**/*.md",
     "**/*.yml",
     "**/*.yaml",
     "**/*.toml",
     "**/*.html",
     "**/*.js",
-    "**/*.mjs"
+    "**/*.mjs",
+    "**/__goldens__/**"
   ]
 }

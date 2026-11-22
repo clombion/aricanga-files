@@ -30,7 +30,6 @@ const SHELL_FENCES = new Accepted(['sh', 'bash', 'shell', 'console', 'zsh']);
 const LOCKED_TOOLS = new Accepted([
   'oxlint',
   'oxfmt',
-  'biome',
   'tsc',
   'vitest',
   'playwright',

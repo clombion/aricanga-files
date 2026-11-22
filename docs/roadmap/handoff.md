@@ -60,10 +60,11 @@ change meets:
   those folders without the root `package.json`.
 - Tests live under each package's `test/` with its own `tsconfig.json`: the type-aware linter
   types a file by its nearest config.
-- oxfmt formats at a print width of 140. Biome currently formats and lints CSS and JSON; the
-  **harness/no-biome** branch replaces it: stylelint takes every CSS rule Biome enforced (mapped
-  rule by rule, the mapping documented), oxfmt formats CSS and JSON, and a `json-files` check
-  holds duplicate keys, empty keys and a dependency listed twice.
+- oxfmt formats every held TypeScript, CSS and JSON file at a print width of 140. stylelint
+  lints CSS, with every recommended Biome CSS rule held by its stylelint counterpart, and the
+  `json-files` check holds JSON: duplicate and empty keys, unsafe numbers, and a dependency listed
+  twice. [harness/lint-settings.md](../../harness/lint-settings.md) maps each Biome rule to its
+  owner and gives each stylelint rule's setting with its reason.
 
 ## Decisions the owner has made
 

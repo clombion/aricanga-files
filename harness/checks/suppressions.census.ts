@@ -14,8 +14,6 @@ const CHECKS = new Accepted([
   'oxlint:.mjs',
   'typescript:.ts',
   'typescript:.tsx',
-  'biome:.css',
-  'biome:.json',
   'stylelint:.css',
   'coverage:.ts',
   'coverage:.tsx',
@@ -27,8 +25,7 @@ const RULES = String.raw`[@\w./-]+(?:\s*,\s*[@\w./-]+)*`;
 const DISABLE = /^(?<tool>oxlint|eslint|stylelint)-disable(?:-next-line|-line)?\b(?<rest>.*)$/su;
 const NAMED_DISABLE = new RegExp(String.raw`^\s+(?<rules>${RULES})\s+--\s+\S`, 'u');
 const ENABLE = /^(?:oxlint|eslint|stylelint)-enable\b/u;
-const BIOME = /^biome-ignore(?:-all|-start|-end)?\b(?<rest>.*)$/su;
-const NAMED_BIOME = /^\s+(?<rule>lint\/[\w/]+)(?:\([^)]*\))?:\s*\S/u;
+const BIOME = /^biome-ignore(?:-all|-start|-end)?\b/u;
 const EXPECT_ERROR = /^@ts-expect-error\b(?<rest>.*)$/su;
 const REASONED = /^\s+--\s+\S/u;
 const REFUSED_TS = /^(?<directive>@ts-(?:ignore|nocheck))\b/u;
@@ -129,18 +126,8 @@ function disableVerdict(groups: Readonly<Record<string, string>>): Verdict {
   return { rules: rules.split(',').map((rule) => rule.trim()), tool };
 }
 
-/**
- * What a `biome-ignore` directive is.
- *
- * @param {string} rest - The directive after its keyword.
- * @returns {Verdict} The directive's verdict.
- */
-function biomeVerdict(rest: string): Verdict {
-  const rule = NAMED_BIOME.exec(rest)?.groups?.['rule'];
-  return rule === undefined
-    ? { problem: 'a biome-ignore names its lint/... rule and ends with : <reason>' }
-    : { rules: [rule], tool: 'biome' };
-}
+/** A `biome-ignore` left behind suppresses nothing: Biome is no tool of the project. */
+const STRAY_BIOME: Verdict = { problem: 'a biome-ignore suppresses nothing: Biome is not one of the tools that check this repository' };
 
 /**
  * What a `@ts-expect-error`, refused `@ts-` or coverage directive is.
@@ -176,8 +163,7 @@ function verdictOf(directive: string): Verdict {
   if (ENABLE.test(directive)) {
     return undefined;
   }
-  const biome = BIOME.exec(directive)?.groups?.['rest'];
-  return biome === undefined ? typeOrCoverageVerdict(directive) : biomeVerdict(biome);
+  return BIOME.test(directive) ? STRAY_BIOME : typeOrCoverageVerdict(directive);
 }
 
 /**

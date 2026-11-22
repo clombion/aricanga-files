@@ -22,7 +22,6 @@ const HARNESS_ID = 'gate';
 const WRITERS: readonly (readonly [RegExp, string])[] = [
   [/\b(?:oxlint|stylelint|knip)\b.*--fix/u, 'a fixer rewrites files'],
   [/\boxfmt\b(?!.*--check)/u, 'oxfmt without --check rewrites files'],
-  [/\bbiome\b.*--(?:write|fix|unsafe)/u, 'biome --write rewrites files'],
   [/\bgen-docs\.ts\b(?!.*--check)/u, 'gen-docs without --check rewrites the docs'],
   [/\bvitest\b.*(?:\s-u\b|--update)/u, 'a snapshot update rewrites snapshots'],
   [/\btsc\b(?!.*--noEmit)/u, 'tsc without --noEmit writes its output'],
@@ -180,7 +179,6 @@ describe('the gate check', () => {
     'oxlint --fix',
     'oxfmt',
     'oxfmt .',
-    'biome check --write',
     'stylelint "**/*.css" --fix',
     'knip --fix',
     'node harness/scripts/gen-docs.ts',

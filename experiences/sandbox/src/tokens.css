@@ -7,5 +7,5 @@
   --space-bubble-block: 0.5rem;
   --space-bubble-inline: 0.75rem;
   --radius-bubble: 0.75rem;
-  --surface-bubble: #e9e9eb;
+  --surface-bubble: rgb(233 233 235);
 }

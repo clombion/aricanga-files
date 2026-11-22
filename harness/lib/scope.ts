@@ -23,7 +23,6 @@ const ROOT_FILES = new Accepted<string>([
   'tsconfig.base.json',
   '.oxlintrc.json',
   '.oxfmtrc.json',
-  'biome.json',
   'knip.json',
   'lefthook.json',
   '.commitlintrc.json',

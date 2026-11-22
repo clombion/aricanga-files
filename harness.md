@@ -16,7 +16,7 @@ generated blocks of the docs. `pnpm run fix` writes this table from `package.jso
 | `pnpm run check` | `pnpm run check:fast && pnpm run test && pnpm run test:browser` |
 | `pnpm run check:fast` | `pnpm run lock:check && pnpm run lint && pnpm run format:check && pnpm run typecheck && pnpm run dupes && pnpm run docs:check && pnpm run deadcode && pnpm run build:check` |
 | `pnpm run lock:check` | `pnpm install --frozen-lockfile --lockfile-only` |
-| `pnpm run lint` | `pnpm run lock:check && oxlint && biome ci --error-on-warnings && stylelint "**/*.css" --max-warnings 0` |
+| `pnpm run lint` | `pnpm run lock:check && oxlint && stylelint "**/*.css" --max-warnings 0` |
 | `pnpm run format:check` | `pnpm run lock:check && oxfmt --check` |
 | `pnpm run typecheck` | `pnpm run lock:check && node harness/scripts/typecheck.ts` |
 | `pnpm run dupes` | `pnpm run lock:check && node harness/scripts/dupes.ts` |
@@ -26,7 +26,7 @@ generated blocks of the docs. `pnpm run fix` writes this table from `package.jso
 | `pnpm run test` | `pnpm run lock:check && vitest run --config vitest.gate.config.ts --coverage && node harness/scripts/coverage-floor.ts` |
 | `pnpm run test:browser` | `pnpm run lock:check && playwright test -c packages/characterisation/playwright.characterisation.config.ts --grep-invert @performance && playwright test -c packages/characterisation/playwright.characterisation.config.ts --grep @performance --workers=1` |
 | `pnpm run test:stress` | `pnpm run lock:check && node harness/scripts/stress.ts` |
-| `pnpm run fix` | `oxlint --fix && oxfmt && biome check --write && node harness/scripts/gen-docs.ts` |
+| `pnpm run fix` | `oxlint --fix && oxfmt && node harness/scripts/gen-docs.ts` |
 <!-- end: tasks -->
 
 ## Shipped checks
@@ -50,6 +50,7 @@ list.
 - `generated-docs` (`harness/checks/generated-docs.test.ts`): Every generated block of the docs equals a fresh render, names a known generator, and every generator has a block.
 - `history-narration` (`harness/checks/history-narration.test.ts`): Current text describes the project as it is: no comment or doc narrates how it got there.
 - `isolation` (`harness/checks/isolation.test.ts`): A test that leaves a timer pending when it ends fails, and the next test starts clean.
+- `json-files` (`harness/checks/json-files.test.ts`): Every held JSON file is strict JSON a reader cannot misread, and no manifest lists a dependency twice.
 - `lint-settings` (`harness/checks/lint-settings.test.ts`): oxlint, under this project's settings, fails each planted violation of a rule the harness rests on.
 - `network-guard` (`harness/checks/network-guard.test.ts`): A test that connects to, looks up or fetches a host other than this machine trips the network guard.
 - `node-floor` (`harness/checks/node-floor.test.ts`): The Node running the suite, and the pinned `.node-version`, meet the floor `engines.node` declares.
@@ -146,7 +147,6 @@ writes this table from `package.json` and `pnpm-lock.yaml`.
 | `@ai-sdk/google` | [vercel/ai](https://github.com/vercel/ai) | `pnpm-lock.yaml` | 4.0.122 |
 | `@ai-sdk/openai` | [vercel/ai](https://github.com/vercel/ai) | `pnpm-lock.yaml` | 4.0.121 |
 | `@axe-core/playwright` | [dequelabs/axe-core-npm](https://github.com/dequelabs/axe-core-npm) | `pnpm-lock.yaml` | 4.14.0 |
-| `@biomejs/biome` | [biomejs/biome](https://github.com/biomejs/biome) | `pnpm-lock.yaml` | 2.6.8 |
 | `@commitlint/cli` | [conventional-changelog/commitlint](https://github.com/conventional-changelog/commitlint) | `pnpm-lock.yaml` | 21.2.4 |
 | `@commitlint/config-conventional` | [conventional-changelog/commitlint](https://github.com/conventional-changelog/commitlint) | `pnpm-lock.yaml` | 21.2.4 |
 | `@double-great/stylelint-a11y` | [double-great/stylelint-a11y](https://github.com/double-great/stylelint-a11y) | `pnpm-lock.yaml` | 3.8.3 |
