@@ -1,5 +1,7 @@
 {
-  "extends": ["stylelint-config-standard"],
+  "extends": [
+    "stylelint-config-standard"
+  ],
   "plugins": [
     "stylelint-plugin-logical-css",
     "stylelint-no-unsupported-browser-features",
@@ -23,28 +25,150 @@
     "**/build/**"
   ],
   "rules": {
-    "no-descending-specificity": true,
-    "selector-max-specificity": "0,2,0",
-    "selector-max-compound-selectors": 3,
-    "max-nesting-depth": 1,
-    "selector-max-id": 0,
-    "selector-no-qualifying-type": true,
-    "declaration-no-important": true,
-    "color-named": "never",
-    "font-weight-notation": "numeric",
-    "declaration-property-unit-allowed-list": {
-      "font-size": ["rem"],
-      "line-height": [],
-      "letter-spacing": ["em"],
-      "/^(margin|padding|gap|row-gap|column-gap|inset)/": ["rem", "%"],
-      "/^(min-|max-)?(inline|block)-size$/": ["rem", "%", "ch", "dvi", "dvb", "svi", "svb", "cqi", "cqb"],
-      "/radius$/": ["rem", "%"],
-      "/^border(-[a-z]+)*-width$/": ["px"],
-      "/^outline(-width|-offset)$/": ["px"],
-      "/^(transition|animation)(-duration|-delay)?$/": ["ms"]
+    "at-rule-descriptor-value-no-unknown": true,
+    "at-rule-no-unknown": true,
+    "at-rule-property-required-list": {
+      "property": [
+        "syntax",
+        "inherits",
+        "initial-value"
+      ]
     },
-    "logical-css/require-logical-properties": true,
+    "block-no-empty": true,
+    "color-named": "never",
+    "color-no-hex": true,
+    "color-no-invalid-hex": true,
+    "comment-word-disallowed-list": [
+      "/^TODO/",
+      "/^FIXME/",
+      "/^XXX/"
+    ],
+    "custom-property-no-missing-var-function": true,
+    "declaration-block-no-duplicate-custom-properties": true,
+    "declaration-block-no-duplicate-properties": true,
+    "declaration-block-no-shorthand-property-overrides": true,
+    "declaration-no-important": true,
+    "declaration-property-unit-allowed-list": {
+      "font-size": [
+        "rem"
+      ],
+      "line-height": [],
+      "letter-spacing": [
+        "em"
+      ],
+      "/^(margin|padding|gap|row-gap|column-gap|inset)/": [
+        "rem",
+        "%"
+      ],
+      "/^(min-|max-)?(inline|block)-size$/": [
+        "rem",
+        "%",
+        "ch",
+        "dvi",
+        "dvb",
+        "svi",
+        "svb",
+        "cqi",
+        "cqb"
+      ],
+      "/radius$/": [
+        "rem",
+        "%"
+      ],
+      "/^border(-[a-z]+)*-width$/": [
+        "px"
+      ],
+      "/^outline(-width|-offset)$/": [
+        "px"
+      ],
+      "/^(transition|animation)(-duration|-delay)?$/": [
+        "ms"
+      ]
+    },
+    "display-notation": "short",
+    "font-family-no-duplicate-names": true,
+    "font-family-no-missing-generic-family-keyword": true,
+    "font-weight-notation": "numeric",
+    "function-linear-gradient-no-nonstandard-direction": true,
+    "function-no-unknown": true,
+    "function-url-no-scheme-relative": true,
+    "function-url-scheme-allowed-list": [
+      "data"
+    ],
+    "keyframe-block-no-duplicate-selectors": true,
+    "keyframe-declaration-no-important": true,
+    "length-zero-no-unit": true,
+    "max-nesting-depth": 1,
+    "media-feature-name-no-unknown": true,
+    "media-feature-name-unit-allowed-list": {
+      "/(width|height)$/": [
+        "rem",
+        "em"
+      ]
+    },
+    "media-type-no-deprecated": true,
+    "named-grid-areas-no-invalid": true,
+    "no-descending-specificity": true,
+    "no-duplicate-at-import-rules": true,
+    "no-invalid-position-at-import-rule": true,
+    "no-unknown-animations": true,
+    "no-unknown-custom-media": true,
+    "property-no-unknown": true,
+    "relative-selector-nesting-notation": "explicit",
+    "selector-anb-no-unmatchable": true,
+    "selector-combinator-allowed-list": [
+      " ",
+      ">"
+    ],
+    "selector-max-attribute": 1,
+    "selector-max-class": 3,
+    "selector-max-combinators": 2,
+    "selector-max-compound-selectors": 3,
+    "selector-max-id": 0,
+    "selector-max-pseudo-class": 3,
+    "selector-max-specificity": "0,2,0",
+    "selector-max-type": 0,
+    "selector-max-universal": 0,
+    "selector-no-deprecated": true,
+    "selector-no-invalid": true,
+    "selector-no-qualifying-type": true,
+    "selector-no-unmatchable": true,
+    "selector-pseudo-class-no-unknown": true,
+    "selector-pseudo-element-no-unknown": true,
+    "selector-type-no-unknown": true,
+    "time-min-milliseconds": 100,
+    "unit-allowed-list": [
+      "rem",
+      "em",
+      "%",
+      "ch",
+      "px",
+      "ms",
+      "deg",
+      "fr",
+      "dvi",
+      "dvb",
+      "svi",
+      "svb",
+      "cqi",
+      "cqb"
+    ],
+    "unit-no-unknown": true,
+    "a11y/content-property-no-static-value": true,
+    "a11y/font-size-is-readable": true,
+    "a11y/line-height-is-vertical-rhythmed": true,
+    "a11y/media-prefers-color-scheme": true,
+    "a11y/media-prefers-reduced-motion": true,
+    "a11y/no-display-none": true,
+    "a11y/no-obsolete-attribute": true,
+    "a11y/no-obsolete-element": true,
+    "a11y/no-outline-none": true,
+    "a11y/no-spread-text": true,
+    "a11y/no-text-align-justify": true,
+    "a11y/selector-pseudo-class-focus": true,
+    "harness/design-tokens": true,
     "logical-css/require-logical-keywords": true,
+    "logical-css/require-logical-properties": true,
     "logical-css/require-logical-units": true,
     "plugin/no-unsupported-browser-features": [
       true,
@@ -69,23 +193,21 @@
         "/^(transition|animation|border|outline|background)$/"
       ],
       {
-        "ignoreValues": ["currentColor", "transparent", "inherit", "initial", "unset", "revert", "none", "auto", "0"],
+        "ignoreValues": [
+          "currentColor",
+          "transparent",
+          "inherit",
+          "initial",
+          "unset",
+          "revert",
+          "none",
+          "auto",
+          "0"
+        ],
         "expandShorthand": true,
-        "disableFix": true
+        "disableFix": true,
+        "ignoreFunctions": false
       }
-    ],
-    "a11y/content-property-no-static-value": true,
-    "a11y/font-size-is-readable": true,
-    "a11y/line-height-is-vertical-rhythmed": true,
-    "a11y/media-prefers-color-scheme": true,
-    "a11y/media-prefers-reduced-motion": true,
-    "a11y/no-display-none": true,
-    "a11y/no-obsolete-attribute": true,
-    "a11y/no-obsolete-element": true,
-    "a11y/no-outline-none": true,
-    "a11y/no-spread-text": true,
-    "a11y/no-text-align-justify": true,
-    "a11y/selector-pseudo-class-focus": true,
-    "harness/design-tokens": true
+    ]
   }
 }

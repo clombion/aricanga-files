@@ -20,7 +20,7 @@ class SkMessage extends LitElement {
       line-height: var(--leading-body);
     }
 
-    p {
+    .bubble {
       margin: 0;
       padding-block: var(--space-bubble-block);
       padding-inline: var(--space-bubble-inline);
@@ -37,7 +37,7 @@ class SkMessage extends LitElement {
   }
 
   public override render(): TemplateResult {
-    return html`<p part="bubble">${this.text}</p>`;
+    return html`<p class="bubble" part="bubble">${this.text}</p>`;
   }
 }
 

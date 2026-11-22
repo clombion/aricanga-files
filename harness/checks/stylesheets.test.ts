@@ -15,6 +15,7 @@ import { describe, expect, test } from 'vitest';
 import { json, object } from '#lib/config.ts';
 import { lintSheet, readers, sheets, sheetsOf, withoutSheets } from '#lib/stylesheets.ts';
 import { rawSizes, rawTokenValues } from '#lib/design-tokens.ts';
+import { PLANTS } from './stylesheets.plants.ts';
 import type { Sheet } from '#lib/stylesheets.ts';
 import { textOf } from '#lib/source-files.ts';
 
@@ -103,67 +104,6 @@ describe('the repository', () => {
   });
 });
 
-const RM = '\n\n@media (prefers-reduced-motion: reduce) {\n  .a {\n    transition: none;\n  }\n}\n';
-
-/** One plant per rule `.stylelintrc.json` turns on: a sheet the rule must fail, and a near miss every rule passes. */
-const PLANTS: readonly (readonly [string, string, string])[] = [
-  [
-    'no-descending-specificity',
-    'p .a {\n  color: var(--x);\n}\n\n.a {\n  color: var(--y);\n}\n',
-    '.a {\n  color: var(--y);\n}\n\np .a {\n  color: var(--x);\n}\n',
-  ],
-  ['selector-max-specificity', '.a .b .c {\n  color: var(--x);\n}\n', '.a .b {\n  color: var(--x);\n}\n'],
-  ['selector-max-compound-selectors', 'p span em strong {\n  color: var(--x);\n}\n', 'p span em {\n  color: var(--x);\n}\n'],
-  [
-    'max-nesting-depth',
-    'p {\n  & span {\n    & em {\n      color: var(--x);\n    }\n  }\n}\n',
-    'p {\n  & span {\n    color: var(--x);\n  }\n}\n',
-  ],
-  ['selector-max-id', '#a {\n  color: var(--x);\n}\n', '.a {\n  color: var(--x);\n}\n'],
-  ['selector-no-qualifying-type', 'p.a {\n  color: var(--x);\n}\n', '.a {\n  color: var(--x);\n}\n'],
-  ['declaration-no-important', '.a {\n  color: var(--x) !important;\n}\n', '.a {\n  color: var(--x);\n}\n'],
-  ['color-named', '.a {\n  color: red;\n}\n', '.a {\n  color: var(--danger);\n}\n'],
-  ['font-weight-notation', '.a {\n  font-weight: bold;\n}\n', '.a {\n  font-weight: 700;\n}\n'],
-  ['declaration-property-unit-allowed-list', '.a {\n  font-size: 120%;\n}\n', '.a {\n  inline-size: 50%;\n}\n'],
-  ['logical-css/require-logical-properties', '.a {\n  margin-left: 0;\n}\n', '.a {\n  margin-inline-start: 0;\n}\n'],
-  ['logical-css/require-logical-keywords', '.a {\n  float: left;\n}\n', '.a {\n  float: inline-start;\n}\n'],
-  ['logical-css/require-logical-units', '.a {\n  inline-size: 50vw;\n}\n', '.a {\n  inline-size: 50%;\n}\n'],
-  ['plugin/no-unsupported-browser-features', '.a {\n  initial-letter: 2;\n}\n', '.a {\n  display: grid;\n}\n'],
-  ['scale-unlimited/declaration-strict-value', '.a {\n  color: #fff;\n}\n', '.a {\n  color: var(--ink);\n}\n'],
-  ['scale-unlimited/declaration-strict-value', '.a {\n  z-index: 3;\n}\n', '.a {\n  z-index: var(--layer-top);\n}\n'],
-  [
-    'scale-unlimited/declaration-strict-value',
-    `.a {\n  transition-duration: 200ms;\n}${RM}`,
-    `.a {\n  transition-duration: var(--quick);\n}${RM}`,
-  ],
-  [
-    'scale-unlimited/declaration-strict-value',
-    `.a {\n  transition-timing-function: ease-in;\n}${RM}`,
-    `.a {\n  transition-timing-function: var(--ease-out);\n}${RM}`,
-  ],
-  ['a11y/content-property-no-static-value', '.a::before {\n  content: "New";\n}\n', '.a::before {\n  content: "";\n}\n'],
-  ['a11y/font-size-is-readable', '.a {\n  font-size: 12px;\n}\n', '.a {\n  font-size: var(--text-body);\n}\n'],
-  ['a11y/line-height-is-vertical-rhythmed', '.a {\n  line-height: 1.2;\n}\n', '.a {\n  line-height: 1.5;\n}\n'],
-  ['a11y/media-prefers-color-scheme', '.a {\n  color: #000;\n}\n', '.a {\n  color: var(--ink);\n}\n'],
-  [
-    'a11y/media-prefers-reduced-motion',
-    '.a {\n  transition: opacity var(--quick) var(--ease-out);\n}\n',
-    `.a {\n  transition: opacity var(--quick) var(--ease-out);\n}${RM}`,
-  ],
-  ['a11y/no-display-none', '.a {\n  display: none;\n}\n', '.a {\n  display: block;\n}\n'],
-  ['a11y/no-obsolete-attribute', '[dropzone] {\n  color: var(--x);\n}\n', '[hidden] {\n  color: var(--x);\n}\n'],
-  ['a11y/no-obsolete-element', 'blink {\n  color: var(--x);\n}\n', 'em {\n  color: var(--x);\n}\n'],
-  ['a11y/no-outline-none', '.a:focus {\n  outline: none;\n}\n', '.a:focus {\n  outline: var(--focus-ring);\n}\n'],
-  [
-    'a11y/no-spread-text',
-    '.a {\n  text-align: start;\n  max-width: 120ch;\n}\n',
-    '.a {\n  text-align: start;\n  max-inline-size: var(--measure);\n}\n',
-  ],
-  ['a11y/no-text-align-justify', '.a {\n  text-align: justify;\n}\n', '.a {\n  text-align: start;\n}\n'],
-  ['a11y/selector-pseudo-class-focus', '.a:hover {\n  color: var(--x);\n}\n', '.a:hover,\n.a:focus {\n  color: var(--x);\n}\n'],
-  ['harness/design-tokens', '.a {\n  padding-inline: 1rem;\n}\n', '.a {\n  padding-inline: var(--gap);\n}\n'],
-];
-
 describe('the lint, on planted sheets', () => {
   test('every rule the configuration turns on has a plant', async () => {
     expect.hasAssertions();
@@ -179,7 +119,7 @@ describe('the lint, on planted sheets', () => {
 
   test('a token file defines raw values; a custom property anywhere else may not', async () => {
     expect.hasAssertions();
-    const tokens = ':root {\n  --gap: 0.5rem;\n  --ink: #111;\n  --quick: 150ms;\n  --layer-top: 10;\n}\n';
+    const tokens = ':root {\n  --gap: 0.5rem;\n  --ink: rgb(17 17 17);\n  --quick: 150ms;\n  --layer-top: 10;\n}\n';
     await expect(lintText('plant/tokens.css', tokens)).resolves.toStrictEqual([]);
     await expect(lintText('plant/theme.css', tokens)).resolves.toStrictEqual([
       'harness/design-tokens',
