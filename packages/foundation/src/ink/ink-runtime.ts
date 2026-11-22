@@ -145,7 +145,10 @@ class InkRuntime {
     this.bind('advance_day', () => {
       this.drained.push({ fn: 'advance_day' });
     });
-    this.bind('request_data', (source, query, params) => {
+    // `params` is optional in the story's declaration, so the handler takes it as a rest argument:
+    // ink checks a call's arguments against the handler's declared parameters.
+    this.bind('request_data', (source, query, ...rest: readonly unknown[]) => {
+      const [params] = rest;
       const call: ExternalCall =
         params === undefined
           ? { fn: 'request_data', query: inkText(query), source: inkText(source) }

@@ -12,6 +12,15 @@ const READ = readerOf(CARDS_ID);
 /** A stat starts at zero, and a delta that is missing or not a number moves nothing. */
 const NO_CHANGE = 0;
 
+/** What `indexOf` answers when a stat tag has no colon. */
+const NOT_FOUND = -1;
+
+/** A stat's name starts at the tag value's start. */
+const START = 0;
+
+/** The delta starts one character after the colon. */
+const AFTER_COLON = 1;
+
 /** Each card played advances the deck by one. */
 const CARDS_PER_PLAY = 1;
 
@@ -49,11 +58,11 @@ function deltaOf(rawDelta: string | undefined): number {
  * @returns {ReduceResult<CardsState>} The deck after the card, and the stat change to present.
  */
 function applyStat(state: CardsState, tagValue: string): ReduceResult<CardsState> {
-  const [rawStat, rawDelta] = tagValue.split(':');
-  const stat = rawStat?.trim() ?? 'unknown';
-  const delta = deltaOf(rawDelta);
-  // A stat is a word the story writes, so only the deck's own entry counts, never Object.prototype's.
-  const value = (Object.hasOwn(state.stats, stat) ? (state.stats[stat] ?? NO_CHANGE) : NO_CHANGE) + delta;
+  const colon = tagValue.indexOf(':');
+  const stat = (colon === NOT_FOUND ? tagValue : tagValue.slice(START, colon)).trim();
+  const delta = deltaOf(colon === NOT_FOUND ? undefined : tagValue.slice(colon + AFTER_COLON));
+  // A stat is a word the story writes, so only the deck's own entries count, never Object.prototype's.
+  const value = (new Map(Object.entries(state.stats)).get(stat) ?? NO_CHANGE) + delta;
   const effects: Effect[] = [fx.present('cards/statChanged', { delta, stat, value })];
   return {
     effects,

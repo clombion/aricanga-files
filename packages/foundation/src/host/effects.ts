@@ -4,7 +4,6 @@ import { parseDataRequest, parseDriveInkOp, parseScheduleCommit } from '#src/sim
 import type { InkRuntime } from '#src/ink/ink-runtime';
 import type { Resume } from '#src/sim/input';
 import type { Snapshot } from '#src/sim/snapshot';
-import { assertNever } from '#src/sim/exhaustive';
 import { encodeSnapshot } from './codec';
 
 /*
@@ -60,28 +59,9 @@ const DRIVE_INK: DriveInkHandlers = {
  * @param {DriveInkOp} op - The instruction.
  * @param {EffectTarget} target - The host and the ink story.
  */
-function driveInk(op: DriveInkOp, target: Readonly<EffectTarget>): void {
-  switch (op.op) {
-    case 'choose': {
-      DRIVE_INK.choose(op, target);
-      return;
-    }
-    case 'goto': {
-      DRIVE_INK.goto(op, target);
-      return;
-    }
-    case 'load-snap': {
-      DRIVE_INK['load-snap'](op, target);
-      return;
-    }
-    case 'save-snap': {
-      DRIVE_INK['save-snap'](op, target);
-      return;
-    }
-    default: {
-      assertNever(op);
-    }
-  }
+function driveInk<TOp extends DriveInkOp['op']>(op: Extract<DriveInkOp, { readonly op: TOp }>, target: Readonly<EffectTarget>): void {
+  const handler: DriveInkHandlers[TOp] = DRIVE_INK[op.op];
+  handler(op, target);
 }
 
 /** How each effect family is carried out: a host family goes to the host, a suspending one resumes its system. */
