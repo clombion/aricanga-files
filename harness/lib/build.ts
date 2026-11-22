@@ -159,3 +159,4 @@ async function checkBuild(app: string, root: string = REPO_ROOT): Promise<BuildR
 }
 
 export { apps, checkBuild };
+export type { BuildResult };

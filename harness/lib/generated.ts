@@ -186,4 +186,4 @@ async function run(check: boolean, generators: Readonly<Generators> = GENERATORS
 }
 
 export { blocks, GENERATORS, problems, rendered, run };
-export type { Files, Generators };
+export type { Files, Generators, Problem };

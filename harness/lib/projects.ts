@@ -3,6 +3,8 @@
  * derived from the listing so a new project is checked the moment it exists.
  */
 
+import { bin, finished } from './tools.ts';
+import type { Finished } from './process.ts';
 import { heldFiles } from './scope.ts';
 
 const BASE = 'tsconfig.base.json';
@@ -19,4 +21,16 @@ async function projects(): Promise<readonly string[]> {
   return files.filter((path) => PROJECT.test(path) && path !== BASE);
 }
 
-export { projects };
+/**
+ * Type-check one project with the locked `tsc`, emitting nothing.
+ *
+ * @param {string} project - The project's `tsconfig*.json`, relative to `root`.
+ * @param {string} root - Where `tsc` runs.
+ * @returns {Promise<Finished>} The finished run.
+ */
+async function typecheckProject(project: string, root: string): Promise<Finished> {
+  const outcome = await finished([bin('tsc'), '--noEmit', '-p', project], { cwd: root });
+  return outcome;
+}
+
+export { projects, typecheckProject };

@@ -3,21 +3,8 @@
  * nothing, and exit 1 on a stale block or an unknown block name.
  */
 
-import { complain, exitCode } from '#lib/output.ts';
-import { isEmpty } from '#lib/lists.ts';
+import { complain } from '#lib/output.ts';
+import { genDocs } from '#lib/script-entries.ts';
 import { run } from '#lib/generated.ts';
 
-/**
- * Write or compare the generated blocks, complaining of each one left stale.
- *
- * @returns {Promise<number>} The script's exit code.
- */
-async function main(): Promise<number> {
-  const left = await run(process.argv.includes('--check'));
-  for (const problem of left) {
-    complain(`${problem.path}:${problem.line}: ${problem.message}`);
-  }
-  return exitCode(isEmpty(left));
-}
-
-process.exitCode = await main();
+process.exitCode = await genDocs({ check: process.argv.includes('--check'), complain, run });

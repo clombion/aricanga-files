@@ -1,5 +1,7 @@
 /** The pre-push refusal of a pushed `fixup!`, `squash!` or `amend!` commit. */
 
+import { finished } from './tools.ts';
+
 /** A sha of zeros: the ref does not exist on that side. */
 const ZERO = /^0+$/u;
 
@@ -49,4 +51,16 @@ function refused(subjects: readonly string[]): readonly string[] {
   return subjects.filter((subject) => FOLD.test(subject));
 }
 
-export { refused, revisions, updates };
+/**
+ * The subjects of the commits a revision range names, newest first.
+ *
+ * @param {readonly string[]} range - The `git log` revision arguments.
+ * @param {string} cwd - The repository.
+ * @returns {Promise<readonly string[]>} The non-empty subjects.
+ */
+async function subjectsOf(range: readonly string[], cwd: string): Promise<readonly string[]> {
+  const log = await finished(['git', 'log', '--format=%s', ...range], { cwd });
+  return log.stdout.split('\n').filter((subject) => subject !== '');
+}
+
+export { refused, revisions, subjectsOf, updates };
