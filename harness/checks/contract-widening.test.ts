@@ -38,6 +38,7 @@ const PLANTS: readonly (readonly [string, ContractSite['form'], string])[] = [
 const RESPELLED: readonly (readonly [string, string])[] = [
   ['packages/systems/__respell_0.ts', `${IMPORT}export const w = 'on';\n`],
   ['packages/systems/__respell_1.ts', `${IMPORT}export function g(s: string): boolean {\n  return s === 'off';\n}\n`],
+  ['packages/systems/__respell_11.ts', `${IMPORT}export function y(s: string): boolean {\n  return 'off' === s;\n}\n`],
   [
     'packages/foundation/src/__respell_2.ts',
     "export function h(s: string): number {\n  switch (s) {\n    case 'ping':\n      return 1;\n  }\n  return 0;\n}\n",
@@ -68,7 +69,7 @@ const NEAR_MISSES: readonly (readonly [string, string])[] = [
   ['packages/systems/__miss_contextual.ts', `${IMPORT}export const a: Mode = 'on';\nexport const b: Msg = { tag: 'ping' };\n`],
   [
     'packages/systems/__miss_compared.ts',
-    `${IMPORT}${PICK}export const on = m === 'off';\nexport function s(): number {\n  switch (m) {\n    case 'on':\n      return 1;\n    default:\n      return 0;\n  }\n}\n`,
+    `${IMPORT}${PICK}export const on = m === 'off';\nexport const off = 'off' === m;\nexport function s(): number {\n  switch (m) {\n    case 'on':\n      return 1;\n    default:\n      return 0;\n  }\n}\n`,
   ],
   ['packages/systems/__miss_template.ts', `${IMPORT}${PICK}export const label = \`mode \${m}\`;\n`],
   [

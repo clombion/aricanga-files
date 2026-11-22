@@ -93,15 +93,26 @@ function rawTokenValues(value: string): readonly Raw[] {
   return [...TOKEN_FINDERS.flatMap((finder) => found(finder, value)), ...zIndex];
 }
 
+/**
+ * The raw design values a declaration holds that the rule reports: a declaration's raw sizes, and a
+ * custom property's raw values outside the token file, where a token defines them.
+ *
+ * @param {string} property - The declared property.
+ * @param {string} value - Its value.
+ * @param {boolean} tokenFile - Whether the sheet is the token file.
+ * @returns {readonly Raw[]} The raw values to report.
+ */
+function reported(property: string, value: string, tokenFile: boolean): readonly Raw[] {
+  if (!property.startsWith('--')) {
+    return rawSizes(value);
+  }
+  return tokenFile ? [] : rawTokenValues(value);
+}
+
 const rule: Rule = () => (root, result) => {
   const tokenFile = present(root.source?.input.file, 'the file name of the sheet stylelint lints').endsWith('tokens.css');
   root.walkDecls((declaration) => {
-    const custom = declaration.prop.startsWith('--');
-    if (tokenFile && custom) {
-      return;
-    }
-    const raws = custom ? rawTokenValues(declaration.value) : rawSizes(declaration.value);
-    for (const [kind, value] of raws) {
+    for (const [kind, value] of reported(declaration.prop, declaration.value, tokenFile)) {
       stylelint.utils.report({ message: messages.raw(kind, value), node: declaration, result, ruleName, word: value });
     }
   });

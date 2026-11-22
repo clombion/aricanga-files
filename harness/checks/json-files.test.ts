@@ -30,7 +30,14 @@ const PLANTS: readonly (readonly [string, readonly string[]])[] = [
   ['{"a": 1,}', ['$: not strict JSON: expected a key at offset 8']],
   ['{\n  // a comment\n  "a": 1\n}', ['$: not strict JSON: no JSON token at offset 4']],
   ['{"a": 1', ["$: not strict JSON: expected ',' or '}' at offset 6"]],
+  [String.raw`{"\ud83d": 1}`, ['$.\uD83D: the key holds a lone surrogate']],
+  ['{} {}', ['$: not strict JSON: expected the end of the text at offset 3']],
+  ['', ['$: not strict JSON: expected a value at offset 0']],
+  [']', ['$: not strict JSON: expected a value at offset 0']],
 ];
+
+/** Brackets nested past any call stack: no reading of them is a finding about the file. */
+const PAST_THE_STACK = 1_000_000;
 
 /** Texts every rule passes: equal keys in sibling objects, a safe integer, a whole surrogate pair, a normalised key. */
 const NEAR_MISSES: readonly string[] = [
@@ -70,6 +77,11 @@ describe('the reader, on planted texts', () => {
   test.each(PLANTS)('finds the problem in %j', (text, problems) => {
     expect.hasAssertions();
     expect(jsonProblems(text).map((found) => `${found.path}: ${found.problem}`)).toStrictEqual(problems);
+  });
+
+  test('lets an overflow of the call stack through rather than calling the text invalid', () => {
+    expect.hasAssertions();
+    expect(() => jsonProblems('['.repeat(PAST_THE_STACK))).toThrow(RangeError);
   });
 
   test.each(NEAR_MISSES)('passes %j', (text) => {
