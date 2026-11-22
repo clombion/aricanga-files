@@ -11,8 +11,9 @@ checks are in [harness.md](../../harness.md) and which ones exist in
 **feat/rebuild-phase-3-view** holds every change below and passes the whole gate, `pnpm run check`:
 lint, format, typecheck, dupes, docs, dead code, the build check, every unit and harness test with
 the coverage floor's debt list empty, and the browser suite in all five projects. Work continues on
-a branch off it, merged back when the gate passes; the pre-push hook runs the gate. Every commit
-ends with the session's `Claude-Session:` line and carries no `Co-Authored-By`.
+a branch off it, merged back when the gate passes; the pre-push hook runs the gate. Commits carry
+no `Co-Authored-By`. The other `harness/*` branches on the remote are merged history: nothing on
+them is missing from the phase branch.
 
 ## What the branch holds
 
@@ -70,10 +71,15 @@ change meets:
 
 ## Open questions for the owner
 
-- Issue #20 (characterise Solid 2.0) and #12 (port the harness) are done; closing them is the
-  owner's call.
 - The labels `content`, `phone`, `a11y`, `i18n`, `in progress` and the `exp:` experience labels
-  do not exist yet; #56 carries `qa` alone for that reason.
+  are being created; once they exist, #56 gains `content`, and an issue under active work carries
+  `in progress`.
+- Each of these `planned` rows of `HARNESS_STATUS.md` needs a dependency the owner approves first:
+  `github-actions` (actionlint, zizmor, pinact) and `mutation-testing` (Stryker, which would also
+  check the `seen-failing` mutants mechanically).
+- `harness-status` (a check holding every row of `HARNESS_STATUS.md` true) and `staged-checks`
+  (the hooks checking exactly what is committed, in a worktree of their own) are `planned` and
+  need no new dependency.
 
 ## Next
 
