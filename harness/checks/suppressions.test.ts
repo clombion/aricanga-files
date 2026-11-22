@@ -37,13 +37,9 @@ const SUPPRESSIONS = new CountedExemptions({
     count: 2,
     reason: 'stateOf and viewOf: the erasure owner reads a system value back after proving the owner id matches',
   },
-  [site('packages/foundation/test/exhaustive.test.ts', 'oxlint:typescript/switch-exhaustiveness-check')]: {
-    count: 1,
-    reason: 'the planted non-exhaustive switch the test proves the compiler refuses',
-  },
   [site('packages/foundation/test/exhaustive.test.ts', 'typescript:expect-error')]: {
     count: 1,
-    reason: 'the planted missing case: the expected error is the proof',
+    reason: 'the planted table missing a kind: the expected error is the proof',
   },
   [site('packages/characterisation/src/fixtures/adapter.tsx', 'oxlint:solid/reactivity')]: {
     count: 1,

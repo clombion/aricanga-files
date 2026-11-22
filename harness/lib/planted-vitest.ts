@@ -4,7 +4,7 @@
  * A guard is proven by what this run reports for each planted test.
  */
 
-import { json, object } from './config.ts';
+import { json, list, object } from './config.ts';
 import { Project } from './tools.ts';
 
 /** The setup module the gate's Vitest config loads for every test. */
@@ -27,14 +27,6 @@ const CONFIG = `export default {
 };
 `;
 
-function strings(value: unknown): string[] {
-  return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
-}
-
-function list(value: unknown): readonly unknown[] {
-  return Array.isArray(value) ? value : [];
-}
-
 /**
  * Each test's outcome in a Vitest JSON report.
  *
@@ -43,12 +35,14 @@ function list(value: unknown): readonly unknown[] {
  */
 function outcomesOf(reportText: string): ReadonlyMap<string, Outcome> {
   const report = object(json(reportText), 'the Vitest report');
-  const assertions = list(report['testResults']).flatMap((file) => list(object(file, 'a test file result')['assertionResults']));
+  const assertions = list(report['testResults'], 'the test file results').flatMap((file) =>
+    list(object(file, 'a test file result')['assertionResults'], "a test file's results"),
+  );
   return new Map(
     assertions.map((assertion) => {
       const fields = object(assertion, 'a test result');
       const outcome: Outcome = {
-        failure: strings(fields['failureMessages']).join('\n'),
+        failure: list(fields['failureMessages'], "a test's failure messages").map(String).join('\n'),
         status: String(fields['status']),
       };
       return [String(fields['fullName']), outcome] as const;

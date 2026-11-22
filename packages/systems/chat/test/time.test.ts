@@ -95,6 +95,12 @@ describe('the clock', () => {
     ]);
     expect(times(result)).toStrictEqual([minutesAt('22:00'), MINUTES_PER_DAY + minutesAt('09:00') + DRIFT]);
   });
+
+  test('advance_day on an unanchored clock anchors it at the first day, 09:00', async () => {
+    expect.hasAssertions();
+    const result = await run([story('a'), story('b', [], { advanceDay: true })]);
+    expect(times(result)).toStrictEqual([undefined, MINUTES_PER_DAY + minutesAt('09:00') + DRIFT]);
+  });
 });
 
 describe('forward-only time', () => {

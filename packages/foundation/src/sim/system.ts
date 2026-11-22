@@ -2,7 +2,6 @@ import type { Command, Input, Resume } from './input';
 import type { KernelStatus, ReduceContext, ReduceResult, RenderContext } from './context';
 import type { Effect } from './effect';
 import type { SystemId } from './snapshot';
-import { assertNever } from './exhaustive';
 
 /*
  * The contract every system implements so foundation stays vocabulary-agnostic
@@ -122,6 +121,11 @@ function resumeOf<TState, TCommand extends Command, TEffect extends Effect, TVie
   return resume.kind === 'restored' ? { kind: 'restored', state: system.parseState(resume.state) } : resume;
 }
 
+/** Each input source's reading by one system, taking the input of its own source. */
+type InputHandlers<TState, TCommand extends Command> = {
+  readonly [TSource in Input<unknown>['source']]: (input: Extract<Input<unknown>, { readonly source: TSource }>) => Input<TState, TCommand>;
+};
+
 /**
  * An input as the system receives it: a player command is parsed by the system, a resume through
  * `resumeOf`, and a story step or a lifecycle input carries nothing of the system's own.
@@ -130,25 +134,18 @@ function resumeOf<TState, TCommand extends Command, TEffect extends Effect, TVie
  * @param {Input} input - The input from the runtime.
  * @returns {Input} The input typed by the system's state and commands.
  */
-function inputOf<TState, TCommand extends Command, TEffect extends Effect, TViewModel>(
+function inputOf<TState, TCommand extends Command, TEffect extends Effect, TViewModel, TSource extends Input<unknown>['source']>(
   system: Readonly<System<TState, TCommand, TEffect, TViewModel>>,
-  input: Readonly<Input<unknown>>,
+  input: Extract<Input<unknown>, { readonly source: TSource }>,
 ): Input<TState, TCommand> {
-  switch (input.source) {
-    case 'story':
-    case 'lifecycle': {
-      return input;
-    }
-    case 'player': {
-      return { command: system.parseCommand(input.command), source: 'player' };
-    }
-    case 'resume': {
-      return { resume: resumeOf(system, input.resume), source: 'resume' };
-    }
-    default: {
-      return assertNever(input);
-    }
-  }
+  const handlers: InputHandlers<TState, TCommand> = {
+    lifecycle: (lifecycle) => lifecycle,
+    player: (player) => ({ command: system.parseCommand(player.command), source: 'player' }),
+    resume: (resume) => ({ resume: resumeOf(system, resume.resume), source: 'resume' }),
+    story: (story) => story,
+  };
+  const handler: InputHandlers<TState, TCommand>[TSource] = handlers[input.source];
+  return handler(input);
 }
 
 /**

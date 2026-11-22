@@ -44,6 +44,24 @@ const RESPELLED: readonly (readonly [string, string])[] = [
   ],
   ['packages/systems/__respell_3.ts', `${IMPORT}export const t: Readonly<Record<string, number>> = { 'on': 1 };\n`],
   ['packages/systems/__respell_4.ts', `${IMPORT}declare const t: Readonly<Record<string, number>>;\nexport const n = t['off'];\n`],
+  ['packages/systems/__respell_5.ts', `${IMPORT}declare function take(word: string): void;\ntake('on');\n`],
+  ['packages/systems/__respell_6.ts', `${IMPORT}declare const o: { is(word: string): boolean };\no.is('off');\n`],
+  [
+    'packages/systems/__respell_7.ts',
+    `${IMPORT}${PICK}declare function expect(value: unknown): { toEqual(expected: unknown): void };\nexpect(x).toEqual(['ping']);\n`,
+  ],
+  [
+    'packages/systems/__respell_8.ts',
+    `${IMPORT}${PICK}declare function expect(value: unknown): { toEqual(expected: unknown): void };\nexpect(x).toEqual({ missing: 'ping' });\n`,
+  ],
+  [
+    'packages/systems/__respell_9.ts',
+    `${IMPORT}${PICK}declare const k: string;\ndeclare function expect(value: unknown): { toEqual(expected: unknown): void };\nexpect(x).toEqual({ [k]: 'ping' });\n`,
+  ],
+  [
+    'packages/systems/__respell_10.ts',
+    `${IMPORT}import type { Gone } from './__nowhere';\nexport type Kept = Gone;\nexport const w = 'off';\n`,
+  ],
 ];
 
 const NEAR_MISSES: readonly (readonly [string, string])[] = [
@@ -64,7 +82,7 @@ const NEAR_MISSES: readonly (readonly [string, string])[] = [
   ],
   [
     'packages/systems/__miss_expectation.ts',
-    `${IMPORT}${PICK}declare function expect(value: unknown): { toBe(expected: unknown): void; toEqual(expected: unknown): void };\nexpect(m).toBe('on');\nexpect({ x }).toStrictEqual({ x: { tag: 'ping' } });\n`,
+    `${IMPORT}${PICK}declare function expect(value: unknown): { not: { toBe(expected: unknown): void }; toBe(expected: unknown): void; toEqual(expected: unknown): void };\nexpect(m).toBe('on');\nexpect({ x }).toStrictEqual({ x: { tag: 'ping' } });\ndeclare const ms: readonly Mode[];\nexpect(ms).toEqual(['off']);\ndeclare const set: ReadonlySet<Mode>;\nexpect(set).toBe('on');\nexpect(m).not.toBe('off');\nexport { x };\n`,
   ],
 ];
 

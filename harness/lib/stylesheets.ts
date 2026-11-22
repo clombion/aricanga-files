@@ -14,6 +14,7 @@ import { Prefixes } from './exemptions.ts';
 import { Slot } from './lists.ts';
 import { fromRoot } from './paths.ts';
 import { heldFiles } from './scope.ts';
+import { present } from './present.ts';
 import stylelint from 'stylelint';
 import { textsOf } from './source-files.ts';
 
@@ -192,11 +193,7 @@ async function parse(text: string): Promise<Root> {
     code: text,
     config: { plugins: [stylelint.createPlugin('harness/collect', collect)], rules: { 'harness/collect': true } },
   });
-  const root = captured.take();
-  if (root === undefined) {
-    throw new Error('stylelint ran no rule over the sheet');
-  }
-  return root;
+  return present(captured.take(), 'the sheet stylelint ran its rule over');
 }
 
 export { lintSheet, parse, readers, sheets, sheetsOf, withoutSheets };

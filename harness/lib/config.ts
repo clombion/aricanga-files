@@ -51,6 +51,35 @@ function json(text: string): unknown {
 }
 
 /**
+ * Parse a tool's JSON report, refusing text that is not JSON by naming the report.
+ *
+ * @param {string} text - The report's text.
+ * @param {string} what - What the report is, for the refusal.
+ * @returns {unknown} The parsed value.
+ */
+function report(text: string, what: string): unknown {
+  try {
+    return json(text);
+  } catch (error: unknown) {
+    throw new ConfigError(`${what} is not JSON: ${String(error)}`, { cause: error });
+  }
+}
+
+/**
+ * A JSON list, or a refusal naming what it was instead.
+ *
+ * @param {unknown} value - The value to read as a list.
+ * @param {string} what - What the value is, for the refusal.
+ * @returns {readonly unknown[]} The list's items.
+ */
+function list(value: unknown, what: string): readonly unknown[] {
+  if (!Array.isArray(value)) {
+    throw new ConfigError(`${what} is not a list: ${JSON.stringify(value)}`);
+  }
+  return value;
+}
+
+/**
  * Every script of a parsed `package.json`, in the file's order.
  *
  * @param {unknown} packageJson - The parsed `package.json`.
@@ -155,5 +184,5 @@ async function repoHooks(): Promise<readonly Hook[]> {
   return hooks(json(text));
 }
 
-export { closure, ConfigError, hooks, json, object, repoHooks, repoTasks, runsTask, tasks };
+export { closure, ConfigError, hooks, json, list, object, repoHooks, repoTasks, report, runsTask, tasks };
 export type { Hook, Task };

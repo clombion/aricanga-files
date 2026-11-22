@@ -1,10 +1,9 @@
 import type { AnySystem, System } from '#src/sim/system';
-import type { Command, Input } from '#src/sim/input';
+import type { Command, Input, Resume } from '#src/sim/input';
 import type { ReduceContext, ReduceResult } from '#src/sim/context';
 import { commandOf, readerOf } from '#src/sim/parse';
 import type { Effect } from '#src/sim/effect';
 import type { Reader } from '#src/sim/parse';
-import { assertNever } from '#src/sim/exhaustive';
 import { erase } from '#src/sim/system';
 import { fx } from '#src/sim/effect';
 
@@ -47,6 +46,26 @@ interface Gated {
   readonly fetched: unknown;
 }
 
+/** Each resume kind's reduction, taking the resume of its own kind. */
+type ResumeHandlers<TState> = {
+  readonly [TKind in Resume<TState>['kind']]: (resume: Extract<Resume<TState>, { readonly kind: TKind }>) => ReduceResult<TState>;
+};
+
+/**
+ * A resume reduced by the handler of its own kind.
+ *
+ * @param {ResumeHandlers} handlers - One handler per resume kind.
+ * @param {Resume} resume - The resume.
+ * @returns {ReduceResult} What its handler gives.
+ */
+function resumeBy<TState, TKind extends Resume<TState>['kind']>(
+  handlers: Readonly<ResumeHandlers<TState>>,
+  resume: Extract<Resume<TState>, { readonly kind: TKind }>,
+): ReduceResult<TState> {
+  const handler: ResumeHandlers<TState>[TKind] = handlers[resume.kind];
+  return handler(resume);
+}
+
 /**
  * A fixture system's reduction of a resume or lifecycle input: a commit fired with the current token
  * opens the gate (a stale token is a no-op), arrived data is kept, and anything else changes nothing.
@@ -59,21 +78,13 @@ function reduceResume<TState extends Gated>(state: TState, input: Input<TState>)
   if (input.source !== 'resume') {
     return { effects: [], state };
   }
-  switch (input.resume.kind) {
-    case 'commit-fired': {
-      return input.resume.token === state.token ? { effects: [], state: { ...state, busy: false } } : { effects: [], state };
-    }
-    case 'data-arrived': {
-      return { effects: [], state: { ...state, fetched: input.resume.value } };
-    }
-    case 'story-loaded':
-    case 'restored': {
-      return { effects: [], state };
-    }
-    default: {
-      return assertNever(input.resume);
-    }
-  }
+  const handlers: ResumeHandlers<TState> = {
+    'commit-fired': (resume) => (resume.token === state.token ? { effects: [], state: { ...state, busy: false } } : { effects: [], state }),
+    'data-arrived': (resume) => ({ effects: [], state: { ...state, fetched: resume.value } }),
+    restored: () => ({ effects: [], state }),
+    'story-loaded': () => ({ effects: [], state }),
+  };
+  return resumeBy(handlers, input.resume);
 }
 
 /** The inputs a fixture system shapes itself: its story lines and player commands. */
@@ -127,6 +138,23 @@ function gatedSystem<TState extends Gated, TCommand extends Command>(
   };
 }
 
+/** Each fixture command's reduction, taking the command of its own kind. */
+type CommandHandlers = {
+  readonly [TKind in FixtureCommand['kind']]: (
+    state: FixtureState,
+    command: Extract<FixtureCommand, { readonly kind: TKind }>,
+  ) => ReduceResult<FixtureState>;
+};
+
+/** What each fixture command does: the effect it asks for, and the gate a schedule closes. */
+const COMMANDS: CommandHandlers = {
+  choose: (state, command) => ({ effects: [fx.driveInk({ index: command.payload.index, op: 'choose' })], state }),
+  fetch: (state) => ({ effects: [fx.fetch({ query: 'q', source: 's' })], state }),
+  persist: (state) => ({ effects: [fx.persist()], state }),
+  present: (state) => ({ effects: [fx.present('fixture/ping', {})], state }),
+  schedule: (state) => ({ effects: [fx.schedule({ delayMs: COMMIT_DELAY_MS, token: state.token })], state: { ...state, busy: true } }),
+};
+
 /**
  * The fixture system's reduction of a player command.
  *
@@ -134,27 +162,12 @@ function gatedSystem<TState extends Gated, TCommand extends Command>(
  * @param {FixtureCommand} command - The command.
  * @returns {ReduceResult} The next state and the effect the command asks for.
  */
-function reduceCommand(state: FixtureState, command: FixtureCommand): ReduceResult<FixtureState> {
-  switch (command.kind) {
-    case 'schedule': {
-      return { effects: [fx.schedule({ delayMs: COMMIT_DELAY_MS, token: state.token })], state: { ...state, busy: true } };
-    }
-    case 'fetch': {
-      return { effects: [fx.fetch({ query: 'q', source: 's' })], state };
-    }
-    case 'present': {
-      return { effects: [fx.present('fixture/ping', {})], state };
-    }
-    case 'persist': {
-      return { effects: [fx.persist()], state };
-    }
-    case 'choose': {
-      return { effects: [fx.driveInk({ index: command.payload.index, op: 'choose' })], state };
-    }
-    default: {
-      return assertNever(command);
-    }
-  }
+function reduceCommand<TKind extends FixtureCommand['kind']>(
+  state: FixtureState,
+  command: Extract<FixtureCommand, { readonly kind: TKind }>,
+): ReduceResult<FixtureState> {
+  const handler: CommandHandlers[TKind] = COMMANDS[command.kind];
+  return handler(state, command);
 }
 
 /** The fixture system's id. */

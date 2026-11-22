@@ -137,10 +137,12 @@ function readers(scan: Scan): ReadonlyMap<number, ReadonlySet<string>> {
   for (const path of scan.paths) {
     const names = namesIn(scan, path);
     const symbols = isEmpty(names) ? [] : scan.checker.getSymbolAtLocation(names);
-    for (const target of symbols.flatMap((symbol) => (symbol === undefined ? [] : [targets.of(symbol)]))) {
-      if (target !== undefined) {
-        found.set(target.id, new Set([...(found.get(target.id) ?? []), path]));
-      }
+    const resolvedTargets = symbols
+      .filter((symbol): symbol is TsSymbol => symbol !== undefined)
+      .map((symbol) => targets.of(symbol))
+      .filter((target): target is TsSymbol => target !== undefined);
+    for (const target of resolvedTargets) {
+      found.set(target.id, new Set([...(found.get(target.id) ?? []), path]));
     }
   }
   return found;
@@ -153,11 +155,15 @@ function readers(scan: Scan): ReadonlyMap<number, ReadonlySet<string>> {
  * @returns {readonly ExportedType[]} The unread types.
  */
 function unread(scan: Scan): readonly ExportedType[] {
-  const read = readers(scan);
-  return [...exportedTypes(scan)]
-    .filter(
-      ([id, type]: readonly [number, ExportedType]) => !type.isPublic && ![...(read.get(id) ?? [])].some((path) => reads(path, type.path)),
-    )
+  const exported = exportedTypes(scan);
+  const readElsewhere = new Set(
+    [...readers(scan)].flatMap(([id, paths]: readonly [number, ReadonlySet<string>]) => {
+      const type = exported.get(id);
+      return type !== undefined && [...paths].some((path) => reads(path, type.path)) ? [id] : [];
+    }),
+  );
+  return [...exported]
+    .filter(([id, type]: readonly [number, ExportedType]) => !type.isPublic && !readElsewhere.has(id))
     .map(([, type]: readonly [number, ExportedType]) => type);
 }
 

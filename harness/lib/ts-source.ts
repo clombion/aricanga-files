@@ -19,11 +19,7 @@ import {
   isPropertyAccessExpression,
   isStringLiteral,
 } from 'typescript/unstable/ast/is';
-
-/** A module TypeScript could not parse. */
-class ParseError extends Error {
-  public override readonly name = 'ParseError';
-}
+import { present } from './present.ts';
 
 /** A comment of a module: its text (delimiters included), its 1-based line and the code before it. */
 interface Comment {
@@ -64,10 +60,7 @@ function parse(path: string, text: string): SourceFile {
     const snapshot = api().updateSnapshot({ openFiles: [fileName] });
     const file = snapshot.getDefaultProjectForFile(fileName)?.program.getSourceFile(fileName);
     api().updateSnapshot({ closeFiles: [fileName] });
-    if (file === undefined) {
-      throw new ParseError(`TypeScript returned no source file for ${path}`);
-    }
-    return file;
+    return present(file, `the source file TypeScript parsed from ${path}`);
   } finally {
     unmount();
   }
@@ -126,7 +119,9 @@ function comments(file: SourceFile): Comment[] {
     .map((range) => {
       const { line, character } = file.getLineAndCharacterOfPosition(range.pos);
       return {
-        code: (lines.at(line) ?? '').slice(LINE_START, character).trim(),
+        code: present(lines.at(line), `line ${String(line)}`)
+          .slice(LINE_START, character)
+          .trim(),
         line: line + FIRST_LINE,
         text: text.slice(range.pos, range.end),
       };

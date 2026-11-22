@@ -11,6 +11,7 @@
 
 import { Slot } from './lists.ts';
 import { patch } from './patch.ts';
+import { present } from './present.ts';
 
 /** A timer not yet fired or cleared, with where it was set. */
 interface Pending {
@@ -38,15 +39,15 @@ const AT = /^at /u;
  * @returns {string} The setter's stack frame.
  */
 function caller(): string {
-  const line = new Error('timer').stack?.split('\n')[SETTER_FRAME] ?? '';
+  const line = present(new Error('timer').stack?.split('\n').at(SETTER_FRAME), 'the stack frame of the code that set the timer');
   return line.trim().replace(AT, '');
 }
 
 /** The timers the guard saw set and not yet fired or cleared, and how to clear each kind. */
 class Timers {
-  public readonly pending = new Map<unknown, Pending>();
+  public readonly pending: Map<unknown, Pending> = new Map<unknown, Pending>();
 
-  public readonly clears = new Map<Pending['kind'], (handle: unknown) => void>();
+  public readonly clears: Map<Pending['kind'], (handle: unknown) => void> = new Map<Pending['kind'], (handle: unknown) => void>();
 
   /**
    * A `setTimeout` replacement that records the timer until it fires or is cleared.
@@ -143,4 +144,4 @@ function install(): Installed {
   };
 }
 
-export { install };
+export { install, Timers };

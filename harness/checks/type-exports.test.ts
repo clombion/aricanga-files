@@ -35,6 +35,7 @@ const PLANTS: Readonly<Record<string, string>> = {
   'packages/foundation/src/__types_index.ts': "export type { OnlyReexported } from './__types_owner';\n",
   'packages/systems/__types.test.ts':
     "import type { ReadByTest } from '../foundation/src/__types_owner';\nexport const y: ReadByTest = 2;\n",
+  'packages/systems/__types_missing.ts': "import type { Gone } from './__types_nowhere';\nexport const v: Gone | undefined = undefined;\n",
   'packages/systems/__types_reader.ts':
     "import type { Read, Renamed } from '../foundation/src/__types_owner';\nexport const x: Read = 1;\nexport const w: Renamed = 4;\n",
 };

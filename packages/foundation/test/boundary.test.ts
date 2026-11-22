@@ -64,7 +64,7 @@ function runtime(): Runtime {
       },
     },
   };
-  return new Runtime({ host, ink: new InkRuntime(compileInk('Start # fx: 1\n')), seed: 0, systems: [fixtureSystemErased] });
+  return new Runtime({ host, ink: InkRuntime.fromJson(compileInk('Start # fx: 1\n')), seed: 0, systems: [fixtureSystemErased] });
 }
 
 describe('the runtime boundary', () => {

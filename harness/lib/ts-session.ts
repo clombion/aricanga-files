@@ -65,9 +65,7 @@ class Session {
       },
     });
     this.open = [opened];
-    process.once('exit', () => {
-      this.close();
-    });
+    process.once('exit', this.close.bind(this));
     return opened;
   }
 

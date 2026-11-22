@@ -68,7 +68,7 @@ function world(): World {
     store: memoryStore(),
   };
   const systems: readonly AnySystem[] = [erase(hSystem)];
-  return { deliveries, fires, host, presented, runtime: new Runtime({ host, ink: new InkRuntime(story()), seed: 0, systems }) };
+  return { deliveries, fires, host, presented, runtime: new Runtime({ host, ink: InkRuntime.fromJson(story()), seed: 0, systems }) };
 }
 
 /**

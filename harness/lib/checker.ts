@@ -18,6 +18,7 @@ import { Prefixes } from './exemptions.ts';
 import { SymbolFlags } from 'typescript/unstable/sync';
 import { isEmpty } from './lists.ts';
 import path from 'node:path';
+import { present } from './present.ts';
 import { typescriptFiles } from './scope.ts';
 
 /** The compiler options of a scan: the shared base's strictness, every lib a held module reads. */
@@ -112,17 +113,16 @@ function mounted(config: string, paths: readonly string[], sources: Readonly<Rec
 function openScan(paths: readonly string[], sources: Readonly<Record<string, string>> = {}): Scan {
   const config = path.join(REPO_ROOT, '.harness-scan', nextName(), 'tsconfig.json');
   const unmount = mount(mounted(config, paths, sources));
-  const project = api()
-    .updateSnapshot({ openProjects: [config] })
-    .getProject(config);
+  const project = present(
+    api()
+      .updateSnapshot({ openProjects: [config] })
+      .getProject(config),
+    'the scan project',
+  );
   const close = (): void => {
     api().updateSnapshot({ closeProjects: [config] });
     unmount();
   };
-  if (project === undefined) {
-    close();
-    throw new Error('the scan project did not open');
-  }
   return { checker: project.checker, close, paths, program: project.program };
 }
 

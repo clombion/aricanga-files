@@ -6,7 +6,7 @@ export const FOUNDATION_VERSION = '0.0.0';
 
 // Ink runtime (the single inkjs touchpoint).
 export { InkRuntime } from './ink/ink-runtime';
-export type { InkFixtures, NameResolver, DataResolver } from './ink/ink-runtime';
+export type { InkFixtures, InkStory, NameResolver, DataResolver } from './ink/ink-runtime';
 
 // Simulation contracts.
 export type { Tag, Choice, ExternalCall, InkStatus, InkStep } from './sim/story';
@@ -21,7 +21,6 @@ export { erase, stateOf, viewOf } from './sim/system';
 export type { Item, Reader } from './sim/parse';
 export { commandOf, InputRefusedError, readerOf, unitCommands } from './sim/parse';
 export type { ReduceRecord, ReduceObserver } from './sim/trace';
-export { assertNever } from './sim/exhaustive';
 export type { Router, RouteContext } from './sim/router';
 export { createTagOwnershipRouter } from './sim/router';
 

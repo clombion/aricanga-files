@@ -8,11 +8,12 @@
 
 import type { Block, Doc } from './docs.ts';
 import { UPSTREAM, pins } from './pins.ts';
+import { checkList, pinTable, taskTable } from './generated-render.ts';
 import { markdown, markdownDocs, markdownPaths } from './docs.ts';
+import { textsOf, tracked, writeText } from './source-files.ts';
 import { Accepted } from './exemptions.ts';
 import { checkModules } from './checks.ts';
 import { repoTasks } from './config.ts';
-import { writeText } from './source-files.ts';
 
 /** Each generator, by the name of the blocks it renders. */
 type Generators = ReadonlyMap<string, () => Promise<string>>;
@@ -34,57 +35,46 @@ interface Files {
 
 /** The tasks that run no tool themselves but are the gate's entry points. */
 const ENTRY_TASKS = new Accepted(['check', 'check:fast', 'lock:check', 'setup', 'fix']);
-const LOCK_FIRST = 'pnpm run lock:check';
 
 /** The lines a block's end marker takes. */
 const END_MARKER_LINES = 1;
 
 /**
- * The list of shipped checks, from each check module's `HARNESS_ID` and leading doc comment.
+ * The list of shipped checks, from every listed check module.
  *
  * @returns {Promise<string>} The list, as Markdown.
  */
-async function checkList(): Promise<string> {
-  const modules = await checkModules();
-  return modules.map((module) => `- \`${module.harnessId}\` (\`${module.path}\`): ${module.summary}`).join('\n');
+async function checks(): Promise<string> {
+  const listed = await tracked();
+  const texts = await textsOf(listed.filter((path) => path.startsWith('harness/checks/') && path.endsWith('.test.ts')));
+  return checkList(checkModules(texts));
 }
 
 /**
- * The table of pinned tools, with each tool's upstream repository.
+ * The table of pinned tools.
  *
  * @returns {Promise<string>} The table, as Markdown.
  */
-async function pinTable(): Promise<string> {
+async function pinned(): Promise<string> {
   const found = await pins();
-  const rows = found.map((pin) => {
-    const repository = UPSTREAM.get(pin.tool);
-    const upstream = repository === undefined ? 'no upstream named' : `[${repository}](https://github.com/${repository})`;
-    return `| \`${pin.tool}\` | ${upstream} | \`${pin.where}\` | ${pin.version} |`;
-  });
-  return ['| Tool | Upstream | Pinned in | Pin |', '| --- | --- | --- | --- |', ...rows].join('\n');
+  return pinTable(found, UPSTREAM);
 }
 
 /**
- * The table of the harness's tasks: the entry points and every task that starts with the lock check.
+ * The table of the harness's tasks.
  *
  * @returns {Promise<string>} The table, as Markdown.
  */
-async function taskTable(): Promise<string> {
-  const tasks = await repoTasks();
-  const rows = [...tasks.values()]
-    .filter((task) => {
-      const [first] = task.commands;
-      return ENTRY_TASKS.has(task.name) || first === LOCK_FIRST;
-    })
-    .map((task) => `| \`pnpm run ${task.name}\` | \`${task.script.replaceAll('|', String.raw`\|`)}\` |`);
-  return ['| Command | Runs |', '| --- | --- |', ...rows].join('\n');
+async function tasks(): Promise<string> {
+  const found = await repoTasks();
+  return taskTable([...found.values()], ENTRY_TASKS.values);
 }
 
 /** The repository's generators. */
 const GENERATORS: Generators = new Map([
-  ['checks', checkList],
-  ['pins', pinTable],
-  ['tasks', taskTable],
+  ['checks', checks],
+  ['pins', pinned],
+  ['tasks', tasks],
 ]);
 
 /**

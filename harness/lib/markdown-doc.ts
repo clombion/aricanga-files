@@ -9,7 +9,6 @@ import {
   FIRST_LINE,
   anchor,
   blockMarkers,
-  cellsOf,
   fenceLines,
   fenceMarker,
   headingOf,
@@ -17,8 +16,9 @@ import {
   spansOf,
   withoutSpans,
 } from './markdown-text.ts';
-import { Slot, isEmpty } from './lists.ts';
 import { BlockError } from './block-error.ts';
+import { Slot } from './lists.ts';
+import { present } from './present.ts';
 
 /** A generated block whose end marker is not read yet. */
 interface OpenBlock {
@@ -139,27 +139,6 @@ class Doc {
   }
 
   /**
-   * Every pipe table outside the fences, as rows of cells, without the delimiter row.
-   *
-   * @returns {readonly (readonly (readonly string[])[])[]} The tables.
-   */
-  public tables(): readonly (readonly (readonly string[])[])[] {
-    const tables: (readonly string[])[][] = [];
-    let current: (readonly string[])[] = [];
-    for (const [, line] of [...this.outside(), [FIRST_LINE, ''] as const]) {
-      const trimmed = line.trim();
-      const cells = trimmed.startsWith('|') ? cellsOf(trimmed) : undefined;
-      if (cells !== undefined) {
-        current.push(cells);
-      } else if (!trimmed.startsWith('|') && !isEmpty(current)) {
-        tables.push(current);
-        current = [];
-      }
-    }
-    return tables;
-  }
-
-  /**
    * Read one line's block marker, opening or closing a block.
    *
    * @param {number} number - The line's number.
@@ -191,10 +170,7 @@ class Doc {
    * @returns {readonly Block[]} The closed block.
    */
   private closedBlock(open: Readonly<Slot<OpenBlock>>, number: number): readonly Block[] {
-    const opened = open.take();
-    if (opened === undefined) {
-      return [];
-    }
+    const opened = present(open.take(), `the block the end marker at line ${String(number)} closes`);
     const body = this.lines.slice(opened.line, number - BEFORE).join('\n');
     return [{ body, end: number, name: opened.name, path: this.path, start: opened.line }];
   }
@@ -211,7 +187,7 @@ class Doc {
     const marker = fenceMarker(line);
     const current = open.peek();
     if (current === undefined) {
-      open.put({ info: marker === undefined ? '' : marker.info, line: number, lines: [] });
+      open.put({ info: present(marker, `the fence marker at line ${String(number)}`).info, line: number, lines: [] });
       return [];
     }
     if (marker?.info === '') {

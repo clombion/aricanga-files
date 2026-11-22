@@ -128,7 +128,8 @@ async function checkInvariant(
       }
       return true;
     }),
-    { numRuns: opts.runs ?? INVARIANT_RUNS },
+    // The violation's rule and detail are the report: fast-check leaves the thrown error out without this.
+    { includeErrorInReport: true, numRuns: opts.runs ?? INVARIANT_RUNS },
   );
   return report(details.failed, defaultReportMessage(details));
 }
