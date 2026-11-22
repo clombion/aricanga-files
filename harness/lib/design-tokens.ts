@@ -122,6 +122,6 @@ rule.messages = messages;
 
 const plugin: ReturnType<typeof stylelint.createPlugin> = stylelint.createPlugin(ruleName, rule);
 
-export { messages, rawSizes, rawTokenValues, ruleName };
+export { messages, rawSizes, rawTokenValues, reported, ruleName };
 // Stylelint loads a plugin module's default export.
 export default plugin;

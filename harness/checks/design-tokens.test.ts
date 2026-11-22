@@ -1,7 +1,7 @@
 /** The `harness/design-tokens` rule, through the repository's stylelint: raw values outside the tokens are reported, the token file's own tokens are not. */
 
 import { describe, expect, test } from 'vitest';
-import { messages, rawTokenValues, ruleName } from '#lib/design-tokens.ts';
+import { messages, rawTokenValues, reported, ruleName } from '#lib/design-tokens.ts';
 import { lintSheet } from '#lib/stylesheets.ts';
 
 /** The first line of a planted sheet. */
@@ -30,6 +30,18 @@ describe('the raw values a token holds', () => {
       ['easing', 'ease'],
     ]);
     expect(rawTokenValues('3')).toStrictEqual([['z-index', '3']]);
+  });
+});
+
+describe('what a declaration has reported', () => {
+  test("is a declaration's raw sizes wherever it is", () => {
+    expect.hasAssertions();
+    expect([reported('padding', '1rem', false), reported('padding', '1rem', true)]).toStrictEqual([[['size', '1rem']], [['size', '1rem']]]);
+  });
+
+  test("is a custom property's raw values outside the token file, and nothing inside it", () => {
+    expect.hasAssertions();
+    expect([reported('--tint', '#fff', false), reported('--tint', '#fff', true)]).toStrictEqual([[['colour', '#fff']], []]);
   });
 });
 
