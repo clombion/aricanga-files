@@ -1,6 +1,7 @@
-/** The one module of the harness's scripts that writes to the standard streams. A script ends through `exitCode`. */
+/** The one module of the harness's scripts that writes to the standard streams. A script ends through `exitCode`. It also reads standard input. */
 
 import type { Writable } from 'node:stream';
+import { text as readText } from 'node:stream/consumers';
 
 /** The exit code of a run that found nothing wrong. */
 const EXIT_SUCCESS = 0;
@@ -71,5 +72,15 @@ function succeeded(outcome: Readonly<{ status: number | null }>): boolean {
   return outcome.status === EXIT_SUCCESS;
 }
 
-export { complain, EXIT_FAILURE, EXIT_SUCCESS, err, exitCode, out, say, succeeded };
+/**
+ * Read a script's standard input to its end.
+ *
+ * @returns {Promise<string>} Everything the script was handed on standard input.
+ */
+async function standardInput(): Promise<string> {
+  const read = await readText(process.stdin);
+  return read;
+}
+
+export { complain, EXIT_FAILURE, EXIT_SUCCESS, err, exitCode, out, say, standardInput, succeeded };
 export type { Sink };

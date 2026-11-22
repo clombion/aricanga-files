@@ -151,4 +151,4 @@ async function typecheckAll(typecheck: Readonly<TypecheckRun>): Promise<number> 
 }
 
 export { buildCheck, checkPushed, genDocs, stressHunt, typecheckAll };
-export type { BuildRun, DocsRun, PushRun, Report, StressRun, TypecheckRun };
+export type { Report, StressRun };

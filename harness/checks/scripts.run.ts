@@ -1,8 +1,6 @@
 /** Running an entry script in the test's own process, with its library function stood in for. */
 
-import { Readable } from 'node:stream';
 import { fromRoot } from '#lib/paths.ts';
-import type { text } from 'node:stream/consumers';
 import { vi } from 'vitest';
 
 /** What a stood-in standard input holds: one updated ref with a known remote side. */
@@ -25,32 +23,24 @@ async function stoodIn(): Promise<number> {
 }
 
 /**
- * A stood-in library function that returns nothing.
+ * A stood-in standard input: it reads nothing and gives `STDIN`.
  *
- * @returns {Promise<void>} Settles at once.
+ * @returns {Promise<string>} `STDIN`.
  */
-async function settles(): Promise<void> {
-  await Promise.resolve();
+async function stoodInput(): Promise<string> {
+  const stood = await Promise.resolve(STDIN);
+  return stood;
 }
 
 /**
- * A stand-in for `text` from `node:stream/consumers`: standard input reads as `STDIN`, and any other
- * stream is read by the real `text`.
+ * A module with one of its functions stood in for by `stoodIn`, every other export as it is.
  *
- * @param {unknown} stream - The stream read.
- * @returns {Promise<string>} Its text.
+ * @param {Module} module - The module's real exports.
+ * @param {keyof Module} name - The function to stand in for.
+ * @returns {Module} The exports with that function stood in for.
  */
-async function standingIn(stream: unknown): Promise<string> {
-  if (stream === process.stdin) {
-    const stood = await Promise.resolve(STDIN);
-    return stood;
-  }
-  if (!(stream instanceof Readable)) {
-    throw new TypeError('a stood-in text read was handed no readable stream');
-  }
-  const actual = await vi.importActual<{ readonly text: typeof text }>('node:stream/consumers');
-  const read = await actual.text(stream);
-  return read;
+function withStoodIn<Module extends object>(module: Readonly<Module>, name: keyof Module): Module {
+  return { ...module, [name]: vi.fn<() => Promise<number>>(stoodIn) };
 }
 
 /**
@@ -81,4 +71,4 @@ function lastArgument<Argument>(calls: readonly (readonly [Argument])[]): Argume
   return argument;
 }
 
-export { exitOf, lastArgument, settles, standingIn, STDIN, STOOD_IN, stoodIn };
+export { exitOf, lastArgument, STDIN, STOOD_IN, stoodIn, stoodInput, withStoodIn };

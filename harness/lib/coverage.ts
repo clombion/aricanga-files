@@ -139,25 +139,8 @@ function shortfalls(files: readonly FileCoverage[], floor: number = FLOOR): read
   );
 }
 
-/** The shortfall the project carries while it adopts the floor, per file and metric. */
-const ADOPTING = 'adopting: the shortfall this file carried when the floor was adopted; close it with tests and lower the entry';
-
-const DEBT: CountedExemptions = new CountedExemptions({
-  'harness/scripts/check-pushed.ts :: branches': { count: 4, reason: ADOPTING },
-  'harness/scripts/check-pushed.ts :: functions': { count: 2, reason: ADOPTING },
-  'harness/scripts/check-pushed.ts :: lines': { count: 6, reason: ADOPTING },
-  'harness/scripts/check-pushed.ts :: statements': { count: 7, reason: ADOPTING },
-  'harness/scripts/coverage-floor.ts :: lines': { count: 1, reason: ADOPTING },
-  'harness/scripts/coverage-floor.ts :: statements': { count: 1, reason: ADOPTING },
-  'harness/scripts/dupes.ts :: lines': { count: 1, reason: ADOPTING },
-  'harness/scripts/dupes.ts :: statements': { count: 1, reason: ADOPTING },
-  'harness/scripts/gen-docs.ts :: branches': { count: 2, reason: ADOPTING },
-  'harness/scripts/gen-docs.ts :: lines': { count: 4, reason: ADOPTING },
-  'harness/scripts/gen-docs.ts :: statements': { count: 4, reason: ADOPTING },
-  'harness/scripts/typecheck.ts :: branches': { count: 4, reason: ADOPTING },
-  'harness/scripts/typecheck.ts :: lines': { count: 8, reason: ADOPTING },
-  'harness/scripts/typecheck.ts :: statements': { count: 8, reason: ADOPTING },
-});
+/** The shortfall the floor tolerates, per file and metric, each with its reason: none. */
+const DEBT: CountedExemptions = new CountedExemptions({});
 
 /**
  * The floor's problems: every file and metric whose shortfall differs from its debt.

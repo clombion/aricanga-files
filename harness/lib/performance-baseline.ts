@@ -163,4 +163,3 @@ async function recordBaseline(recording: Readonly<BaselineRun>): Promise<void> {
 }
 
 export { BASELINE, recordBaseline, RUN_ARGUMENTS, RUNS, timingOf };
-export type { BaselineRun, Timing };

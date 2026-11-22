@@ -1,8 +1,16 @@
 /** The scripts' writes reach their sink as given or as a line, and a run's exit code follows its result. */
 
-import { EXIT_FAILURE, EXIT_SUCCESS, complain, err, exitCode, out, say } from '#lib/output.ts';
-import { describe, expect, test } from 'vitest';
+import { EXIT_FAILURE, EXIT_SUCCESS, complain, err, exitCode, out, say, standardInput } from '#lib/output.ts';
+import { describe, expect, test, vi } from 'vitest';
+import { STDIN } from './scripts.run.ts';
 import type { Sink } from '#lib/output.ts';
+import { text } from 'node:stream/consumers';
+
+vi.mock(import('node:stream/consumers'), async (original) => {
+  const consumers = await original();
+  const { stoodInput } = await import('./scripts.run.ts');
+  return { ...consumers, text: vi.fn<typeof consumers.text>(stoodInput) };
+});
 
 /**
  * A sink that keeps what is written to it.
@@ -43,5 +51,11 @@ describe("the scripts' output", () => {
     expect.hasAssertions();
     expect(exitCode(true)).toBe(EXIT_SUCCESS);
     expect(exitCode(false)).toBe(EXIT_FAILURE);
+  });
+
+  test('reads standard input to its end', async () => {
+    expect.hasAssertions();
+    await expect(standardInput()).resolves.toBe(STDIN);
+    expect(text).toHaveBeenCalledWith(process.stdin);
   });
 });

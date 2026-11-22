@@ -27,10 +27,10 @@ vi.mock(import('#lib/script-entries.ts'), () => ({
   typecheckAll: vi.fn<() => Promise<number>>(stoodIn),
 }));
 
-vi.mock(import('node:stream/consumers'), async (original) => {
-  const consumers = await original();
-  const { standingIn } = await import('./scripts.run.ts');
-  return { ...consumers, text: vi.fn<typeof consumers.text>(standingIn) };
+vi.mock(import('#lib/output.ts'), async (original) => {
+  const output = await original();
+  const { stoodInput } = await import('./scripts.run.ts');
+  return { ...output, standardInput: vi.fn<typeof output.standardInput>(stoodInput) };
 });
 
 describe('the entry scripts', () => {
