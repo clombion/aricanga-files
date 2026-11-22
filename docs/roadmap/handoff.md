@@ -1,7 +1,7 @@
 # Handoff: the rebuild at Phase 3, Step 2
 
 The state of the rebuild for the agent that takes it over. Read [AGENTS.md](../../AGENTS.md) first:
-its rules (the gate, fail-before-fix, the hand-back, tests that can fail) hold every change. The
+its rules (the gate, seen-failing, the hand-back, tests that can fail) hold every change. The
 checks are in [harness.md](../../harness.md) and which ones exist in
 [HARNESS_STATUS.md](../../HARNESS_STATUS.md). Work is tracked in GitHub Issues as
 [issues.md](issues.md) describes; ask the owner before filing or editing one.
@@ -70,8 +70,6 @@ change meets:
 
 ## Open questions for the owner
 
-- One added `parseTag` test (`packages/foundation/test/contracts.test.ts`, a value holding a
-  second separator) passes on its parent; it stays unless the owner drops it.
 - Issue #20 (characterise Solid 2.0) and #12 (port the harness) are done; closing them is the
   owner's call.
 - The labels `content`, `phone`, `a11y`, `i18n`, `in progress` and the `exp:` experience labels

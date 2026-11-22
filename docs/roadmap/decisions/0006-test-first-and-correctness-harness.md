@@ -25,8 +25,11 @@ or a test that passes whatever the code does, is worse than no check.
   test before implementation. A task is Done only when every criterion has a
   passing, tagged test; nothing is "manually verified". A phase's integrating
   proof is that phase's acceptance test.
-- **Fail before fix.** Every test a commit adds fails on the commit's parent, at
-  least one of them inside its body rather than at import. The failing run is
+- **Seen failing.** Every test a commit adds is seen failing before it is kept.
+  Where the commit changes behaviour, the test fails on the commit's parent, at
+  least one of them inside its body rather than at import. Where the commit
+  keeps behaviour (an owner rewritten, working code covered, a rule's plant),
+  the test fails on a named mutant of the owner it holds. The failing output is
   kept for the hand-back.
 - **Carve-outs** where strict red-green is the wrong tool:
   - contract and type work is driven by `tsc -b`, stub conformance and the
@@ -75,7 +78,7 @@ keeps that file true.
 - **Hand-back.** A unit of work hands back, besides its commits: a mutant per
   owner it changed with the test that fails on it; a sweep for siblings of the
   defect's shape; the states it touched with the test holding each; the rules it
-  defined; the failing parent run of each added test.
+  defined; the failing run of each added test, on its parent or its named mutant.
 - **Never weaken a check to pass it.** No new suppression or exemption without
   its reason, no lowered threshold, no deleted plant.
 

@@ -26,7 +26,7 @@ Whether this project implements each check of [harness.md](harness.md). A status
 | doubles | A scripted double refuses an unscripted call | implemented | `harness/checks/doubles.test.ts` | | |
 | elements | A page writes no `null`, `undefined` or `NaN`, names every control and shows markup in data as text | planned | | | Phase 3 Step 3, with the composed axe sweep |
 | exemption-lists | Every consulted list is declared and every declaration is consulted | implemented | `harness/checks/exemption-lists.test.ts` | | |
-| fail-before-fix | Every added test fails on its parent | implemented | `AGENTS.md` | | |
+| seen-failing | Every added test fails on its parent, or on a named mutant of its owner where the commit keeps behaviour | implemented | `AGENTS.md` | | |
 | fixture-provenance | A fixture builds a production record by production's own rule | implemented | `AGENTS.md` | | |
 | flake-hunter | A test that passes only in its usual order or alone fails | implemented | `harness/checks/flake-hunter.test.ts` | | |
 | gate | The gate writes nothing, runs only locked tools, and the hooks run its tasks | implemented | `harness/checks/gate.test.ts` | | |

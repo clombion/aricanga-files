@@ -25,6 +25,11 @@ describe('the kernel contracts', () => {
     expect(parseTag('at: 10:30')).toStrictEqual({ key: 'at', raw: 'at: 10:30', value: '10:30' });
   });
 
+  test('parseTag keeps a value that runs over a line break whole', () => {
+    expect.hasAssertions();
+    expect(parseTag('note: first\nsecond')).toStrictEqual({ key: 'note', raw: 'note: first\nsecond', value: 'first\nsecond' });
+  });
+
   test('a snapshot round-trips through the codec to deep-equal', () => {
     expect.hasAssertions();
     expect(decodeSnapshot(encodeSnapshot(SNAPSHOT))).toStrictEqual(SNAPSHOT);

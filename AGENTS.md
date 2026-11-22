@@ -29,11 +29,12 @@ is a read-only behavioural oracle outside the harness until it is deleted (ADR-0
   census requires, no lowered threshold, no deleted plant, no rule turned off that does not
   contradict another enabled rule.
 
-## fail-before-fix
+## seen-failing
 
-Every test a commit adds fails on the commit's parent, at least one of them inside its body
-rather than at import. Run the new test on the parent before writing the fix, and keep the failing
-output for the hand-back.
+Every test a commit adds is seen failing before it is kept. Where the commit changes behaviour, the
+test fails on the commit's parent, at least one of them inside its body rather than at import. Where
+the commit keeps behaviour (an owner rewritten, working code covered, a rule's plant), the test
+fails on a named mutant of the owner it holds. Keep the failing output for the hand-back.
 
 ## hand-back
 
@@ -43,7 +44,7 @@ A unit of work hands back, besides the commits:
 - a sweep of the code for siblings of the defect's shape, with what it found;
 - a table of the states it touched, with the test that holds each state;
 - each rule it defined (name, module, one line), and any rule it saw defined twice;
-- the failing parent run of each added test.
+- the failing run of each added test: on the parent, or on its named mutant.
 
 A fix that changes how a run ends (its exit code, its signals, its teardown) is a design change:
 plan it and have the plan verified before building it.
