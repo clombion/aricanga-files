@@ -105,7 +105,10 @@ function slower(timing: Readonly<Timing>, slowest: Readonly<Timing> | undefined)
  * @param {Readonly<ReadonlyMap<string, Timing>>} baseline - The slowest timings so far, by project.
  * @returns {Promise<ReadonlyMap<string, Timing>>} The baseline with this run's reports folded in.
  */
-async function recordRun(recording: Readonly<BaselineRun>, baseline: Readonly<ReadonlyMap<string, Timing>>): Promise<ReadonlyMap<string, Timing>> {
+async function recordRun(
+  recording: Readonly<BaselineRun>,
+  baseline: Readonly<ReadonlyMap<string, Timing>>,
+): Promise<ReadonlyMap<string, Timing>> {
   const finished = await recording.run(RUN_ARGUMENTS, { cwd: recording.root });
   recording.out(`performance run exited ${finished.status}\n`);
   const directories = await readdir(recording.results);
