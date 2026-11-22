@@ -9,6 +9,7 @@
 import { bin, finished } from './tools.ts';
 import { json, object, repoTasks } from './config.ts';
 import type { Finished } from './process.ts';
+import { present } from './present.ts';
 import { textOf } from './source-files.ts';
 
 /** The ignore lists of `knip.json` that list plain entries. */
@@ -24,7 +25,7 @@ const AFTER_BINARY = 1;
  */
 async function deadcodeRuns(): Promise<readonly (readonly string[])[]> {
   const tasks = await repoTasks();
-  const commands = tasks.get('deadcode')?.commands ?? [];
+  const { commands } = present(tasks.get('deadcode'), 'the deadcode task');
   return commands.filter((command) => command.startsWith('knip')).map((command) => command.split(' ').slice(AFTER_BINARY));
 }
 

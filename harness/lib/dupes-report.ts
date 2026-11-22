@@ -3,10 +3,10 @@
  * and why a run gave no report.
  */
 
+import { list, object } from './config.ts';
 import { EXIT_SUCCESS } from './output.ts';
 import type { Outcome } from './process.ts';
 import { createHash } from 'node:crypto';
-import { object } from './config.ts';
 import { relativeTo as posixRelative } from './relative.ts';
 
 /** A clone jscpd found: the run, the two files (relative to the root, sorted) and the fragment's hash. */
@@ -31,20 +31,6 @@ const HASH_START = 0;
  */
 function cloneKey(clone: Clone): string {
   return `${clone.run} ${clone.first} ${clone.second} ${clone.fragment}`;
-}
-
-/**
- * A report's list, or a refusal naming what was there instead.
- *
- * @param {unknown} value - The report's value.
- * @param {string} what - What list it should be.
- * @returns {readonly unknown[]} The list.
- */
-function list(value: unknown, what: string): readonly unknown[] {
-  if (!Array.isArray(value)) {
-    throw new TypeError(`jscpd's report holds ${JSON.stringify(value)} where the ${what} list belongs`);
-  }
-  return value;
 }
 
 /**
@@ -84,7 +70,7 @@ function cloneOf(runName: string, entry: unknown, root: string): Clone {
  * @returns {readonly Clone[]} The clones.
  */
 function clones(runName: string, report: unknown, root: string): readonly Clone[] {
-  return list(object(report, "jscpd's report")['duplicates'], 'duplicates')
+  return list(object(report, "jscpd's report")['duplicates'], "jscpd's report's duplicates")
     .map((entry) => cloneOf(runName, entry, root))
     .filter((clone) => runName !== 'cross-file' || clone.first !== clone.second);
 }
@@ -98,7 +84,9 @@ function clones(runName: string, report: unknown, root: string): readonly Clone[
  */
 function scanned(report: unknown, root: string): ReadonlySet<string> {
   const summary = object(object(report, "jscpd's report")['summary'], 'summary');
-  return new Set(list(summary['files'], 'summary files').map((entry) => relativeTo(object(entry, 'a summary file')['path'], root)));
+  return new Set(
+    list(summary['files'], "jscpd's report's summary files").map((entry) => relativeTo(object(entry, 'a summary file')['path'], root)),
+  );
 }
 
 /**

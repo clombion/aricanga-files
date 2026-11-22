@@ -30,6 +30,7 @@ const FORMS: readonly (readonly [string, string])[] = [
   ['clock', 'globalThis.Date.now();\n'],
   ['clock', "Date['now']();\n"],
   ['clock', 'new Date();\n'],
+  ['clock', 'new Date;\n'],
   ['clock', 'Date();\n'],
   ['clock', 'process.hrtime();\n'],
   ['random', 'Math.random();\n'],

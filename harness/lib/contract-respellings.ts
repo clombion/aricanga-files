@@ -31,6 +31,7 @@ import { nameText, nodes, pathOf, textOfNode } from './checker.ts';
 import { Accepted } from './exemptions.ts';
 import type { Scan } from './checker.ts';
 import { heldAsKey } from './contract-keys.ts';
+import { present } from './present.ts';
 import { relative as relativeTo } from './paths.ts';
 
 /** How deep into type arguments a word is looked for. */
@@ -135,8 +136,7 @@ function descend(checker: Readonly<Checker>, types: readonly Type[], path: reado
  * @returns {readonly Type[]} Its type, or nothing.
  */
 function typeOf(checker: Readonly<Checker>, node: Node): readonly Type[] {
-  const type = checker.getTypeAtLocation(node);
-  return type === undefined ? [] : [type];
+  return [present(checker.getTypeAtLocation(node), `the type of ${textOfNode(node)}`)];
 }
 
 /**

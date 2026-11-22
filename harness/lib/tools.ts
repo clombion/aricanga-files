@@ -190,4 +190,5 @@ class Project {
   }
 }
 
+export { ToolError } from './tool-error.ts';
 export { bin, finished, isolatedEnv, Project };

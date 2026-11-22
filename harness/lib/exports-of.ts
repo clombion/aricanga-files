@@ -5,7 +5,7 @@
  */
 
 import type { InterfaceDeclaration, SourceFile, TypeAliasDeclaration } from 'typescript/unstable/ast';
-import { SyntaxKind, isExportDeclaration, isIdentifier, isNamedExports } from 'typescript/unstable/ast';
+import { SyntaxKind, isExportDeclaration, isNamedExports } from 'typescript/unstable/ast';
 
 /**
  * The local names a module's own export lists name.
@@ -19,7 +19,7 @@ function listedExports(file: SourceFile): ReadonlySet<string> {
     const clause = isExportDeclaration(statement) && statement.moduleSpecifier === undefined ? statement.exportClause : undefined;
     for (const element of clause !== undefined && isNamedExports(clause) ? clause.elements : []) {
       const local = element.propertyName ?? element.name;
-      names.add(isIdentifier(local) ? local.text : '');
+      names.add(local.text);
     }
   }
   return names;

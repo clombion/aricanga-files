@@ -7,6 +7,7 @@
  */
 
 import type { Rule } from 'stylelint';
+import { present } from './present.ts';
 import stylelint from 'stylelint';
 
 /** A raw value found: its kind and its text. */
@@ -92,11 +93,8 @@ function rawTokenValues(value: string): readonly Raw[] {
   return [...TOKEN_FINDERS.flatMap((finder) => found(finder, value)), ...zIndex];
 }
 
-const rule: Rule = (primary) => (root, result) => {
-  if (primary !== true) {
-    return;
-  }
-  const tokenFile = (root.source?.input.file ?? '').endsWith('tokens.css');
+const rule: Rule = () => (root, result) => {
+  const tokenFile = present(root.source?.input.file, 'the file name of the sheet stylelint lints').endsWith('tokens.css');
   root.walkDecls((declaration) => {
     const custom = declaration.prop.startsWith('--');
     if (tokenFile && custom) {

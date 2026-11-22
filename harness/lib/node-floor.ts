@@ -17,11 +17,8 @@ class FloorError extends Error {
 const EXACT = /^v?(?<major>\d+)\.(?<minor>\d+)\.(?<patch>\d+)$/u;
 const FLOOR = /^>=\s*(?<version>\d+\.\d+\.\d+)$/u;
 
-/** The value a missing part of a version stands for. */
-const MISSING_PART = 0;
-
-/** What `findIndex` returns when no part differs: `.at` would read it as the last part. */
-const NOT_FOUND = -1;
+/** The order of a version against its floor at which the floor is met: equal, or anything above. */
+const AT_FLOOR = 0;
 
 /**
  * Parse an exact `x.y.z` (a leading `v` allowed).
@@ -59,9 +56,9 @@ function floor(range: string): Version {
  * @returns {boolean} Whether it meets the floor.
  */
 function meets(found: Version, minimum: Version): boolean {
-  const differing = found.findIndex((part, index) => part !== (minimum.at(index) ?? MISSING_PART));
-  const part = found.at(differing);
-  return differing === NOT_FOUND || part === undefined || part > (minimum.at(differing) ?? MISSING_PART);
+  const [major, minor, patch] = found;
+  const [floorMajor, floorMinor, floorPatch] = minimum;
+  return (major - floorMajor || minor - floorMinor || patch - floorPatch) >= AT_FLOOR;
 }
 
 /**
@@ -80,17 +77,27 @@ function engineRange(manifest: unknown): string {
 }
 
 /**
+ * The floor a manifest's `engines.node` states, refused when it states none.
+ *
+ * @param {unknown} manifest - The parsed `package.json`.
+ * @returns {Version} The floor.
+ */
+function declaredFloor(manifest: unknown): Version {
+  const range = engineRange(manifest);
+  if (range === '') {
+    throw new FloorError('package.json declares no engines.node');
+  }
+  return floor(range);
+}
+
+/**
  * The repository's declared floor.
  *
  * @returns {Promise<Version>} The floor `engines.node` states.
  */
 async function repoFloor(): Promise<Version> {
   const text = await textOf('package.json');
-  const range = engineRange(json(text));
-  if (range === '') {
-    throw new FloorError('package.json declares no engines.node');
-  }
-  return floor(range);
+  return declaredFloor(json(text));
 }
 
 /**
@@ -103,4 +110,4 @@ async function pinned(): Promise<Version> {
   return version(text);
 }
 
-export { engineRange, floor, FloorError, meets, pinned, repoFloor, version };
+export { declaredFloor, engineRange, floor, FloorError, meets, pinned, repoFloor, version };

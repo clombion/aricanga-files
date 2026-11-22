@@ -5,6 +5,7 @@
 
 import type { Sheet, SheetFinding } from './stylesheets.ts';
 import { parse } from './stylesheets.ts';
+import { present } from './present.ts';
 
 /** The custom properties a sheet or module defines and reads. */
 interface Properties {
@@ -33,7 +34,7 @@ const NO_LINE = 0;
 function namesIn(text: string, pattern: Readonly<RegExp>): readonly string[] {
   const names: string[] = [];
   for (const match of text.matchAll(pattern)) {
-    names.push(match.groups?.['name'] ?? '');
+    names.push(present(match.groups?.['name'], 'the name the pattern captures'));
   }
   return names;
 }
@@ -110,7 +111,7 @@ async function unusedClasses(all: readonly Sheet[], modules: Readonly<ReadonlyMa
         for (const name of namesIn(rule.selector, CLASS)) {
           const named = new RegExp(`(?<![\\w-])${name}(?![\\w-])`, 'u');
           if (!texts.some((text) => named.test(text))) {
-            const line = sheet.line + (rule.source?.start?.line ?? FIRST_LINE) - FIRST_LINE;
+            const line = sheet.line + present(rule.source?.start?.line, 'the line PostCSS parsed the rule at') - FIRST_LINE;
             found.push({ line, path: sheet.path, rule: 'class-unused', text: name });
           }
         }
@@ -145,7 +146,7 @@ async function duplicateRules(sheet: Sheet): Promise<readonly SheetFinding[]> {
       .join(', ');
     const key = `${context.join(' > ')} :: ${selector}`;
     if (seen.has(key)) {
-      const line = sheet.line + (rule.source?.start?.line ?? FIRST_LINE) - FIRST_LINE;
+      const line = sheet.line + present(rule.source?.start?.line, 'the line PostCSS parsed the rule at') - FIRST_LINE;
       found.push({ line, path: sheet.path, rule: 'selector-repeated', text: key });
     }
     seen.add(key);

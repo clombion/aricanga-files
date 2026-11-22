@@ -4,6 +4,7 @@ import { afterAll, beforeAll } from 'vitest';
 import { openScan, scannedFiles } from './checker.ts';
 import type { Scan } from './checker.ts';
 import { Slot } from './lists.ts';
+import { present } from './present.ts';
 
 /** How long opening a scan of the whole repository may take, in milliseconds. */
 const OPEN_TIMEOUT_MS = 120_000;
@@ -28,13 +29,7 @@ function useScan(
   afterAll(() => {
     opened.take()?.close();
   });
-  return () => {
-    const scan = opened.peek();
-    if (scan === undefined) {
-      throw new Error('the scan is read outside the tests that opened it');
-    }
-    return scan;
-  };
+  return () => present(opened.peek(), 'the scan, read outside the tests that opened it,');
 }
 
 /**

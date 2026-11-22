@@ -28,6 +28,7 @@ import { nodes, pathOf, sourceOf, textOfNode } from './checker.ts';
 import { Prefixes } from './exemptions.ts';
 import type { Scan } from './checker.ts';
 import { isEmpty } from './lists.ts';
+import { present } from './present.ts';
 
 /** The roots whose exported unions are contracts: the kernel's packages. */
 const CONTRACT_ROOTS: Prefixes = new Prefixes(['packages/foundation/src/', 'packages/systems/']);
@@ -78,10 +79,7 @@ function discriminants(checker: Readonly<Checker>, type: Type, declared: Readonl
  * @returns {readonly Contract[]} Its contracts: the union itself, or its discriminants.
  */
 function contractsOf(scan: Scan, statement: TypeAliasDeclaration, path: string): readonly Contract[] {
-  const symbol = scan.checker.getSymbolAtLocation(statement.name);
-  if (symbol === undefined) {
-    return [];
-  }
+  const symbol = present(scan.checker.getSymbolAtLocation(statement.name), `the symbol of the type alias ${statement.name.text}`);
   const type = scan.checker.getDeclaredTypeOfSymbol(symbol);
   const words = stringLiterals(type);
   if (words !== undefined && words.length >= LEAST_WORDS) {
@@ -112,12 +110,12 @@ function contracts(scan: Scan, paths: readonly string[]): readonly Contract[] {
 /**
  * The contract a type is: a union of at least two of one contract's words.
  *
- * @param {Type | undefined} type - The type.
+ * @param {Type} type - The type.
  * @param {readonly Contract[]} known - The contracts.
  * @returns {Contract | undefined} The contract, or undefined.
  */
-function contractOf(type: Type | undefined, known: readonly Contract[]): Contract | undefined {
-  const words = type === undefined ? undefined : stringLiterals(type);
+function contractOf(type: Type, known: readonly Contract[]): Contract | undefined {
+  const words = stringLiterals(type);
   if (words === undefined || words.length < LEAST_WORDS) {
     return undefined;
   }
@@ -187,7 +185,7 @@ function widenings(scan: Scan, file: SourceFile, known: readonly Contract[]): re
   const candidates = nodes(file).filter((node) => isCandidate(node));
   const types = isEmpty(candidates) ? [] : scan.checker.getTypeAtLocation(candidates);
   return candidates.flatMap((node, index) => {
-    const contract = contractOf(types[index], known);
+    const contract = contractOf(present(types[index], `the type of ${textOfNode(node)}`), known);
     const form = contract === undefined ? undefined : lossOf(scan, node);
     return contract === undefined || form === undefined ? [] : [{ code: textOfNode(node.parent), contract: contract.name, form, path }];
   });
