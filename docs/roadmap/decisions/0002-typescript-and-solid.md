@@ -68,6 +68,6 @@ the closest alternative and loses on the typed, overridable component contract.
 - Solid 2.0 is new; its runtime claims are tested rather than assumed, and a
   claim a test contradicts is recorded in ADR-0008 with its evidence.
 - Lint and format: oxlint owns `.ts`/`.tsx` (type-aware, with
-  `eslint-plugin-solid`'s v2-strict rules), Biome lints CSS and JSON, oxfmt
-  formats. TypeScript stays on 6.x until the boundary lint runs on oxlint with
+  `eslint-plugin-solid`'s v2-strict rules), stylelint lints CSS, a harness check
+  holds JSON, and oxfmt formats every held TypeScript, CSS and JSON file. TypeScript stays on 6.x until the boundary lint runs on oxlint with
   fixture parity; then it moves to 7.

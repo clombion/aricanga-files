@@ -2,8 +2,7 @@
  * Every tool exemption is live: each ignore, override, include and exclude glob matches a listed file.
  *
  * The globs read: oxlint's `ignorePatterns` and each override's `files`; the gate's Vitest config,
- * its coverage `include` and `exclude` and each project's `include`; Biome's `files.includes`
- * (`!` entries are its exclusions); and, once their configuration exists, oxfmt's
+ * its coverage `include` and `exclude` and each project's `include`; and, once their configuration exists, oxfmt's
  * `ignorePatterns`, knip's `ignore` (top level and per workspace) and stylelint's `ignoreFiles`
  * and `.stylelintignore`. A glob that matches nothing either names a path that is gone or a policy
  * for files that do not exist yet: the first is deleted, the second is declared in `POLICIES` with
@@ -11,10 +10,10 @@
  */
 
 import { Exemptions, site } from '#lib/exemptions.ts';
-import { biomeEntries, knipEntries, oxfmtEntries, oxlintEntries, stylelintEntries, vitestEntries } from './tool-exemptions.readers.ts';
 import { dead, matches } from '#lib/globs.ts';
 import { describe, expect, test } from 'vitest';
 import { json, object } from '#lib/config.ts';
+import { knipEntries, oxfmtEntries, oxlintEntries, stylelintEntries, vitestEntries } from './tool-exemptions.readers.ts';
 import { textOf, tracked } from '#lib/source-files.ts';
 import type { Entry } from './tool-exemptions.readers.ts';
 import { fromRoot } from '#lib/paths.ts';
@@ -56,19 +55,17 @@ async function listedJson(path: string): Promise<unknown> {
 async function repoEntries(): Promise<Entry[]> {
   const vitestModule: unknown = await import(fromRoot('vitest.gate.config.ts'));
   const vitest = object(vitestModule, 'vitest.gate.config.ts')['default'];
-  const [oxfmt, knip, stylelint, oxlint, biome, listed] = await Promise.all([
+  const [oxfmt, knip, stylelint, oxlint, listed] = await Promise.all([
     listedJson('.oxfmtrc.json'),
     listedJson('knip.json'),
     listedJson('.stylelintrc.json'),
     listedJson('.oxlintrc.json'),
-    listedJson('biome.json'),
     tracked(),
   ]);
   const stylelintIgnore = listed.includes('.stylelintignore') ? await textOf('.stylelintignore') : '';
   return [
     ...oxlintEntries(oxlint),
     ...vitestEntries(vitest),
-    ...biomeEntries(biome),
     ...(oxfmt === undefined ? [] : oxfmtEntries(oxfmt)),
     ...(knip === undefined ? [] : knipEntries(knip)),
     ...stylelintEntries(stylelint ?? {}, stylelintIgnore),
@@ -128,16 +125,6 @@ describe('the readers', () => {
 
 describe('the readers of the other tools', () => {
   const LISTED = ['packages/plant/src/a.ts', 'packages/plant/src/a.test.ts', 'packages/plant/src/b.css', 'docs/x.md'];
-
-  test('reads a biome exclusion as the glob it excludes, and a folder exclusion as everything under it', () => {
-    expect.hasAssertions();
-    expect(biomeEntries({ files: { includes: ['packages/**/*.css', '!**/gone/**', '!docs', '!**/plant'] } })).toStrictEqual([
-      { glob: 'packages/**/*.css', tool: 'biome files.includes' },
-      { glob: '**/gone/**', tool: 'biome files.includes (exclusion)' },
-      { glob: 'docs/**', tool: 'biome files.includes (exclusion)' },
-      { glob: '**/plant/**', tool: 'biome files.includes (exclusion)' },
-    ]);
-  });
 
   test('reads oxfmt, knip and stylelint ignores', () => {
     expect.hasAssertions();

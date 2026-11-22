@@ -4,7 +4,7 @@
  * Over every held `.ts`, `.tsx`, `.js`, `.mjs` and `.css` file's comments:
  *
  * - `oxlint-disable*` and `stylelint-disable*` name their rules and end with `-- <reason>`;
- *   `biome-ignore` names its `lint/...` rule and ends with `: <reason>`;
+ *   a `biome-ignore` is refused, since Biome checks nothing here;
  * - `@ts-expect-error` ends with `-- <reason>`; `@ts-ignore` and `@ts-nocheck` are refused;
  * - `eslint-disable*` is refused: oxlint does not honour it here (`respectEslintDisableDirectives`
  *   is off), so it is dead text;
@@ -105,7 +105,10 @@ describe('the census', () => {
     ['// @ts-expect-error - why\nconst x: number = "a";', 'a @ts-expect-error ends with -- <reason>'],
     ['// @ts-ignore\nconst x: number = "a";', '@ts-ignore is refused: fix the type, or expect the error with its reason'],
     ['// @ts-nocheck\nexport {};', '@ts-nocheck is refused: fix the type, or expect the error with its reason'],
-    ['// biome-ignore lint/style/noX: why\nexport {};', 'biome does not check .ts files'],
+    [
+      '// biome-ignore lint/style/noX: why\nexport {};',
+      'a biome-ignore suppresses nothing: Biome is not one of the tools that check this repository',
+    ],
     ['/* stylelint-disable-next-line color-named -- why */\nexport {};', 'stylelint does not check .ts files'],
   ])('refuses %j in a module', (text, problem) => {
     expect.hasAssertions();
@@ -114,7 +117,10 @@ describe('the census', () => {
 
   test.each([
     ['/* stylelint-disable-next-line color-named */\na { color: red; }', 'a stylelint-disable names its rules and ends with -- <reason>'],
-    ['/* biome-ignore lint/style/noX */\na { color: red; }', 'a biome-ignore names its lint/... rule and ends with : <reason>'],
+    [
+      '/* biome-ignore lint/style/noX: why */\na { color: red; }',
+      'a biome-ignore suppresses nothing: Biome is not one of the tools that check this repository',
+    ],
     ['/* oxlint-disable no-console -- why */\na { color: red; }', 'oxlint does not check .css files'],
   ])('refuses %j in a stylesheet', (text, problem) => {
     expect.hasAssertions();

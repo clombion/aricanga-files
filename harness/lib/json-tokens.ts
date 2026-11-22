@@ -13,18 +13,41 @@ class JsonSyntaxError extends Error {
 }
 
 /**
- * One token or a run of whitespace at the reader's position, each kind in its own named group. A
+ * One token or a run of whitespace at the reader's position. A
  * string refuses an unescaped control character (`\p{Cc}`, which also refuses DEL and the C1 range
  * RFC 8259 admits raw: stricter, and no held file writes one).
  */
 const TOKEN =
-  /(?<space>[ \t\n\r]+)|(?<mark>[{}[\]:,])|(?<string>"(?:[^"\\\p{Cc}]|\\["\\/bfnrt]|\\u[\dA-Fa-f]{4})*")|(?<number>-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[Ee][+-]?\d+)?)|(?<word>true|false|null)/uy;
-
-/** The token kinds, in the order the pattern tries them. */
-const KINDS: readonly JsonToken['kind'][] = ['mark', 'string', 'number', 'word'];
+  /(?:[ \t\n\r]+)|(?:[{}[\]:,])|(?:"(?:[^"\\\p{Cc}]|\\["\\/bfnrt]|\\u[\dA-Fa-f]{4})*")|(?:-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[Ee][+-]?\d+)?)|(?:true|false|null)/uy;
 
 /** Where a text's reading starts. */
 const START = 0;
+
+/** Whitespace, which reads no token. */
+const SPACE = /^\s/u;
+/** A structural mark. */
+const MARK = /^[{}[\]:,]/u;
+/** The first letter of `true`, `false` or `null`. */
+const WORD = /^[tfn]/u;
+
+/**
+ * The kind of a token the pattern read, from its first character; none for whitespace.
+ *
+ * @param {string} text - The token's text.
+ * @returns {JsonToken['kind'] | undefined} Its kind.
+ */
+function kindOf(text: string): JsonToken['kind'] | undefined {
+  if (SPACE.test(text)) {
+    return undefined;
+  }
+  if (MARK.test(text)) {
+    return 'mark';
+  }
+  if (text.startsWith('"')) {
+    return 'string';
+  }
+  return WORD.test(text) ? 'word' : 'number';
+}
 
 /** A token read at an offset, or whitespace (no token), and where the next read starts. */
 interface Read {
@@ -45,8 +68,9 @@ function readAt(text: string, offset: number): Read {
   if (found === null) {
     throw new JsonSyntaxError(`no JSON token at offset ${String(offset)}`);
   }
-  const kind = KINDS.find((candidate) => found.groups?.[candidate] !== undefined);
-  return { end: TOKEN.lastIndex, token: kind === undefined ? undefined : { kind, offset, text: found[START] } };
+  const [matched] = found;
+  const kind = kindOf(matched);
+  return { end: TOKEN.lastIndex, token: kind === undefined ? undefined : { kind, offset, text: matched } };
 }
 
 /**

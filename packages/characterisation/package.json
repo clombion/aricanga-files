@@ -2,8 +2,8 @@
   "name": "@narratives/characterisation",
   "version": "0.1.0",
   "private": true,
-  "type": "module",
   "description": "Step 1 of Phase 3: real-browser characterisation of Solid 2.0 runtime behaviour against the pinned versions. Each [verify]/[known] claim from the Solid-2.0 view-layer brief is a test here, run in Chromium, Firefox and WebKit.",
+  "type": "module",
   "imports": {
     "#src/*": "./src/*.ts"
   },
@@ -14,13 +14,13 @@
     "characterise": "playwright test -c playwright.characterisation.config.ts",
     "characterise:report": "playwright show-report .output/report"
   },
-  "devDependencies": {
-    "@solidjs/compiler": "2.0.2",
-    "@solidjs/vite-plugin": "3.0.1"
-  },
   "dependencies": {
     "@solidjs/web": "2.0.3",
     "solid-js": "2.0.3",
     "vite": "8.3.8"
+  },
+  "devDependencies": {
+    "@solidjs/compiler": "2.0.2",
+    "@solidjs/vite-plugin": "3.0.1"
   }
 }

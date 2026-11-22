@@ -53,7 +53,7 @@ The view is the dual of the kernel under the algebra:
    Chromium, Firefox and WebKit, desktop and mobile emulation. ADR-0008 is
    written from the results. A contradicted claim changes the design. ([#20](https://github.com/clombion/aricanga-files/issues/20))
 2. **Toolchain.** oxlint for `.ts`/`.tsx` with `eslint-plugin-solid` v2-strict,
-   Biome for CSS and JSON, oxfmt for formatting, under the correctness harness of
+   stylelint for CSS, a harness check for JSON, oxfmt for formatting, under the correctness harness of
    ADR-0006; TypeScript 7 once the boundary lint has fixture parity on oxlint.
    ([#12](https://github.com/clombion/aricanga-files/issues/12))
 3. **View layer.** Adapter, mount and shell first, with the project lint rules

@@ -73,34 +73,6 @@ function vitestEntries(config: unknown): Entry[] {
   ];
 }
 
-/** A Biome pattern that names a file, by its extension, or everything under a folder, by its `/**` end. */
-const NAMES_FILES = /(?:\/\*\*|\.[\w*]+)$/u;
-
-/**
- * A Biome exclusion as the files it excludes: a folder pattern, such as `docs`, excludes everything under it.
- *
- * @param {string} glob - The exclusion, without its `!`.
- * @returns {string} The glob of the files it excludes.
- */
-function underFolder(glob: string): string {
-  return NAMES_FILES.test(glob) ? glob : `${glob}/**`;
-}
-
-/**
- * Biome's `files.includes`, a `!` entry read as the exclusion it is.
- *
- * @param {unknown} config - The config.
- * @returns {Entry[]} Biome's `files.includes`, a `!` entry read as the exclusion it is.
- */
-function biomeEntries(config: unknown): Entry[] {
-  const files = object(object(config, 'biome.json')['files'] ?? {}, 'files');
-  return strings(files['includes'], 'files.includes').map((glob) =>
-    glob.startsWith('!')
-      ? { glob: underFolder(glob.slice('!'.length)), tool: 'biome files.includes (exclusion)' }
-      : { glob, tool: 'biome files.includes' },
-  );
-}
-
 /**
  * The ignore patterns of `oxfmt`.
  *
@@ -155,5 +127,5 @@ function stylelintEntries(config: unknown, ignoreFile: string): Entry[] {
   ];
 }
 
-export { biomeEntries, knipEntries, oxfmtEntries, oxlintEntries, stylelintEntries, vitestEntries };
+export { knipEntries, oxfmtEntries, oxlintEntries, stylelintEntries, vitestEntries };
 export type { Entry };

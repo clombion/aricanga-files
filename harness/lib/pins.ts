@@ -32,7 +32,6 @@ const UPSTREAM: ReadonlyMap<string, string> = new Map([
   ['@ai-sdk/google', 'vercel/ai'],
   ['@ai-sdk/openai', 'vercel/ai'],
   ['@axe-core/playwright', 'dequelabs/axe-core-npm'],
-  ['@biomejs/biome', 'biomejs/biome'],
   ['@commitlint/cli', 'conventional-changelog/commitlint'],
   ['@commitlint/config-conventional', 'conventional-changelog/commitlint'],
   ['@double-great/stylelint-a11y', 'double-great/stylelint-a11y'],

@@ -1,11 +1,12 @@
 /**
- * The one reader of a JSON file's text as written: `JSON.parse` keeps the last of two equal keys and
+ * A JSON file's text read as written: `JSON.parse` keeps the last of two equal keys and
  * rounds a number it cannot hold, so a file's problems are read from its tokens. The reader holds
  * RFC 8259 JSON and nothing looser: no comment, no trailing comma.
  */
 
 import { JsonSyntaxError, tokensOf } from './json-tokens.ts';
 import type { JsonToken } from './json-tokens.ts';
+import { json } from './config.ts';
 
 /** A problem a JSON text has, with where it sits as a path of keys and indices. */
 interface JsonProblem {
@@ -145,7 +146,7 @@ class Reading {
       return this.stop('a key');
     }
     this.#at += STEP;
-    const key = String(JSON.parse(token.text));
+    const key = String(json(token.text));
     this.note(`${path}.${key}`, keyProblems(key, seen));
     this.require(':', "':'");
     return key;
@@ -193,7 +194,7 @@ class Reading {
    * @param {string} path - Where it sits.
    */
   private scalar(token: Readonly<JsonToken>, path: string): void {
-    const lone = token.kind === 'string' && LONE_SURROGATE.test(String(JSON.parse(token.text)));
+    const lone = token.kind === 'string' && LONE_SURROGATE.test(String(json(token.text)));
     const problem = token.kind === 'number' ? numberProblem(token.text) : undefined;
     this.note(path, [...(lone ? ['the string holds a lone surrogate'] : []), ...(problem === undefined ? [] : [problem])]);
   }
@@ -260,4 +261,3 @@ function jsonProblems(text: string): readonly JsonProblem[] {
 }
 
 export { jsonProblems };
-export type { JsonProblem };

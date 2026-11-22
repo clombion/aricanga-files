@@ -36,6 +36,7 @@ Whether this project implements each check of [harness.md](harness.md). A status
 | harness-status | This file is true | planned | | | the check that holds every row against `harness.md` and the check modules |
 | history-narration | Current text narrates no history | implemented | `harness/checks/history-narration.test.ts` | | |
 | isolation | A test that leaves a timer pending fails, and the next test starts clean | implemented | `harness/checks/isolation.test.ts` | | |
+| json-files | Every held JSON file is strict JSON a reader cannot misread, and no manifest lists a dependency twice | implemented | `harness/checks/json-files.test.ts` | | |
 | layout | Layout holds at phone and desktop widths, with no shift when a control toggles and reflow at 320 px | planned | | | Phase 3 Step 3: the phone chrome is the first layout |
 | lint-settings | oxlint fails each planted violation of a rule the harness rests on | implemented | `harness/checks/lint-settings.test.ts` | | |
 | meta-readers | Every contract field is read, through a named function | planned | | | the census layer of closedworld |

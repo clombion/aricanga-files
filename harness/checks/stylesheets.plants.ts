@@ -29,8 +29,8 @@ function rule(selector: string): string {
   return `${selector} {\n  color: var(--x);\n}\n`;
 }
 
-/** The rules a Biome rule maps to (docs/concepts/lint-rules.md), each held by a plant. */
-const FROM_BIOME: readonly Plant[] = [
+/** The correctness rules, each the stylelint counterpart of a recommended Biome CSS rule (harness/lint-settings.md). */
+const CORRECTNESS: readonly Plant[] = [
   [
     'at-rule-descriptor-value-no-unknown',
     '@font-face {\n  font-family: Plant;\n  font-display: sometimes;\n  src: url("a.woff2");\n}\n',
@@ -82,7 +82,7 @@ const FROM_BIOME: readonly Plant[] = [
   ['unit-no-unknown', on('inline-size: 10pixels'), on('inline-size: 50%')],
 ];
 
-/** The rules stricter than Biome and the standard config, each held by a plant. */
+/** The rules past correctness: selector shape, colour notation, URLs, units and names. */
 const STRICTER: readonly Plant[] = [
   [
     'at-rule-property-required-list',
@@ -129,8 +129,8 @@ const STRICTER: readonly Plant[] = [
   ['unit-allowed-list', on('inline-size: 10vmin'), on('inline-size: 50%')],
 ];
 
-/** The rules held before the Biome removal, each held by a plant. */
-const HELD: readonly Plant[] = [
+/** The specificity, value, logical-property, browser-support, accessibility and token rules. */
+const DESIGN: readonly Plant[] = [
   ['no-descending-specificity', `${rule('.b .a')}\n${rule('.a')}`, `${rule('.a')}\n${rule('.b .a')}`],
   ['selector-max-specificity', rule('.a .b .c'), rule('.a .b')],
   ['selector-max-compound-selectors', rule(':where(.a) :where(.b) :where(.c) :where(.d)'), rule(':where(.a) :where(.b) .c')],
@@ -185,7 +185,6 @@ const HELD: readonly Plant[] = [
 ];
 
 /** Every plant, one or more per rule `.stylelintrc.json` turns on. */
-const PLANTS: readonly Plant[] = [...FROM_BIOME, ...STRICTER, ...HELD];
+const PLANTS: readonly Plant[] = [...CORRECTNESS, ...STRICTER, ...DESIGN];
 
 export { PLANTS };
-export type { Plant };
