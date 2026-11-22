@@ -63,6 +63,7 @@ const UPSTREAM: ReadonlyMap<string, string> = new Map([
   ['stylelint-config-standard', 'stylelint/stylelint-config-standard'],
   ['stylelint-declaration-strict-value', 'AndyOGo/stylelint-declaration-strict-value'],
   ['stylelint-no-unsupported-browser-features', 'RJWadley/stylelint-no-unsupported-browser-features'],
+  ['stylelint-order', 'hudochenkov/stylelint-order'],
   ['stylelint-plugin-logical-css', 'yuschick/stylelint-plugin-logical-css'],
   ['typescript', 'microsoft/TypeScript'],
   ['unified', 'unifiedjs/unified'],

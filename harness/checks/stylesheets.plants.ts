@@ -33,8 +33,8 @@ function rule(selector: string): string {
 const CORRECTNESS: readonly Plant[] = [
   [
     'at-rule-descriptor-value-no-unknown',
-    '@font-face {\n  font-family: Plant;\n  font-display: sometimes;\n  src: url("a.woff2");\n}\n',
-    '@font-face {\n  font-family: Plant;\n  font-display: swap;\n  src: url("a.woff2");\n}\n',
+    '@font-face {\n  font-display: sometimes;\n  font-family: Plant;\n  src: url("a.woff2");\n}\n',
+    '@font-face {\n  font-display: swap;\n  font-family: Plant;\n  src: url("a.woff2");\n}\n',
   ],
   ['at-rule-no-unknown', `@unknown {\n${rule('.a')}}\n`, `@media (width >= 40rem) {\n${rule('.a')}}\n`],
   ['block-no-empty', '.a {\n}\n', rule('.a')],
@@ -86,8 +86,8 @@ const CORRECTNESS: readonly Plant[] = [
 const STRICTER: readonly Plant[] = [
   [
     'at-rule-property-required-list',
-    '@property --size {\n  syntax: "<length>";\n  initial-value: 0;\n}\n',
-    '@property --size {\n  syntax: "<length>";\n  inherits: false;\n  initial-value: 0;\n}\n',
+    '@property --size {\n  initial-value: 0;\n  syntax: "<length>";\n}\n',
+    '@property --size {\n  inherits: false;\n  initial-value: 0;\n  syntax: "<length>";\n}\n',
   ],
   ['color-no-hex', on('color: #fff'), rule('.a')],
   ['color-no-invalid-hex', on('color: #ggg'), rule('.a')],
@@ -123,8 +123,8 @@ const STRICTER: readonly Plant[] = [
   ['selector-no-unmatchable', rule(':is(::before)'), rule(':is(.b)')],
   [
     'time-min-milliseconds',
-    `.a {\n  transition-duration: var(--x);\n  transition-delay: 5ms;\n}${RM}`,
-    `.a {\n  transition-duration: var(--x);\n  transition-delay: var(--y);\n}${RM}`,
+    `.a {\n  transition-delay: 5ms;\n  transition-duration: var(--x);\n}${RM}`,
+    `.a {\n  transition-delay: var(--y);\n  transition-duration: var(--x);\n}${RM}`,
   ],
   ['unit-allowed-list', on('inline-size: 10vmin'), on('inline-size: 50%')],
 ];
@@ -176,8 +176,8 @@ const DESIGN: readonly Plant[] = [
   ['a11y/no-outline-none', '.a:focus {\n  outline: none;\n}\n', '.a:focus {\n  outline: var(--focus-ring);\n}\n'],
   [
     'a11y/no-spread-text',
-    '.a {\n  text-align: start;\n  max-width: 120ch;\n}\n',
-    '.a {\n  text-align: start;\n  max-inline-size: var(--measure);\n}\n',
+    '.a {\n  max-width: 120ch;\n  text-align: start;\n}\n',
+    '.a {\n  max-inline-size: var(--measure);\n  text-align: start;\n}\n',
   ],
   ['a11y/no-text-align-justify', on('text-align: justify'), on('text-align: start')],
   ['a11y/selector-pseudo-class-focus', rule('.a:hover'), rule('.a:hover,\n.a:focus')],
@@ -185,6 +185,20 @@ const DESIGN: readonly Plant[] = [
 ];
 
 /** Every plant, one or more per rule `.stylelintrc.json` turns on. */
-const PLANTS: readonly Plant[] = [...CORRECTNESS, ...STRICTER, ...DESIGN];
+/** The order rules of `stylelint-order`: what comes first in a block, and properties alphabetically. */
+const ORDER: readonly Plant[] = [
+  [
+    'order/order',
+    '.a {\n  & .b {\n    color: var(--x);\n  }\n\n  color: var(--y);\n}\n',
+    '.a {\n  color: var(--y);\n\n  & .b {\n    color: var(--x);\n  }\n}\n',
+  ],
+  [
+    'order/properties-alphabetical-order',
+    '.a {\n  inline-size: 50%;\n  color: var(--x);\n}\n',
+    '.a {\n  color: var(--x);\n  inline-size: 50%;\n}\n',
+  ],
+];
+
+const PLANTS: readonly Plant[] = [...CORRECTNESS, ...STRICTER, ...DESIGN, ...ORDER];
 
 export { PLANTS };

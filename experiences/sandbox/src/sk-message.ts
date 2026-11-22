@@ -21,11 +21,11 @@ class SkMessage extends LitElement {
     }
 
     .bubble {
+      background-color: var(--surface-bubble);
+      border-radius: var(--radius-bubble);
       margin: 0;
       padding-block: var(--space-bubble-block);
       padding-inline: var(--space-bubble-inline);
-      border-radius: var(--radius-bubble);
-      background-color: var(--surface-bubble);
     }
   `;
 

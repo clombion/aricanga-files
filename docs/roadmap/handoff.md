@@ -72,8 +72,6 @@ change meets:
 
 - One added `parseTag` test (`packages/foundation/test/contracts.test.ts`, a value holding a
   second separator) passes on its parent; it stays unless the owner drops it.
-- `stylelint-order` (property ordering) is the plugin recommended beyond the built-ins; it needs the
-  owner's approval before it is installed.
 - Issue #20 (characterise Solid 2.0) and #12 (port the harness) are done; closing them is the
   owner's call.
 - The labels `content`, `phone`, `a11y`, `i18n`, `in progress` and the `exp:` experience labels

@@ -5,7 +5,8 @@
     "stylelint-no-unsupported-browser-features",
     "stylelint-declaration-strict-value",
     "@double-great/stylelint-a11y",
-    "./harness/lib/design-tokens.ts"
+    "./harness/lib/design-tokens.ts",
+    "stylelint-order"
   ],
   "allowEmptyInput": true,
   "reportNeedlessDisables": true,
@@ -139,6 +140,13 @@
         "disableFix": true,
         "ignoreFunctions": false
       }
-    ]
+    ],
+    "order/order": [
+      ["custom-properties", "declarations", "rules", "at-rules"],
+      {
+        "unspecified": "bottom"
+      }
+    ],
+    "order/properties-alphabetical-order": true
   }
 }

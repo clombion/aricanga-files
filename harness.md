@@ -178,6 +178,7 @@ writes this table from `package.json` and `pnpm-lock.yaml`.
 | `stylelint-config-standard` | [stylelint/stylelint-config-standard](https://github.com/stylelint/stylelint-config-standard) | `pnpm-lock.yaml` | 40.0.0 |
 | `stylelint-declaration-strict-value` | [AndyOGo/stylelint-declaration-strict-value](https://github.com/AndyOGo/stylelint-declaration-strict-value) | `pnpm-lock.yaml` | 1.12.1 |
 | `stylelint-no-unsupported-browser-features` | [RJWadley/stylelint-no-unsupported-browser-features](https://github.com/RJWadley/stylelint-no-unsupported-browser-features) | `pnpm-lock.yaml` | 8.1.2 |
+| `stylelint-order` | [hudochenkov/stylelint-order](https://github.com/hudochenkov/stylelint-order) | `pnpm-lock.yaml` | 8.1.3 |
 | `stylelint-plugin-logical-css` | [yuschick/stylelint-plugin-logical-css](https://github.com/yuschick/stylelint-plugin-logical-css) | `pnpm-lock.yaml` | 2.1.0 |
 | `typescript` | [microsoft/TypeScript](https://github.com/microsoft/TypeScript) | `pnpm-lock.yaml` | 7.0.2 |
 | `unified` | [unifiedjs/unified](https://github.com/unifiedjs/unified) | `pnpm-lock.yaml` | 11.0.5 |

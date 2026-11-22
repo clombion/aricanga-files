@@ -94,6 +94,8 @@ options are written in JSON; oxlint holds those, and Biome ran over no `.ts` fil
 | `display-notation` | `short` | One notation for `display`. |
 | `scale-unlimited/declaration-strict-value` | colours, fill, stroke, z-index, durations, curves, and the shorthands holding them; `ignoreFunctions: false` | Raw values only in `tokens.css`; a raw colour written as a function (`rgb(255 255 255)`) is refused like a hex one. |
 | logical-css, no-unsupported-browser-features, a11y, `harness/design-tokens` | on | The logical-property, browser-support, accessibility and token rules. |
+| `order/order` | custom properties, declarations, nested rules, then at-rules; anything else last | One shape per block: a reader finds a block's own values before what it nests. |
+| `order/properties-alphabetical-order` | on | One declaration order with no list to keep: a property is found where the alphabet puts it, and a duplicate sits beside its twin. A grouped order would be a hand-kept list that drifts as properties are added. |
 
 ## stylelint rules left off, each with its reason
 
@@ -110,5 +112,4 @@ options are written in JSON; oxlint holds those, and Biome ran over no `.ts` fil
 
 Not installed (a new dependency needs the owner's approval):
 
-- `stylelint-order`: one declaration order per rule block, and one order of rules.
 - `stylelint-use-logical-spec`: overlaps `stylelint-plugin-logical-css`; no gain.
