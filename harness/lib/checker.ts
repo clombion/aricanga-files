@@ -54,6 +54,14 @@ interface Scan {
   readonly close: () => void;
 }
 
+/** How a scan mounts its files, opens and releases its project, and the paths it covers. */
+interface ScanOpening {
+  readonly paths: readonly string[];
+  readonly mount: () => () => void;
+  readonly open: () => Readonly<{ checker: Readonly<Checker>; program: Readonly<Program> }> | undefined;
+  readonly release: () => void;
+}
+
 /**
  * Whether a module belongs to a test infrastructure package (run by Playwright, not by Vitest).
  *
@@ -103,6 +111,29 @@ function mounted(config: string, paths: readonly string[], sources: Readonly<Rec
 }
 
 /**
+ * A scan over a mounted project. Every path that mounted the files and opened the project releases
+ * both: the scan's `close` on success, and the refusal itself when the session has no such project.
+ *
+ * @param {ScanOpening} opening - How the scan mounts its files, opens and releases its project, and what it covers.
+ * @returns {Scan} The open scan.
+ */
+function scanOver(opening: Readonly<ScanOpening>): Scan {
+  const unmount = opening.mount();
+  try {
+    const project = present(opening.open(), 'the scan project');
+    const close = (): void => {
+      opening.release();
+      unmount();
+    };
+    return { checker: project.checker, close, paths: opening.paths, program: project.program };
+  } catch (error) {
+    opening.release();
+    unmount();
+    throw error;
+  }
+}
+
+/**
  * A scan over `paths`. `sources` overlay the real files: a planted path need not exist on disk, and
  * a real path in `sources` reads as the overlay's text.
  *
@@ -112,18 +143,17 @@ function mounted(config: string, paths: readonly string[], sources: Readonly<Rec
  */
 function openScan(paths: readonly string[], sources: Readonly<Record<string, string>> = {}): Scan {
   const config = path.join(REPO_ROOT, '.harness-scan', nextName(), 'tsconfig.json');
-  const unmount = mount(mounted(config, paths, sources));
-  const project = present(
-    api()
-      .updateSnapshot({ openProjects: [config] })
-      .getProject(config),
-    'the scan project',
-  );
-  const close = (): void => {
-    api().updateSnapshot({ closeProjects: [config] });
-    unmount();
-  };
-  return { checker: project.checker, close, paths, program: project.program };
+  return scanOver({
+    mount: () => mount(mounted(config, paths, sources)),
+    open: () =>
+      api()
+        .updateSnapshot({ openProjects: [config] })
+        .getProject(config),
+    paths,
+    release: () => {
+      api().updateSnapshot({ closeProjects: [config] });
+    },
+  });
 }
 
 /**
@@ -228,8 +258,9 @@ export {
   pathOf,
   qualifiedName,
   resolved,
+  scanOver,
   scannedFiles,
   sourceOf,
   textOfNode,
 };
-export type { Scan };
+export type { Scan, ScanOpening };
