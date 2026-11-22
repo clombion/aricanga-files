@@ -66,7 +66,10 @@ type ExternalHandler = (...args: readonly unknown[]) => unknown;
 
 /**
  * The surface of an inkjs story the runtime reads, typed as inkjs declares it: a line, the current
- * tags and a choice's tags may each be `null`.
+ * tags and a choice's tags may each be `null`. A host hands the runtime this surface; `fromJson`
+ * builds it from compiled ink.
+ *
+ * @public
  */
 type InkStory = Pick<Story, 'BindExternalFunction' | 'ChooseChoiceIndex' | 'Continue' | 'canContinue'> & {
   readonly currentTags: ReadonlyTags<Story['currentTags']>;

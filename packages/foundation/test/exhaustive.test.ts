@@ -4,6 +4,9 @@ import type { Lifecycle } from '#src/sim/input';
 /** The seed of the `init` lifecycle the tests describe. */
 const SEED = 2;
 
+/** The reset lifecycle, written as a typed value. */
+const RESET: Extract<Lifecycle, { readonly kind: 'reset' }> = { kind: 'reset' };
+
 /** Each lifecycle kind's description, taking the lifecycle of its own kind: the kernel's dispatch shape. */
 type Describers = {
   readonly [TKind in Lifecycle['kind']]: (lifecycle: Extract<Lifecycle, { readonly kind: TKind }>) => string;
@@ -37,11 +40,11 @@ describe('a dispatch table over a closed union', () => {
   test('handles every kind it is typed by', () => {
     expect.hasAssertions();
     expect(describeBy(DESCRIBERS, { kind: 'init', seed: SEED })).toBe(`init:${SEED}`);
-    expect(describeBy(DESCRIBERS, { kind: 'reset' })).toBe('reset');
+    expect(describeBy(DESCRIBERS, RESET)).toBe(RESET.kind);
   });
 
   test('missing a kind fails to compile (proven by @ts-expect-error), and that kind has no handler', () => {
     expect.hasAssertions();
-    expect(Object.hasOwn(MISSING, 'reset')).toBe(false);
+    expect(Object.hasOwn(MISSING, RESET.kind)).toBe(false);
   });
 });

@@ -6,7 +6,7 @@ export const FOUNDATION_VERSION = '0.0.0';
 
 // Ink runtime (the single inkjs touchpoint).
 export { InkRuntime } from './ink/ink-runtime';
-export type { InkFixtures, NameResolver, DataResolver } from './ink/ink-runtime';
+export type { InkFixtures, InkStory, NameResolver, DataResolver } from './ink/ink-runtime';
 
 // Simulation contracts.
 export type { Tag, Choice, ExternalCall, InkStatus, InkStep } from './sim/story';
