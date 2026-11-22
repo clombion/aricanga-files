@@ -7,7 +7,7 @@
 
 import { EXIT_CLEAN, EXIT_FINDINGS } from './exit-status.ts';
 import { describe, expect, test } from 'vitest';
-import { refused, revisions, updates } from '#lib/pushed.ts';
+import { refused, revisions, subjectsOf, updates } from '#lib/pushed.ts';
 import type { Finished } from '#lib/process.ts';
 import { Project } from '#lib/tools.ts';
 import { fromRoot } from '#lib/paths.ts';
@@ -86,6 +86,19 @@ async function pushOf(subjects: readonly string[]): Promise<number> {
     await project.remove();
   }
 }
+
+describe('the pushed subjects', () => {
+  test('are read from the repository the range names, newest first', async () => {
+    expect.hasAssertions();
+    const project = await Project.create({ linkModules: false });
+    try {
+      const [base, head] = await commitRange(project, ['feat: one', 'fixup! feat: one']);
+      await expect(subjectsOf([`${base}..${head}`], project.root)).resolves.toStrictEqual(['fixup! feat: one', 'feat: one']);
+    } finally {
+      await project.remove();
+    }
+  });
+});
 
 describe('the pre-push script', () => {
   test('fails on a fold commit in the pushed range', async () => {
