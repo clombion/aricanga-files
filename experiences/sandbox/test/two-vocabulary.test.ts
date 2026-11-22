@@ -49,7 +49,7 @@ function recordingHost(): RecordingHost {
  * @returns {InkRuntime} The runtime.
  */
 function ink(): InkRuntime {
-  return new InkRuntime(compileInk('x\n'));
+  return InkRuntime.fromJson(compileInk('x\n'));
 }
 
 /**
@@ -72,7 +72,7 @@ describe('routing by tag ownership', () => {
     const experience = createExperience({
       foreground: 'cards',
       host,
-      ink: new InkRuntime(compileInk('Hello # speaker: Pat\n')),
+      ink: InkRuntime.fromJson(compileInk('Hello # speaker: Pat\n')),
       systems: [erase(cardsSystem), erase(chatSystem)],
     });
     drain(experience);
@@ -85,7 +85,7 @@ describe('routing by tag ownership', () => {
     const experience = createExperience({
       foreground: 'chat',
       host,
-      ink: new InkRuntime(compileInk('Courage up # stat: courage:+2\n')),
+      ink: InkRuntime.fromJson(compileInk('Courage up # stat: courage:+2\n')),
       systems: [erase(chatSystem), erase(cardsSystem)],
     });
     drain(experience);
