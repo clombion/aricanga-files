@@ -8,19 +8,11 @@ checks are in [harness.md](../../harness.md) and which ones exist in
 
 ## Where the work is
 
-| Branch | Holds |
-| --- | --- |
-| **harness/strict-base** | The integration branch: every change below. `pnpm run check:fast` and every unit and harness test pass; the full gate fails only on the coverage floor's `harness/**` entries. |
-| **harness/coverage-harness** | Tests closing the coverage floor under `harness/**`. Not yet merged. |
-| **harness/package-debt** | Closing the 12 remaining ADOPTING coverage entries under `packages/**`. Not yet merged. |
-| **harness/no-biome** | Removing Biome (below). Not yet merged. |
-| **feat/rebuild-phase-3-view** | The pushed phase branch; behind **harness/strict-base**. |
-
-The three unmerged branches may hold `chore(wip)` commits: complete them with a further commit,
-never by rewriting pushed history. Merge each into **harness/strict-base**, run `pnpm run check`
-(which includes `pnpm run test:browser`), and push **harness/strict-base** to
-**feat/rebuild-phase-3-view** once the gate passes. Every commit ends with the session's
-`Claude-Session:` line and carries no `Co-Authored-By`.
+**feat/rebuild-phase-3-view** holds every change below and passes the whole gate, `pnpm run check`:
+lint, format, typecheck, dupes, docs, dead code, the build check, every unit and harness test with
+the coverage floor's debt list empty, and the browser suite in all five projects. Work continues on
+a branch off it, merged back when the gate passes; the pre-push hook runs the gate. Every commit
+ends with the session's `Claude-Session:` line and carries no `Co-Authored-By`.
 
 ## What the branch holds
 
@@ -80,19 +72,18 @@ change meets:
 
 - One added `parseTag` test (`packages/foundation/test/contracts.test.ts`, a value holding a
   second separator) passes on its parent; it stays unless the owner drops it.
-- A stylelint plugin that adds strictness beyond the built-ins (property ordering) needs the
+- `stylelint-order` (property ordering) is the plugin recommended beyond the built-ins; it needs the
   owner's approval before it is installed.
-- Issue #20 (characterise Solid 2.0) is done and #12 (port the harness) closes when the gate
-  passes; closing either is the owner's call.
+- Issue #20 (characterise Solid 2.0) and #12 (port the harness) are done; closing them is the
+  owner's call.
 - The labels `content`, `phone`, `a11y`, `i18n`, `in progress` and the `exp:` experience labels
   do not exist yet; #56 carries `qa` alone for that reason.
 
 ## Next
 
-1. Merge the three branches above, run the full gate, push.
-2. Phase 3 Step 3, the view layer on Solid: the keyed snapshot adapter (#28), the sandbox's
+1. Phase 3 Step 3, the view layer on Solid: the keyed snapshot adapter (#28), the sandbox's
    baseline Part replacing its Phase 0 element (#24), the real-browser Part harness (#30), then the Parts of #31
    to #41. The `planned` rows of `HARNESS_STATUS.md` for the view layer (console guard, CSP bundle
    and frame, owners flat, part failure, typed classes, elements, layout) land with the first
    Parts.
-3. The closedworld census layer, #51 to #56, in their blocked-by order.
+2. The closedworld census layer, #51 to #56, in their blocked-by order.
