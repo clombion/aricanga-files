@@ -45,7 +45,7 @@ Colour {name(red)}.
 describe('the ink runtime', () => {
   test('resolves names and data through the lookups it is given', () => {
     expect.hasAssertions();
-    const ink = new InkRuntime(compileInk(EXTERNALS), {
+    const ink = InkRuntime.fromJson(compileInk(EXTERNALS), {
       data: (key): string => `data:${key}`,
       name: (id): string => `name:${id}`,
     });
@@ -54,13 +54,13 @@ describe('the ink runtime', () => {
 
   test('passes a name or a data key through as itself without a lookup', () => {
     expect.hasAssertions();
-    const ink = new InkRuntime(compileInk(EXTERNALS));
+    const ink = InkRuntime.fromJson(compileInk(EXTERNALS));
     expect(ink.continue().text).toBe('Hello pat and weather.');
   });
 
   test('drains the externals a line calls into its step, and waits for requested data', () => {
     expect.hasAssertions();
-    const ink = new InkRuntime(compileInk(EXTERNALS));
+    const ink = InkRuntime.fromJson(compileInk(EXTERNALS));
     ink.continue();
     const step = ink.continue();
     expect(step.externalCalls).toStrictEqual([
@@ -74,20 +74,20 @@ describe('the ink runtime', () => {
 
   test('reads a number or a boolean ink passes an external as its text, and a numeric text as a number', () => {
     expect.hasAssertions();
-    const ink = new InkRuntime(compileInk(PRIMITIVES));
+    const ink = InkRuntime.fromJson(compileInk(PRIMITIVES));
     expect(ink.continue().text).toBe('Number 7 and truth true.');
     expect(ink.continue().externalCalls).toStrictEqual([{ fn: 'delay_next', seconds: THREE }]);
   });
 
   test('drains a data request with no parameters without inventing them', () => {
     expect.hasAssertions();
-    const ink = new InkRuntime(compileInk(NO_PARAMS));
+    const ink = InkRuntime.fromJson(compileInk(NO_PARAMS));
     expect(ink.continue().externalCalls).toStrictEqual([{ fn: 'request_data', query: 'units', source: 'gem' }]);
   });
 
   test('refuses a value ink passes an external that is no primitive', () => {
     expect.hasAssertions();
-    const ink = new InkRuntime(compileInk(LIST_ARGUMENT));
+    const ink = InkRuntime.fromJson(compileInk(LIST_ARGUMENT));
     expect(() => ink.continue()).toThrow('ink passed an external a object, not a primitive');
   });
 });

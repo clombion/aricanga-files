@@ -19,7 +19,7 @@ type Host = Readonly<Pick<HTMLElement, 'append' | 'replaceChildren'>>;
  * @returns {SkMessage[]} The elements, in story order.
  */
 function messagesOf(storyJson: string): SkMessage[] {
-  const runtime = new InkRuntime(storyJson);
+  const runtime = InkRuntime.fromJson(storyJson);
   const elements: SkMessage[] = [];
   while (runtime.canContinue()) {
     const step = runtime.continue();

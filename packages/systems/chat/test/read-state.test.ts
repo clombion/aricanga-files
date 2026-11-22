@@ -2,6 +2,7 @@ import { close, cursorsOf, messagesOf, open, run, story } from '#test/support';
 import { describe, expect, test } from 'vitest';
 import type { ChatRun } from '#test/support';
 import type { ReadCursor } from '#src/state';
+import { chatSystem } from '#src/system';
 import { hwmMonotonic } from '@narratives/system-chat/testing';
 
 /**
@@ -37,6 +38,14 @@ describe('the read cursor', () => {
     expect.hasAssertions();
     const result = await run([open('pat'), story('A', ['targetChat: pat'])]);
     expect(cursorsOf(result)).not.toHaveProperty('pat');
+  });
+
+  test('is left as it is by a close with no chat open', async () => {
+    expect.hasAssertions();
+    const before = await run([story('A', ['targetChat: pat'])]);
+    const result = await run([story('A', ['targetChat: pat']), close()]);
+    expect(cursorsOf(result)).toStrictEqual(cursorsOf(before));
+    expect(result.viewOf(chatSystem).view).toStrictEqual({ type: 'hub' });
   });
 });
 

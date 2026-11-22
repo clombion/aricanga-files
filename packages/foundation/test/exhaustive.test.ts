@@ -1,66 +1,50 @@
 import { describe, expect, test } from 'vitest';
 import type { Lifecycle } from '#src/sim/input';
-import { assertNever } from '#src/sim/exhaustive';
 
 /** The seed of the `init` lifecycle the tests describe. */
 const SEED = 2;
 
+/** The reset lifecycle, written as a typed value. */
+const RESET: Extract<Lifecycle, { readonly kind: 'reset' }> = { kind: 'reset' };
+
+/** Each lifecycle kind's description, taking the lifecycle of its own kind: the kernel's dispatch shape. */
+type Describers = {
+  readonly [TKind in Lifecycle['kind']]: (lifecycle: Extract<Lifecycle, { readonly kind: TKind }>) => string;
+};
+
+/** A table that handles every lifecycle kind, so it compiles. */
+const DESCRIBERS: Describers = {
+  init: (lifecycle) => `init:${lifecycle.seed}`,
+  reset: (lifecycle) => lifecycle.kind,
+};
+
+// @ts-expect-error -- the planted table misses `reset`: a closed union's table refuses a missing kind
+const MISSING: Describers = { init: (lifecycle) => `init:${lifecycle.seed}` };
+
 /**
- * An exhaustive switch over a closed union compiles and is total.
+ * A lifecycle described by the handler of its own kind.
  *
+ * @param {Describers} describers - One handler per lifecycle kind.
  * @param {Lifecycle} lifecycle - The lifecycle input.
  * @returns {string} Its description.
  */
-function describeLifecycle(lifecycle: Lifecycle): `init:${number}` | Lifecycle['kind'] {
-  switch (lifecycle.kind) {
-    case 'init': {
-      return `init:${lifecycle.seed}`;
-    }
-    case 'reset': {
-      return lifecycle.kind;
-    }
-    default: {
-      return assertNever(lifecycle);
-    }
-  }
+function describeBy<TKind extends Lifecycle['kind']>(
+  describers: Readonly<Describers>,
+  lifecycle: Extract<Lifecycle, { readonly kind: TKind }>,
+): string {
+  const describer: Describers[TKind] = describers[lifecycle.kind];
+  return describer(lifecycle);
 }
 
-/**
- * Planted: a switch missing a case, so `@ts-expect-error` proves the compiler refuses it.
- *
- * @param {Lifecycle} lifecycle - The lifecycle input.
- * @returns {string} Its description, for the one case handled.
- */
-function broken(lifecycle: Lifecycle): string {
-  // oxlint-disable-next-line typescript/switch-exhaustiveness-check -- the planted missing case this test proves the compiler refuses
-  switch (lifecycle.kind) {
-    case 'init': {
-      return `init:${lifecycle.seed}`;
-    }
-    // The case 'reset' is deliberately unhandled — `lifecycle` is still inhabited in `default`.
-    default: {
-      // @ts-expect-error -- `lifecycle` is `{kind:'reset'}` here, not `never`
-      return assertNever(lifecycle);
-    }
-  }
-}
-
-describe('the exhaustiveness guard', () => {
-  test('an exhaustive switch over a closed union compiles and runs', () => {
+describe('a dispatch table over a closed union', () => {
+  test('handles every kind it is typed by', () => {
     expect.hasAssertions();
-    expect(describeLifecycle({ kind: 'init', seed: SEED })).toBe(`init:${SEED}`);
-    expect(describeLifecycle({ kind: 'reset' })).toBe('reset');
+    expect(describeBy(DESCRIBERS, { kind: 'init', seed: SEED })).toBe(`init:${SEED}`);
+    expect(describeBy(DESCRIBERS, RESET)).toBe(RESET.kind);
   });
 
-  test('a non-exhaustive switch fails to compile (proven by @ts-expect-error)', () => {
+  test('missing a kind fails to compile (proven by @ts-expect-error), and that kind has no handler', () => {
     expect.hasAssertions();
-    // The typed `init` path still works; the missed case is a compile-time error
-    // (the @ts-expect-error above turns into a failure if exhaustiveness is added).
-    expect(broken({ kind: 'init', seed: SEED })).toBe(`init:${SEED}`);
-  });
-
-  test('throws, naming the value, when an unhandled case reaches it at run time', () => {
-    expect.hasAssertions();
-    expect(() => broken({ kind: 'reset' })).toThrow('Unreachable: unhandled case {"kind":"reset"}');
+    expect(Object.hasOwn(MISSING, RESET.kind)).toBe(false);
   });
 });

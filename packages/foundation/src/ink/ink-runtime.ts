@@ -64,15 +64,55 @@ type InkExternal = 'name' | 'data' | ExternalCall['fn'];
 /** An external's handler: ink hands it its arguments untyped, so it takes `unknown` and converts. */
 type ExternalHandler = (...args: readonly unknown[]) => unknown;
 
+/**
+ * The surface of an inkjs story the runtime reads, typed as inkjs declares it: a line, the current
+ * tags and a choice's tags may each be `null`. A host hands the runtime this surface; `fromJson`
+ * builds it from compiled ink.
+ *
+ * @public
+ */
+type InkStory = Pick<Story, 'BindExternalFunction' | 'ChooseChoiceIndex' | 'Continue' | 'canContinue'> & {
+  readonly currentTags: ReadonlyTags<Story['currentTags']>;
+  readonly currentChoices: readonly InkChoice[];
+  readonly state: Readonly<Pick<Story['state'], 'LoadJson' | 'ToJson'>>;
+};
+
+/** A tag list as inkjs declares it, read only: its strings, or inkjs's absent value. */
+type ReadonlyTags<TTags> = Exclude<TTags, readonly string[]> | Readonly<NonNullable<TTags>>;
+
+/** The fields of an inkjs choice the runtime reads. */
+interface InkChoice {
+  readonly index: Story['currentChoices'][number]['index'];
+  readonly tags: ReadonlyTags<Story['currentChoices'][number]['tags']>;
+  readonly text: Story['currentChoices'][number]['text'];
+}
+
 /** The ink story a step's lines, tags, choices and externals are read from. */
 class InkRuntime {
-  private readonly story: Story;
+  private readonly story: Readonly<InkStory>;
   private drained: ExternalCall[] = [];
   private awaitingData = false;
 
-  public constructor(storyJson: string, fixtures: Readonly<InkFixtures> = {}) {
-    this.story = new Story(storyJson);
+  /**
+   * A runtime over a story surface; `InkRuntime.fromJson` builds one from compiled ink.
+   *
+   * @param {InkStory} story - The inkjs story, or a double of its declared surface.
+   * @param {InkFixtures} fixtures - How the `name` and `data` externals resolve.
+   */
+  public constructor(story: Readonly<InkStory>, fixtures: Readonly<InkFixtures> = {}) {
+    this.story = story;
     this.bindExternals(fixtures);
+  }
+
+  /**
+   * A runtime over a compiled ink story.
+   *
+   * @param {string} storyJson - The story as inklecate or inkjs's compiler writes it.
+   * @param {InkFixtures} fixtures - How the `name` and `data` externals resolve.
+   * @returns {InkRuntime} The runtime.
+   */
+  public static fromJson(storyJson: string, fixtures: Readonly<InkFixtures> = {}): InkRuntime {
+    return new InkRuntime(new Story(storyJson), fixtures);
   }
 
   /**
@@ -192,4 +232,4 @@ class InkRuntime {
 }
 
 export { InkRuntime };
-export type { DataResolver, InkFixtures, NameResolver };
+export type { DataResolver, InkFixtures, InkStory, NameResolver };

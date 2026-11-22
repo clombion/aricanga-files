@@ -21,7 +21,7 @@ const RENDER = { locale: 'en', now: 0 };
 function runtimeOf(systems: readonly AnySystem[], observe?: (reduced: string) => void): Runtime {
   return new Runtime({
     host: refusingHost(),
-    ink: new InkRuntime(compileInk('Only line.\n')),
+    ink: InkRuntime.fromJson(compileInk('Only line.\n')),
     observer: {
       observe: (record) => {
         observe?.(`${record.systemId}:${record.input.source}`);
@@ -54,7 +54,7 @@ describe('the runtime at its start', () => {
         new Runtime({
           foreground: 'ghost',
           host: refusingHost(),
-          ink: new InkRuntime(compileInk('Only line.\n')),
+          ink: InkRuntime.fromJson(compileInk('Only line.\n')),
           systems: [erase(hSystem)],
         }),
     ).toThrow('foreground system "ghost" is not registered');

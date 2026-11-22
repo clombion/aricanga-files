@@ -157,18 +157,6 @@ const DEBT: CountedExemptions = new CountedExemptions({
   'harness/scripts/typecheck.ts :: branches': { count: 4, reason: ADOPTING },
   'harness/scripts/typecheck.ts :: lines': { count: 8, reason: ADOPTING },
   'harness/scripts/typecheck.ts :: statements': { count: 8, reason: ADOPTING },
-  'packages/foundation/src/host/runtime.ts :: branches': { count: 1, reason: ADOPTING },
-  'packages/foundation/src/host/runtime.ts :: lines': { count: 1, reason: ADOPTING },
-  'packages/foundation/src/host/runtime.ts :: statements': { count: 1, reason: ADOPTING },
-  'packages/foundation/src/ink/ink-runtime.ts :: branches': { count: 3, reason: ADOPTING },
-  'packages/foundation/src/sim/system.ts :: branches': { count: 1, reason: ADOPTING },
-  'packages/foundation/src/sim/system.ts :: lines': { count: 1, reason: ADOPTING },
-  'packages/foundation/src/sim/system.ts :: statements': { count: 1, reason: ADOPTING },
-  'packages/foundation/src/testing/fixture-system.ts :: branches': { count: 2, reason: ADOPTING },
-  'packages/foundation/src/testing/fixture-system.ts :: lines': { count: 2, reason: ADOPTING },
-  'packages/foundation/src/testing/fixture-system.ts :: statements': { count: 2, reason: ADOPTING },
-  'packages/systems/chat/src/model/read-state.ts :: branches': { count: 1, reason: ADOPTING },
-  'packages/systems/chat/src/model/time.ts :: branches': { count: 1, reason: ADOPTING },
 });
 
 /**

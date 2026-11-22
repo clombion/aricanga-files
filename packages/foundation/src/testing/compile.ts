@@ -22,7 +22,7 @@ function compileInk(source: string): string {
  * @returns {InkRuntime} The story's runtime.
  */
 function storyOf(source: string): InkRuntime {
-  return new InkRuntime(compileInk(source));
+  return InkRuntime.fromJson(compileInk(source));
 }
 
 export { compileInk, storyOf };
