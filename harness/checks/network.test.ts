@@ -1,7 +1,7 @@
 /** The network guard's wrappers, over a stand-in real function: a local host passes through, another host trips before the call. */
 
 import { TripwireError, drain } from '#lib/doubles.ts';
-import { connectHost, fetchHost, guarded, lookupHost } from '#lib/network.ts';
+import { connectHost, fetchArgsHost, guarded, lookupHost } from '#lib/network.ts';
 import { describe, expect, test } from 'vitest';
 
 /**
@@ -13,11 +13,8 @@ function reached(): string {
   return 'reached';
 }
 
-/** The first argument of a call. */
-const FIRST = 0;
-
 /** A fetch wrapper over the stand-in. */
-const wrappedFetch = guarded('fetch', (args) => fetchHost(args.at(FIRST)))(reached);
+const wrappedFetch = guarded('fetch', fetchArgsHost)(reached);
 
 describe('the network guard', () => {
   test('lets a call to this machine through to the real function', () => {

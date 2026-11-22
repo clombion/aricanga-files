@@ -137,10 +137,12 @@ function readers(scan: Scan): ReadonlyMap<number, ReadonlySet<string>> {
   for (const path of scan.paths) {
     const names = namesIn(scan, path);
     const symbols = isEmpty(names) ? [] : scan.checker.getSymbolAtLocation(names);
-    for (const target of symbols.flatMap((symbol) => (symbol === undefined ? [] : [targets.of(symbol)]))) {
-      if (target !== undefined) {
-        found.set(target.id, new Set([...(found.get(target.id) ?? []), path]));
-      }
+    const resolvedTargets = symbols
+      .filter((symbol): symbol is TsSymbol => symbol !== undefined)
+      .map((symbol) => targets.of(symbol))
+      .filter((target): target is TsSymbol => target !== undefined);
+    for (const target of resolvedTargets) {
+      found.set(target.id, new Set([...(found.get(target.id) ?? []), path]));
     }
   }
   return found;

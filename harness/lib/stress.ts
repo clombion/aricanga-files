@@ -7,6 +7,7 @@
 
 import { bin, isolatedEnv } from './tools.ts';
 import { Accepted } from './exemptions.ts';
+import type { Outcome } from './process.ts';
 import { REPO_ROOT } from './paths.ts';
 import { randomInt } from 'node:crypto';
 import { runConcurrently } from './process.ts';
@@ -79,6 +80,19 @@ function copyArgv(options: Hunt, index: number): readonly string[] {
 }
 
 /**
+ * One copy's result: its status and output when it finished, or how it ended when it did not.
+ *
+ * @param {Outcome} outcome - How the copy ended.
+ * @param {number} seed - The copy's seed.
+ * @returns {CopyResult} Its result.
+ */
+function copyResult(outcome: Outcome, seed: number): CopyResult {
+  return outcome.kind === 'finished'
+    ? { output: outcome.stdout + outcome.stderr, seed, status: outcome.status }
+    : { output: JSON.stringify(outcome), seed, status: NOT_FINISHED };
+}
+
+/**
  * Run every copy of a hunt at once.
  *
  * @param {Hunt} options - The hunt.
@@ -87,11 +101,7 @@ function copyArgv(options: Hunt, index: number): readonly string[] {
 async function hunt(options: Hunt): Promise<readonly CopyResult[]> {
   const argvs = Array.from({ length: options.copies }, (_unused, index) => copyArgv(options, index));
   const outcomes = await runConcurrently(argvs, { cwd: options.root, env: isolatedEnv(), timeoutMs: COPY_TIMEOUT_MS });
-  return outcomes.map((outcome, index) => ({
-    output: outcome.kind === 'finished' ? outcome.stdout + outcome.stderr : JSON.stringify(outcome),
-    seed: options.seed + index,
-    status: outcome.kind === 'finished' ? outcome.status : NOT_FINISHED,
-  }));
+  return outcomes.map((outcome, index) => copyResult(outcome, options.seed + index));
 }
 
 /**
@@ -141,5 +151,5 @@ function huntOf(args: readonly string[]): Hunt {
   };
 }
 
-export { hunt, huntOf };
+export { copyResult, hunt, huntOf };
 export type { Hunt };

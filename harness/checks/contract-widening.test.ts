@@ -82,7 +82,7 @@ const NEAR_MISSES: readonly (readonly [string, string])[] = [
   ],
   [
     'packages/systems/__miss_expectation.ts',
-    `${IMPORT}${PICK}declare function expect(value: unknown): { toBe(expected: unknown): void; toEqual(expected: unknown): void };\nexpect(m).toBe('on');\nexpect({ x }).toStrictEqual({ x: { tag: 'ping' } });\ndeclare const ms: readonly Mode[];\nexpect(ms).toEqual(['off']);\n`,
+    `${IMPORT}${PICK}declare function expect(value: unknown): { not: { toBe(expected: unknown): void }; toBe(expected: unknown): void; toEqual(expected: unknown): void };\nexpect(m).toBe('on');\nexpect({ x }).toStrictEqual({ x: { tag: 'ping' } });\ndeclare const ms: readonly Mode[];\nexpect(ms).toEqual(['off']);\ndeclare const set: ReadonlySet<Mode>;\nexpect(set).toBe('on');\nexpect(m).not.toBe('off');\nexport { x };\n`,
   ],
 ];
 

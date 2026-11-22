@@ -75,6 +75,17 @@ function fetchHost(input: unknown): string {
 }
 
 /**
+ * The host a `fetch` call reaches: its first argument's.
+ *
+ * @param {readonly unknown[]} args - The call's arguments.
+ * @returns {string} The host it reaches.
+ */
+function fetchArgsHost(args: readonly unknown[]): string {
+  const [input] = args;
+  return fetchHost(input);
+}
+
+/**
  * The host a lookup asks for: its first argument.
  *
  * @param {readonly unknown[]} args - The lookup's arguments.
@@ -121,14 +132,7 @@ function install(): Installed {
     patch(net.Socket.prototype, 'connect', guarded('connect', connectHost)),
     patch(dns, 'lookup', guarded('lookup', lookupHost)),
     patch(dns.promises, 'lookup', guarded('lookup', lookupHost)),
-    patch(
-      globalThis,
-      'fetch',
-      guarded('fetch', (args) => {
-        const [input] = args;
-        return fetchHost(input);
-      }),
-    ),
+    patch(globalThis, 'fetch', guarded('fetch', fetchArgsHost)),
   ];
   return {
     restore: () => {
@@ -139,4 +143,4 @@ function install(): Installed {
   };
 }
 
-export { connectHost, fetchHost, guarded, install, isLocalHost, lookupHost };
+export { connectHost, fetchArgsHost, fetchHost, guarded, install, isLocalHost, lookupHost };

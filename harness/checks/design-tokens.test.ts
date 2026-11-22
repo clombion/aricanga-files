@@ -42,8 +42,10 @@ describe('the rule', () => {
     ]);
   });
 
-  test('lets the token file define its tokens', async () => {
+  test('lets the token file define its tokens, and holds its other declarations to them', async () => {
     expect.hasAssertions();
-    await expect(warnings('plant/tokens.css', ':root {\n  --gap: 1rem;\n}\n')).resolves.toStrictEqual([]);
+    await expect(warnings('plant/tokens.css', ':root {\n  --gap: 1rem;\n}\n\n.a {\n  padding: 2rem;\n}\n')).resolves.toStrictEqual([
+      messages.raw('size', '2rem'),
+    ]);
   });
 });
