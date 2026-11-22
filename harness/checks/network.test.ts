@@ -1,35 +1,39 @@
-/** The network guard, installed for every test: a local lookup passes, a fetch to another host trips, and a socket's options name its host. */
+/** The network guard's wrappers, over a stand-in real function: a local host passes through, another host trips before the call. */
 
 import { TripwireError, drain } from '#lib/doubles.ts';
+import { connectHost, fetchHost, guarded, lookupHost } from '#lib/network.ts';
 import { describe, expect, test } from 'vitest';
-import { connectHost } from '#lib/network.ts';
-import dns from 'node:dns';
 
 /**
- * Fetch from a host other than this machine.
+ * A stand-in real function that reports it was reached.
  *
- * @returns {Promise<Response>} The response, which the guard never lets come.
+ * @returns {string} What it returns.
  */
-async function sendAway(): Promise<Response> {
-  const response = await fetch('https://planted.invalid/');
-  return response;
+function reached(): string {
+  return 'reached';
 }
 
-describe('the installed network guard', () => {
-  test('lets a lookup of this machine through', async () => {
+/** The first argument of a call. */
+const FIRST = 0;
+
+/** A fetch wrapper over the stand-in. */
+const wrappedFetch = guarded('fetch', (args) => fetchHost(args.at(FIRST)))(reached);
+
+describe('the network guard', () => {
+  test('lets a call to this machine through to the real function', () => {
     expect.hasAssertions();
-    const found = await dns.promises.lookup('localhost');
-    expect(found.address).toBeTypeOf('string');
+    expect(wrappedFetch(undefined, ['http://localhost/'])).toBe('reached');
   });
 
-  test('trips a fetch to another host before it is sent, naming the host', async () => {
+  test('trips a call to another host before the real function, naming the host', () => {
     expect.hasAssertions();
-    await expect(sendAway()).rejects.toThrow(TripwireError);
+    expect(() => wrappedFetch(undefined, ['https://planted.invalid/'])).toThrow(TripwireError);
     expect(drain()).toStrictEqual(['a test opened a non-local connection (fetch to planted.invalid)']);
   });
 
-  test('reads no host from socket options that name none', () => {
+  test('reads the host a lookup asks for, and none from socket options that name none', () => {
     expect.hasAssertions();
+    expect(lookupHost(['planted.invalid'])).toBe('planted.invalid');
     expect(connectHost([{ port: 80 }])).toBeUndefined();
   });
 });

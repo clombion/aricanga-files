@@ -23,7 +23,6 @@ import { isProduction, nodes, resolved, sourceOf } from './checker.ts';
 import { Prefixes } from './exemptions.ts';
 import type { Scan } from './checker.ts';
 import { isEmpty } from './lists.ts';
-import { present } from './present.ts';
 
 /** Modules that read the harness library's types without being production modules themselves. */
 const CHECK_ROOTS = new Prefixes(['harness/checks/']);
@@ -154,13 +153,15 @@ function readers(scan: Scan): ReadonlyMap<number, ReadonlySet<string>> {
  * @returns {readonly ExportedType[]} The unread types.
  */
 function unread(scan: Scan): readonly ExportedType[] {
-  const read = readers(scan);
-  return [...exportedTypes(scan)]
-    .filter(
-      ([id, type]: readonly [number, ExportedType]) =>
-        !type.isPublic &&
-        ![...present(read.get(id), `the readers of ${type.name}, its own module among them`)].some((path) => reads(path, type.path)),
-    )
+  const exported = exportedTypes(scan);
+  const readElsewhere = new Set(
+    [...readers(scan)].flatMap(([id, paths]: readonly [number, ReadonlySet<string>]) => {
+      const type = exported.get(id);
+      return type !== undefined && [...paths].some((path) => reads(path, type.path)) ? [id] : [];
+    }),
+  );
+  return [...exported]
+    .filter(([id, type]: readonly [number, ExportedType]) => !type.isPublic && !readElsewhere.has(id))
     .map(([, type]: readonly [number, ExportedType]) => type);
 }
 

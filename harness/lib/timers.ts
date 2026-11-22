@@ -45,9 +45,9 @@ function caller(): string {
 
 /** The timers the guard saw set and not yet fired or cleared, and how to clear each kind. */
 class Timers {
-  public readonly pending = new Map<unknown, Pending>();
+  public readonly pending: Map<unknown, Pending> = new Map<unknown, Pending>();
 
-  public readonly clears = new Map<Pending['kind'], (handle: unknown) => void>();
+  public readonly clears: Map<Pending['kind'], (handle: unknown) => void> = new Map<Pending['kind'], (handle: unknown) => void>();
 
   /**
    * A `setTimeout` replacement that records the timer until it fires or is cleared.
@@ -144,4 +144,4 @@ function install(): Installed {
   };
 }
 
-export { install };
+export { install, Timers };

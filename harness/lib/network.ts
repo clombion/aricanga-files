@@ -139,4 +139,4 @@ function install(): Installed {
   };
 }
 
-export { connectHost, fetchHost, install, isLocalHost };
+export { connectHost, fetchHost, guarded, install, isLocalHost, lookupHost };
