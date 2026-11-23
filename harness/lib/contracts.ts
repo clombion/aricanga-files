@@ -22,12 +22,13 @@ import {
   isPropertyAccessExpression,
   isTypeAliasDeclaration,
 } from 'typescript/unstable/ast';
-import { inTypeOrImport, stringLiterals } from './contract-model.ts';
 import { isExportedType, listedExports } from './exports-of.ts';
 import { isProduction, nodes, pathOf, sourceOf, textOfNode } from './checker.ts';
 import type { Scan } from './checker.ts';
+import { holdsNoRuntimeValue } from './ts-source.ts';
 import { isEmpty } from './lists.ts';
 import { present } from './present.ts';
+import { stringLiterals } from './contract-model.ts';
 
 /** The fewest words a union holds to be a contract. */
 const LEAST_WORDS = 2;
@@ -150,7 +151,7 @@ function names(node: Node): boolean {
 function isCandidate(node: Node): node is Expression {
   return (
     (isIdentifier(node) || isPropertyAccessExpression(node) || isCallExpression(node) || isElementAccessExpression(node)) &&
-    !inTypeOrImport(node) &&
+    !holdsNoRuntimeValue(node) &&
     !names(node)
   );
 }

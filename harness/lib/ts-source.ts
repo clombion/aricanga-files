@@ -12,12 +12,18 @@ import type { CommentRange, Expression, ImportDeclaration, Node, SourceFile } fr
 import { api, mount, nextName } from './ts-session.ts';
 import { getLeadingCommentRanges, getTrailingCommentRanges } from 'typescript/unstable/ast/scanner';
 import {
+  isExportDeclaration,
   isIdentifier,
   isImportDeclaration,
+  isImportEqualsDeclaration,
+  isInterfaceDeclaration,
   isJsxExpression,
   isNamedImports,
   isPropertyAccessExpression,
+  isSourceFile,
   isStringLiteral,
+  isTypeAliasDeclaration,
+  isTypeNode,
 } from 'typescript/unstable/ast/is';
 import { present } from './present.ts';
 
@@ -199,6 +205,45 @@ function chain(node: Expression): string[] | undefined {
   return undefined;
 }
 
+/**
+ * Whether a node, or an ancestor of it below its source file, meets `boundary`.
+ *
+ * @param {Node} node - The node.
+ * @param {(candidate: Node) => boolean} boundary - The kinds of node the walk stops at.
+ * @returns {boolean} Whether the node sits within one.
+ */
+function within(node: Node, boundary: (candidate: Node) => boolean): boolean {
+  for (let current = node; !isSourceFile(current); current = current.parent) {
+    if (boundary(current)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Whether a node holds no runtime value: it is or sits in a type, a type alias or interface
+ * declaration, or an import or export declaration. A heritage clause's expression is a type node
+ * (`ExpressionWithTypeArguments`), so a call in a class's `extends` reads as a type here, as it did in
+ * each walk this one replaced. The one answer every scan of
+ * runtime uses and words reads.
+ *
+ * @param {Node} node - The node.
+ * @returns {boolean} Whether no runtime value can be in it.
+ */
+function holdsNoRuntimeValue(node: Node): boolean {
+  return within(
+    node,
+    (candidate) =>
+      isTypeNode(candidate) ||
+      isImportDeclaration(candidate) ||
+      isExportDeclaration(candidate) ||
+      isImportEqualsDeclaration(candidate) ||
+      isTypeAliasDeclaration(candidate) ||
+      isInterfaceDeclaration(candidate),
+  );
+}
+
+export { body, chain, comments, holdsNoRuntimeValue, importsFrom, nodes, parse, within };
 export { closeSession } from './ts-session.ts';
 export type { Expression, Node, SourceFile } from 'typescript/unstable/ast';
-export { body, chain, comments, importsFrom, nodes, parse };

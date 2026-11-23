@@ -30,7 +30,7 @@ import { nameText, nodes, pathOf, textOfNode } from './checker.ts';
 import { Accepted } from './exemptions.ts';
 import type { Scan } from './checker.ts';
 import { heldAsKey } from './contract-keys.ts';
-import { inTypeOrImport } from './contract-model.ts';
+import { holdsNoRuntimeValue } from './ts-source.ts';
 import { present } from './present.ts';
 import { relative as relativeTo } from './paths.ts';
 
@@ -271,7 +271,7 @@ function respellings(scan: Scan, file: SourceFile, known: readonly Contract[]): 
   );
   const owned = known.filter((contract) => contract.owner === path);
   return nodes(file).flatMap((node): ContractSite[] => {
-    if (!(isStringLiteral(node) || isNoSubstitutionTemplateLiteral(node)) || inTypeOrImport(node)) {
+    if (!(isStringLiteral(node) || isNoSubstitutionTemplateLiteral(node)) || holdsNoRuntimeValue(node)) {
       return [];
     }
     const word = node.text;

@@ -17,13 +17,8 @@ import {
   isCallExpression,
   isClassDeclaration,
   isElementAccessExpression,
-  isExportDeclaration,
   isFunctionDeclaration,
-  isHeritageClause,
   isIdentifier,
-  isImportDeclaration,
-  isImportEqualsDeclaration,
-  isInterfaceDeclaration,
   isMethodDeclaration,
   isNewExpression,
   isObjectBindingPattern,
@@ -31,16 +26,14 @@ import {
   isPropertyAccessExpression,
   isPropertyAssignment,
   isPropertyDeclaration,
-  isSourceFile,
   isStringLiteral,
-  isTypeAliasDeclaration,
-  isTypeNode,
   isVariableDeclaration,
 } from 'typescript/unstable/ast';
 import { isPlatform, nameText, nodes, pathOf, qualifiedName } from './checker.ts';
 import type { Rule } from './owner-rules.ts';
 import type { Scan } from './checker.ts';
 import type { Symbol as TsSymbol } from 'typescript/unstable/sync';
+import { holdsNoRuntimeValue } from './ts-source.ts';
 import { nearest } from './package-dirs.ts';
 import { rulesOf } from './owner-rules.ts';
 import { site } from './exemptions.ts';
@@ -62,29 +55,6 @@ const NO_ARGUMENTS = 0;
  */
 function keyOf(found: Site): string {
   return site(found.path, found.rule);
-}
-
-/**
- * Whether a node is a type, or sits in a type or an import or export declaration.
- *
- * @param {Node} node - The node.
- * @returns {boolean} Whether no runtime use can be in it.
- */
-function inTypeOrImport(node: Node): boolean {
-  for (let current = node; !isSourceFile(current); current = current.parent) {
-    if (
-      isTypeNode(current) ||
-      isImportDeclaration(current) ||
-      isExportDeclaration(current) ||
-      isImportEqualsDeclaration(current) ||
-      isTypeAliasDeclaration(current) ||
-      isInterfaceDeclaration(current) ||
-      isHeritageClause(current)
-    ) {
-      return true;
-    }
-  }
-  return false;
 }
 
 /**
@@ -190,7 +160,7 @@ function usedSymbol(scan: Scan, node: Node): TsSymbol | undefined {
 function uses(scan: Scan, file: SourceFile): readonly string[] {
   const found: string[] = [];
   for (const node of nodes(file)) {
-    if (!inTypeOrImport(node)) {
+    if (!holdsNoRuntimeValue(node)) {
       found.push(...clockReads(scan, node), ...platformName(scan, usedSymbol(scan, node)));
     }
   }

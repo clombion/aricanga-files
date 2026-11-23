@@ -67,6 +67,10 @@ const RESPELLED: readonly (readonly [string, string])[] = [
 ];
 
 const NEAR_MISSES: readonly (readonly [string, string])[] = [
+  [
+    'packages/systems/__miss_interface.ts',
+    `${IMPORT}export interface Keyed {\n  readonly 'on': number;\n}\nexport type Literal = { readonly 'off': number };\n`,
+  ],
   ['packages/systems/__miss_contextual.ts', `${IMPORT}export const a: Mode = 'on';\nexport const b: Msg = { tag: 'ping' };\n`],
   [
     'packages/systems/__miss_compared.ts',

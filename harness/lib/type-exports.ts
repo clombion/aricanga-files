@@ -15,7 +15,6 @@ import {
   isIdentifier,
   isImportDeclaration,
   isInterfaceDeclaration,
-  isSourceFile,
   isTypeAliasDeclaration,
 } from 'typescript/unstable/ast';
 import { isExportedType, listedExports } from './exports-of.ts';
@@ -25,6 +24,7 @@ import type { Population } from './scope.ts';
 import { Prefixes } from './exemptions.ts';
 import type { Scan } from './checker.ts';
 import { isEmpty } from './lists.ts';
+import { within } from './ts-source.ts';
 
 /** The harness's own test project, whose modules may read a production module's unexported types. */
 const CHECK_ROOTS = new Prefixes([HARNESS_CHECKS]);
@@ -49,18 +49,17 @@ function reads(population: Population, reader: string, declarer: string): boolea
 }
 
 /**
- * Whether a node sits in an import or export declaration.
+ * Whether a node sits in an import or export declaration, or an `export =`: a name there reads no
+ * type, it passes one on.
  *
  * @param {Node} node - The node.
  * @returns {boolean} Whether an enclosing node imports or exports.
  */
 function inImportOrExport(node: Node): boolean {
-  for (let current = node.parent; !isSourceFile(current); current = current.parent) {
-    if (isImportDeclaration(current) || isExportDeclaration(current) || isExportAssignment(current)) {
-      return true;
-    }
-  }
-  return false;
+  return within(
+    node.parent,
+    (candidate) => isImportDeclaration(candidate) || isExportDeclaration(candidate) || isExportAssignment(candidate),
+  );
 }
 
 /**

@@ -1,7 +1,5 @@
 /** What the contract scans share: a contract, a place code loses one, and how both are read. */
 
-import { isExportDeclaration, isImportDeclaration, isSourceFile, isTypeNode } from 'typescript/unstable/ast';
-import type { Node } from 'typescript/unstable/ast';
 import type { Type } from 'typescript/unstable/sync';
 
 /** A closed union: the module that owns it, its name, and its words. */
@@ -37,20 +35,5 @@ function stringLiterals(type: Readonly<Type>): readonly string[] | undefined {
   return words;
 }
 
-/**
- * Whether a node sits in a type, or in an import or export declaration.
- *
- * @param {Node} node - The node.
- * @returns {boolean} Whether no runtime value can be in it.
- */
-function inTypeOrImport(node: Node): boolean {
-  for (let current = node.parent; !isSourceFile(current); current = current.parent) {
-    if (isTypeNode(current) || isImportDeclaration(current) || isExportDeclaration(current)) {
-      return true;
-    }
-  }
-  return false;
-}
-
-export { inTypeOrImport, stringLiterals };
+export { stringLiterals };
 export type { Contract, ContractSite };
