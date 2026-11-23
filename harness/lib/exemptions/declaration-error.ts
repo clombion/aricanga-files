@@ -1,6 +1,9 @@
-/** The refusal of an exemption list declared wrongly: an entry without a reason, twice, or below one. */
+/**
+ * The refusal of a declaration built wrongly: an exemption entry without a reason, twice, or below one;
+ * a vocabulary fact that is no plain data.
+ */
 
-/** An exemption list that cannot be built as written. */
+/** A declaration that cannot be built as written. */
 class ExemptionError extends Error {
   public override readonly name = 'ExemptionError';
 }

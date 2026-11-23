@@ -151,6 +151,26 @@ const SHAPES: readonly Plant[] = [
     removal: {},
     text: 'import { Accepted } from "./exemptions.ts";\nexport const found: boolean = new Accepted(["a"]).starts("ab");\n',
   },
+  ...[
+    ['open', 'declare const facts: Readonly<Record<string, string>>;\nexport const words: unknown = new Vocabulary(facts);\n'],
+    [
+      'pattern',
+      'declare const facts: Readonly<Record<Lowercase<string>, string>>;\nexport const words: unknown = new Vocabulary(facts);\n',
+    ],
+    ['optional', 'declare const facts: Readonly<{ word?: string }>;\nexport const words: unknown = new Vocabulary(facts);\n'],
+    ['function', 'export const words: unknown = new Vocabulary({ word: () => 1 });\n'],
+    ['map', 'export const words: unknown = new Vocabulary({ word: new Map<string, string>() });\n'],
+    [
+      'instance',
+      'import { Accepted } from "./exemptions.ts";\nexport const words: unknown = new Vocabulary({ word: new Accepted(["a"]) });\n',
+    ],
+    ['symbol', 'const key = Symbol("k");\nexport const words: unknown = new Vocabulary({ word: { [key]: { note: "a" } } });\n'],
+  ].map(([shape = '', text = '']: readonly string[]): Plant => ({
+    codes: ['TS2345'],
+    path: `src/vocabulary-${shape}.ts`,
+    removal: {},
+    text: `import { Vocabulary } from "./exemptions.ts";\n${text}`,
+  })),
 ];
 
 export { PLANTS, SHAPES, TSC_DEFAULT };

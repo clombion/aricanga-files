@@ -30,9 +30,6 @@ import { REPO_ROOT } from './paths.ts';
 import { isEmpty } from './lists.ts';
 import path from 'node:path';
 
-/** The order the runs report in: the exact run first. */
-const RUN_ORDER = ['exact', 'cross-file'] as const;
-
 /** The output streams `main` writes to; a check passes its own. */
 interface Streams {
   readonly out: (text: string) => void;
@@ -123,8 +120,8 @@ function cloneProblems(found: readonly Clone[], allowed: Readonly<Exemptions>): 
  */
 async function scan(target: Target, allowed: Readonly<Exemptions>, runner?: Runner): Promise<readonly string[]> {
   const runs = await Promise.all(
-    RUN_ORDER.map(async (name) => {
-      const result = await runOnce([name, RUNS[name]], target, runner);
+    RUNS.words.map(async (name) => {
+      const result = await runOnce([name, RUNS.of(name)], target, runner);
       return result;
     }),
   );

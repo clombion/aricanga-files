@@ -2,6 +2,7 @@
 
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import type { Outcome } from './process.ts';
+import { Vocabulary } from './exemptions.ts';
 import { fromRoot } from './paths.ts';
 import { isFile } from './source-files.ts';
 import { json } from './config.ts';
@@ -44,10 +45,13 @@ const COMMON: readonly string[] = [
   '--no-colors',
 ];
 
-const RUNS: Readonly<Record<'exact' | 'cross-file', readonly string[]>> = {
+/** The jscpd runs, each with its flags; `scan` runs every word and reports in the words' order. */
+const RUNS: Vocabulary<Readonly<Record<'exact' | 'cross-file', readonly string[]>>> = new Vocabulary<
+  Readonly<Record<'exact' | 'cross-file', readonly string[]>>
+>({
   'cross-file': ['--min-lines', '5', '--min-tokens', '30'],
   exact: ['--min-lines', '5', '--min-tokens', '50'],
-};
+});
 
 /**
  * The jscpd command line of one run: the run's flags, the common flags, the report folder, the roots.

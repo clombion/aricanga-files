@@ -3,13 +3,13 @@
  *
  * Over the modules of `harness/checks` and `harness/lib`: a module-level array, object, or pre-filled
  * `Set` or `Map` literal (through `as const` and `satisfies`) that the module consults — with
- * `includes`, `has`, `indexOf`, `get`, `some`, `every`, `find`, `in`, a computed lookup
+ * `includes`, `has`, `indexOf`, `get`, `some`, `every`, `find`, `in`, `Object.hasOwn`, a computed lookup
  * `NAME[key]`, or by handing it to a module function that does one of these with its parameter —
  * must be declared through `harness/lib/exemptions.ts`. Iterating a list is not consulting it.
  *
  * A declaration nothing consults is stale: an `Exemptions` or `CountedExemptions` is consulted by a
  * call that fails on a stale entry (`unexempted`, `unexemptedBy`, `mismatches`, `assertExact`) or
- * by being handed to a call, which is trusted to make one; an `Accepted` or `Prefixes` by any read.
+ * by being handed to a call, which is trusted to make one; an `Accepted`, `Prefixes` or `Vocabulary` by any read.
  * Reads in importing modules count, through a relative or a `#…` subpath specifier. The fence
  * cannot see a collection built at run time, nor tolerance applied inside a helper of another module.
  */
@@ -89,6 +89,29 @@ describe('the repository', () => {
   });
 });
 
+/** A record keyed by words, each with its facts, consulted each way a check can: undeclared, so refused. */
+const RAW_WORDS = "type Word = 'a' | 'b';\nconst WORDS: Readonly<Record<Word, { x: boolean }>> = { a: { x: true }, b: { x: false } };\n";
+
+describe('a vocabulary', () => {
+  test('declared as a Vocabulary and read, passes', async () => {
+    expect.hasAssertions();
+    const source =
+      'const WORDS = new Vocabulary({ a: { x: true }, b: { x: false } });\nexport const facts = (word: string) => (WORDS.has(word) ? WORDS.of(word) : undefined);';
+    await expect(findings({ [PLANT]: source })).resolves.toStrictEqual([]);
+  });
+
+  test.each([
+    ['in', 'export const has = (word: string) => word in WORDS;'],
+    ['an index', "export const facts = (word: 'a' | 'b') => WORDS[word].x;"],
+    ['Object.hasOwn', 'export const has = (word: string) => Object.hasOwn(WORDS, word);'],
+  ])('kept as a raw record and consulted by %s, is refused', async (_name, consult) => {
+    expect.hasAssertions();
+    await expect(findings({ [PLANT]: `${RAW_WORDS}${consult}` })).resolves.toStrictEqual([
+      { name: 'WORDS', path: PLANT, problem: UNDECLARED },
+    ]);
+  });
+});
+
 describe('the fence', () => {
   test.each(CONSULTED_LITERALS)('sees %s', async (_name, source) => {
     expect.hasAssertions();
@@ -117,6 +140,7 @@ describe('the fence', () => {
     "const NAME = new CountedExemptions({ a: { count: 1, reason: 'why' } });",
     "const NAME = new Accepted(['a']);",
     "const NAME = new Prefixes(['a']);",
+    'const NAME = new Vocabulary({ a: { x: true } });',
   ])('sees a declaration nothing consults: %j', async (source) => {
     expect.hasAssertions();
     await expect(findings({ [PLANT]: source })).resolves.toStrictEqual([{ name: 'NAME', path: PLANT, problem: UNCONSULTED }]);

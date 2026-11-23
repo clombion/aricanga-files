@@ -91,12 +91,12 @@ describe('the repository', () => {
   test('main reports each problem and exits 1', async () => {
     expect.hasAssertions();
     const { status, errors } = await runMain(failingRunner);
-    expect([status, errors]).toStrictEqual([EXIT_FINDINGS, ['exact: jscpd exited 2: planted\n', 'cross-file: jscpd exited 2: planted\n']]);
+    expect([status, errors]).toStrictEqual([EXIT_FINDINGS, ['cross-file: jscpd exited 2: planted\n', 'exact: jscpd exited 2: planted\n']]);
   });
 
   test('states every flag and uses no ignore channel', async () => {
     expect.hasAssertions();
-    const flags = [...COMMON, ...Object.values(RUNS).flat()];
+    const flags = [...COMMON, ...RUNS.words.flatMap((name) => RUNS.of(name))];
     expect(flags.filter((flag) => FLAGS_OUTSIDE_THE_SCRIPT.test(flag))).toStrictEqual([]);
     const listed = await tracked();
     expect(listed.filter((path) => BASELINE_FILES.test(path))).toStrictEqual([]);
@@ -112,8 +112,8 @@ describe('the scan of a clone', () => {
     expect.hasAssertions();
     const { root, listed } = await plant({ 'a/one.ts': PLANT, 'b/two.ts': PLANT.replace('first', 'second') });
     await expect(scan({ listed, root, roots: ['a', 'b'] }, NONE)).resolves.toStrictEqual([
-      'clone (exact): a/one.ts and b/two.ts',
       'clone (cross-file): a/one.ts and b/two.ts',
+      'clone (exact): a/one.ts and b/two.ts',
     ]);
   });
 
@@ -139,7 +139,7 @@ describe('the scan of a clone', () => {
   test('passes an allowed clone and fails a stale entry', async () => {
     expect.hasAssertions();
     const { root, listed } = await plant({ 'a/one.ts': PLANT, 'b/two.ts': PLANT });
-    const report = await reportOf(RUNS.exact, { root, roots: ['a', 'b'] });
+    const report = await reportOf(RUNS.of('exact'), { root, roots: ['a', 'b'] });
     const [exact] = clones('exact', report, root);
     expect(exact).toBeDefined();
     const allowed = new Exemptions(Object.fromEntries(bothRuns(exact).map((clone) => [cloneKey(clone), 'planted'])));
@@ -176,10 +176,10 @@ describe('a run that gives no report', () => {
   const argv = ['jscpd'];
 
   test.each([
-    [{ argv, kind: 'finished', status: EXIT_BROKEN, stderr: 'bad flag', stdout: '' } as const, 'exact: jscpd exited 2: bad flag'],
-    [{ argv, kind: 'timed-out', timeoutMs: 300_000 } as const, 'exact: jscpd ran past 300000 ms'],
-    [{ argv, kind: 'not-started', reason: 'not found' } as const, 'exact: jscpd could not start (not found): run `pnpm install`'],
-    [{ argv, kind: 'finished', status: EXIT_CLEAN, stderr: '', stdout: '' } as const, 'exact: jscpd wrote no report'],
+    [{ argv, kind: 'finished', status: EXIT_BROKEN, stderr: 'bad flag', stdout: '' } as const, 'cross-file: jscpd exited 2: bad flag'],
+    [{ argv, kind: 'timed-out', timeoutMs: 300_000 } as const, 'cross-file: jscpd ran past 300000 ms'],
+    [{ argv, kind: 'not-started', reason: 'not found' } as const, 'cross-file: jscpd could not start (not found): run `pnpm install`'],
+    [{ argv, kind: 'finished', status: EXIT_CLEAN, stderr: '', stdout: '' } as const, 'cross-file: jscpd wrote no report'],
   ])('is a problem: %o', async (outcome: Outcome, problem) => {
     expect.hasAssertions();
     const runner: Runner = async () => {

@@ -1,16 +1,22 @@
 /**
- * The one owner of exemption lists: every entry carries a reason and fails once it matches nothing.
+ * The one owner of exemption lists: every list a check consults is declared here, by its kind. A
+ * tolerated key carries a reason and fails once it matches nothing; a defined value, prefix or word
+ * need not match.
  *
- * Four declarations cover every list a check consults, one module each under `exemptions/`:
+ * Five declarations cover every list a check consults, one module each under `exemptions/`:
  *
  * - `Exemptions`: keys a rule tolerates, each with its reason; an entry no finding matches fails.
  * - `CountedExemptions`: keys a rule tolerates a fixed number of times; a count off either way fails.
  * - `Accepted`: the values a rule defines as valid; consulted by membership, nothing has to match.
  * - `Prefixes`: the starts or ends text matching uses; consulted by `starts` and `ends` only.
+ * - `Vocabulary`: the words of a closed vocabulary, each with its facts; consulted by `has`, read by
+ *   `of`, nothing has to match.
  *
- * Keys are strings. A check keyed by a pair builds its key with `site(path, rule)`. No declaration
- * hands its keys to a consumer: a check that needs the keys derives them from its own scan, and the
- * list holds their liveness.
+ * Keys are strings. A check keyed by a pair builds its key with `site(path, rule)`. A list of
+ * tolerated keys holds their liveness only through its consulting calls, which fail on an entry
+ * nothing matched; its `entries` can be read (a test reads them to hold each key to the listing), and
+ * reading them checks nothing. The defining kinds hand out what they define: `Accepted.values`, and
+ * `Vocabulary.words` with each word's facts.
  */
 
 export { Accepted } from './exemptions/accepted.ts';
@@ -19,4 +25,5 @@ export type { Mismatch } from './exemptions/counted.ts';
 export { StaleExemptionError } from './exemptions/errors.ts';
 export { Exemptions } from './exemptions/keyed.ts';
 export { Prefixes } from './exemptions/prefixes.ts';
+export { Vocabulary } from './exemptions/vocabulary.ts';
 export { site } from './exemptions/reasons.ts';

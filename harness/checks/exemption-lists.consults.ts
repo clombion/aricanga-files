@@ -23,11 +23,12 @@ import {
   isVariableStatement,
 } from 'typescript/unstable/ast/is';
 import { Accepted } from '#lib/exemptions.ts';
+import type { CallExpression } from 'typescript/unstable/ast';
 import { SyntaxKind } from 'typescript/unstable/ast';
 import { nodes } from '#lib/ts-source.ts';
 
-/** The four declarations of `harness/lib/exemptions.ts`. */
-const DECLARATIONS = new Accepted(['Exemptions', 'CountedExemptions', 'Accepted', 'Prefixes']);
+/** The five declarations of `harness/lib/exemptions.ts`. */
+const DECLARATIONS = new Accepted(['Exemptions', 'CountedExemptions', 'Accepted', 'Prefixes', 'Vocabulary']);
 const STALE_FAILING_CALLS = new Accepted(['unexempted', 'unexemptedBy', 'mismatches', 'assertExact']);
 const CONSULTING_METHODS = new Accepted([
   'includes',
@@ -133,7 +134,18 @@ function identifierText(node: Node | undefined): string | undefined {
 }
 
 /**
- * The node a single node consults as a collection, by a method, `in`, or a computed lookup.
+ * A call's first argument.
+ *
+ * @param {CallExpression} call - The call.
+ * @returns {Expression | undefined} Its first argument, if any.
+ */
+function firstArgument(call: CallExpression): Expression | undefined {
+  const [first] = call.arguments;
+  return first;
+}
+
+/**
+ * The node a single node consults as a collection, by a method, `in`, `Object.hasOwn`, or a computed lookup.
  *
  * @param {Node} node - Any node.
  * @returns {Node | undefined} The consulted collection, or `undefined`.
@@ -141,6 +153,9 @@ function identifierText(node: Node | undefined): string | undefined {
 function consultedBy(node: Node): Node | undefined {
   if (isCallExpression(node) && isPropertyAccessExpression(node.expression)) {
     const method = identifierText(node.expression.name);
+    if (method === 'hasOwn' && identifierText(node.expression.expression) === 'Object') {
+      return firstArgument(node);
+    }
     return method !== undefined && CONSULTING_METHODS.has(method) ? node.expression.expression : undefined;
   }
   if (isBinaryExpression(node) && node.operatorToken.kind === SyntaxKind.InKeyword) {
