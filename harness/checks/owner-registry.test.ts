@@ -8,94 +8,23 @@
  * pure constructor call, the owner itself, and a root the rule does not cover.
  */
 
+import { CANONICAL, FORMS, IN_A_TEST, MEMBERS, NEAR_MISSES, UNGUARDED, unguarded } from './owner-registry.plants.ts';
 import { SHAPES, keyOf, ownerUses, rulesOf, sites } from '#lib/owners.ts';
 import { describe, expect, test } from 'vitest';
 import { manifest, reader } from './scope.plants.ts';
+import { plantedPopulation, usePlanted, useScan } from '#lib/scan-hooks.ts';
 import { population, populationOf } from '#lib/scope.ts';
 import { scannedFiles, sourceOf } from '#lib/checker.ts';
-import { usePlanted, useScan } from '#lib/scan-hooks.ts';
+import type { Rule } from '#lib/owner-rules.ts';
 import type { Scan } from '#lib/checker.ts';
 import type { Site } from '#lib/owners.ts';
+import { present } from '#lib/present.ts';
 import { tracked } from '#lib/source-files.ts';
 
 const HARNESS_ID = 'owner-registry';
 
-const RULES = rulesOf(await population());
-
-/** One plant per rule and call form: [rule, source]. */
-const FORMS: readonly (readonly [string, string])[] = [
-  ['process-start', "import { spawn } from 'node:child_process';\nspawn('x');\n"],
-  ['process-start', "import { spawn as go } from 'node:child_process';\ngo('x');\n"],
-  ['process-start', "import * as cp from 'child_process';\ncp.execSync('x');\n"],
-  ['process-start', "import * as cp from 'node:child_process';\nconst { fork } = cp;\nfork('x');\n"],
-  ['clock', 'Date.now();\n'],
-  ['clock', 'const D = Date;\nD.now();\n'],
-  ['clock', 'const { now } = performance;\nnow();\n'],
-  ['clock', 'globalThis.Date.now();\n'],
-  ['clock', "Date['now']();\n"],
-  ['clock', 'new Date();\n'],
-  ['clock', 'new Date;\n'],
-  ['clock', 'Date();\n'],
-  ['clock', 'process.hrtime();\n'],
-  ['random', 'Math.random();\n'],
-  ['random', 'const { random } = Math;\nrandom();\n'],
-  ['random', 'globalThis.crypto.randomUUID();\n'],
-  ['random', "import { randomBytes } from 'node:crypto';\nrandomBytes(4);\n"],
-  ['standard-streams', "console.log('x');\n"],
-  ['standard-streams', "const say = console;\nsay.info('x');\n"],
-  ['standard-streams', "globalThis.console.error('x');\n"],
-  ['standard-streams', "process.stdout.write('x');\n"],
-  ['standard-streams', 'const { stderr } = process;\nstderr.end();\n'],
-  ['json-parse', "JSON.parse('1');\n"],
-  ['json-parse', "const { parse } = JSON;\nparse('1');\n"],
-  ['json-parse', "globalThis.JSON.parse('1');\n"],
-  ['network', "void fetch('x');\n"],
-  ['network', "void window.fetch('x');\n"],
-  ['network', "void globalThis.fetch('x');\n"],
-  ['network', "new WebSocket('ws://x');\n"],
-  ['network', "import { request } from 'node:https';\nrequest('x');\n"],
-  ['timers', 'setTimeout(() => undefined, 1);\n'],
-  ['timers', 'globalThis.setInterval(() => undefined, 1);\n'],
-  ['timers', 'const { setTimeout: later } = globalThis;\nlater(() => undefined, 1);\n'],
-  ['timers', 'requestAnimationFrame(() => undefined);\n'],
-  ['storage', "localStorage.getItem('a');\n"],
-  ['storage', 'window.sessionStorage.clear();\n'],
-  ['storage', "globalThis.indexedDB.open('x');\n"],
-  ['storage', "document.cookie = 'a=b';\n"],
-  ['settings', 'export const x = process.env.X;\n'],
-  ['settings', 'const { env } = process;\nexport const x = env;\n'],
-  ['settings', "export const x = process['env'];\n"],
-];
-
-/** One canonical use per rule, planted in every root the rule covers. */
-const CANONICAL: readonly (readonly [string, string])[] = [
-  ['process-start', "import { spawn } from 'node:child_process';\nspawn('x');\n"],
-  ['clock', 'Date.now();\n'],
-  ['random', 'Math.random();\n'],
-  ['standard-streams', "console.log('x');\n"],
-  ['json-parse', "JSON.parse('1');\n"],
-  ['network', "void fetch('x');\n"],
-  ['timers', 'setTimeout(() => undefined, 1);\n'],
-  ['storage', "localStorage.getItem('a');\n"],
-  ['settings', 'export const x = process.env.X;\n'],
-];
-
-const IN_A_TEST = 'packages/systems/chat/test/__in_a_test.test.ts';
-
-const NEAR_MISSES: readonly (readonly [string, string])[] = [
-  [
-    'packages/foundation/src/__miss_type.ts',
-    "import type { ChildProcess } from 'node:child_process';\nexport let child: ChildProcess | undefined;\nexport let store: Storage | undefined;\n",
-  ],
-  ['packages/foundation/src/__miss_own_now.ts', 'const clock = { now: () => 1 };\nclock.now();\n'],
-  ['packages/foundation/src/__miss_own_fetch.ts', "export function load() {\n  const fetch = (x: string) => x;\n  return fetch('a');\n}\n"],
-  ['packages/foundation/src/__miss_pure.ts', 'new Date(0).getTime();\nDate.UTC(2020, 1);\nJSON.stringify({});\n'],
-  [
-    'harness/lib/process.ts',
-    "import { spawnSync } from 'node:child_process';\nexport const out = spawnSync('x');\nexport const env = process.env;\n",
-  ],
-  ['utils/__miss_uncovered.ts', 'Math.random();\n'],
-];
+/** The rules over the planted members, which the planted roots are drawn from. */
+const RULES = rulesOf(await plantedPopulation([], MEMBERS));
 
 /** A planted module, and the rule the scan must report in it, if any. */
 interface Plant {
@@ -138,13 +67,7 @@ const PLANTED: readonly Plant[] = [
 ];
 const plants = new Map(PLANTED.map((plant) => [plant.path, plant.text] as const));
 const expected: readonly Site[] = PLANTED.flatMap((plant) => (plant.rule === undefined ? [] : [{ path: plant.path, rule: plant.rule }]));
-const plantedScan = usePlanted(plants, [
-  ['experiences/sandbox/', 'experience'],
-  ['packages/characterisation/', 'test-infrastructure'],
-  ['packages/foundation/', 'foundation'],
-  ['packages/systems/cards/', 'system'],
-  ['packages/systems/chat/', 'system'],
-]);
+const plantedScan = usePlanted(plants, MEMBERS);
 const repoScan = useScan();
 
 /**
@@ -156,15 +79,32 @@ const repoScan = useScan();
  */
 function sitesIn(scanOf: () => Scan, paths: readonly string[]): Site[] {
   const scan = scanOf();
-  return paths.flatMap((path) => sites(scan, sourceOf(scan, path)));
+  return [
+    ...sites(
+      scan,
+      paths.map((path) => sourceOf(scan, path)),
+    ),
+  ];
 }
 
-/** Each declared owner, kernel owners included, as the rule's name, its owner module and the rule as declared. */
-const OWNED = SHAPES.flatMap((shape) =>
+/** Each declared owner, kernel owners included, as the rule's name and its owner module. */
+const DECLARED = SHAPES.flatMap((shape) =>
   [shape.kernelOwner, ...shape.scopes.map((scope) => scope.owner)].flatMap((owner) =>
-    owner === undefined ? [] : [[shape.name, owner, shape] as const],
+    owner === undefined ? [] : [[shape.name, owner] as const],
   ),
 );
+
+/**
+ * The owners a set of rules honours, as `rule: owner`.
+ *
+ * @param {readonly Rule[]} rules - The rules.
+ * @returns {readonly string[]} Each owner, by rule, sorted.
+ */
+function honoured(rules: readonly Rule[]): readonly string[] {
+  return rules
+    .flatMap((rule) => rule.scopes.flatMap((scope) => (scope.owner === undefined ? [] : [`${rule.name}: ${scope.owner}`])))
+    .toSorted();
+}
 
 describe('the repository', () => {
   test('no guarded API is used outside its owner', async () => {
@@ -172,12 +112,28 @@ describe('the repository', () => {
     expect(sitesIn(repoScan, await scannedFiles())).toStrictEqual([]);
   });
 
-  test.each(OWNED)('the %s owner %s exists and uses its API', async (_name, owner, rule) => {
+  test('honours every declared owner, so a member demoted from the kernel fails here', async () => {
+    expect.hasAssertions();
+    const rules = rulesOf(await population());
+    expect(honoured(rules)).toStrictEqual(DECLARED.map(([name, owner]) => `${name}: ${owner}`).toSorted());
+  });
+
+  test('guards every member under some scope of every rule', async () => {
+    expect.hasAssertions();
+    const held = await population();
+    const missed = unguarded(rulesOf(held), held);
+    expect(UNGUARDED.unexempted(missed)).toStrictEqual([]);
+  });
+
+  test.each(DECLARED)('the %s owner %s exists and uses its API', async (name, owner) => {
     expect.hasAssertions();
     const scan = repoScan();
-    const file = sourceOf(scan, owner);
+    const rule = present(
+      rulesOf(scan.population).find((candidate) => candidate.name === name),
+      `the rule ${name}`,
+    );
     await expect(tracked()).resolves.toContain(owner);
-    expect(ownerUses(scan, file, rule)).toBe(true);
+    expect(ownerUses(scan, sourceOf(scan, owner), rule)).toBe(true);
   });
 });
 

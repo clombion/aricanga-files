@@ -90,4 +90,5 @@ function usePlanted(plants: Readonly<ReadonlyMap<string, string>>, members: read
   );
 }
 
-export { usePlanted, useScan };
+export { plantedPopulation, usePlanted, useScan };
+export type { PlantedMember };

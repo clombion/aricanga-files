@@ -4,11 +4,12 @@
  */
 
 import { Accepted } from './exemptions.ts';
+import type { MemberDir } from './package-dirs.ts';
 import type { Population } from './scope.ts';
 
-/** A root a rule covers, and its owner there (undefined: no module of the root may use the API). */
+/** A root a rule covers, a directory, and its owner there (undefined: no module of the root may use the API). */
 interface Scope {
-  readonly root: string;
+  readonly root: MemberDir;
   readonly owner: string | undefined;
 }
 
@@ -31,10 +32,10 @@ interface RuleShape extends Omit<Rule, 'scopes'> {
 /**
  * The scopes of roots no module of which may use an API.
  *
- * @param {readonly string[]} roots - The roots.
+ * @param {readonly MemberDir[]} roots - The roots.
  * @returns {Scope[]} A scope per root, with no owner.
  */
-function nobody(...roots: readonly string[]): Scope[] {
+function nobody(...roots: readonly MemberDir[]): Scope[] {
   return roots.map((root) => ({ owner: undefined, root }));
 }
 
@@ -42,10 +43,10 @@ function nobody(...roots: readonly string[]): Scope[] {
  * The scopes of roots one module of which may use an API: the root holding `owner`; no module of the others.
  *
  * @param {string | undefined} owner - The owning module; undefined: no module of any root may use it.
- * @param {readonly string[]} roots - The roots.
+ * @param {readonly MemberDir[]} roots - The roots.
  * @returns {Scope[]} A scope per root.
  */
-function ownedBy(owner: string | undefined, roots: readonly string[]): Scope[] {
+function ownedBy(owner: string | undefined, roots: readonly MemberDir[]): Scope[] {
   return roots.map((root) => ({ owner: owner?.startsWith(root) === true ? owner : undefined, root }));
 }
 

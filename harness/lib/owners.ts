@@ -209,21 +209,25 @@ function breaks(rule: Rule, found: readonly string[]): boolean {
 }
 
 /**
- * The guarded uses in a covered file that its rules do not allow there.
+ * The guarded uses in covered files that their rules do not allow there: the rules are the scan's
+ * population's, derived once for all the files; a file's rule scope is the nearest root holding it.
  *
  * @param {Scan} scan - The open scan.
- * @param {SourceFile} file - The file.
+ * @param {readonly SourceFile[]} files - The files.
  * @returns {readonly Site[]} The sites.
  */
-function sites(scan: Scan, file: SourceFile): readonly Site[] {
-  const path = pathOf(file);
-  const found = uses(scan, file);
-  return rulesOf(scan.population)
-    .filter((rule) => {
-      const scope = nearest(rule.scopes, (candidate) => candidate.root, path);
-      return scope !== undefined && scope.owner !== path && breaks(rule, found);
-    })
-    .map((rule) => ({ path, rule: rule.name }));
+function sites(scan: Scan, files: readonly SourceFile[]): readonly Site[] {
+  const rules = rulesOf(scan.population);
+  return files.flatMap((file) => {
+    const path = pathOf(file);
+    const found = uses(scan, file);
+    return rules
+      .filter((rule) => {
+        const scope = nearest(rule.scopes, (candidate) => candidate.root, path);
+        return scope !== undefined && scope.owner !== path && breaks(rule, found);
+      })
+      .map((rule) => ({ path, rule: rule.name }));
+  });
 }
 
 /**
