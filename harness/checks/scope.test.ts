@@ -1,7 +1,7 @@
 /** The population: pnpm's workspace packages whose manifests git lists, less the POC, each with its role. */
 
 import type { Dir, Population } from '#lib/scope.ts';
-import { LOCKFILE, importers } from '#lib/pins.ts';
+import { LOCKFILE, lockOf } from '#lib/pins.ts';
 import {
   POC,
   PopulationError,
@@ -28,7 +28,7 @@ import path from 'node:path';
  */
 function missedImporters(held: Population, lockText: string): readonly string[] {
   const members = new Set<string>(held.members.map((member) => member.dir));
-  return importers(lockText)
+  return [...lockOf(lockText).keys()]
     .map((importer) => dirOfImporter(importer))
     .filter((dir) => dir !== '' && !POC.starts(dir) && !members.has(dir));
 }
@@ -168,7 +168,7 @@ describe('a package', () => {
       ['a/x:y/package.json', 'a/x:y', 'a/x:y/'],
       ['1.0/package.json', '1.0', '1.0/'],
     ]);
-    const keys = importers(QUOTED_KEYS);
+    const keys = [...lockOf(QUOTED_KEYS).keys()];
     expect(keys.map((importer) => importerOf(dirOfImporter(importer)))).toStrictEqual(keys);
   });
 
@@ -268,11 +268,11 @@ describe('the repository', () => {
   test('holds every package the lockfile records, but the root and the POC', async () => {
     expect.hasAssertions();
     const [held, lockText] = await Promise.all([population(), textOf(LOCKFILE)]);
-    expect([importers(lockText).includes('.'), missedImporters(held, lockText)]).toStrictEqual([true, []]);
+    expect([lockOf(lockText).has('.'), missedImporters(held, lockText)]).toStrictEqual([true, []]);
   });
 
   test('reads every importer of a lockfile as pnpm writes it: quoted, holding a colon, or with no dependencies', () => {
     expect.hasAssertions();
-    expect(importers(QUOTED_KEYS)).toStrictEqual(['.', '@s/p', 'a/#hash', "a/q'uote", 'a/sp ace', 'a/x:y']);
+    expect([...lockOf(QUOTED_KEYS).keys()]).toStrictEqual(['.', '@s/p', 'a/#hash', "a/q'uote", 'a/sp ace', 'a/x:y']);
   });
 });

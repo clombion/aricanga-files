@@ -40,7 +40,7 @@ describe('the renderers', () => {
 
   test('tabulate each pin with its upstream, and refuse a pin no upstream names', () => {
     expect.hasAssertions();
-    const pin = { tool: 'planted', version: '1.0.0', where: 'package.json' };
+    const pin = { tool: 'planted', version: '1.0.0', where: ['package.json'] };
     expect(pinTable([pin], new Map([['planted', 'owner/planted']]))).toBe(
       [
         '| Tool | Upstream | Pinned in | Pin |',
@@ -49,6 +49,14 @@ describe('the renderers', () => {
       ].join('\n'),
     );
     expect(() => pinTable([pin], new Map())).toThrow(new ConfigError('no upstream repository is named for the pinned tool "planted"'));
+  });
+
+  test('refuse to tabulate a pin with no version', () => {
+    expect.hasAssertions();
+    const pin = { tool: 'planted', version: undefined, where: ['pnpm-lock.yaml'] };
+    expect(() => pinTable([pin], new Map([['planted', 'owner/planted']]))).toThrow(
+      new ConfigError('no version is pinned for "planted" in pnpm-lock.yaml'),
+    );
   });
 
   test('tabulate the entry tasks and the tasks that lock first, escaping a pipe', () => {

@@ -37,7 +37,10 @@ function pinTable(found: readonly Pin[], upstream: ReadonlyMap<string, string>):
     if (repository === undefined) {
       throw new ConfigError(`no upstream repository is named for the pinned tool ${JSON.stringify(pin.tool)}`);
     }
-    return `| \`${pin.tool}\` | [${repository}](https://github.com/${repository}) | \`${pin.where}\` | ${pin.version} |`;
+    if (pin.version === undefined) {
+      throw new ConfigError(`no version is pinned for ${JSON.stringify(pin.tool)} in ${pin.where.join(', ')}`);
+    }
+    return `| \`${pin.tool}\` | [${repository}](https://github.com/${repository}) | ${pin.where.map((input) => `\`${input}\``).join(', ')} | ${pin.version} |`;
   });
   return ['| Tool | Upstream | Pinned in | Pin |', '| --- | --- | --- | --- |', ...rows].join('\n');
 }

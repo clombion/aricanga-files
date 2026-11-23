@@ -65,12 +65,12 @@ function meets(found: Version, minimum: Version): boolean {
  * A manifest's `engines.node` as written.
  *
  * @param {unknown} manifest - The parsed `package.json`.
- * @returns {string} The range, or `''` when it declares none.
+ * @returns {string | undefined} The range, or undefined when it declares none.
  */
-function engineRange(manifest: unknown): string {
+function engineRange(manifest: unknown): string | undefined {
   const engines = object(object(manifest, 'package.json')['engines'] ?? {}, 'engines');
-  const node = engines['node'] ?? '';
-  if (typeof node !== 'string') {
+  const { node } = engines;
+  if (node !== undefined && typeof node !== 'string') {
     throw new FloorError('engines.node is not a string');
   }
   return node;
@@ -84,7 +84,7 @@ function engineRange(manifest: unknown): string {
  */
 function declaredFloor(manifest: unknown): Version {
   const range = engineRange(manifest);
-  if (range === '') {
+  if (range === undefined) {
     throw new FloorError('package.json declares no engines.node');
   }
   return floor(range);

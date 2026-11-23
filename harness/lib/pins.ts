@@ -1,87 +1,60 @@
 /**
  * The pinned tools, each with its upstream repository, where it is pinned, and its pin; and the
- * lockfile's importers, read for the population's independent check (`harness/checks/scope.test.ts`).
+ * lockfile read once, by importer, for the pins and for the population's independent check
+ * (`harness/checks/scope.test.ts`).
  *
- * The pins are the root `package.json`'s dependencies and devDependencies and the devDependencies
- * of every held manifest (each member's, and `harness/lint-rules/package.json`), each at the version
- * `pnpm-lock.yaml` holds, read as YAML, plus Node's `engines.node` floor and pnpm's `packageManager`. `UPSTREAM` names each tool's repository; the
- * tool-upgrades check fails on a pin it does not name and on a row that pins nothing, and
- * `harness/lib/generated.ts` renders the table of `harness.md`.
+ * The pins are the root `package.json`'s dependencies and devDependencies and each member's
+ * devDependencies, each at the version `pnpm-lock.yaml` locks under that package's importer, plus
+ * Node's `engines.node` floor and pnpm's `packageManager`. The manifests read are the population's:
+ * the root and the members, never another listed `package.json`. A tool locked at two versions is
+ * two pins. `UPSTREAM` names each tool's repository; the tool-upgrades check fails on a pin it does
+ * not name (`upstream.ts`), on a pin with no version and on a row that pins nothing, and `harness/lib/generated.ts`
+ * renders the table of `harness.md`.
  */
 
-import { ConfigError, json, object } from './config.ts';
-import { textOf, textsOf } from './source-files.ts';
+import { ConfigError, object, report } from './config.ts';
+import type { Dir, Population } from './scope.ts';
+import { importerOf, manifestOf, population } from './scope.ts';
 import { engineRange } from './node-floor.ts';
+import { isEmpty } from './lists.ts';
 import { parse } from 'yaml';
-import { population } from './scope.ts';
+import { present } from './present.ts';
+import { textOf } from './source-files.ts';
 
-/** A pinned tool: its name, the file that pins it, and its version there. */
+/** A pinned tool: its name, its version (none when nothing holds one), and every input that pins it at that version. */
 interface Pin {
   readonly tool: string;
-  readonly where: string;
-  readonly version: string;
+  readonly where: readonly string[];
+  readonly version: string | undefined;
 }
 
-/** A workspace package's manifest, keyed by its directory (`.` for the root). */
+/** One input's pin of a tool: the file, and the lockfile importers it is pinned under (none for a `package.json` field). */
+interface Found {
+  readonly tool: string;
+  readonly version: string | undefined;
+  readonly file: string;
+  readonly importers: readonly string[];
+}
+
+/** A workspace package's parsed manifest, by its directory. */
 interface Manifest {
-  readonly importer: string;
+  readonly dir: Dir;
   readonly manifest: unknown;
 }
 
-/** The upstream GitHub repository of every pinned tool, written as owner and repository name. */
-const UPSTREAM: ReadonlyMap<string, string> = new Map([
-  ['@ai-sdk/anthropic', 'vercel/ai'],
-  ['@ai-sdk/google', 'vercel/ai'],
-  ['@ai-sdk/openai', 'vercel/ai'],
-  ['@axe-core/playwright', 'dequelabs/axe-core-npm'],
-  ['@commitlint/cli', 'conventional-changelog/commitlint'],
-  ['@commitlint/config-conventional', 'conventional-changelog/commitlint'],
-  ['@double-great/stylelint-a11y', 'double-great/stylelint-a11y'],
-  ['@iarna/toml', 'iarna/iarna-toml'],
-  ['@playwright/test', 'microsoft/playwright'],
-  ['@solidjs/compiler', 'solidjs/solid'],
-  ['@solidjs/vite-plugin', 'solidjs/vite-plugin-solid'],
-  ['@types/iarna__toml', 'DefinitelyTyped/DefinitelyTyped'],
-  ['@types/node', 'DefinitelyTyped/DefinitelyTyped'],
-  ['@vitest/coverage-v8', 'vitest-dev/vitest'],
-  ['@viz-js/viz', 'mdaines/viz-js'],
-  ['ai', 'vercel/ai'],
-  ['eslint', 'eslint/eslint'],
-  ['eslint-plugin-solid', 'solidjs-community/eslint-plugin-solid'],
-  ['fast-check', 'dubzzz/fast-check'],
-  ['happy-dom', 'capricorn86/happy-dom'],
-  ['inkjs', 'y-lohse/inkjs'],
-  ['jscpd', 'kucherenko/jscpd'],
-  ['knip', 'webpro-nl/knip'],
-  ['lefthook', 'evilmartians/lefthook'],
-  ['node', 'nodejs/node'],
-  ['oxfmt', 'oxc-project/oxc'],
-  ['oxlint', 'oxc-project/oxc'],
-  ['oxlint-tsgolint', 'oxc-project/tsgolint'],
-  ['pnpm', 'pnpm/pnpm'],
-  ['remark-parse', 'remarkjs/remark'],
-  ['sharp', 'lovell/sharp'],
-  ['stylelint', 'stylelint/stylelint'],
-  ['stylelint-config-standard', 'stylelint/stylelint-config-standard'],
-  ['stylelint-declaration-strict-value', 'AndyOGo/stylelint-declaration-strict-value'],
-  ['stylelint-no-unsupported-browser-features', 'RJWadley/stylelint-no-unsupported-browser-features'],
-  ['stylelint-order', 'hudochenkov/stylelint-order'],
-  ['stylelint-plugin-logical-css', 'yuschick/stylelint-plugin-logical-css'],
-  ['typescript', 'microsoft/TypeScript'],
-  ['unified', 'unifiedjs/unified'],
-  ['unist-util-visit', 'syntax-tree/unist-util-visit'],
-  ['vite', 'vitejs/vite'],
-  ['vitest', 'vitest-dev/vitest'],
-  ['xstate', 'statelyai/xstate'],
-  ['yaml', 'eemeli/yaml'],
-  ['zod', 'colinhacks/zod'],
-]);
+/** A lockfile read once: each importer's resolved versions, by package name, by importer. */
+type Lock = ReadonlyMap<string, ReadonlyMap<string, string>>;
 
 const LOCKFILE = 'pnpm-lock.yaml';
 const WORKSPACE = 'workspace:';
 
 const PNPM_PREFIX = /^pnpm@/u;
-const MANIFEST_SUFFIX = /\/package\.json$/u;
+
+/** What joins a pin's tool and version in its key: below every character a name or version holds. */
+const KEY_SEPARATOR = '\u0000';
+
+/** A group's first input. */
+const FIRST = 0;
 
 /**
  * The dependency groups pnpm writes in a lockfile importer (pnpm's `DEPENDENCIES_FIELDS`). A package a
@@ -112,31 +85,18 @@ function strings(value: unknown, what: string): Readonly<Record<string, string>>
 }
 
 /**
- * A lockfile's text read as YAML, refusing text that is not YAML by naming the lockfile.
+ * A lockfile's text read as YAML's failsafe schema, so every key and version is the string pnpm
+ * wrote (`1.0` stays `1.0`), refusing text that is not YAML by naming the lockfile.
  *
  * @param {string} lockText - The lockfile's text.
  * @returns {unknown} The parsed value.
  */
 function yamlOf(lockText: string): unknown {
   try {
-    return parse(lockText);
+    return parse(lockText, { schema: 'failsafe' });
   } catch (error: unknown) {
     throw new ConfigError(`${LOCKFILE} is not YAML: ${String(error)}`, { cause: error });
   }
-}
-
-/**
- * The `importers` mapping of a pnpm lockfile, read as YAML: each importer by its key as YAML reads it
- * (quoted or plain, `{}` for an importer with no dependencies). An importer holds its dependency
- * groups and pnpm's other fields (`publishDirectory`, `dependenciesMeta`). Text that is not YAML (a
- * merge conflict, a duplicate key) and a lockfile with no `importers` mapping refuse with `ConfigError`.
- *
- * @param {string} lockText - The lockfile's text.
- * @returns {Readonly<Record<string, unknown>>} Each importer, by its key.
- */
-function importerGroups(lockText: string): Readonly<Record<string, unknown>> {
-  const lock = object(yamlOf(lockText), LOCKFILE);
-  return object(lock['importers'], `${LOCKFILE} importers`);
 }
 
 /**
@@ -145,12 +105,12 @@ function importerGroups(lockText: string): Readonly<Record<string, unknown>> {
  * `dependenciesMeta`) are not read. An entry with no `version` is left out, so its pin reads as one
  * with no version, the same as a package the lockfile does not hold.
  *
- * @param {string} lockText - The lockfile's text.
- * @param {string} importer - The importer, `.` for the root.
+ * @param {string} importer - The importer, for a refusal.
+ * @param {unknown} value - The importer's mapping.
  * @returns {ReadonlyMap<string, string>} Each package's resolved version, by name.
  */
-function locked(lockText: string, importer: string): ReadonlyMap<string, string> {
-  const fields = object(importerGroups(lockText)[importer] ?? {}, `${LOCKFILE} ${importer}`);
+function lockedVersions(importer: string, value: unknown): ReadonlyMap<string, string> {
+  const fields = object(value, `${LOCKFILE} ${importer}`);
   return new Map(
     LOCK_GROUPS.flatMap((group) =>
       Object.entries(object(Object.hasOwn(fields, group) ? fields[group] : {}, `${LOCKFILE} ${importer} ${group}`)).flatMap(
@@ -164,81 +124,145 @@ function locked(lockText: string, importer: string): ReadonlyMap<string, string>
 }
 
 /**
- * The importers a pnpm lockfile records: one per workspace package `pnpm install` wrote, `.` for the
- * root, each as the directory pnpm names it.
+ * A pnpm lockfile read once: one entry per importer `pnpm install` wrote, `.` for the root, each as
+ * the directory pnpm names it, with its resolved versions. Text that is not YAML (a merge conflict, a
+ * duplicate key) and a lockfile with no `importers` mapping refuse with `ConfigError`.
  *
  * @param {string} lockText - The lockfile's text.
- * @returns {readonly string[]} The importers.
+ * @returns {Lock} Each importer's versions.
  */
-function importers(lockText: string): readonly string[] {
-  return Object.keys(importerGroups(lockText));
+function lockOf(lockText: string): Lock {
+  const lock = object(yamlOf(lockText), LOCKFILE);
+  const importers = object(lock['importers'], `${LOCKFILE} importers`);
+  return new Map(
+    Object.entries(importers).map(([importer, value]: readonly [string, unknown]) => [importer, lockedVersions(importer, value)]),
+  );
 }
 
 /**
  * The root manifest's pins beyond its dependencies: Node's floor and pnpm's `packageManager`.
  *
  * @param {unknown} manifest - The root `package.json`.
- * @returns {readonly Pin[]} The two pins.
+ * @returns {readonly Found[]} The two pins.
  */
-function rootPins(manifest: unknown): readonly Pin[] {
-  const fields = object(manifest, 'package.json');
-  const manager = typeof fields['packageManager'] === 'string' ? fields['packageManager'] : '';
+function rootPins(manifest: unknown): readonly Found[] {
+  const { packageManager } = object(manifest, 'package.json');
   return [
-    { tool: 'node', version: engineRange(manifest), where: 'package.json engines' },
-    { tool: 'pnpm', version: manager.replace(PNPM_PREFIX, ''), where: 'package.json packageManager' },
+    { file: 'package.json engines', importers: [], tool: 'node', version: engineRange(manifest) },
+    {
+      file: 'package.json packageManager',
+      importers: [],
+      tool: 'pnpm',
+      version: typeof packageManager === 'string' ? packageManager.replace(PNPM_PREFIX, '') : undefined,
+    },
   ];
 }
 
 /**
- * The pins of one manifest at the versions the lockfile holds.
+ * The pins of one manifest at the versions the lockfile holds under its importer.
  *
- * @param {Manifest} entry - The manifest and its importer.
- * @param {string} lockText - The lockfile's text.
- * @returns {readonly Pin[]} Its pins.
+ * @param {Manifest} entry - The manifest and its directory.
+ * @param {Lock} lock - The lockfile, read once.
+ * @returns {readonly Found[]} Its pins.
  */
-function manifestPins(entry: Manifest, lockText: string): readonly Pin[] {
-  const { importer, manifest } = entry;
-  const fields = object(manifest, `${importer}/package.json`);
-  const groups = importer === '.' ? ['dependencies', 'devDependencies'] : ['devDependencies'];
-  const versions = locked(lockText, importer);
+function manifestPins(entry: Manifest, lock: Lock): readonly Found[] {
+  const { dir, manifest } = entry;
+  const fields = object(manifest, manifestOf(dir));
+  const groups = dir === '' ? ['dependencies', 'devDependencies'] : ['devDependencies'];
+  const versions = lock.get(importerOf(dir));
   const dependencies = groups.flatMap((group) =>
-    Object.entries(strings(fields[group], `${importer} ${group}`))
+    Object.entries(strings(fields[group], `${manifestOf(dir)} ${group}`))
       .filter(([, specifier]: readonly [string, string]) => !specifier.startsWith(WORKSPACE))
-      .map(([tool]: readonly [string, string]): Pin => ({ tool, version: versions.get(tool) ?? '', where: LOCKFILE })),
+      .map(([tool]: readonly [string, string]): Found => ({
+        file: LOCKFILE,
+        importers: [importerOf(dir)],
+        tool,
+        version: versions?.get(tool),
+      })),
   );
-  return importer === '.' ? [...dependencies, ...rootPins(manifest)] : dependencies;
+  return dir === '' ? [...dependencies, ...rootPins(manifest)] : dependencies;
 }
 
 /**
- * Every pin of the given manifests at the versions the lockfile holds.
+ * A found pin's key: its tool, then its version.
+ *
+ * @param {Found} input - The found pin.
+ * @returns {string} Its key.
+ */
+function keyOf(input: Found): string {
+  return `${input.tool}${KEY_SEPARATOR}${input.version ?? ''}`;
+}
+
+/**
+ * The inputs of one (tool, version), as a pin's `where`: each file once, a lockfile with the importers
+ * that pin the tool under it (`pnpm-lock.yaml (., packages/app)`), ordered by code unit.
+ *
+ * @param {readonly Found[]} found - The inputs' pins of one tool at one version.
+ * @returns {readonly string[]} The inputs.
+ */
+function inputsOf(found: readonly Found[]): readonly string[] {
+  const files = [...new Set(found.map((input) => input.file))].toSorted();
+  return files.map((file) => {
+    const importers = [...new Set(found.filter((input) => input.file === file).flatMap((input) => input.importers))].toSorted();
+    return isEmpty(importers) ? file : `${file} (${importers.join(', ')})`;
+  });
+}
+
+/**
+ * Every pin of the given manifests at the versions the lockfile holds: one per tool and version, so
+ * a tool locked at two versions is two pins, each naming every input that pins it at its version;
+ * ordered by tool, then version.
  *
  * @param {readonly Manifest[]} manifests - The manifests.
- * @param {string} lockText - The lockfile's text.
- * @returns {readonly Pin[]} The pins, one per tool, sorted by tool.
+ * @param {string} lockText - The lockfile's text, read once here.
+ * @returns {readonly Pin[]} The pins.
  */
 function pinned(manifests: readonly Manifest[], lockText: string): readonly Pin[] {
-  const found = manifests.flatMap((entry) => manifestPins(entry, lockText));
-  const unique = new Map(found.map((pin) => [pin.tool, pin] as const));
-  return [...unique.values()].toSorted((first, second) => first.tool.localeCompare(second.tool));
+  const lock = lockOf(lockText);
+  const found = manifests.flatMap((entry) => manifestPins(entry, lock));
+  const byKey = new Map(found.map((input) => [keyOf(input), found.filter((other) => keyOf(other) === keyOf(input))] as const));
+  return [...byKey.entries()]
+    .toSorted(([first]: readonly [string, readonly Found[]], [second]: readonly [string, readonly Found[]]) => first.localeCompare(second))
+    .map(([, inputs]: readonly [string, readonly Found[]]): Pin => {
+      const { tool, version } = present(inputs.at(FIRST), 'a pin of its own key');
+      return { tool, version, where: inputsOf(inputs) };
+    });
 }
 
 /**
- * Every pin of this repository: the root manifest and each held workspace package's.
+ * The pins of a population: the root's manifest and each member's, at the versions the lockfile holds.
+ *
+ * @param {Population} held - The population.
+ * @param {(listed: string) => Promise<string>} read - Reads a listed file's text.
+ * @returns {Promise<readonly Pin[]>} The pins.
+ */
+async function pinsOf(held: Population, read: (listed: string) => Promise<string>): Promise<readonly Pin[]> {
+  const dirs: readonly Dir[] = ['', ...held.members.map((member) => member.dir)];
+  const [manifests, lockText] = await Promise.all([
+    Promise.all(
+      dirs.map(async (dir): Promise<Manifest> => {
+        const text = await read(manifestOf(dir));
+        return { dir, manifest: report(text, manifestOf(dir)) };
+      }),
+    ),
+    read(LOCKFILE),
+  ]);
+  return pinned(manifests, lockText);
+}
+
+/**
+ * Every pin of this repository.
  *
  * @returns {Promise<readonly Pin[]>} The pins.
  */
 async function pins(): Promise<readonly Pin[]> {
   const held = await population();
-  const texts = await textsOf(
-    held.listing.filter((path) => path === 'package.json' || (held.holds(path) && path.endsWith('/package.json'))),
-  );
-  const manifests = texts.map(([path, text]: readonly [string, string]) => ({
-    importer: path === 'package.json' ? '.' : path.replace(MANIFEST_SUFFIX, ''),
-    manifest: json(text),
-  }));
-  const lockText = await textOf(LOCKFILE);
-  return pinned(manifests, lockText);
+  const found = await pinsOf(held, async (listed: string): Promise<string> => {
+    const text = await textOf(listed);
+    return text;
+  });
+  return found;
 }
 
-export { importers, LOCKFILE, pinned, pins, UPSTREAM };
+export { LOCKFILE, lockOf, pinned, pins, pinsOf };
 export type { Pin };

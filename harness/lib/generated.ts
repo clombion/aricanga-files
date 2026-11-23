@@ -7,12 +7,13 @@
  */
 
 import type { Block, Doc } from './docs.ts';
-import { UPSTREAM, pins } from './pins.ts';
 import { checkList, pinTable, taskTable } from './generated-render.ts';
 import { markdown, markdownDocs, markdownPaths } from './docs.ts';
 import { textsOf, tracked, writeText } from './source-files.ts';
 import { Accepted } from './exemptions.ts';
+import { UPSTREAM } from './upstream.ts';
 import { checkModules } from './checks.ts';
+import { pins } from './pins.ts';
 import { repoTasks } from './config.ts';
 
 /** Each generator, by the name of the blocks it renders. */

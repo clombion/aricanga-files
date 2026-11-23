@@ -138,55 +138,55 @@ list.
 
 ## tool-upgrades: Choosing, reading and taking a tool upgrade
 
-Every pinned tool has its upstream repository in `UPSTREAM` (`harness/lib/pins.ts`); `pnpm run fix`
+Every pinned tool has its upstream repository in `UPSTREAM` (`harness/lib/upstream.ts`); `pnpm run fix`
 writes this table from `package.json` and `pnpm-lock.yaml`.
 
 <!-- generated: pins -->
 | Tool | Upstream | Pinned in | Pin |
 | --- | --- | --- | --- |
-| `@ai-sdk/anthropic` | [vercel/ai](https://github.com/vercel/ai) | `pnpm-lock.yaml` | 4.0.106 |
-| `@ai-sdk/google` | [vercel/ai](https://github.com/vercel/ai) | `pnpm-lock.yaml` | 4.0.122 |
-| `@ai-sdk/openai` | [vercel/ai](https://github.com/vercel/ai) | `pnpm-lock.yaml` | 4.0.121 |
-| `@axe-core/playwright` | [dequelabs/axe-core-npm](https://github.com/dequelabs/axe-core-npm) | `pnpm-lock.yaml` | 4.14.0 |
-| `@commitlint/cli` | [conventional-changelog/commitlint](https://github.com/conventional-changelog/commitlint) | `pnpm-lock.yaml` | 21.2.4 |
-| `@commitlint/config-conventional` | [conventional-changelog/commitlint](https://github.com/conventional-changelog/commitlint) | `pnpm-lock.yaml` | 21.2.4 |
-| `@double-great/stylelint-a11y` | [double-great/stylelint-a11y](https://github.com/double-great/stylelint-a11y) | `pnpm-lock.yaml` | 3.8.3 |
-| `@iarna/toml` | [iarna/iarna-toml](https://github.com/iarna/iarna-toml) | `pnpm-lock.yaml` | 2.2.5 |
-| `@playwright/test` | [microsoft/playwright](https://github.com/microsoft/playwright) | `pnpm-lock.yaml` | 1.65.1 |
-| `@solidjs/compiler` | [solidjs/solid](https://github.com/solidjs/solid) | `pnpm-lock.yaml` | 2.0.2 |
-| `@solidjs/vite-plugin` | [solidjs/vite-plugin-solid](https://github.com/solidjs/vite-plugin-solid) | `pnpm-lock.yaml` | 3.0.1 |
-| `@types/iarna__toml` | [DefinitelyTyped/DefinitelyTyped](https://github.com/DefinitelyTyped/DefinitelyTyped) | `pnpm-lock.yaml` | 2.0.5 |
-| `@types/node` | [DefinitelyTyped/DefinitelyTyped](https://github.com/DefinitelyTyped/DefinitelyTyped) | `pnpm-lock.yaml` | 26.6.6 |
-| `@vitest/coverage-v8` | [vitest-dev/vitest](https://github.com/vitest-dev/vitest) | `pnpm-lock.yaml` | 5.1.1 |
-| `@viz-js/viz` | [mdaines/viz-js](https://github.com/mdaines/viz-js) | `pnpm-lock.yaml` | 3.31.0 |
-| `ai` | [vercel/ai](https://github.com/vercel/ai) | `pnpm-lock.yaml` | 7.0.177 |
-| `eslint` | [eslint/eslint](https://github.com/eslint/eslint) | `pnpm-lock.yaml` | 10.15.0 |
-| `eslint-plugin-solid` | [solidjs-community/eslint-plugin-solid](https://github.com/solidjs-community/eslint-plugin-solid) | `pnpm-lock.yaml` | 0.20.0 |
-| `fast-check` | [dubzzz/fast-check](https://github.com/dubzzz/fast-check) | `pnpm-lock.yaml` | 4.10.3 |
-| `happy-dom` | [capricorn86/happy-dom](https://github.com/capricorn86/happy-dom) | `pnpm-lock.yaml` | 21.0.4 |
-| `inkjs` | [y-lohse/inkjs](https://github.com/y-lohse/inkjs) | `pnpm-lock.yaml` | 2.4.0 |
-| `jscpd` | [kucherenko/jscpd](https://github.com/kucherenko/jscpd) | `pnpm-lock.yaml` | 5.4.2 |
-| `knip` | [webpro-nl/knip](https://github.com/webpro-nl/knip) | `pnpm-lock.yaml` | 6.44.1 |
-| `lefthook` | [evilmartians/lefthook](https://github.com/evilmartians/lefthook) | `pnpm-lock.yaml` | 2.2.2 |
+| `@ai-sdk/anthropic` | [vercel/ai](https://github.com/vercel/ai) | `pnpm-lock.yaml (.)` | 4.0.106 |
+| `@ai-sdk/google` | [vercel/ai](https://github.com/vercel/ai) | `pnpm-lock.yaml (.)` | 4.0.122 |
+| `@ai-sdk/openai` | [vercel/ai](https://github.com/vercel/ai) | `pnpm-lock.yaml (.)` | 4.0.121 |
+| `@axe-core/playwright` | [dequelabs/axe-core-npm](https://github.com/dequelabs/axe-core-npm) | `pnpm-lock.yaml (.)` | 4.14.0 |
+| `@commitlint/cli` | [conventional-changelog/commitlint](https://github.com/conventional-changelog/commitlint) | `pnpm-lock.yaml (.)` | 21.2.4 |
+| `@commitlint/config-conventional` | [conventional-changelog/commitlint](https://github.com/conventional-changelog/commitlint) | `pnpm-lock.yaml (.)` | 21.2.4 |
+| `@double-great/stylelint-a11y` | [double-great/stylelint-a11y](https://github.com/double-great/stylelint-a11y) | `pnpm-lock.yaml (.)` | 3.8.3 |
+| `@iarna/toml` | [iarna/iarna-toml](https://github.com/iarna/iarna-toml) | `pnpm-lock.yaml (.)` | 2.2.5 |
+| `@playwright/test` | [microsoft/playwright](https://github.com/microsoft/playwright) | `pnpm-lock.yaml (.)` | 1.65.1 |
+| `@solidjs/compiler` | [solidjs/solid](https://github.com/solidjs/solid) | `pnpm-lock.yaml (experiences/sandbox, packages/characterisation)` | 2.0.2 |
+| `@solidjs/vite-plugin` | [solidjs/vite-plugin-solid](https://github.com/solidjs/vite-plugin-solid) | `pnpm-lock.yaml (., experiences/sandbox, packages/characterisation)` | 3.0.1 |
+| `@types/iarna__toml` | [DefinitelyTyped/DefinitelyTyped](https://github.com/DefinitelyTyped/DefinitelyTyped) | `pnpm-lock.yaml (.)` | 2.0.5 |
+| `@types/node` | [DefinitelyTyped/DefinitelyTyped](https://github.com/DefinitelyTyped/DefinitelyTyped) | `pnpm-lock.yaml (.)` | 26.6.6 |
+| `@vitest/coverage-v8` | [vitest-dev/vitest](https://github.com/vitest-dev/vitest) | `pnpm-lock.yaml (.)` | 5.1.1 |
+| `@viz-js/viz` | [mdaines/viz-js](https://github.com/mdaines/viz-js) | `pnpm-lock.yaml (.)` | 3.31.0 |
+| `ai` | [vercel/ai](https://github.com/vercel/ai) | `pnpm-lock.yaml (.)` | 7.0.177 |
+| `eslint-plugin-solid` | [solidjs-community/eslint-plugin-solid](https://github.com/solidjs-community/eslint-plugin-solid) | `pnpm-lock.yaml (.)` | 0.20.0 |
+| `eslint` | [eslint/eslint](https://github.com/eslint/eslint) | `pnpm-lock.yaml (.)` | 10.15.0 |
+| `fast-check` | [dubzzz/fast-check](https://github.com/dubzzz/fast-check) | `pnpm-lock.yaml (.)` | 4.10.3 |
+| `happy-dom` | [capricorn86/happy-dom](https://github.com/capricorn86/happy-dom) | `pnpm-lock.yaml (.)` | 21.0.4 |
+| `inkjs` | [y-lohse/inkjs](https://github.com/y-lohse/inkjs) | `pnpm-lock.yaml (., experiences/sandbox)` | 2.4.0 |
+| `jscpd` | [kucherenko/jscpd](https://github.com/kucherenko/jscpd) | `pnpm-lock.yaml (.)` | 5.4.2 |
+| `knip` | [webpro-nl/knip](https://github.com/webpro-nl/knip) | `pnpm-lock.yaml (.)` | 6.44.1 |
+| `lefthook` | [evilmartians/lefthook](https://github.com/evilmartians/lefthook) | `pnpm-lock.yaml (.)` | 2.2.2 |
 | `node` | [nodejs/node](https://github.com/nodejs/node) | `package.json engines` | >=22.18.0 |
-| `oxfmt` | [oxc-project/oxc](https://github.com/oxc-project/oxc) | `pnpm-lock.yaml` | 0.79.0 |
-| `oxlint` | [oxc-project/oxc](https://github.com/oxc-project/oxc) | `pnpm-lock.yaml` | 1.94.0 |
-| `oxlint-tsgolint` | [oxc-project/tsgolint](https://github.com/oxc-project/tsgolint) | `pnpm-lock.yaml` | 7.0.2007 |
+| `oxfmt` | [oxc-project/oxc](https://github.com/oxc-project/oxc) | `pnpm-lock.yaml (.)` | 0.79.0 |
+| `oxlint-tsgolint` | [oxc-project/tsgolint](https://github.com/oxc-project/tsgolint) | `pnpm-lock.yaml (.)` | 7.0.2007 |
+| `oxlint` | [oxc-project/oxc](https://github.com/oxc-project/oxc) | `pnpm-lock.yaml (.)` | 1.94.0 |
 | `pnpm` | [pnpm/pnpm](https://github.com/pnpm/pnpm) | `package.json packageManager` | 10.28.0 |
-| `remark-parse` | [remarkjs/remark](https://github.com/remarkjs/remark) | `pnpm-lock.yaml` | 11.0.0 |
-| `sharp` | [lovell/sharp](https://github.com/lovell/sharp) | `pnpm-lock.yaml` | 0.35.5 |
-| `stylelint` | [stylelint/stylelint](https://github.com/stylelint/stylelint) | `pnpm-lock.yaml` | 17.16.0 |
-| `stylelint-config-standard` | [stylelint/stylelint-config-standard](https://github.com/stylelint/stylelint-config-standard) | `pnpm-lock.yaml` | 40.0.0 |
-| `stylelint-declaration-strict-value` | [AndyOGo/stylelint-declaration-strict-value](https://github.com/AndyOGo/stylelint-declaration-strict-value) | `pnpm-lock.yaml` | 1.12.1 |
-| `stylelint-no-unsupported-browser-features` | [RJWadley/stylelint-no-unsupported-browser-features](https://github.com/RJWadley/stylelint-no-unsupported-browser-features) | `pnpm-lock.yaml` | 8.1.2 |
-| `stylelint-order` | [hudochenkov/stylelint-order](https://github.com/hudochenkov/stylelint-order) | `pnpm-lock.yaml` | 8.1.3 |
-| `stylelint-plugin-logical-css` | [yuschick/stylelint-plugin-logical-css](https://github.com/yuschick/stylelint-plugin-logical-css) | `pnpm-lock.yaml` | 2.1.0 |
-| `typescript` | [microsoft/TypeScript](https://github.com/microsoft/TypeScript) | `pnpm-lock.yaml` | 7.0.2 |
-| `unified` | [unifiedjs/unified](https://github.com/unifiedjs/unified) | `pnpm-lock.yaml` | 11.0.5 |
-| `unist-util-visit` | [syntax-tree/unist-util-visit](https://github.com/syntax-tree/unist-util-visit) | `pnpm-lock.yaml` | 5.2.0 |
-| `vite` | [vitejs/vite](https://github.com/vitejs/vite) | `pnpm-lock.yaml` | 8.3.8 |
-| `vitest` | [vitest-dev/vitest](https://github.com/vitest-dev/vitest) | `pnpm-lock.yaml` | 5.1.1 |
-| `xstate` | [statelyai/xstate](https://github.com/statelyai/xstate) | `pnpm-lock.yaml` | 5.33.4 |
-| `yaml` | [eemeli/yaml](https://github.com/eemeli/yaml) | `pnpm-lock.yaml` | 2.9.1 |
-| `zod` | [colinhacks/zod](https://github.com/colinhacks/zod) | `pnpm-lock.yaml` | 4.6.7 |
+| `remark-parse` | [remarkjs/remark](https://github.com/remarkjs/remark) | `pnpm-lock.yaml (.)` | 11.0.0 |
+| `sharp` | [lovell/sharp](https://github.com/lovell/sharp) | `pnpm-lock.yaml (.)` | 0.35.5 |
+| `stylelint-config-standard` | [stylelint/stylelint-config-standard](https://github.com/stylelint/stylelint-config-standard) | `pnpm-lock.yaml (.)` | 40.0.0 |
+| `stylelint-declaration-strict-value` | [AndyOGo/stylelint-declaration-strict-value](https://github.com/AndyOGo/stylelint-declaration-strict-value) | `pnpm-lock.yaml (.)` | 1.12.1 |
+| `stylelint-no-unsupported-browser-features` | [RJWadley/stylelint-no-unsupported-browser-features](https://github.com/RJWadley/stylelint-no-unsupported-browser-features) | `pnpm-lock.yaml (.)` | 8.1.2 |
+| `stylelint-order` | [hudochenkov/stylelint-order](https://github.com/hudochenkov/stylelint-order) | `pnpm-lock.yaml (.)` | 8.1.3 |
+| `stylelint-plugin-logical-css` | [yuschick/stylelint-plugin-logical-css](https://github.com/yuschick/stylelint-plugin-logical-css) | `pnpm-lock.yaml (.)` | 2.1.0 |
+| `stylelint` | [stylelint/stylelint](https://github.com/stylelint/stylelint) | `pnpm-lock.yaml (.)` | 17.16.0 |
+| `typescript` | [microsoft/TypeScript](https://github.com/microsoft/TypeScript) | `pnpm-lock.yaml (.)` | 7.0.2 |
+| `unified` | [unifiedjs/unified](https://github.com/unifiedjs/unified) | `pnpm-lock.yaml (.)` | 11.0.5 |
+| `unist-util-visit` | [syntax-tree/unist-util-visit](https://github.com/syntax-tree/unist-util-visit) | `pnpm-lock.yaml (.)` | 5.2.0 |
+| `vite` | [vitejs/vite](https://github.com/vitejs/vite) | `pnpm-lock.yaml (.)` | 8.3.8 |
+| `vitest` | [vitest-dev/vitest](https://github.com/vitest-dev/vitest) | `pnpm-lock.yaml (.)` | 5.1.1 |
+| `xstate` | [statelyai/xstate](https://github.com/statelyai/xstate) | `pnpm-lock.yaml (.)` | 5.33.4 |
+| `yaml` | [eemeli/yaml](https://github.com/eemeli/yaml) | `pnpm-lock.yaml (.)` | 2.9.1 |
+| `zod` | [colinhacks/zod](https://github.com/colinhacks/zod) | `pnpm-lock.yaml (.)` | 4.6.7 |
 <!-- end: pins -->
