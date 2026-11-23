@@ -4,10 +4,10 @@
  */
 
 import { list, object, stringOf } from './config.ts';
-import { EXIT_SUCCESS } from './output.ts';
 import type { Outcome } from './process.ts';
 import { createHash } from 'node:crypto';
 import { relativeTo as posixRelative } from './relative.ts';
+import { succeeded } from './exit-status.ts';
 
 /** A jscpd run's name. */
 type Run = 'cross-file' | 'exact';
@@ -115,7 +115,7 @@ function noReport(outcome: Outcome, reported: boolean): string | undefined {
   if (outcome.kind === 'not-started') {
     return `jscpd could not start (${outcome.reason}): run \`pnpm install\``;
   }
-  if (outcome.status !== EXIT_SUCCESS) {
+  if (!succeeded(outcome)) {
     return `jscpd exited ${outcome.status}: ${outcome.stdout}${outcome.stderr}`;
   }
   return reported ? undefined : 'jscpd wrote no report';

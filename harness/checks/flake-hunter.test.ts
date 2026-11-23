@@ -9,7 +9,7 @@
 
 import { describe, expect, test } from 'vitest';
 import { hunt, huntOf } from '#lib/stress.ts';
-import { EXIT_CLEAN } from './exit-status.ts';
+import { EXIT_CLEAN } from '#lib/exit-status.ts';
 import type { Hunt } from '#lib/stress.ts';
 import { Project } from '#lib/tools.ts';
 

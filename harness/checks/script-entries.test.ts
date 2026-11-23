@@ -1,5 +1,6 @@
 /** The entry scripts' logic reports each problem and ends with the exit code its result calls for. */
 
+import { EXIT_CLEAN, EXIT_FINDINGS } from '#lib/exit-status.ts';
 import { EXIT_FAILURE, EXIT_SUCCESS } from '#lib/output.ts';
 import { buildCheck, checkPushed, genDocs, stressHunt, typecheckAll } from '#lib/script-entries.ts';
 import { describe, expect, test } from 'vitest';
@@ -9,13 +10,13 @@ import type { Hunt } from '#lib/stress.ts';
 import { Scripted } from '#lib/doubles.ts';
 
 /** A built app. */
-const BUILT: BuildResult = { app: 'apps/a', output: '', status: EXIT_SUCCESS, written: [] };
+const BUILT: BuildResult = { app: 'apps/a', output: '', status: EXIT_CLEAN, written: [] };
 
 /** An app that failed to build. */
-const BROKEN: BuildResult = { app: 'apps/b', output: 'boom', status: EXIT_FAILURE, written: [] };
+const BROKEN: BuildResult = { app: 'apps/b', output: 'boom', status: EXIT_FINDINGS, written: [] };
 
 /** An app that built and wrote into the checkout. */
-const WRITING: BuildResult = { app: 'apps/c', output: '', status: EXIT_SUCCESS, written: ['apps/c/stray.js'] };
+const WRITING: BuildResult = { app: 'apps/c', output: '', status: EXIT_CLEAN, written: ['apps/c/stray.js'] };
 
 /** A hunt's options. */
 const HUNT: Hunt = { config: 'vitest.gate.config.ts', copies: 2, filters: [], repeats: 1, root: '/planted', seed: 7 };
@@ -154,7 +155,7 @@ describe('the flake hunt', () => {
   test('reports the seed and passes when every copy passed, with no replay line', async () => {
     expect.hasAssertions();
     const { report, said } = keeping();
-    const hunts = new Scripted({ hunt: [{ output: '', seed: 7, status: EXIT_SUCCESS }] });
+    const hunts = new Scripted({ hunt: [{ output: '', seed: 7, status: EXIT_CLEAN }] });
     const status = await stressHunt({ hunt: asking(hunts, () => 'hunt'), options: HUNT, out: report });
     expect([status, said]).toStrictEqual([
       EXIT_SUCCESS,
@@ -167,8 +168,8 @@ describe('the flake hunt', () => {
     const { report, said } = keeping();
     const hunts = new Scripted({
       hunt: [
-        { output: '', seed: 7, status: EXIT_SUCCESS },
-        { output: 'flaked', seed: 8, status: EXIT_FAILURE },
+        { output: '', seed: 7, status: EXIT_CLEAN },
+        { output: 'flaked', seed: 8, status: EXIT_FINDINGS },
       ],
     });
     const status = await stressHunt({ hunt: asking(hunts, () => 'hunt'), options: HUNT, out: report });
@@ -188,7 +189,7 @@ describe('the type check', () => {
   test('checks every project from the root and passes when each does', async () => {
     expect.hasAssertions();
     const { report, said } = keeping();
-    const runs = new Scripted({ '/planted:a/tsconfig.json': tscRun(EXIT_SUCCESS, '') });
+    const runs = new Scripted({ '/planted:a/tsconfig.json': tscRun(EXIT_CLEAN, '') });
     const status = await typecheckAll({ check: asking(runs, inRoot), projects: ['a/tsconfig.json'], root: '/planted', say: report });
     expect([status, said, runs.calls]).toStrictEqual([EXIT_SUCCESS, ['typecheck: 1 projects, 0 failed'], ['/planted:a/tsconfig.json']]);
   });
@@ -197,8 +198,8 @@ describe('the type check', () => {
     expect.hasAssertions();
     const { report, said } = keeping();
     const runs = new Scripted({
-      '/planted:a/tsconfig.json': tscRun(EXIT_FAILURE, 'a.ts(1,1): error TS1\n'),
-      '/planted:b/tsconfig.json': tscRun(EXIT_SUCCESS, ''),
+      '/planted:a/tsconfig.json': tscRun(EXIT_FINDINGS, 'a.ts(1,1): error TS1\n'),
+      '/planted:b/tsconfig.json': tscRun(EXIT_CLEAN, ''),
     });
     const status = await typecheckAll({
       check: asking(runs, inRoot),

@@ -1,6 +1,6 @@
 /** What the `clones` check plants: temporary roots of files, and runners standing in for jscpd. */
 
-import { EXIT_BROKEN, EXIT_CLEAN } from './exit-status.ts';
+import { EXIT_BROKEN, EXIT_CLEAN } from '#lib/exit-status.ts';
 import { dirname, join } from 'node:path/posix';
 import { mkdir, mkdtemp, rm, truncate, writeFile } from 'node:fs/promises';
 import type { Outcome } from '#lib/process.ts';

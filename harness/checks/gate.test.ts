@@ -10,7 +10,7 @@
  * check, commit-msg runs commitlint, and no other hook or remote config is declared.
  */
 
-import { EXIT_CLEAN, EXIT_FINDINGS } from './exit-status.ts';
+import { EXIT_CLEAN, EXIT_FINDINGS } from '#lib/exit-status.ts';
 import type { Hook, Task } from '#lib/config.ts';
 import { LOCK_CHECK, lockCheckAfter, lockCheckArguments } from './gate.lock.ts';
 import { closure, hooks, repoHooks, repoTasks, runsTask, tasks } from '#lib/config.ts';

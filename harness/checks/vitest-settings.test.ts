@@ -16,7 +16,7 @@
  * bounded.
  */
 
-import { EXIT_CLEAN, EXIT_FINDINGS } from './exit-status.ts';
+import { EXIT_CLEAN, EXIT_FINDINGS } from '#lib/exit-status.ts';
 import { describe, expect, test } from 'vitest';
 import { list, object, parsed } from '#lib/config.ts';
 import { Project } from '#lib/tools.ts';

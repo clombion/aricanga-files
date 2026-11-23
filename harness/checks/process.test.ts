@@ -2,6 +2,7 @@
 
 import { describe, expect, test } from 'vitest';
 import { environment, run } from '#lib/process.ts';
+import { EXIT_CLEAN } from '#lib/exit-status.ts';
 import type { Outcome } from '#lib/process.ts';
 import { REPO_ROOT } from '#lib/paths.ts';
 
@@ -64,7 +65,7 @@ describe('a bounded run', () => {
   test('whose child reads its input finishes with what it wrote', async () => {
     expect.hasAssertions();
     const outcome = await run(['node', '-e', 'process.stdin.pipe(process.stdout)'], { ...OPTIONS, input: 'planted' });
-    expect(outcome).toMatchObject({ kind: 'finished', status: 0, stdout: 'planted' });
+    expect(outcome).toMatchObject({ kind: 'finished', status: EXIT_CLEAN, stdout: 'planted' });
   });
 });
 

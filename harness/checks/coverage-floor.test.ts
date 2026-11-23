@@ -10,8 +10,9 @@
 
 import { COVERAGE_DIR, DEBT, fileCoverage, floorProblems, gateReport, main, shortfalls } from '#lib/coverage.ts';
 import { CountedExemptions, site } from '#lib/exemptions.ts';
-import { EXIT_CLEAN, EXIT_FINDINGS } from './exit-status.ts';
+import { EXIT_FAILURE, EXIT_SUCCESS } from '#lib/output.ts';
 import { describe, expect, test } from 'vitest';
+import { EXIT_CLEAN } from '#lib/exit-status.ts';
 import type { FileCoverage } from '#lib/coverage.ts';
 import { Project } from '#lib/tools.ts';
 import { gateCoverage } from './gate-config.ts';
@@ -208,13 +209,13 @@ describe('the gate', () => {
 
   test('the script exits 0 on a report with no shortfall', async () => {
     expect.hasAssertions();
-    await expect(runScript(() => ({}))).resolves.toStrictEqual([EXIT_CLEAN, []]);
+    await expect(runScript(() => ({}))).resolves.toStrictEqual([EXIT_SUCCESS, []]);
   });
 
   test('the script exits 1 on a report with a shortfall and writes each problem', async () => {
     expect.hasAssertions();
     const [status, errors] = await runScript(unrunStatement);
-    expect([status, errors.length]).toStrictEqual([EXIT_FINDINGS, PLANTED_PROBLEMS]);
+    expect([status, errors.length]).toStrictEqual([EXIT_FAILURE, PLANTED_PROBLEMS]);
   });
 });
 

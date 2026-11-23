@@ -8,7 +8,7 @@
  * ignore, so it fails. Each entry of `knip.json`'s ignore lists is held here with its reason.
  */
 
-import { EXIT_CLEAN, EXIT_FINDINGS } from './exit-status.ts';
+import { EXIT_CLEAN, EXIT_FINDINGS } from '#lib/exit-status.ts';
 import { deadcodeRuns, ignoreEntries, issueTypes, knip, repoIgnoreEntries, strictnessProblems } from '#lib/deadcode.ts';
 import { describe, expect, test } from 'vitest';
 import { Exemptions } from '#lib/exemptions.ts';

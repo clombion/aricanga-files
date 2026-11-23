@@ -3,7 +3,10 @@
 import type { Writable } from 'node:stream';
 import { text as readText } from 'node:stream/consumers';
 
-/** The exit code of a run that found nothing wrong. */
+/**
+ * The exit code a script of the harness ends with when its run found nothing wrong: 0, as pnpm and the
+ * git hooks read a process's clean exit. A tool's statuses are `exit-status.ts`'s, not these.
+ */
 const EXIT_SUCCESS = 0;
 
 /** The exit code of a run that found a problem. */
@@ -63,16 +66,6 @@ function exitCode(passed: boolean): number {
 }
 
 /**
- * Whether a finished process exited cleanly.
- *
- * @param {Readonly<{ status: number | null }>} outcome - The finished process.
- * @returns {boolean} Whether its status is `EXIT_SUCCESS`.
- */
-function succeeded(outcome: Readonly<{ status: number | null }>): boolean {
-  return outcome.status === EXIT_SUCCESS;
-}
-
-/**
  * Read a script's standard input to its end.
  *
  * @returns {Promise<string>} Everything the script was handed on standard input.
@@ -82,5 +75,5 @@ async function standardInput(): Promise<string> {
   return read;
 }
 
-export { complain, EXIT_FAILURE, EXIT_SUCCESS, err, exitCode, out, say, standardInput, succeeded };
+export { complain, EXIT_FAILURE, EXIT_SUCCESS, err, exitCode, out, say, standardInput };
 export type { Sink };

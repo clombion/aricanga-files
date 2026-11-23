@@ -11,7 +11,7 @@
 import { describe, expect, test } from 'vitest';
 import { object, parsed } from '#lib/config.ts';
 import { textOf, tracked } from '#lib/source-files.ts';
-import { EXIT_FINDINGS } from './exit-status.ts';
+import { EXIT_FINDINGS } from '#lib/exit-status.ts';
 import { OXLINT_CONFIG_FILES } from '#lib/lint-rules.ts';
 import { Project } from '#lib/tools.ts';
 

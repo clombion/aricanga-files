@@ -4,7 +4,7 @@ import { BASELINE, RUN_ARGUMENTS, recordBaseline, timingOf } from '#lib/performa
 import { Project, finished } from '#lib/tools.ts';
 import { afterEach, describe, expect, test } from 'vitest';
 import { object, parsed, stringOf } from '#lib/config.ts';
-import { EXIT_SUCCESS } from '#lib/output.ts';
+import { EXIT_CLEAN } from '#lib/exit-status.ts';
 import type { Finished } from '#lib/process.ts';
 import { REPO_ROOT } from '#lib/paths.ts';
 import { Scripted } from '#lib/doubles.ts';
@@ -74,7 +74,7 @@ function runner(
     const run = Number(runs.answer(`run ${String(index)}`));
     index += NEXT_RUN;
     await directory.writeAll(RUN_FILES.at(run) ?? []);
-    return { argv, kind: 'finished', status: EXIT_SUCCESS, stderr: '', stdout: '' };
+    return { argv, kind: 'finished', status: EXIT_CLEAN, stderr: '', stdout: '' };
   };
 }
 

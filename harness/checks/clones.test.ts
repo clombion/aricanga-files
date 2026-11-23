@@ -7,7 +7,8 @@
 
 import { COMMON, MAX_SIZE, RUNS, cloneKey, clones, noReport, reportOf, scan } from '#lib/dupes.ts';
 import type { Clone, Reported, Run, Runner } from '#lib/dupes.ts';
-import { EXIT_BROKEN, EXIT_CLEAN, EXIT_FINDINGS } from './exit-status.ts';
+import { EXIT_BROKEN, EXIT_CLEAN } from '#lib/exit-status.ts';
+import { EXIT_FAILURE, EXIT_SUCCESS } from '#lib/output.ts';
 import { afterEach, describe, expect, test } from 'vitest';
 import { cleanRunner, failingRunner, growTo, plant, removePlants, runMain } from './clones.plants.ts';
 import { Exemptions } from '#lib/exemptions.ts';
@@ -92,13 +93,13 @@ describe('the repository', () => {
   test('has no copied code', async () => {
     expect.hasAssertions();
     const { status, errors } = await runMain();
-    expect([status, errors]).toStrictEqual([EXIT_CLEAN, []]);
+    expect([status, errors]).toStrictEqual([EXIT_SUCCESS, []]);
   });
 
   test('main reports a clean scan and exits 0', async () => {
     expect.hasAssertions();
     const { status, errors, out } = await runMain(cleanRunner);
-    expect([status, errors]).toStrictEqual([EXIT_CLEAN, []]);
+    expect([status, errors]).toStrictEqual([EXIT_SUCCESS, []]);
     const files = await typescriptFiles();
     expect(out).toStrictEqual([`no copied code in the ${files.length} held TypeScript files\n`]);
   });
@@ -106,7 +107,7 @@ describe('the repository', () => {
   test('main reports each problem and exits 1', async () => {
     expect.hasAssertions();
     const { status, errors } = await runMain(failingRunner);
-    expect([status, errors]).toStrictEqual([EXIT_FINDINGS, ['cross-file: jscpd exited 2: planted\n', 'exact: jscpd exited 2: planted\n']]);
+    expect([status, errors]).toStrictEqual([EXIT_FAILURE, ['cross-file: jscpd exited 2: planted\n', 'exact: jscpd exited 2: planted\n']]);
   });
 
   test('states every flag and uses no ignore channel', async () => {

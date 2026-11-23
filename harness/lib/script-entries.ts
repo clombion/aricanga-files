@@ -4,12 +4,13 @@
  */
 
 import type { CopyResult, Hunt } from './stress.ts';
-import { exitCode, succeeded } from './output.ts';
 import { inSequence, isEmpty } from './lists.ts';
 import { refused, revisions, updates } from './pushed.ts';
 import type { BuildResult } from './build.ts';
 import type { Finished } from './process.ts';
 import type { Problem } from './generated.ts';
+import { exitCode } from './output.ts';
+import { succeeded } from './exit-status.ts';
 
 /** Where a script reports a line or a block of text. */
 type Report = (text: string) => void;

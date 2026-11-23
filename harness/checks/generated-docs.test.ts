@@ -11,7 +11,7 @@ import type { Files, Generators } from '#lib/generated.ts';
 import { GENERATORS, blocks, problems, rendered, run } from '#lib/generated.ts';
 import { describe, expect, test } from 'vitest';
 import { finished, isolatedEnv } from '#lib/tools.ts';
-import { EXIT_CLEAN } from './exit-status.ts';
+import { EXIT_SUCCESS } from '#lib/output.ts';
 import { REPO_ROOT } from '#lib/paths.ts';
 
 const HARNESS_ID = 'generated-docs';
@@ -59,14 +59,14 @@ describe('the repository', () => {
   test('every block is current and named by a generator, as the gate runs it', async () => {
     expect.hasAssertions();
     const done = await finished(['node', 'harness/scripts/gen-docs.ts', '--check'], { cwd: REPO_ROOT });
-    expect({ status: done.status, stderr: done.stderr }).toStrictEqual({ status: EXIT_CLEAN, stderr: '' });
+    expect({ status: done.status, stderr: done.stderr }).toStrictEqual({ status: EXIT_SUCCESS, stderr: '' });
   });
 
   test('every block is current under a locale that orders letters otherwise', async () => {
     expect.hasAssertions();
     const env = isolatedEnv({ LANG: 'lt_LT.UTF-8', LC_ALL: 'lt_LT.UTF-8' });
     const done = await finished(['node', 'harness/scripts/gen-docs.ts', '--check'], { cwd: REPO_ROOT, env });
-    expect({ status: done.status, stderr: done.stderr }).toStrictEqual({ status: EXIT_CLEAN, stderr: '' });
+    expect({ status: done.status, stderr: done.stderr }).toStrictEqual({ status: EXIT_SUCCESS, stderr: '' });
   });
 
   test('every generator has a block', async () => {

@@ -5,7 +5,7 @@
  * fails on a fold commit in the range, and lets a subject that only mentions a fixup through.
  */
 
-import { EXIT_CLEAN, EXIT_FINDINGS } from './exit-status.ts';
+import { EXIT_FAILURE, EXIT_SUCCESS } from '#lib/output.ts';
 import { describe, expect, test } from 'vitest';
 import { refused, revisions, subjectsOf, updates } from '#lib/pushed.ts';
 import type { Finished } from '#lib/process.ts';
@@ -103,12 +103,12 @@ describe('the pushed subjects', () => {
 describe('the pre-push script', () => {
   test('fails on a fold commit in the pushed range', async () => {
     expect.hasAssertions();
-    await expect(pushOf(['feat: one', 'fixup! feat: one'])).resolves.toBe(EXIT_FINDINGS);
+    await expect(pushOf(['feat: one', 'fixup! feat: one'])).resolves.toBe(EXIT_FAILURE);
   });
 
   test('passes a range of ordinary commits', async () => {
     expect.hasAssertions();
-    await expect(pushOf(['feat: one', 'fix: fixup! handling'])).resolves.toBe(EXIT_CLEAN);
+    await expect(pushOf(['feat: one', 'fix: fixup! handling'])).resolves.toBe(EXIT_SUCCESS);
   });
 });
 

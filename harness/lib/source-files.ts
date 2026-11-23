@@ -10,7 +10,7 @@ import { REPO_ROOT } from './paths.ts';
 import { isolatedEnv } from './tools.ts';
 import path from 'node:path';
 import { run } from './process.ts';
-import { succeeded } from './output.ts';
+import { succeeded } from './exit-status.ts';
 
 /** The fewest files a listing of this repository can hold; fewer means the listing failed. */
 const FLOOR = 50;

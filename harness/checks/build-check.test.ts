@@ -9,7 +9,7 @@
 
 import { apps, checkBuild } from '#lib/build.ts';
 import { describe, expect, test } from 'vitest';
-import { EXIT_CLEAN } from './exit-status.ts';
+import { EXIT_CLEAN } from '#lib/exit-status.ts';
 import { Project } from '#lib/tools.ts';
 import { inSequence } from '#lib/lists.ts';
 

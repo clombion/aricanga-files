@@ -15,7 +15,7 @@
 
 import { Accepted, Exemptions } from '#lib/exemptions.ts';
 import { ESLINT_DIRECTIVE_TEXT, UNUSED_DIRECTIVE_TEXT, WARNING_PLANT, WARNING_TEXT } from './lint-settings.plants.ts';
-import { EXIT_CLEAN, EXIT_FINDINGS } from './exit-status.ts';
+import { EXIT_CLEAN, EXIT_FINDINGS } from '#lib/exit-status.ts';
 import { config, lint, plantedCodes, repoConfig } from './lint-settings.run.ts';
 import { describe, expect, test } from 'vitest';
 import { object, parsed } from '#lib/config.ts';
