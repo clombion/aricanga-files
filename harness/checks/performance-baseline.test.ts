@@ -1,11 +1,14 @@
 /** The performance baseline folds every run's reports into each project's slowest timings, and writes them sorted. */
 
 import { BASELINE, RUN_ARGUMENTS, recordBaseline, timingOf } from '#lib/performance-baseline.ts';
+import { Project, finished } from '#lib/tools.ts';
 import { afterEach, describe, expect, test } from 'vitest';
+import { json, object } from '#lib/config.ts';
 import { EXIT_SUCCESS } from '#lib/output.ts';
 import type { Finished } from '#lib/process.ts';
-import { Project } from '#lib/tools.ts';
+import { REPO_ROOT } from '#lib/paths.ts';
 import { Scripted } from '#lib/doubles.ts';
+import { textOf } from '#lib/source-files.ts';
 
 /** The first scripted run, and the step to the next. */
 const FIRST_RUN = 0;
@@ -13,6 +16,21 @@ const NEXT_RUN = 1;
 
 /** The arguments after the runner's binary. */
 const AFTER_BINARY = 1;
+
+/**
+ * The projects the performance spec's configuration runs, as Playwright lists them.
+ *
+ * @returns {Promise<readonly string[]>} Their names, sorted.
+ */
+async function configuredProjects(): Promise<readonly string[]> {
+  const listed = await finished([...RUN_ARGUMENTS, '--list', '--reporter=json'], { cwd: REPO_ROOT });
+  const { config: listedConfig } = object(json(listed.stdout), 'the listing');
+  const { projects } = object(listedConfig, 'the listed config');
+  if (!Array.isArray(projects)) {
+    throw new TypeError(`the listed config holds no projects: ${listed.stdout}`);
+  }
+  return projects.map((project: unknown) => String(object(project, 'a listed project')['name'])).toSorted();
+}
 
 /** The planted projects not yet removed. */
 const planted: Project[] = [];
@@ -105,6 +123,15 @@ describe('a recorded baseline', () => {
       '@performance',
       '--workers=1',
     ]);
+  });
+});
+
+describe('the committed baseline', () => {
+  test('names exactly the projects the performance spec runs in', async () => {
+    expect.hasAssertions();
+    const recorded = object(json(await textOf(BASELINE)), BASELINE);
+    const baseline = Object.keys(recorded).toSorted();
+    await expect(configuredProjects()).resolves.toStrictEqual(baseline);
   });
 });
 
