@@ -14,9 +14,9 @@
 
 import { ConfigError, object, report } from './config.ts';
 import type { Dir, Population } from './scope.ts';
+import { byCodeUnit, isEmpty } from './lists.ts';
 import { importerOf, manifestOf, population } from './scope.ts';
 import { engineRange } from './node-floor.ts';
-import { isEmpty } from './lists.ts';
 import { parse } from 'yaml';
 import { present } from './present.ts';
 import { textOf } from './source-files.ts';
@@ -211,7 +211,7 @@ function inputsOf(found: readonly Found[]): readonly string[] {
 /**
  * Every pin of the given manifests at the versions the lockfile holds: one per tool and version, so
  * a tool locked at two versions is two pins, each naming every input that pins it at its version;
- * ordered by tool, then version.
+ * ordered by tool, then version, by code unit (`KEY_SEPARATOR` sorts below every character a name holds).
  *
  * @param {readonly Manifest[]} manifests - The manifests.
  * @param {string} lockText - The lockfile's text, read once here.
@@ -222,7 +222,7 @@ function pinned(manifests: readonly Manifest[], lockText: string): readonly Pin[
   const found = manifests.flatMap((entry) => manifestPins(entry, lock));
   const byKey = new Map(found.map((input) => [keyOf(input), found.filter((other) => keyOf(other) === keyOf(input))] as const));
   return [...byKey.entries()]
-    .toSorted(([first]: readonly [string, readonly Found[]], [second]: readonly [string, readonly Found[]]) => first.localeCompare(second))
+    .toSorted(([first]: readonly [string, readonly Found[]], [second]: readonly [string, readonly Found[]]) => byCodeUnit(first, second))
     .map(([, inputs]: readonly [string, readonly Found[]]): Pin => {
       const { tool, version } = present(inputs.at(FIRST), 'a pin of its own key');
       return { tool, version, where: inputsOf(inputs) };

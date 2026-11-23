@@ -1,15 +1,19 @@
 /** The indentation of a golden's JSON text. */
 const INDENT = 2;
 
+/** A comparator's answers: the left first, the right first (one object's keys are never equal). */
+const LEFT_FIRST = -1;
+const RIGHT_FIRST = 1;
+
 /**
- * Order a key–value pair by its key.
+ * Order a key–value pair by its key's UTF-16 code units, the same under every locale.
  *
  * @param {readonly [string, unknown]} left - One entry, its key first.
  * @param {readonly [string, unknown]} right - The other entry.
  * @returns {number} The entries' order, by key.
  */
 function byKey([left]: readonly [string, unknown], [right]: readonly [string, unknown]): number {
-  return left.localeCompare(right);
+  return left < right ? LEFT_FIRST : RIGHT_FIRST;
 }
 
 /*

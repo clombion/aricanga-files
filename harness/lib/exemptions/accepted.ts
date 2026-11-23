@@ -1,5 +1,7 @@
 /** `Accepted`: the values a rule defines as valid; consulted by membership, nothing has to match. */
 
+import { byCodeUnit } from './order.ts';
+
 /** The values a rule defines as valid, such as exit codes or file suffixes. */
 class Accepted<Value extends string | number> {
   public readonly values: Readonly<ReadonlySet<Value>>;
@@ -25,12 +27,12 @@ class Accepted<Value extends string | number> {
   }
 
   /**
-   * The accepted values, sorted.
+   * The accepted values, by the code units of their text (`byCodeUnit`).
    *
    * @returns {Iterator<Value>} The values in sorted order.
    */
   public [Symbol.iterator](): Iterator<Value> {
-    return [...this.values].toSorted((left, right) => String(left).localeCompare(String(right))).values();
+    return [...this.values].toSorted((left, right) => byCodeUnit(String(left), String(right))).values();
   }
 }
 

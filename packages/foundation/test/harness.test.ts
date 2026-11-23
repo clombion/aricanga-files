@@ -108,3 +108,17 @@ describe('the fixture harness', () => {
     await expect(canonical(run.trace)).toMatchFileSnapshot('./__goldens__/fixture-stream.json');
   });
 });
+
+describe('the canonical text', () => {
+  test('orders keys by code unit, whatever order they were written in', () => {
+    expect.hasAssertions();
+    const written: readonly (readonly [string, string])[] = [
+      ['bb', 'b'],
+      ['BB', 'B'],
+      ['aa', 'a'],
+    ];
+    const ordered = '{\n  "BB": "B",\n  "aa": "a",\n  "bb": "b"\n}';
+    const reversed: Readonly<Record<string, string>> = Object.fromEntries(written.toReversed());
+    expect([canonical(Object.fromEntries(written)), canonical(reversed)]).toStrictEqual([ordered, ordered]);
+  });
+});

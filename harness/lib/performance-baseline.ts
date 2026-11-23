@@ -8,6 +8,7 @@ import { readFile, readdir } from 'node:fs/promises';
 import type { Finished } from './process.ts';
 import type { Report } from './script-entries.ts';
 import { bin } from './tools.ts';
+import { byCodeUnit } from './lists.ts';
 import { json } from './config.ts';
 import path from 'node:path';
 
@@ -156,7 +157,7 @@ async function runsFrom(
 async function recordBaseline(recording: Readonly<BaselineRun>): Promise<void> {
   const baseline = await runsFrom(recording, recording.runs, new Map());
   const sorted = Object.fromEntries(
-    [...baseline].toSorted(([left]: readonly [string, Timing], [right]: readonly [string, Timing]) => left.localeCompare(right)),
+    [...baseline].toSorted(([left]: readonly [string, Timing], [right]: readonly [string, Timing]) => byCodeUnit(left, right)),
   );
   await recording.write(BASELINE, `${JSON.stringify(sorted, undefined, INDENT)}\n`);
   recording.out(`baseline written for ${Object.keys(sorted).join(', ')}\n`);

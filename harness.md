@@ -160,8 +160,8 @@ writes this table from `package.json` and `pnpm-lock.yaml`.
 | `@vitest/coverage-v8` | [vitest-dev/vitest](https://github.com/vitest-dev/vitest) | `pnpm-lock.yaml (.)` | 5.1.1 |
 | `@viz-js/viz` | [mdaines/viz-js](https://github.com/mdaines/viz-js) | `pnpm-lock.yaml (.)` | 3.31.0 |
 | `ai` | [vercel/ai](https://github.com/vercel/ai) | `pnpm-lock.yaml (.)` | 7.0.177 |
-| `eslint-plugin-solid` | [solidjs-community/eslint-plugin-solid](https://github.com/solidjs-community/eslint-plugin-solid) | `pnpm-lock.yaml (.)` | 0.20.0 |
 | `eslint` | [eslint/eslint](https://github.com/eslint/eslint) | `pnpm-lock.yaml (.)` | 10.15.0 |
+| `eslint-plugin-solid` | [solidjs-community/eslint-plugin-solid](https://github.com/solidjs-community/eslint-plugin-solid) | `pnpm-lock.yaml (.)` | 0.20.0 |
 | `fast-check` | [dubzzz/fast-check](https://github.com/dubzzz/fast-check) | `pnpm-lock.yaml (.)` | 4.10.3 |
 | `happy-dom` | [capricorn86/happy-dom](https://github.com/capricorn86/happy-dom) | `pnpm-lock.yaml (.)` | 21.0.4 |
 | `inkjs` | [y-lohse/inkjs](https://github.com/y-lohse/inkjs) | `pnpm-lock.yaml (., experiences/sandbox)` | 2.4.0 |
@@ -170,17 +170,17 @@ writes this table from `package.json` and `pnpm-lock.yaml`.
 | `lefthook` | [evilmartians/lefthook](https://github.com/evilmartians/lefthook) | `pnpm-lock.yaml (.)` | 2.2.2 |
 | `node` | [nodejs/node](https://github.com/nodejs/node) | `package.json engines` | >=22.18.0 |
 | `oxfmt` | [oxc-project/oxc](https://github.com/oxc-project/oxc) | `pnpm-lock.yaml (.)` | 0.79.0 |
-| `oxlint-tsgolint` | [oxc-project/tsgolint](https://github.com/oxc-project/tsgolint) | `pnpm-lock.yaml (.)` | 7.0.2007 |
 | `oxlint` | [oxc-project/oxc](https://github.com/oxc-project/oxc) | `pnpm-lock.yaml (.)` | 1.94.0 |
+| `oxlint-tsgolint` | [oxc-project/tsgolint](https://github.com/oxc-project/tsgolint) | `pnpm-lock.yaml (.)` | 7.0.2007 |
 | `pnpm` | [pnpm/pnpm](https://github.com/pnpm/pnpm) | `package.json packageManager` | 10.28.0 |
 | `remark-parse` | [remarkjs/remark](https://github.com/remarkjs/remark) | `pnpm-lock.yaml (.)` | 11.0.0 |
 | `sharp` | [lovell/sharp](https://github.com/lovell/sharp) | `pnpm-lock.yaml (.)` | 0.35.5 |
+| `stylelint` | [stylelint/stylelint](https://github.com/stylelint/stylelint) | `pnpm-lock.yaml (.)` | 17.16.0 |
 | `stylelint-config-standard` | [stylelint/stylelint-config-standard](https://github.com/stylelint/stylelint-config-standard) | `pnpm-lock.yaml (.)` | 40.0.0 |
 | `stylelint-declaration-strict-value` | [AndyOGo/stylelint-declaration-strict-value](https://github.com/AndyOGo/stylelint-declaration-strict-value) | `pnpm-lock.yaml (.)` | 1.12.1 |
 | `stylelint-no-unsupported-browser-features` | [RJWadley/stylelint-no-unsupported-browser-features](https://github.com/RJWadley/stylelint-no-unsupported-browser-features) | `pnpm-lock.yaml (.)` | 8.1.2 |
 | `stylelint-order` | [hudochenkov/stylelint-order](https://github.com/hudochenkov/stylelint-order) | `pnpm-lock.yaml (.)` | 8.1.3 |
 | `stylelint-plugin-logical-css` | [yuschick/stylelint-plugin-logical-css](https://github.com/yuschick/stylelint-plugin-logical-css) | `pnpm-lock.yaml (.)` | 2.1.0 |
-| `stylelint` | [stylelint/stylelint](https://github.com/stylelint/stylelint) | `pnpm-lock.yaml (.)` | 17.16.0 |
 | `typescript` | [microsoft/TypeScript](https://github.com/microsoft/TypeScript) | `pnpm-lock.yaml (.)` | 7.0.2 |
 | `unified` | [unifiedjs/unified](https://github.com/unifiedjs/unified) | `pnpm-lock.yaml (.)` | 11.0.5 |
 | `unist-util-visit` | [syntax-tree/unist-util-visit](https://github.com/syntax-tree/unist-util-visit) | `pnpm-lock.yaml (.)` | 5.2.0 |

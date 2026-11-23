@@ -1,6 +1,7 @@
 /** The shipped checks: every check module that declares a `HARNESS_ID`, with its doc comment's first line. */
 
 import { ConfigError } from './config.ts';
+import { byCodeUnit } from './lists.ts';
 
 /** A check module, its id and its summary. */
 interface CheckModule {
@@ -45,7 +46,7 @@ function summary(path: string, text: string): string {
  * @returns {number} Their order.
  */
 function byId(left: CheckModule, right: CheckModule): number {
-  return left.harnessId.localeCompare(right.harnessId) || left.path.localeCompare(right.path);
+  return byCodeUnit(left.harnessId, right.harnessId) || byCodeUnit(left.path, right.path);
 }
 
 /**

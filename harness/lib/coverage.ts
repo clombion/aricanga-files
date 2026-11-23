@@ -10,10 +10,10 @@
 
 import { CountedExemptions, site } from './exemptions.ts';
 import { EXIT_FAILURE, EXIT_SUCCESS } from './output.ts';
+import { byCodeUnit, isEmpty } from './lists.ts';
 import { json, object } from './config.ts';
 import type { Mismatch } from './exemptions.ts';
 import { REPO_ROOT } from './paths.ts';
-import { isEmpty } from './lists.ts';
 import path from 'node:path';
 import { relativeTo } from './relative.ts';
 import { textAt } from './source-files.ts';
@@ -119,7 +119,7 @@ function coverageOf(file: string, entry: unknown, root: string): FileCoverage {
 function fileCoverage(report: unknown, root: string = REPO_ROOT): readonly FileCoverage[] {
   return Object.entries(object(report, 'coverage report'))
     .map(([file, entry]: readonly [string, unknown]) => coverageOf(file, entry, root))
-    .toSorted((first, second) => first.path.localeCompare(second.path));
+    .toSorted((first, second) => byCodeUnit(first.path, second.path));
 }
 
 /**

@@ -114,3 +114,19 @@ describe('the pins of one tool across inputs', () => {
     expect([...lockOf(['importers:', '  .: {}', '  1.0: {}', '  0x10: {}', ''].join('\n')).keys()]).toStrictEqual(['.', '1.0', '0x10']);
   });
 });
+
+describe('the order of the pins', () => {
+  test('order the pins by tool, then version, a name holding a character below the quote included', () => {
+    expect.hasAssertions();
+    const lockText = [
+      'importers:',
+      '  .:',
+      '    devDependencies:',
+      "      'ab!': {specifier: '1', version: 1.0.0}",
+      '      ab: {specifier: 1, version: 2.0.0}',
+      '',
+    ].join('\n');
+    const tools = pinned([{ dir: '', manifest: { devDependencies: { ab: '1', 'ab!': '1' } } }], lockText).map((pin) => pin.tool);
+    expect(tools).toStrictEqual(['ab', 'ab!', 'node', 'pnpm']);
+  });
+});

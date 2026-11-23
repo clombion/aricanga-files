@@ -1,4 +1,4 @@
-/** The harness's list helpers: emptiness, and a slot a hook fills and empties. */
+/** The harness's list helpers: emptiness, the order of written text, and a slot a hook fills and empties. */
 
 /** The length of an empty list. */
 const EMPTY = 0;
@@ -84,3 +84,4 @@ async function inSequence<Item, Result>(items: readonly Item[], step: (item: Ite
 }
 
 export { inSequence, isEmpty, Slot };
+export { byCodeUnit } from './exemptions/order.ts';
