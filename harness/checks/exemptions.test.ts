@@ -18,6 +18,13 @@ describe('an exemption list', () => {
     expect(() => new Exemptions({ planted: '  ' })).toThrow('exemptions without a reason: ["planted"]');
   });
 
+  test('names, with a stale entry, the findings no entry covers', () => {
+    expect.hasAssertions();
+    expect(() => new Exemptions({ gone: 'planted' }).unexempted(['new'])).toThrow(
+      new StaleExemptionError('stale exemptions, delete them: ["gone"]; findings no entry covers: ["new"]'),
+    );
+  });
+
   test('refuses a key grouped under two reasons, naming it', () => {
     expect.hasAssertions();
     expect(() => Exemptions.grouped({ first: ['planted'], second: ['planted'] })).toThrow('"planted" is exempted twice');

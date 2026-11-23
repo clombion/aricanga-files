@@ -61,10 +61,14 @@ class Exemptions {
     const seen = [...findings];
     const keys = new Set(seen.map((finding) => key(finding)));
     const stale = [...this.entries.keys()].filter((entry) => !keys.has(entry));
+    const unexempted = seen.filter((finding) => !this.entries.has(key(finding)));
     if (stale.length > NONE) {
-      throw new StaleExemptionError(`stale exemptions, delete them: ${JSON.stringify(stale)}`);
+      const uncovered = unexempted.map((finding) => key(finding));
+      throw new StaleExemptionError(
+        `stale exemptions, delete them: ${JSON.stringify(stale)}; findings no entry covers: ${JSON.stringify(uncovered)}`,
+      );
     }
-    return seen.filter((finding) => !this.entries.has(key(finding)));
+    return unexempted;
   }
 }
 
