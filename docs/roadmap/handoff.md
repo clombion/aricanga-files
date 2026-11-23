@@ -36,7 +36,11 @@ them is missing from the phase branch.
   refuses an import of it or a dependency on it anywhere in the workspace.
 - **Harness**: about 35 checks under `harness/checks`, each with planted violations; the project
   oxlint plugin under `harness/lint-rules` (its README lists every rule); TypeScript 7 at its
-  strictest, each setting proven by a plant.
+  strictest, each setting proven by a plant. The harness holds its members by rule, not by list
+  (#58 step 1a): every workspace package pnpm lists whose manifest git lists, less the POC, each
+  declaring its role in its manifest (`harness/lib/scope.ts`, `harness/lib/roles.ts`); the owner
+  rules' kernel, the contracts, the production projects and the gate's Vitest include and coverage
+  derive from it. Steps 1b, 1c, 2 and 3 of #58 remain; AGENTS.md names the lists still kept by hand.
 
 ## The lint configuration and what it forces
 
