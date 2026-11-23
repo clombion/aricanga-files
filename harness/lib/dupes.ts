@@ -26,6 +26,7 @@ import { cloneKey, clones, scanned } from './dupes-report.ts';
 import { population, typescriptFiles } from './scope.ts';
 import { readFile, stat } from 'node:fs/promises';
 import { Exemptions } from './exemptions.ts';
+import type { Population } from './scope.ts';
 import { REPO_ROOT } from './paths.ts';
 import { isEmpty } from './lists.ts';
 import path from 'node:path';
@@ -136,6 +137,19 @@ async function scan(target: Target, allowed: Readonly<Exemptions>, runner?: Runn
 }
 
 /**
+ * What jscpd scans: each root of the population, as a directory, and each held file outside them.
+ *
+ * @param {readonly string[]} listed - The held TypeScript files.
+ * @param {Population} held - The population.
+ * @returns {readonly string[]} The roots and the files, as jscpd's arguments.
+ */
+function scanRoots(listed: readonly string[], held: Population): readonly string[] {
+  const directories = held.roots.map((root) => root.replace(TRAILING_SLASH, ''));
+  const rootFiles = listed.filter((file) => !held.roots.some((root) => file.startsWith(root)));
+  return [...directories, ...rootFiles];
+}
+
+/**
  * Scan the held TypeScript (the roots, and held files outside them).
  *
  * @param {Streams} streams - Where the result and the problems are written.
@@ -144,9 +158,7 @@ async function scan(target: Target, allowed: Readonly<Exemptions>, runner?: Runn
  */
 async function main(streams: Streams, runner?: Runner): Promise<number> {
   const [listed, held] = await Promise.all([typescriptFiles(), population()]);
-  const directories = held.roots.map((root) => root.replace(TRAILING_SLASH, ''));
-  const rootFiles = listed.filter((file) => !held.roots.some((root) => file.startsWith(root)));
-  const problems = await scan({ listed, root: REPO_ROOT, roots: [...directories, ...rootFiles] }, ALLOWED, runner);
+  const problems = await scan({ listed, root: REPO_ROOT, roots: scanRoots(listed, held) }, ALLOWED, runner);
   for (const problem of problems) {
     streams.err(`${problem}\n`);
   }
@@ -161,4 +173,4 @@ export { cloneKey, clones, noReport } from './dupes-report.ts';
 export type { Clone, Run } from './dupes-report.ts';
 export { COMMON, MAX_SIZE, reportOf, RUNS } from './dupes-run.ts';
 export type { Reported, Runner } from './dupes-run.ts';
-export { main, scan };
+export { main, scan, scanRoots };
