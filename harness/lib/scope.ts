@@ -16,7 +16,7 @@ import { relativeTo } from './relative.ts';
 import { succeeded } from './output.ts';
 
 /** The harness's own place: held, and not a workspace package. */
-const HARNESS_ROOT = 'harness/';
+const HARNESS_ROOT: MemberDir = 'harness/';
 
 /** The POC reference (ADR-0006, "Scope"): read-only, outside the harness until it is deleted. Each entry is a directory. */
 const POC: Prefixes = new Prefixes(
@@ -53,9 +53,21 @@ class PopulationError extends Error {
   public override readonly name = 'PopulationError';
 }
 
-/** A held workspace package: its directory (ending in `/`) and the role its manifest declares. */
+/** A member's directory: relative to the root, ending in `/`. */
+type MemberDir = `${string}/`;
+
+/** A workspace package's directory: the root is `''`, a member's is a `MemberDir`. */
+type Dir = '' | MemberDir;
+
+/** The root's importer, as pnpm names it. */
+const ROOT_IMPORTER = '.';
+
+/** A directory's closing `/`. */
+const CLOSING_SLASH = /\/$/u;
+
+/** A held workspace package: its directory and the role its manifest declares. */
 interface Member {
-  readonly dir: string;
+  readonly dir: MemberDir;
   readonly role: Role;
 }
 
@@ -66,7 +78,7 @@ interface Population {
   /** The members, sorted by directory. */
   readonly members: readonly Member[];
   /** The held directories: every member's and the harness's. */
-  readonly roots: readonly string[];
+  readonly roots: readonly MemberDir[];
   /** Whether a listed path is held: a root file, a harness file or a member's file. */
   readonly holds: (path: string) => boolean;
   /** The nearest member holding a path. */
@@ -77,10 +89,63 @@ interface Population {
 interface PopulationInputs {
   /** The repository-relative listing. */
   readonly listing: readonly string[];
-  /** The workspace packages pnpm lists, as directories relative to the root ending in `/`; the root is ''. */
-  readonly workspace: readonly string[];
+  /** The workspace packages pnpm lists, by directory. */
+  readonly workspace: readonly Dir[];
   /** Reads a listed file's text. */
   readonly read: (listed: string) => Promise<string>;
+}
+
+/**
+ * The directory of a path relative to the root.
+ *
+ * @param {string} relative - The path, `''` for the root.
+ * @returns {Dir} Its directory.
+ */
+function dirOf(relative: string): Dir {
+  return relative === '' ? '' : `${relative}/`;
+}
+
+/**
+ * A package's manifest.
+ *
+ * @param {Dir} dir - The package's directory.
+ * @returns {string} Its `package.json`, relative to the root.
+ */
+function manifestOf(dir: Dir): string {
+  return `${dir}${MANIFEST}`;
+}
+
+/**
+ * A package's lockfile importer: pnpm's `.` for the root, its directory without the `/` otherwise.
+ * `dirOfImporter` is its inverse: `dirOfImporter(importerOf(dir)) === dir` for every directory.
+ *
+ * @param {Dir} dir - The package's directory.
+ * @returns {string} Its importer.
+ */
+function importerOf(dir: Dir): string {
+  return dir === '' ? ROOT_IMPORTER : dir.replace(CLOSING_SLASH, '');
+}
+
+/**
+ * The directory of a lockfile importer; the inverse of `importerOf`.
+ *
+ * @param {string} importer - The importer.
+ * @returns {Dir} Its directory.
+ */
+function dirOfImporter(importer: string): Dir {
+  return importer === ROOT_IMPORTER ? '' : dirOf(importer);
+}
+
+/**
+ * The item whose root holds a path, the nearest when roots nest.
+ *
+ * @param {readonly Item[]} items - The items.
+ * @param {(item: Item) => string} rootOf - Each item's root, ending in `/`.
+ * @param {string} target - A repository-relative path.
+ * @returns {Item | undefined} The item with the longest root that starts the path.
+ */
+function nearest<Item>(items: readonly Item[], rootOf: (item: Item) => string, target: string): Item | undefined {
+  return items.toSorted((left, right) => rootOf(right).length - rootOf(left).length).find((item) => target.startsWith(rootOf(item)));
 }
 
 /**
@@ -110,15 +175,14 @@ function declaredRole(manifest: string, text: string): Role {
  */
 async function populationOf(inputs: Readonly<PopulationInputs>): Promise<Population> {
   const listed = new Set(inputs.listing);
-  const dirs = inputs.workspace.filter((dir) => dir !== '' && listed.has(`${dir}${MANIFEST}`) && !POC.starts(dir)).toSorted();
+  const dirs = inputs.workspace.filter((dir): dir is MemberDir => dir !== '' && listed.has(manifestOf(dir)) && !POC.starts(dir)).toSorted();
   const members: readonly Member[] = await Promise.all(
     dirs.map(async (dir): Promise<Member> => {
-      const text = await inputs.read(`${dir}${MANIFEST}`);
-      return { dir, role: declaredRole(`${dir}${MANIFEST}`, text) };
+      const text = await inputs.read(manifestOf(dir));
+      return { dir, role: declaredRole(manifestOf(dir), text) };
     }),
   );
-  const nearestFirst = members.toSorted((left, right) => right.dir.length - left.dir.length);
-  const memberOf = (target: string): Member | undefined => nearestFirst.find((member) => target.startsWith(member.dir));
+  const memberOf = (target: string): Member | undefined => nearest(members, (member) => member.dir, target);
   return {
     holds: (target: string) => ROOT_FILES.has(target) || target.startsWith(HARNESS_ROOT) || memberOf(target) !== undefined,
     listing: inputs.listing,
@@ -133,17 +197,16 @@ async function populationOf(inputs: Readonly<PopulationInputs>): Promise<Populat
  * so they are related to the root's realpath.
  *
  * @param {string} root - The workspace root.
- * @returns {Promise<readonly string[]>} Each package's directory, ending in `/`; the root is ''.
+ * @returns {Promise<readonly Dir[]>} Each package's directory.
  */
-async function workspacePackages(root: string): Promise<readonly string[]> {
+async function workspacePackages(root: string): Promise<readonly Dir[]> {
   const [done, base] = await Promise.all([finished(['pnpm', 'ls', '-r', '--depth', '-1', '--json'], { cwd: root }), realpath(root)]);
   if (!succeeded(done)) {
     throw new PopulationError(`pnpm could not list the workspace at ${root}: ${done.stderr}`);
   }
   return list(report(done.stdout, 'pnpm ls'), 'pnpm ls').map((entry) => {
     const where = String(object(entry, 'a pnpm package')['path']);
-    const relative = relativeTo(base, where);
-    return relative === '' ? '' : `${relative}/`;
+    return dirOf(relativeTo(base, where));
   });
 }
 
@@ -202,5 +265,18 @@ async function typescriptFiles(): Promise<readonly string[]> {
   return files;
 }
 
-export { DOC_ROOTS, POC, PopulationError, heldFiles, population, populationOf, typescriptFiles, workspacePackages };
-export type { Member, Population };
+export {
+  DOC_ROOTS,
+  POC,
+  PopulationError,
+  dirOfImporter,
+  heldFiles,
+  importerOf,
+  manifestOf,
+  nearest,
+  population,
+  populationOf,
+  typescriptFiles,
+  workspacePackages,
+};
+export type { Dir, Member, Population };

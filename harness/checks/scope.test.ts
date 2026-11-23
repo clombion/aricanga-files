@@ -1,12 +1,22 @@
 /** The population: pnpm's workspace packages whose manifests git lists, less the POC, each with its role. */
 
+import type { Dir, Population } from '#lib/scope.ts';
 import { LOCKFILE, importers } from '#lib/pins.ts';
-import { POC, PopulationError, population, populationOf, workspacePackages } from '#lib/scope.ts';
+import {
+  POC,
+  PopulationError,
+  dirOfImporter,
+  importerOf,
+  manifestOf,
+  nearest,
+  population,
+  populationOf,
+  workspacePackages,
+} from '#lib/scope.ts';
 import { describe, expect, test } from 'vitest';
 import { manifest, reader, refusalOf, workspaceFolder } from './scope.plants.ts';
 import { mkdir, rm, symlink, writeFile } from 'node:fs/promises';
 import { perRoot, textOf } from '#lib/source-files.ts';
-import type { Population } from '#lib/scope.ts';
 import path from 'node:path';
 
 /**
@@ -17,11 +27,20 @@ import path from 'node:path';
  * @returns {readonly string[]} The directories it misses.
  */
 function missedImporters(held: Population, lockText: string): readonly string[] {
-  const members = new Set(held.members.map((member) => member.dir));
+  const members = new Set<string>(held.members.map((member) => member.dir));
   return importers(lockText)
-    .filter((importer) => importer !== '.')
-    .map((importer) => `${importer}/`)
-    .filter((dir) => !POC.starts(dir) && !members.has(dir));
+    .map((importer) => dirOfImporter(importer))
+    .filter((dir) => dir !== '' && !POC.starts(dir) && !members.has(dir));
+}
+
+/**
+ * A root's path, for `nearest`.
+ *
+ * @param {Readonly<{ root: string }>} item - An item with a root.
+ * @returns {string} Its root.
+ */
+function rootOf(item: Readonly<{ root: string }>): string {
+  return item.root;
 }
 
 /** The importers block pnpm 10.28.0 wrote for workspaces whose directories need YAML quoting (`verif-58-1a-r3/phase-5-work/quoting*`). */
@@ -97,6 +116,38 @@ describe('a population', () => {
       workspace: ['packages/a/', 'packages/a/b/'],
     });
     expect(held.memberOf('packages/a/b/src/x.ts')?.dir).toBe('packages/a/b/');
+  });
+});
+
+describe('a package', () => {
+  test('is one directory: its manifest and its importer derive from it, and an importer leads back to it', () => {
+    expect.hasAssertions();
+    const dirs: readonly Dir[] = ['', 'packages/a/', "a/q'uote/", 'a/x:y/', '1.0/'];
+    const derived = dirs.map((dir) => {
+      const importer = importerOf(dir);
+      return [manifestOf(dir), importer, dirOfImporter(importer)];
+    });
+    expect(derived).toStrictEqual([
+      ['package.json', '.', ''],
+      ['packages/a/package.json', 'packages/a', 'packages/a/'],
+      ["a/q'uote/package.json", "a/q'uote", "a/q'uote/"],
+      ['a/x:y/package.json', 'a/x:y', 'a/x:y/'],
+      ['1.0/package.json', '1.0', '1.0/'],
+    ]);
+    const keys = importers(QUOTED_KEYS);
+    expect(keys.map((importer) => importerOf(dirOfImporter(importer)))).toStrictEqual(keys);
+  });
+
+  test('is held by the nearest root whatever order the roots come in', () => {
+    expect.hasAssertions();
+    const outer = { root: 'packages/a/' };
+    const inner = { root: 'packages/a/b/' };
+    expect([
+      nearest([outer, inner], rootOf, 'packages/a/b/x.ts'),
+      nearest([inner, outer], rootOf, 'packages/a/b/x.ts'),
+      nearest([inner, outer], rootOf, 'packages/a/x.ts'),
+      nearest([inner, outer], rootOf, 'harness/x.ts'),
+    ]).toStrictEqual([inner, inner, outer, undefined]);
   });
 });
 

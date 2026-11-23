@@ -41,6 +41,7 @@ import { isPlatform, nameText, nodes, pathOf, qualifiedName } from './checker.ts
 import type { Rule } from './owner-rules.ts';
 import type { Scan } from './checker.ts';
 import type { Symbol as TsSymbol } from 'typescript/unstable/sync';
+import { nearest } from './scope.ts';
 import { rulesOf } from './owner-rules.ts';
 import { site } from './exemptions.ts';
 
@@ -219,7 +220,7 @@ function sites(scan: Scan, file: SourceFile): readonly Site[] {
   const found = uses(scan, file);
   return rulesOf(scan.population)
     .filter((rule) => {
-      const scope = rule.scopes.find((candidate) => path.startsWith(candidate.root));
+      const scope = nearest(rule.scopes, (candidate) => candidate.root, path);
       return scope !== undefined && scope.owner !== path && breaks(rule, found);
     })
     .map((rule) => ({ path, rule: rule.name }));
