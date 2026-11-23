@@ -1,6 +1,6 @@
 /** The readers of the tool configuration refuse each value of the wrong shape, naming it. */
 
-import { ConfigError, closure, hooks, list, report, tasks } from '#lib/config.ts';
+import { ConfigError, closure, hooks, list, parsed, tasks } from '#lib/config.ts';
 import { describe, expect, test } from 'vitest';
 
 describe('the task reader', () => {
@@ -37,12 +37,12 @@ describe('the hook reader', () => {
 describe('a tool report', () => {
   test('is read as the JSON it holds', () => {
     expect.hasAssertions();
-    expect(report('{"diagnostics":[]}', 'the planted report')).toStrictEqual({ diagnostics: [] });
+    expect(parsed('{"diagnostics":[]}', 'the planted report')).toStrictEqual({ diagnostics: [] });
   });
 
   test('that is not JSON is refused, naming the report', () => {
     expect.hasAssertions();
-    expect(() => report('', 'the planted report')).toThrow(/^the planted report is not JSON: SyntaxError/u);
+    expect(() => parsed('', 'the planted report')).toThrow(/^the planted report is not JSON: SyntaxError/u);
   });
 
   test('field that is not a list is refused, naming it', () => {

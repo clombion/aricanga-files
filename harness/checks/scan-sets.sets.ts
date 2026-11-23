@@ -2,9 +2,9 @@
 
 import { Project, finished } from '#lib/tools.ts';
 import { REPO_ROOT, fromRoot } from '#lib/paths.ts';
+import { gateCoverage, globsOf } from './gate-config.ts';
 import { textsOf, tracked } from '#lib/source-files.ts';
 import { dirname } from 'node:path/posix';
-import { gateCoverage } from './gate-config.ts';
 import { isTestInfrastructure } from '#lib/checker.ts';
 import { matches } from '#lib/globs.ts';
 import { population } from '#lib/scope.ts';
@@ -95,16 +95,6 @@ async function projectMembers(): Promise<ReadonlyMap<string, ReadonlySet<string>
 }
 
 /**
- * The globs of one coverage list.
- *
- * @param {unknown} list - A `coverage.include` or `coverage.exclude` value.
- * @returns {readonly string[]} Its globs.
- */
-function globs(list: unknown): readonly string[] {
-  return Array.isArray(list) ? list.map(String) : [];
-}
-
-/**
  * The non-test files the coverage `include` of Vitest reaches and its `exclude` does not take back.
  *
  * @param {readonly string[]} files - The held files.
@@ -112,8 +102,8 @@ function globs(list: unknown): readonly string[] {
  */
 async function coverageReached(files: readonly string[]): Promise<ReadonlySet<string>> {
   const [coverage, held] = await Promise.all([gateCoverage(), population()]);
-  const include = globs(coverage['include']);
-  const exclude = globs(coverage['exclude']);
+  const include = globsOf(coverage, 'include');
+  const exclude = globsOf(coverage, 'exclude');
   const covered = (path: string): boolean => include.some((glob) => matches(glob, path)) && !exclude.some((glob) => matches(glob, path));
   return new Set(files.filter((path) => isTestFile(path) || isTestInfrastructure(held, path) || covered(path)));
 }

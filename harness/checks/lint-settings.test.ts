@@ -18,7 +18,7 @@ import { ESLINT_DIRECTIVE_TEXT, UNUSED_DIRECTIVE_TEXT, WARNING_PLANT, WARNING_TE
 import { EXIT_CLEAN, EXIT_FINDINGS } from './exit-status.ts';
 import { config, lint, plantedCodes, repoConfig } from './lint-settings.run.ts';
 import { describe, expect, test } from 'vitest';
-import { json, object } from '#lib/config.ts';
+import { object, parsed } from '#lib/config.ts';
 import type { Options } from './lint-settings.run.ts';
 import { finished } from '#lib/tools.ts';
 import { fromRoot } from '#lib/paths.ts';
@@ -147,7 +147,7 @@ async function v2Strict(): Promise<Options> {
     ],
     { cwd: fromRoot() },
   );
-  return object(json(done.stdout), 'v2-strict rules');
+  return object(parsed(done.stdout, 'v2-strict rules'), 'v2-strict rules');
 }
 
 /**

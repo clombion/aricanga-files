@@ -3,8 +3,8 @@
  * read as plain values, its `test` and `test.coverage` sections each an object.
  */
 
+import { list, object, stringOf } from '#lib/config.ts';
 import { fromRoot } from '#lib/paths.ts';
-import { object } from '#lib/config.ts';
 import { pathToFileURL } from 'node:url';
 
 type Section = Readonly<Record<string, unknown>>;
@@ -39,4 +39,15 @@ async function gateCoverage(): Promise<Section> {
   return object(test['coverage'] ?? {}, 'coverage');
 }
 
-export { gateCoverage, gateTest };
+/**
+ * The globs of one of a section's lists, each refused unless it is a string.
+ *
+ * @param {Section} section - The section, such as `test.coverage`.
+ * @param {string} field - The list's field, such as `include`.
+ * @returns {readonly string[]} Its globs.
+ */
+function globsOf(section: Section, field: string): readonly string[] {
+  return list(section[field], field).map((glob) => stringOf(glob, `a glob of ${field}`));
+}
+
+export { gateCoverage, gateTest, globsOf };

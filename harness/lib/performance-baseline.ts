@@ -9,7 +9,7 @@ import type { Finished } from './process.ts';
 import type { Report } from './script-entries.ts';
 import { bin } from './tools.ts';
 import { byCodeUnit } from './lists.ts';
-import { json } from './config.ts';
+import { parsed } from './config.ts';
 import path from 'node:path';
 
 /** One project's timings, in milliseconds. */
@@ -74,11 +74,11 @@ async function reportText(results: string, directory: string): Promise<string | 
  * @returns {readonly [string, Timing] | undefined} The project and its timing, or undefined when the report has another shape.
  */
 function timingOf(text: string): readonly [string, Timing] | undefined {
-  const parsed = json(text);
-  if (typeof parsed !== 'object' || parsed === null || !('project' in parsed) || !('render' in parsed) || !('updates' in parsed)) {
+  const report = parsed(text, 'the performance report');
+  if (typeof report !== 'object' || report === null || !('project' in report) || !('render' in report) || !('updates' in report)) {
     return undefined;
   }
-  const { project, render, updates } = parsed;
+  const { project, render, updates } = report;
   if (typeof project !== 'string' || typeof render !== 'number' || typeof updates !== 'number') {
     return undefined;
   }

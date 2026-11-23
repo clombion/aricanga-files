@@ -7,7 +7,7 @@
  */
 
 import { bin, finished } from './tools.ts';
-import { json, object, repoTasks } from './config.ts';
+import { object, parsed, repoTasks } from './config.ts';
 import type { Finished } from './process.ts';
 import { present } from './present.ts';
 import { textOf } from './source-files.ts';
@@ -81,7 +81,7 @@ function ignoreEntries(config: unknown): readonly string[] {
  */
 async function repoIgnoreEntries(): Promise<readonly string[]> {
   const text = await textOf('knip.json');
-  return ignoreEntries(json(text));
+  return ignoreEntries(parsed(text, 'knip.json'));
 }
 
 /**
@@ -91,7 +91,7 @@ async function repoIgnoreEntries(): Promise<readonly string[]> {
  */
 async function issueTypes(): Promise<readonly string[]> {
   const text = await textOf('node_modules/knip/schema.json');
-  const schema = object(json(text), 'knip schema');
+  const schema = object(parsed(text, 'knip schema'), 'knip schema');
   const rules = object(object(schema['properties'], 'properties')['rules'], 'rules');
   return Object.keys(object(rules['properties'], 'rules.properties'));
 }

@@ -1,8 +1,11 @@
-/** Reads the repository's tool configuration as typed records: the package tasks and the git hooks. */
+/**
+ * Reads JSON the harness is handed as typed records: the repository's tool configuration (the package
+ * tasks and the git hooks), and the reports of the tools it runs (pnpm's listing, Vitest's and jscpd's).
+ */
 
 import { textOf } from './source-files.ts';
 
-/** A refusal of a configuration value of the wrong shape. */
+/** A refusal of a configuration value, or a tool's report, of the wrong shape. */
 class ConfigError extends Error {
   public override readonly name = 'ConfigError';
 }
@@ -40,29 +43,34 @@ function object(value: unknown, what: string): Readonly<Record<string, unknown>>
 }
 
 /**
- * Parse JSON text into a value the readers narrow; never a typed cast.
+ * JSON text parsed into a value the readers narrow, never a typed cast. Text that is not JSON
+ * refuses with `ConfigError` naming what it is: every parse names its source.
  *
  * @param {string} text - The JSON text.
+ * @param {string} what - What the text is, for the refusal.
  * @returns {unknown} The parsed value.
  */
-function json(text: string): unknown {
-  const parsed: unknown = JSON.parse(text);
-  return parsed;
-}
-
-/**
- * Parse a tool's JSON report, refusing text that is not JSON by naming the report.
- *
- * @param {string} text - The report's text.
- * @param {string} what - What the report is, for the refusal.
- * @returns {unknown} The parsed value.
- */
-function report(text: string, what: string): unknown {
+function parsed(text: string, what: string): unknown {
   try {
-    return json(text);
+    const value: unknown = JSON.parse(text);
+    return value;
   } catch (error: unknown) {
     throw new ConfigError(`${what} is not JSON: ${String(error)}`, { cause: error });
   }
+}
+
+/**
+ * A string field of a value read from outside, or a refusal naming what it was instead.
+ *
+ * @param {unknown} value - The field's value.
+ * @param {string} what - What the field is, for the refusal.
+ * @returns {string} The string.
+ */
+function stringOf(value: unknown, what: string): string {
+  if (typeof value !== 'string') {
+    throw new ConfigError(`${what} is not a string: ${JSON.stringify(value)}`);
+  }
+  return value;
 }
 
 /**
@@ -151,7 +159,7 @@ function closure(name: string, every: Readonly<ReadonlyMap<string, Task>>): read
  */
 async function repoTasks(): Promise<ReadonlyMap<string, Task>> {
   const text = await textOf('package.json');
-  return tasks(json(text));
+  return tasks(parsed(text, 'package.json'));
 }
 
 /**
@@ -181,8 +189,8 @@ function hooks(lefthook: unknown): readonly Hook[] {
  */
 async function repoHooks(): Promise<readonly Hook[]> {
   const text = await textOf('lefthook.json');
-  return hooks(json(text));
+  return hooks(parsed(text, 'lefthook.json'));
 }
 
-export { closure, ConfigError, hooks, json, list, object, repoHooks, repoTasks, report, runsTask, tasks };
+export { closure, ConfigError, hooks, list, object, parsed, repoHooks, repoTasks, runsTask, stringOf, tasks };
 export type { Hook, Task };

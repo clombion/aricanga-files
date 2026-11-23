@@ -75,4 +75,34 @@ async function workspaceFolder(prefix: string, rootManifest: string): Promise<st
   return folder;
 }
 
-export { manifest, reader, refusalOf, workspaceFolder };
+/** The importers block pnpm 10.28.0 wrote for workspaces whose directories need YAML quoting (`verif-58-1a-r3/phase-5-work/quoting*`). */
+const QUOTED_KEYS: string = [
+  "lockfileVersion: '9.0'",
+  '',
+  'importers:',
+  '',
+  '  .: {}',
+  '',
+  "  '@s/p':",
+  '    devDependencies:',
+  '      dep:',
+  '        specifier: workspace:*',
+  '        version: link:../../a/dep',
+  '',
+  '  a/#hash: {}',
+  '',
+  "  a/q'uote: {}",
+  '',
+  '  a/sp ace: {}',
+  '',
+  '  a/x:y:',
+  '    devDependencies:',
+  '      p5:',
+  '        specifier: workspace:*',
+  '        version: link:../plain',
+  '',
+  'packages:',
+  '',
+].join('\n');
+
+export { manifest, QUOTED_KEYS, reader, refusalOf, workspaceFolder };

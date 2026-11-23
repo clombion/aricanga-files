@@ -12,12 +12,14 @@
  * renders the table of `harness.md`.
  */
 
-import { ConfigError, object, report } from './config.ts';
-import type { Dir, Population } from './scope.ts';
+import { ConfigError, object, parsed } from './config.ts';
 import { byCodeUnit, isEmpty } from './lists.ts';
-import { importerOf, manifestOf, population } from './scope.ts';
+import { importerOf, manifestOf } from './package-dirs.ts';
+import type { Dir } from './package-dirs.ts';
+import type { Population } from './scope.ts';
 import { engineRange } from './node-floor.ts';
 import { parse } from 'yaml';
+import { population } from './scope.ts';
 import { present } from './present.ts';
 import { textOf } from './source-files.ts';
 
@@ -242,7 +244,7 @@ async function pinsOf(held: Population, read: (listed: string) => Promise<string
     Promise.all(
       dirs.map(async (dir): Promise<Manifest> => {
         const text = await read(manifestOf(dir));
-        return { dir, manifest: report(text, manifestOf(dir)) };
+        return { dir, manifest: parsed(text, manifestOf(dir)) };
       }),
     ),
     read(LOCKFILE),

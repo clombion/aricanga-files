@@ -1,22 +1,14 @@
 /** The population: pnpm's workspace packages whose manifests git lists, less the POC, each with its role. */
 
-import type { Dir, Population } from '#lib/scope.ts';
 import { LOCKFILE, lockOf } from '#lib/pins.ts';
-import {
-  POC,
-  PopulationError,
-  dirOfImporter,
-  importerOf,
-  manifestOf,
-  nearest,
-  population,
-  populationOf,
-  workspacePackages,
-} from '#lib/scope.ts';
+import { POC, population, populationOf } from '#lib/scope.ts';
+import { QUOTED_KEYS, manifest, reader, refusalOf, workspaceFolder } from './scope.plants.ts';
 import { describe, expect, test } from 'vitest';
-import { manifest, reader, refusalOf, workspaceFolder } from './scope.plants.ts';
-import { mkdir, rm, symlink, writeFile } from 'node:fs/promises';
 import { perRoot, textOf } from '#lib/source-files.ts';
+import { rm, writeFile } from 'node:fs/promises';
+import type { Population } from '#lib/scope.ts';
+import { PopulationError } from '#lib/workspace.ts';
+import { dirOfImporter } from '#lib/package-dirs.ts';
 import path from 'node:path';
 
 /**
@@ -43,45 +35,24 @@ function manifestEntry([dir, role]: readonly [string, string]): readonly [string
   return [`${dir}package.json`, manifest(role)];
 }
 
-/**
- * A root's path, for `nearest`.
- *
- * @param {Readonly<{ root: string }>} item - An item with a root.
- * @returns {string} Its root.
- */
-function rootOf(item: Readonly<{ root: string }>): string {
-  return item.root;
-}
+/** The fields a refusal's text leads with: its class, its source and its first words. */
+const REFUSAL_HEAD = 3;
 
-/** The importers block pnpm 10.28.0 wrote for workspaces whose directories need YAML quoting (`verif-58-1a-r3/phase-5-work/quoting*`). */
-const QUOTED_KEYS = [
-  "lockfileVersion: '9.0'",
-  '',
-  'importers:',
-  '',
-  '  .: {}',
-  '',
-  "  '@s/p':",
-  '    devDependencies:',
-  '      dep:',
-  '        specifier: workspace:*',
-  '        version: link:../../a/dep',
-  '',
-  '  a/#hash: {}',
-  '',
-  "  a/q'uote: {}",
-  '',
-  '  a/sp ace: {}',
-  '',
-  '  a/x:y:',
-  '    devDependencies:',
-  '      p5:',
-  '        specifier: workspace:*',
-  '        version: link:../plain',
-  '',
-  'packages:',
-  '',
-].join('\n');
+/**
+ * The head of the refusal of a one-member population whose manifest is `text`.
+ *
+ * @param {string} text - The manifest's text.
+ * @returns {Promise<string>} The refusal's class, source and first words.
+ */
+async function refusalHead(text: string): Promise<string> {
+  const computing = populationOf({
+    listing: ['packages/c/package.json'],
+    read: reader({ 'packages/c/package.json': text }),
+    workspace: ['packages/c/'],
+  });
+  const refusal = await refusalOf(computing);
+  return refusal.split(':', REFUSAL_HEAD).join(':');
+}
 
 describe('a population', () => {
   test('holds a listed workspace package with a role, and leaves out the root, an unlisted one and the POC', async () => {
@@ -129,6 +100,33 @@ describe('a population', () => {
   });
 });
 
+describe('a population refused', () => {
+  test('refuses every member with a bad role at once, and a manifest that is not JSON or whose aricanga is no object by its path', async () => {
+    expect.hasAssertions();
+    const roles = reader({ 'packages/a/package.json': manifest('sytem'), 'packages/b/package.json': JSON.stringify({ name: 'b' }) });
+    const computing = populationOf({
+      listing: ['packages/a/package.json', 'packages/b/package.json'],
+      read: roles,
+      workspace: ['packages/a/', 'packages/b/'],
+    });
+    const bad = await refusalOf(computing);
+    const texts = ['{"name":', JSON.stringify({ aricanga: 'system' })];
+    const broken = await Promise.all(
+      texts.map(async (text) => {
+        const head = await refusalHead(text);
+        return head;
+      }),
+    );
+    expect([bad, broken]).toStrictEqual([
+      'PopulationError: packages/a/package.json: aricanga.role is "sytem"; packages/b/package.json: aricanga.role is undefined; a workspace package declares one of the roles of harness/lib/roles.ts (experience, foundation, system, test-infrastructure, view)',
+      [
+        'ConfigError: packages/c/package.json is not JSON: SyntaxError',
+        'ConfigError: packages/c/package.json aricanga is not an object: "system"',
+      ],
+    ]);
+  });
+});
+
 describe('a population by tier', () => {
   test("selects each tier's members once: the kernel, and every member that ships", async () => {
     expect.hasAssertions();
@@ -153,69 +151,10 @@ describe('a population by tier', () => {
   });
 });
 
-describe('a package', () => {
-  test('is one directory: its manifest and its importer derive from it, and an importer leads back to it', () => {
-    expect.hasAssertions();
-    const dirs: readonly Dir[] = ['', 'packages/a/', "a/q'uote/", 'a/x:y/', '1.0/'];
-    const derived = dirs.map((dir) => {
-      const importer = importerOf(dir);
-      return [manifestOf(dir), importer, dirOfImporter(importer)];
-    });
-    expect(derived).toStrictEqual([
-      ['package.json', '.', ''],
-      ['packages/a/package.json', 'packages/a', 'packages/a/'],
-      ["a/q'uote/package.json", "a/q'uote", "a/q'uote/"],
-      ['a/x:y/package.json', 'a/x:y', 'a/x:y/'],
-      ['1.0/package.json', '1.0', '1.0/'],
-    ]);
-    const keys = [...lockOf(QUOTED_KEYS).keys()];
-    expect(keys.map((importer) => importerOf(dirOfImporter(importer)))).toStrictEqual(keys);
-  });
-
-  test('is held by the nearest root whatever order the roots come in', () => {
-    expect.hasAssertions();
-    const outer = { root: 'packages/a/' };
-    const inner = { root: 'packages/a/b/' };
-    expect([
-      nearest([outer, inner], rootOf, 'packages/a/b/x.ts'),
-      nearest([inner, outer], rootOf, 'packages/a/b/x.ts'),
-      nearest([inner, outer], rootOf, 'packages/a/x.ts'),
-      nearest([inner, outer], rootOf, 'harness/x.ts'),
-    ]).toStrictEqual([inner, inner, outer, undefined]);
-  });
-});
-
 describe('the records', () => {
   test('subtracts each POC entry as a directory, not as a prefix of a name', () => {
     expect.hasAssertions();
     expect([POC.starts('utils/x.js'), POC.starts('utils2/x.js'), POC.starts('packages/tests/a.ts')]).toStrictEqual([true, false, true]);
-  });
-});
-
-describe('pnpm', () => {
-  test('refuses a workspace it cannot list, naming the root', async () => {
-    expect.hasAssertions();
-    const folder = await workspaceFolder('unlistable-', '{');
-    try {
-      await expect(workspacePackages(folder)).rejects.toThrow(`pnpm could not list the workspace at ${folder}: `);
-    } finally {
-      await rm(folder, { force: true, recursive: true });
-    }
-  });
-
-  test('answers the same packages through a symlink to the root', async () => {
-    expect.hasAssertions();
-    const folder = await workspaceFolder('linked-', '{}');
-    const link = `${folder}-link`;
-    try {
-      await mkdir(path.join(folder, 'a', 'x'), { recursive: true });
-      await writeFile(path.join(folder, 'a', 'x', 'package.json'), '{"name":"x"}');
-      await symlink(folder, link);
-      await expect(workspacePackages(link)).resolves.toStrictEqual(['', 'a/x/']);
-    } finally {
-      await rm(link, { force: true });
-      await rm(folder, { force: true, recursive: true });
-    }
   });
 });
 

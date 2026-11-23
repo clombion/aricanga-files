@@ -3,7 +3,7 @@
  * and why a run gave no report.
  */
 
-import { list, object } from './config.ts';
+import { list, object, stringOf } from './config.ts';
 import { EXIT_SUCCESS } from './output.ts';
 import type { Outcome } from './process.ts';
 import { createHash } from 'node:crypto';
@@ -56,7 +56,10 @@ function cloneOf(runName: string, entry: unknown, root: string): Clone {
   const fields = object(entry, 'a duplicate');
   const first = relativeTo(object(fields['firstFile'], 'firstFile')['name'], root);
   const second = relativeTo(object(fields['secondFile'], 'secondFile')['name'], root);
-  const fragment = createHash('sha256').update(String(fields['fragment'])).digest('hex').slice(HASH_START, FRAGMENT_DIGITS);
+  const fragment = createHash('sha256')
+    .update(stringOf(fields['fragment'], 'a duplicate fragment'))
+    .digest('hex')
+    .slice(HASH_START, FRAGMENT_DIGITS);
   const [low = first, high = second] = [first, second].toSorted();
   return { first: low, fragment, run: runName, second: high };
 }

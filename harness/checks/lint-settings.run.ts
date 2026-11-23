@@ -1,7 +1,7 @@
 /** Runs of the locked oxlint over planted projects, for the `lint-settings` check. */
 
 import { PLANTS, UNUSED_DIRECTIVE } from './lint-settings.plants.ts';
-import { json, object } from '#lib/config.ts';
+import { object, parsed } from '#lib/config.ts';
 import { OXLINT_CONFIG_FILES } from '#lib/lint-rules.ts';
 import { Project } from '#lib/tools.ts';
 import { textOf } from '#lib/source-files.ts';
@@ -20,7 +20,7 @@ interface Lint {
  */
 async function repoConfig(): Promise<Options> {
   const text = await textOf('.oxlintrc.json');
-  return object(json(text), '.oxlintrc.json');
+  return object(parsed(text, '.oxlintrc.json'), '.oxlintrc.json');
 }
 
 /**
@@ -100,7 +100,7 @@ async function lint(files: Readonly<Record<string, string>>, configText: string)
     );
     await project.writeAll(Object.entries(files));
     const done = await project.tool('oxlint', '-c', '.oxlintrc.json', '--format', 'json', ...Object.keys(files));
-    return { codes: codesByFile(json(done.stdout)), status: done.status };
+    return { codes: codesByFile(parsed(done.stdout, "oxlint's report")), status: done.status };
   } finally {
     await project.remove();
   }

@@ -5,8 +5,8 @@ import type { Outcome } from './process.ts';
 import { Vocabulary } from './exemptions.ts';
 import { fromRoot } from './paths.ts';
 import { isFile } from './source-files.ts';
-import { json } from './config.ts';
 import { noReport } from './dupes-report.ts';
+import { parsed } from './config.ts';
 import path from 'node:path';
 import { run } from './process.ts';
 import { tmpdir } from 'node:os';
@@ -99,7 +99,7 @@ async function reportOf(
     const report = path.join(folder, REPORT);
     const written = await isFile(folder, REPORT);
     const problem = noReport(outcome, written);
-    return problem ?? json(await readFile(report, 'utf8'));
+    return problem ?? parsed(await readFile(report, 'utf8'), "jscpd's report");
   } finally {
     await rm(folder, { force: true, recursive: true });
   }

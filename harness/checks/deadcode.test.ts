@@ -15,7 +15,7 @@ import { Exemptions } from '#lib/exemptions.ts';
 import { Project } from '#lib/tools.ts';
 import { REPO_ROOT } from '#lib/paths.ts';
 import { inSequence } from '#lib/lists.ts';
-import { json } from '#lib/config.ts';
+import { parsed } from '#lib/config.ts';
 import { textOf } from '#lib/source-files.ts';
 
 const HARNESS_ID = 'deadcode';
@@ -139,7 +139,7 @@ describe('the repository', () => {
     expect.hasAssertions();
     const [types, text] = await Promise.all([issueTypes(), textOf('knip.json')]);
     expect(types).toContain('exports');
-    expect(strictnessProblems(json(text), types)).toStrictEqual([]);
+    expect(strictnessProblems(parsed(text, 'knip.json'), types)).toStrictEqual([]);
   });
 });
 

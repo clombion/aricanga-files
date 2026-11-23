@@ -12,8 +12,8 @@
 import { describe, expect, test } from 'vitest';
 import { duplicateDependencies } from './json-files.manifests.ts';
 import { heldFiles } from '#lib/scope.ts';
-import { json } from '#lib/config.ts';
 import { jsonProblems } from '#lib/json-strict.ts';
+import { parsed } from '#lib/config.ts';
 import { textOf } from '#lib/source-files.ts';
 
 const HARNESS_ID = 'json-files';
@@ -66,7 +66,7 @@ describe('the repository', () => {
     const found = await Promise.all(
       manifests.map(async (path) => {
         const text = await textOf(path);
-        return duplicateDependencies(json(text)).map((problem) => `${path}: ${problem}`);
+        return duplicateDependencies(parsed(text, path)).map((problem) => `${path}: ${problem}`);
       }),
     );
     expect(found.flat()).toStrictEqual([]);

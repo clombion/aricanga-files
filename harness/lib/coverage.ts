@@ -11,7 +11,7 @@
 import { CountedExemptions, site } from './exemptions.ts';
 import { EXIT_FAILURE, EXIT_SUCCESS } from './output.ts';
 import { byCodeUnit, isEmpty } from './lists.ts';
-import { json, object } from './config.ts';
+import { object, parsed } from './config.ts';
 import type { Mismatch } from './exemptions.ts';
 import { REPO_ROOT } from './paths.ts';
 import path from 'node:path';
@@ -167,7 +167,7 @@ function floorProblems(files: readonly FileCoverage[], debt: Readonly<CountedExe
  */
 async function gateReport(directory: string = COVERAGE_DIR): Promise<unknown> {
   const text = await textAt(path.join(directory, 'coverage-final.json'));
-  return json(text);
+  return parsed(text, 'the coverage report');
 }
 
 /**

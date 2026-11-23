@@ -9,8 +9,8 @@
 
 import { describe, expect, test } from 'vitest';
 import { isCallExpression, isExportDeclaration, isImportDeclaration, isStringLiteral } from 'typescript/unstable/ast/is';
-import { json, object } from '#lib/config.ts';
 import { nodes, parse } from '#lib/ts-source.ts';
+import { object, parsed } from '#lib/config.ts';
 import { textOf, tracked } from '#lib/source-files.ts';
 import { Accepted } from '#lib/exemptions.ts';
 import type { Node } from '#lib/ts-source.ts';
@@ -103,7 +103,7 @@ function retiredImports(path: string, text: string): string[] {
  * @returns {string[]} Its findings.
  */
 function retiredDependencies(path: string, text: string): string[] {
-  const manifest = object(json(text), path);
+  const manifest = object(parsed(text, path), path);
   return DEPENDENCY_FIELDS.flatMap((field) =>
     Object.keys(object(Object.hasOwn(manifest, field) ? manifest[field] : {}, `${path} ${field}`))
       .filter((name) => RETIRED.has(name))

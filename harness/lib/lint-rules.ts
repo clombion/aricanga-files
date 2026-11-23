@@ -9,9 +9,8 @@
  */
 
 import { Project, bin, finished } from './tools.ts';
-import { list, object, report } from './config.ts';
+import { list, object, parsed, stringOf } from './config.ts';
 import { textsOf, tracked } from './source-files.ts';
-
 import { FixtureError } from './fixture-error.ts';
 import { fromRoot } from './paths.ts';
 import path from 'node:path';
@@ -123,7 +122,11 @@ async function fixtureFolders(): Promise<readonly string[]> {
 function diagnostics(output: unknown): readonly Diagnostic[] {
   return list(object(output, 'oxlint output')['diagnostics'], 'oxlint output diagnostics').map((entry: unknown) => {
     const fields = object(entry, 'diagnostic');
-    return { code: String(fields['code']), file: String(fields['filename']), message: String(fields['message']) };
+    return {
+      code: stringOf(fields['code'], 'a diagnostic code'),
+      file: stringOf(fields['filename'], 'a diagnostic filename'),
+      message: stringOf(fields['message'], 'a diagnostic message'),
+    };
   });
 }
 
@@ -148,7 +151,7 @@ function refuseDuplicates(paths: readonly string[]): void {
  */
 async function lintPlanted(project: Readonly<Project>, paths: readonly string[]): Promise<readonly Diagnostic[]> {
   const outcome = await finished([bin('oxlint'), '--format', 'json', ...paths], { cwd: project.root });
-  return diagnostics(report(outcome.stdout, `oxlint's report (it wrote to stderr: ${outcome.stderr})`)).map((found) => ({
+  return diagnostics(parsed(outcome.stdout, `oxlint's report (it wrote to stderr: ${outcome.stderr})`)).map((found) => ({
     code: found.code,
     file: found.file.replace(`${project.root}/`, ''),
     message: found.message,

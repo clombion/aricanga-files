@@ -15,7 +15,7 @@ import {
 } from './exemption-lists.consults.ts';
 import { dirname, join, normalize } from 'node:path/posix';
 import { importsFrom, parse } from '#lib/ts-source.ts';
-import { json, object } from '#lib/config.ts';
+import { object, parsed } from '#lib/config.ts';
 import { Accepted } from '#lib/exemptions.ts';
 import { textOf } from '#lib/source-files.ts';
 
@@ -39,7 +39,7 @@ interface Finding {
  */
 async function subpathPatterns(): Promise<readonly (readonly [string, string])[]> {
   const text = await textOf('package.json');
-  const manifest = object(json(text), 'package.json');
+  const manifest = object(parsed(text, 'package.json'), 'package.json');
   const imports = object(manifest['imports'] ?? {}, 'imports');
   return Object.entries(imports).flatMap(([pattern, target]: readonly [string, unknown]) =>
     typeof target === 'string' ? [[pattern, target] as const] : [],

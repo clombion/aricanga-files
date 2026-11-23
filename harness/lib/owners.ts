@@ -41,7 +41,7 @@ import { isPlatform, nameText, nodes, pathOf, qualifiedName } from './checker.ts
 import type { Rule } from './owner-rules.ts';
 import type { Scan } from './checker.ts';
 import type { Symbol as TsSymbol } from 'typescript/unstable/sync';
-import { nearest } from './scope.ts';
+import { nearest } from './package-dirs.ts';
 import { rulesOf } from './owner-rules.ts';
 import { site } from './exemptions.ts';
 

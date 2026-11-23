@@ -7,6 +7,7 @@
 
 import { readFile, stat, writeFile } from 'node:fs/promises';
 import { REPO_ROOT } from './paths.ts';
+import { isolatedEnv } from './tools.ts';
 import path from 'node:path';
 import { run } from './process.ts';
 import { succeeded } from './output.ts';
@@ -98,20 +99,36 @@ function perRoot<Value>(compute: (root: string) => Promise<Value>): (root: strin
 }
 
 /**
+ * The output of a bounded listing command, git's listing or pnpm's workspace: one runner, one bound
+ * and one environment for both. A command that does not finish within the bound, or exits non-zero,
+ * refuses through `refuse`, handed the whole outcome: the status and both streams.
+ *
+ * @param {readonly string[]} argv - The command and its arguments.
+ * @param {string} root - Where it runs.
+ * @param {(outcome: string) => Error} refuse - The refusal, given the outcome as JSON.
+ * @returns {Promise<string>} Its standard output.
+ */
+async function listingOutput(argv: readonly string[], root: string, refuse: (outcome: string) => Error): Promise<string> {
+  const outcome = await run(argv, { cwd: root, env: isolatedEnv(), timeoutMs: LISTING_TIMEOUT_MS });
+  if (outcome.kind !== 'finished' || !succeeded(outcome)) {
+    throw refuse(JSON.stringify(outcome));
+  }
+  return outcome.stdout;
+}
+
+/**
  * List `root` through git, refusing a listing git could not give or gave short.
  *
  * @param {string} root - The directory to list.
  * @returns {Promise<readonly string[]>} The files, as POSIX paths relative to `root`.
  */
 async function list(root: string): Promise<readonly string[]> {
-  const outcome = await run(['git', 'ls-files', '-z', '--cached', '--others', '--exclude-standard'], {
-    cwd: root,
-    timeoutMs: LISTING_TIMEOUT_MS,
-  });
-  if (outcome.kind !== 'finished' || !succeeded(outcome)) {
-    throw new ListingError(`git could not list ${root}: ${JSON.stringify(outcome)}`);
-  }
-  const found = await listing(outcome.stdout, root);
+  const stdout = await listingOutput(
+    ['git', 'ls-files', '-z', '--cached', '--others', '--exclude-standard'],
+    root,
+    (outcome) => new ListingError(`git could not list ${root}: ${outcome}`),
+  );
+  const found = await listing(stdout, root);
   return found;
 }
 
@@ -179,4 +196,4 @@ async function writeText(listed: string, text: string): Promise<void> {
   await writeFile(path.join(REPO_ROOT, listed), text, 'utf8');
 }
 
-export { FLOOR, isFile, ListingError, listing, perRoot, textAt, textOf, textsOf, tracked, writeText };
+export { FLOOR, isFile, ListingError, listing, listingOutput, perRoot, textAt, textOf, textsOf, tracked, writeText };

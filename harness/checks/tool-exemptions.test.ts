@@ -12,8 +12,8 @@
 import { Exemptions, site } from '#lib/exemptions.ts';
 import { dead, matches } from '#lib/globs.ts';
 import { describe, expect, test } from 'vitest';
-import { json, object } from '#lib/config.ts';
 import { knipEntries, oxfmtEntries, oxlintEntries, stylelintEntries, vitestEntries } from './tool-exemptions.readers.ts';
+import { object, parsed } from '#lib/config.ts';
 import { textOf, tracked } from '#lib/source-files.ts';
 import type { Entry } from './tool-exemptions.readers.ts';
 import { fromRoot } from '#lib/paths.ts';
@@ -49,7 +49,7 @@ async function listedJson(path: string): Promise<unknown> {
     return undefined;
   }
   const text = await textOf(path);
-  return json(text);
+  return parsed(text, path);
 }
 
 async function repoEntries(): Promise<Entry[]> {

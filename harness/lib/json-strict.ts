@@ -6,7 +6,7 @@
 
 import { JsonSyntaxError, tokensOf } from './json-tokens.ts';
 import type { JsonToken } from './json-tokens.ts';
-import { json } from './config.ts';
+import { parsed } from './config.ts';
 
 /** A problem a JSON text has, with where it sits as a path of keys and indices. */
 interface JsonProblem {
@@ -146,7 +146,7 @@ class Reading {
       return this.stop('a key');
     }
     this.#at += STEP;
-    const key = String(json(token.text));
+    const key = String(parsed(token.text, 'a JSON string token'));
     this.note(`${path}.${key}`, keyProblems(key, seen));
     this.require(':', "':'");
     return key;
@@ -194,7 +194,7 @@ class Reading {
    * @param {string} path - Where it sits.
    */
   private scalar(token: Readonly<JsonToken>, path: string): void {
-    const lone = token.kind === 'string' && LONE_SURROGATE.test(String(json(token.text)));
+    const lone = token.kind === 'string' && LONE_SURROGATE.test(String(parsed(token.text, 'a JSON string token')));
     const problem = token.kind === 'number' ? numberProblem(token.text) : undefined;
     this.note(path, [...(lone ? ['the string holds a lone surrogate'] : []), ...(problem === undefined ? [] : [problem])]);
   }

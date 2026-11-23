@@ -3,7 +3,7 @@
 import { BASELINE, RUN_ARGUMENTS, recordBaseline, timingOf } from '#lib/performance-baseline.ts';
 import { Project, finished } from '#lib/tools.ts';
 import { afterEach, describe, expect, test } from 'vitest';
-import { json, object } from '#lib/config.ts';
+import { object, parsed, stringOf } from '#lib/config.ts';
 import { EXIT_SUCCESS } from '#lib/output.ts';
 import type { Finished } from '#lib/process.ts';
 import { REPO_ROOT } from '#lib/paths.ts';
@@ -24,12 +24,12 @@ const AFTER_BINARY = 1;
  */
 async function configuredProjects(): Promise<readonly string[]> {
   const listed = await finished([...RUN_ARGUMENTS, '--list', '--reporter=json'], { cwd: REPO_ROOT });
-  const { config: listedConfig } = object(json(listed.stdout), 'the listing');
+  const { config: listedConfig } = object(parsed(listed.stdout, 'the listing'), 'the listing');
   const { projects } = object(listedConfig, 'the listed config');
   if (!Array.isArray(projects)) {
     throw new TypeError(`the listed config holds no projects: ${listed.stdout}`);
   }
-  return projects.map((project: unknown) => String(object(project, 'a listed project')['name'])).toSorted();
+  return projects.map((project: unknown) => stringOf(object(project, 'a listed project')['name'], 'a listed project name')).toSorted();
 }
 
 /** The planted projects not yet removed. */
@@ -129,7 +129,7 @@ describe('a recorded baseline', () => {
 describe('the committed baseline', () => {
   test('names exactly the projects the performance spec runs in', async () => {
     expect.hasAssertions();
-    const recorded = object(json(await textOf(BASELINE)), BASELINE);
+    const recorded = object(parsed(await textOf(BASELINE), BASELINE), BASELINE);
     const baseline = Object.keys(recorded).toSorted();
     await expect(configuredProjects()).resolves.toStrictEqual(baseline);
   });

@@ -12,8 +12,8 @@
 
 import { customPropertyProblems, duplicateRules, unusedClasses } from '#lib/sheet-scans.ts';
 import { describe, expect, test } from 'vitest';
-import { json, object } from '#lib/config.ts';
 import { lintSheet, readers, sheets, sheetsOf, withoutSheets } from '#lib/stylesheets.ts';
+import { object, parsed } from '#lib/config.ts';
 import { rawSizes, rawTokenValues } from '#lib/design-tokens.ts';
 import { PLANTS } from './stylesheets.plants.ts';
 import type { Sheet } from '#lib/stylesheets.ts';
@@ -43,7 +43,7 @@ function isEnabled(setting: unknown): boolean {
  */
 async function configuredRules(): Promise<readonly string[]> {
   const text = await textOf('.stylelintrc.json');
-  const config = object(json(text), '.stylelintrc.json');
+  const config = object(parsed(text, '.stylelintrc.json'), '.stylelintrc.json');
   const rules = object(config['rules'], 'rules');
   return Object.keys(rules).filter((rule) => isEnabled(rules[rule]));
 }

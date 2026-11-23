@@ -3,7 +3,7 @@
  * the repository runs on (type stripping of `.ts` scripts needs 22.18), as a single `>=x.y.z`.
  */
 
-import { json, object } from './config.ts';
+import { object, parsed } from './config.ts';
 import { textOf } from './source-files.ts';
 
 /** A version as major, minor and patch. */
@@ -97,7 +97,7 @@ function declaredFloor(manifest: unknown): Version {
  */
 async function repoFloor(): Promise<Version> {
   const text = await textOf('package.json');
-  return declaredFloor(json(text));
+  return declaredFloor(parsed(text, 'package.json'));
 }
 
 /**

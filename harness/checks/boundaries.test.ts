@@ -9,7 +9,7 @@
  */
 
 import { describe, expect, test } from 'vitest';
-import { json, object } from '#lib/config.ts';
+import { object, parsed } from '#lib/config.ts';
 import { textOf, tracked } from '#lib/source-files.ts';
 import { EXIT_FINDINGS } from './exit-status.ts';
 import { OXLINT_CONFIG_FILES } from '#lib/lint-rules.ts';
@@ -89,7 +89,7 @@ async function systems(): Promise<readonly string[]> {
  */
 async function overrideGlobs(): Promise<readonly unknown[]> {
   const text = await textOf('.oxlintrc.json');
-  const { overrides } = object(json(text), '.oxlintrc.json');
+  const { overrides } = object(parsed(text, '.oxlintrc.json'), '.oxlintrc.json');
   const entries: readonly unknown[] = Array.isArray(overrides) ? overrides : [];
   return entries.flatMap((entry) => object(entry, 'override')['files']);
 }

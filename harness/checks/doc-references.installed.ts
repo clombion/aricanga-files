@@ -4,7 +4,7 @@
  */
 
 import { REPO_ROOT, fromRoot } from '#lib/paths.ts';
-import { json, object } from '#lib/config.ts';
+import { list, object, parsed, stringOf } from '#lib/config.ts';
 import { textsOf, tracked } from '#lib/source-files.ts';
 import { Prefixes } from '#lib/exemptions.ts';
 import type { Resolver } from './doc-references.resolve.ts';
@@ -30,7 +30,7 @@ async function namedPackages(): Promise<readonly (readonly [string, string])[]> 
   const listed = await tracked();
   const texts = await textsOf(listed.filter((path) => path.endsWith('package.json') && !path.includes('node_modules/')));
   return texts.flatMap(([path, text]: readonly [string, string]) => {
-    const { name } = object(json(text), path);
+    const { name } = object(parsed(text, path), path);
     return typeof name === 'string' ? [[name, dirname(path)] as const] : [];
   });
 }
@@ -129,12 +129,11 @@ async function quotedValues(): Promise<ReadonlySet<string>> {
  */
 async function oxlintRuleIds(): Promise<ReadonlySet<string>> {
   const done = await finished([fromRoot('node_modules', '.bin', 'oxlint'), '--rules', '--format=json'], { cwd: REPO_ROOT });
-  const listed: unknown = json(done.stdout);
-  const rules: readonly unknown[] = Array.isArray(listed) ? listed : [];
+  const rules = list(parsed(done.stdout, "oxlint's rule listing"), "oxlint's rule listing");
   return new Set(
     rules.map((entry) => {
       const fields = object(entry, 'oxlint rule');
-      return `${String(fields['scope']).replaceAll('_', '-')}/${String(fields['value'])}`;
+      return `${stringOf(fields['scope'], 'an oxlint rule scope').replaceAll('_', '-')}/${stringOf(fields['value'], 'an oxlint rule')}`;
     }),
   );
 }

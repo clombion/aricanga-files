@@ -4,7 +4,7 @@
  * A guard is proven by what this run reports for each planted test.
  */
 
-import { json, list, object } from './config.ts';
+import { list, object, parsed, stringOf } from './config.ts';
 import { Project } from './tools.ts';
 
 /** The setup module the gate's Vitest config loads for every test. */
@@ -34,7 +34,7 @@ const CONFIG = `export default {
  * @returns {ReadonlyMap<string, Outcome>} Each test's outcome, by the test's full name.
  */
 function outcomesOf(reportText: string): ReadonlyMap<string, Outcome> {
-  const report = object(json(reportText), 'the Vitest report');
+  const report = object(parsed(reportText, 'the Vitest report'), 'the Vitest report');
   const assertions = list(report['testResults'], 'the test file results').flatMap((file) =>
     list(object(file, 'a test file result')['assertionResults'], "a test file's results"),
   );
@@ -42,10 +42,12 @@ function outcomesOf(reportText: string): ReadonlyMap<string, Outcome> {
     assertions.map((assertion) => {
       const fields = object(assertion, 'a test result');
       const outcome: Outcome = {
-        failure: list(fields['failureMessages'], "a test's failure messages").map(String).join('\n'),
-        status: String(fields['status']),
+        failure: list(fields['failureMessages'], "a test's failure messages")
+          .map((message) => stringOf(message, "a test's failure message"))
+          .join('\n'),
+        status: stringOf(fields['status'], "a test's status"),
       };
-      return [String(fields['fullName']), outcome] as const;
+      return [stringOf(fields['fullName'], "a test's full name"), outcome] as const;
     }),
   );
 }

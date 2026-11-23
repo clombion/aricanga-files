@@ -12,7 +12,7 @@
 import { FixtureError, codesAt, fixtureFolders, fixtures, lintFixtures, parseFixture } from '#lib/lint-rules.ts';
 import { PLUGIN_NAME, RULES } from '#lint-rules/plugin.ts';
 import { describe, expect, test } from 'vitest';
-import { json, object } from '#lib/config.ts';
+import { object, parsed } from '#lib/config.ts';
 import { Accepted } from '#lib/exemptions.ts';
 import type { Fixture } from '#lib/lint-rules.ts';
 import { textOf } from '#lib/source-files.ts';
@@ -188,7 +188,7 @@ describe('the repository', () => {
   test('the config turns on exactly the plugin rules, and the README lists them', async () => {
     expect.hasAssertions();
     const [config, readme] = await Promise.all([textOf('.oxlintrc.json'), textOf(README)]);
-    expect(configProblems(json(config), ruleNames())).toStrictEqual([]);
+    expect(configProblems(parsed(config, '.oxlintrc.json'), ruleNames())).toStrictEqual([]);
     expect(readmeProblems(readme, descriptions())).toStrictEqual([]);
   });
 

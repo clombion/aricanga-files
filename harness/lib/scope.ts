@@ -4,16 +4,15 @@
  */
 
 import { Accepted, Prefixes } from './exemptions.ts';
+import type { Dir, MemberDir } from './package-dirs.ts';
+import { PopulationError, workspacePackages } from './workspace.ts';
 import { ROLE_WORDS, isRole, ships, tierOf } from './roles.ts';
-import { json, list, object, report } from './config.ts';
+import { manifestOf, nearest } from './package-dirs.ts';
+import { object, parsed } from './config.ts';
 import { perRoot, textOf, tracked } from './source-files.ts';
 import { REPO_ROOT } from './paths.ts';
 import type { Role } from './roles.ts';
-import { finished } from './tools.ts';
 import { isEmpty } from './lists.ts';
-import { realpath } from 'node:fs/promises';
-import { relativeTo } from './relative.ts';
-import { succeeded } from './output.ts';
 
 /** The harness's own place: held, and not a workspace package. */
 const HARNESS_ROOT: MemberDir = 'harness/';
@@ -46,24 +45,8 @@ const ROOT_FILES = new Accepted<string>([
 /** The current text the docs checks read: the agent brief, the harness docs and the roadmap. */
 const DOC_ROOTS: readonly string[] = ['docs/roadmap/', 'harness/', 'packages/characterisation/'];
 
-const MANIFEST = 'package.json';
-
-/** A refusal of a population that cannot be read: pnpm failed, or a member's role is missing or names no role. */
-class PopulationError extends Error {
-  public override readonly name = 'PopulationError';
-}
-
-/** A member's directory: relative to the root, ending in `/`. */
-type MemberDir = `${string}/`;
-
-/** A workspace package's directory: the root is `''`, a member's is a `MemberDir`. */
-type Dir = '' | MemberDir;
-
-/** The root's importer, as pnpm names it. */
-const ROOT_IMPORTER = '.';
-
-/** A directory's closing `/`. */
-const CLOSING_SLASH = /\/$/u;
+/** Where a member's declared word sits in its entry. */
+const ROLE_AT = 1;
 
 /** A held workspace package: its directory and the role its manifest declares. */
 interface Member {
@@ -100,75 +83,68 @@ interface PopulationInputs {
 }
 
 /**
- * The directory of a path relative to the root.
- *
- * @param {string} relative - The path, `''` for the root.
- * @returns {Dir} Its directory.
- */
-function dirOf(relative: string): Dir {
-  return relative === '' ? '' : `${relative}/`;
-}
-
-/**
- * A package's manifest.
- *
- * @param {Dir} dir - The package's directory.
- * @returns {string} Its `package.json`, relative to the root.
- */
-function manifestOf(dir: Dir): string {
-  return `${dir}${MANIFEST}`;
-}
-
-/**
- * A package's lockfile importer: pnpm's `.` for the root, its directory without the `/` otherwise.
- * `dirOfImporter` is its inverse: `dirOfImporter(importerOf(dir)) === dir` for every directory.
- *
- * @param {Dir} dir - The package's directory.
- * @returns {string} Its importer.
- */
-function importerOf(dir: Dir): string {
-  return dir === '' ? ROOT_IMPORTER : dir.replace(CLOSING_SLASH, '');
-}
-
-/**
- * The directory of a lockfile importer; the inverse of `importerOf`.
- *
- * @param {string} importer - The importer.
- * @returns {Dir} Its directory.
- */
-function dirOfImporter(importer: string): Dir {
-  return importer === ROOT_IMPORTER ? '' : dirOf(importer);
-}
-
-/**
- * The item whose root holds a path, the nearest when roots nest.
- *
- * @param {readonly Item[]} items - The items.
- * @param {(item: Item) => string} rootOf - Each item's root, ending in `/`.
- * @param {string} target - A repository-relative path.
- * @returns {Item | undefined} The item with the longest root that starts the path.
- */
-function nearest<Item>(items: readonly Item[], rootOf: (item: Item) => string, target: string): Item | undefined {
-  return items.toSorted((left, right) => rootOf(right).length - rootOf(left).length).find((item) => target.startsWith(rootOf(item)));
-}
-
-/**
- * A member's role, read from its manifest's text.
+ * A member's role word as its manifest's text declares it, whatever it is; text that is not JSON, or
+ * an `aricanga` that is no object, refuses with `ConfigError` naming the manifest.
  *
  * @param {string} manifest - The manifest's path.
  * @param {string} text - Its text.
- * @returns {Role} Its role.
+ * @returns {unknown} Its `aricanga.role`.
  */
-function declaredRole(manifest: string, text: string): Role {
-  const fields = object(json(text), manifest);
+function declaredWord(manifest: string, text: string): unknown {
+  const fields = object(parsed(text, manifest), manifest);
   const declared = fields['aricanga'] === undefined ? {} : object(fields['aricanga'], `${manifest} aricanga`);
-  const word = declared['role'];
-  if (!isRole(word)) {
+  return declared['role'];
+}
+
+/**
+ * A population built from its listing and its members, whatever computed them.
+ *
+ * @param {readonly string[]} listing - The listing.
+ * @param {readonly Member[]} members - The members, sorted by directory.
+ * @returns {Population} The population.
+ */
+function assembled(listing: readonly string[], members: readonly Member[]): Population {
+  const memberOf = (target: string): Member | undefined => nearest(members, (member) => member.dir, target);
+  return {
+    holds: (target: string) => ROOT_FILES.has(target) || target.startsWith(HARNESS_ROOT) || memberOf(target) !== undefined,
+    kernel: members.filter((member) => tierOf(member.role) === 'kernel'),
+    listing,
+    memberOf,
+    members,
+    roots: [...members.map((member) => member.dir), HARNESS_ROOT],
+    shipping: members.filter((member) => ships(member.role)),
+  };
+}
+
+/**
+ * The member directories of a listing: pnpm's packages whose manifests are listed, less the root and
+ * the POC, sorted.
+ *
+ * @param {PopulationInputs} inputs - The listing and pnpm's workspace packages.
+ * @returns {readonly MemberDir[]} The members' directories.
+ */
+function memberDirs(inputs: Readonly<PopulationInputs>): readonly MemberDir[] {
+  const listed = new Set(inputs.listing);
+  return inputs.workspace.filter((dir): dir is MemberDir => dir !== '' && listed.has(manifestOf(dir)) && !POC.starts(dir)).toSorted();
+}
+
+/**
+ * The members of their declared role words, refusing every word that names no role at once.
+ *
+ * @param {readonly (readonly [MemberDir, unknown])[]} words - Each member directory with its declared word.
+ * @returns {readonly Member[]} The members.
+ */
+function membersOf(words: readonly (readonly [MemberDir, unknown])[]): readonly Member[] {
+  const roled = words.filter((entry: readonly [MemberDir, unknown]): entry is readonly [MemberDir, Role] => isRole(entry[ROLE_AT]));
+  if (roled.length !== words.length) {
+    const lines = words
+      .filter((entry: readonly [MemberDir, unknown]) => !isRole(entry[ROLE_AT]))
+      .map(([dir, word]: readonly [MemberDir, unknown]) => `${manifestOf(dir)}: aricanga.role is ${JSON.stringify(word)}`);
     throw new PopulationError(
-      `${manifest}: aricanga.role is ${JSON.stringify(word)}; a workspace package declares one of the roles of harness/lib/roles.ts (${ROLE_WORDS.join(', ')})`,
+      `${lines.join('; ')}; a workspace package declares one of the roles of harness/lib/roles.ts (${ROLE_WORDS.join(', ')})`,
     );
   }
-  return word;
+  return roled.map(([dir, role]: readonly [MemberDir, Role]) => ({ dir, role }));
 }
 
 /**
@@ -178,42 +154,14 @@ function declaredRole(manifest: string, text: string): Role {
  * @returns {Promise<Population>} The population.
  */
 async function populationOf(inputs: Readonly<PopulationInputs>): Promise<Population> {
-  const listed = new Set(inputs.listing);
-  const dirs = inputs.workspace.filter((dir): dir is MemberDir => dir !== '' && listed.has(manifestOf(dir)) && !POC.starts(dir)).toSorted();
-  const members: readonly Member[] = await Promise.all(
-    dirs.map(async (dir): Promise<Member> => {
+  const dirs = memberDirs(inputs);
+  const words = await Promise.all(
+    dirs.map(async (dir): Promise<readonly [MemberDir, unknown]> => {
       const text = await inputs.read(manifestOf(dir));
-      return { dir, role: declaredRole(manifestOf(dir), text) };
+      return [dir, declaredWord(manifestOf(dir), text)];
     }),
   );
-  const memberOf = (target: string): Member | undefined => nearest(members, (member) => member.dir, target);
-  return {
-    holds: (target: string) => ROOT_FILES.has(target) || target.startsWith(HARNESS_ROOT) || memberOf(target) !== undefined,
-    kernel: members.filter((member) => tierOf(member.role) === 'kernel'),
-    listing: inputs.listing,
-    memberOf,
-    members,
-    roots: [...members.map((member) => member.dir), HARNESS_ROOT],
-    shipping: members.filter((member) => ships(member.role)),
-  };
-}
-
-/**
- * The workspace packages pnpm lists at a root, as directories relative to it. pnpm answers realpaths,
- * so they are related to the root's realpath.
- *
- * @param {string} root - The workspace root.
- * @returns {Promise<readonly Dir[]>} Each package's directory.
- */
-async function workspacePackages(root: string): Promise<readonly Dir[]> {
-  const [done, base] = await Promise.all([finished(['pnpm', 'ls', '-r', '--depth', '-1', '--json'], { cwd: root }), realpath(root)]);
-  if (!succeeded(done)) {
-    throw new PopulationError(`pnpm could not list the workspace at ${root}: ${done.stderr}`);
-  }
-  return list(report(done.stdout, 'pnpm ls'), 'pnpm ls').map((entry) => {
-    const where = String(object(entry, 'a pnpm package')['path']);
-    return dirOf(relativeTo(base, where));
-  });
+  return assembled(inputs.listing, membersOf(words));
 }
 
 /**
@@ -239,8 +187,8 @@ async function computed(root: string): Promise<Population> {
 const populations = perRoot(computed);
 
 /**
- * The population of a checkout: one per root as spelled within this module's evaluation; a failure leaves the
- * cache, so the next call computes again.
+ * The population of a checkout: one per root as spelled within this module's evaluation; a failure
+ * leaves the cache, so the next call computes again.
  *
  * @param {string} root - The checkout; the repository by default.
  * @returns {Promise<Population>} The population.
@@ -271,18 +219,5 @@ async function typescriptFiles(): Promise<readonly string[]> {
   return files;
 }
 
-export {
-  DOC_ROOTS,
-  POC,
-  PopulationError,
-  dirOfImporter,
-  heldFiles,
-  importerOf,
-  manifestOf,
-  nearest,
-  population,
-  populationOf,
-  typescriptFiles,
-  workspacePackages,
-};
-export type { Dir, Member, Population };
+export { DOC_ROOTS, POC, heldFiles, population, populationOf, typescriptFiles };
+export type { Member, Population };
