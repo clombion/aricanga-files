@@ -9,9 +9,12 @@ import type { Outcome } from './process.ts';
 import { createHash } from 'node:crypto';
 import { relativeTo as posixRelative } from './relative.ts';
 
+/** A jscpd run's name. */
+type Run = 'cross-file' | 'exact';
+
 /** A clone jscpd found: the run, the two files (relative to the root, sorted) and the fragment's hash. */
 interface Clone {
-  readonly run: string;
+  readonly run: Run;
   readonly first: string;
   readonly second: string;
   readonly fragment: string;
@@ -41,18 +44,18 @@ function cloneKey(clone: Clone): string {
  * @returns {string} The relative POSIX path.
  */
 function relativeTo(name: unknown, root: string): string {
-  return posixRelative(root, String(name));
+  return posixRelative(root, stringOf(name, 'a reported file name'));
 }
 
 /**
  * One duplicate of a report as a clone.
  *
- * @param {string} runName - The run.
+ * @param {Run} runName - The run.
  * @param {unknown} entry - The report's duplicate.
  * @param {string} root - The root.
  * @returns {Clone} The clone.
  */
-function cloneOf(runName: string, entry: unknown, root: string): Clone {
+function cloneOf(runName: Run, entry: unknown, root: string): Clone {
   const fields = object(entry, 'a duplicate');
   const first = relativeTo(object(fields['firstFile'], 'firstFile')['name'], root);
   const second = relativeTo(object(fields['secondFile'], 'secondFile')['name'], root);
@@ -64,18 +67,24 @@ function cloneOf(runName: string, entry: unknown, root: string): Clone {
   return { first: low, fragment, run: runName, second: high };
 }
 
+/** The run a report came from: its name, and whether it keeps a clone whose two copies are in one file. */
+interface ReportRun {
+  readonly name: Run;
+  readonly sameFile: boolean;
+}
+
 /**
- * The clones of a parsed jscpd JSON report; the cross-file run keeps the pairs in two files.
+ * The clones of a parsed jscpd JSON report; a run that does not keep same-file pairs keeps the pairs in two files.
  *
- * @param {string} runName - The run.
+ * @param {ReportRun} run - The run.
  * @param {unknown} report - The parsed report.
  * @param {string} root - The root.
  * @returns {readonly Clone[]} The clones.
  */
-function clones(runName: string, report: unknown, root: string): readonly Clone[] {
+function clones(run: Readonly<ReportRun>, report: unknown, root: string): readonly Clone[] {
   return list(object(report, "jscpd's report")['duplicates'], "jscpd's report's duplicates")
-    .map((entry) => cloneOf(runName, entry, root))
-    .filter((clone) => runName !== 'cross-file' || clone.first !== clone.second);
+    .map((entry) => cloneOf(run.name, entry, root))
+    .filter((clone) => run.sameFile || clone.first !== clone.second);
 }
 
 /**
@@ -113,4 +122,4 @@ function noReport(outcome: Outcome, reported: boolean): string | undefined {
 }
 
 export { cloneKey, clones, noReport, scanned };
-export type { Clone };
+export type { Clone, Run };

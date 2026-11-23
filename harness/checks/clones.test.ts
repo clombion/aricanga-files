@@ -6,7 +6,7 @@
  */
 
 import { COMMON, MAX_SIZE, RUNS, cloneKey, clones, noReport, reportOf, scan } from '#lib/dupes.ts';
-import type { Clone, Runner } from '#lib/dupes.ts';
+import type { Clone, Reported, Run, Runner } from '#lib/dupes.ts';
 import { EXIT_BROKEN, EXIT_CLEAN, EXIT_FINDINGS } from './exit-status.ts';
 import { afterEach, describe, expect, test } from 'vitest';
 import { cleanRunner, failingRunner, growTo, plant, removePlants, runMain } from './clones.plants.ts';
@@ -73,6 +73,21 @@ function lastOf(problems: readonly string[]): string | undefined {
   return last;
 }
 
+/**
+ * The clones of a run that gave its report; a run that gave none fails the test with its reason.
+ *
+ * @param {Reported} reported - What the run gave.
+ * @param {Run} name - The run's name.
+ * @param {string} root - The root.
+ * @returns {readonly Clone[]} The clones, same-file pairs kept.
+ */
+function reportedClones(reported: Reported, name: Run, root: string): readonly Clone[] {
+  if (reported.kind === 'none') {
+    throw new Error(`the run gave no report: ${reported.reason}`);
+  }
+  return clones({ name, sameFile: true }, reported.report, root);
+}
+
 describe('the repository', () => {
   test('has no copied code', async () => {
     expect.hasAssertions();
@@ -96,7 +111,7 @@ describe('the repository', () => {
 
   test('states every flag and uses no ignore channel', async () => {
     expect.hasAssertions();
-    const flags = [...COMMON, ...RUNS.words.flatMap((name) => RUNS.of(name))];
+    const flags = [...COMMON, ...RUNS.words.flatMap((name) => RUNS.of(name).flags)];
     expect(flags.filter((flag) => FLAGS_OUTSIDE_THE_SCRIPT.test(flag))).toStrictEqual([]);
     const listed = await tracked();
     expect(listed.filter((path) => BASELINE_FILES.test(path))).toStrictEqual([]);
@@ -121,7 +136,7 @@ describe('the scan of a clone', () => {
     expect.hasAssertions();
     const { root } = await plant({ 'a/one.ts': PLANT, 'a/two.ts': PLANT });
     const raised = await reportOf(['--min-lines', '5', '--min-tokens', '70'], { root, roots: ['a'] });
-    expect(clones('raised', raised, root)).toHaveLength(ONE_CLONE);
+    expect(reportedClones(raised, 'exact', root)).toHaveLength(ONE_CLONE);
   });
 
   test('sees a small clone in two files in the cross-file run only', async () => {
@@ -139,8 +154,8 @@ describe('the scan of a clone', () => {
   test('passes an allowed clone and fails a stale entry', async () => {
     expect.hasAssertions();
     const { root, listed } = await plant({ 'a/one.ts': PLANT, 'b/two.ts': PLANT });
-    const report = await reportOf(RUNS.of('exact'), { root, roots: ['a', 'b'] });
-    const [exact] = clones('exact', report, root);
+    const reported = await reportOf(RUNS.of('exact').flags, { root, roots: ['a', 'b'] });
+    const [exact] = reportedClones(reported, 'exact', root);
     expect(exact).toBeDefined();
     const allowed = new Exemptions(Object.fromEntries(bothRuns(exact).map((clone) => [cloneKey(clone), 'planted'])));
     await expect(scan({ listed, root, roots: ['a', 'b'] }, allowed)).resolves.toStrictEqual([]);
@@ -176,18 +191,19 @@ describe('a run that gives no report', () => {
   const argv = ['jscpd'];
 
   test.each([
-    [{ argv, kind: 'finished', status: EXIT_BROKEN, stderr: 'bad flag', stdout: '' } as const, 'cross-file: jscpd exited 2: bad flag'],
-    [{ argv, kind: 'timed-out', timeoutMs: 300_000 } as const, 'cross-file: jscpd ran past 300000 ms'],
-    [{ argv, kind: 'not-started', reason: 'not found' } as const, 'cross-file: jscpd could not start (not found): run `pnpm install`'],
-    [{ argv, kind: 'finished', status: EXIT_CLEAN, stderr: '', stdout: '' } as const, 'cross-file: jscpd wrote no report'],
-  ])('is a problem: %o', async (outcome: Outcome, problem) => {
+    [{ argv, kind: 'finished', status: EXIT_BROKEN, stderr: 'bad flag', stdout: '' } as const, 'jscpd exited 2: bad flag'],
+    [{ argv, kind: 'timed-out', timeoutMs: 300_000 } as const, 'jscpd ran past 300000 ms'],
+    [{ argv, kind: 'not-started', reason: 'not found' } as const, 'jscpd could not start (not found): run `pnpm install`'],
+    [{ argv, kind: 'finished', status: EXIT_CLEAN, stderr: '', stdout: '' } as const, 'jscpd wrote no report'],
+  ])('is a problem of each run: %o', async (outcome: Outcome, problem) => {
     expect.hasAssertions();
     const runner: Runner = async () => {
       const ran = await Promise.resolve(outcome);
       return ran;
     };
-    const [first] = await scan({ listed: [], root: tmpdir(), roots: ['a'] }, NONE, runner);
-    expect(first).toBe(problem);
+    await expect(scan({ listed: [], root: tmpdir(), roots: ['a'] }, NONE, runner)).resolves.toStrictEqual(
+      RUNS.words.map((name) => `${name}: ${problem}`),
+    );
   });
 
   test('a finished run with its report is no problem', () => {
@@ -197,8 +213,10 @@ describe('a run that gives no report', () => {
 
   test('the report reader refuses a report of another shape', () => {
     expect.hasAssertions();
-    expect(() => clones('exact', [], tmpdir())).toThrow(/is not an object/u);
-    expect(() => clones('exact', { duplicates: 1 }, tmpdir())).toThrow("jscpd's report's duplicates is not a list: 1");
+    expect(() => clones({ name: 'exact', sameFile: true }, [], tmpdir())).toThrow(/is not an object/u);
+    expect(() => clones({ name: 'exact', sameFile: true }, { duplicates: 1 }, tmpdir())).toThrow(
+      "jscpd's report's duplicates is not a list: 1",
+    );
   });
 });
 

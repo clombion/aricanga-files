@@ -2,6 +2,7 @@
 
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import type { Outcome } from './process.ts';
+import type { Run } from './dupes-report.ts';
 import { Vocabulary } from './exemptions.ts';
 import { fromRoot } from './paths.ts';
 import { isFile } from './source-files.ts';
@@ -45,12 +46,20 @@ const COMMON: readonly string[] = [
   '--no-colors',
 ];
 
-/** The jscpd runs, each with its flags; `scan` runs every word and reports in the words' order. */
-const RUNS: Vocabulary<Readonly<Record<'exact' | 'cross-file', readonly string[]>>> = new Vocabulary<
-  Readonly<Record<'exact' | 'cross-file', readonly string[]>>
->({
-  'cross-file': ['--min-lines', '5', '--min-tokens', '30'],
-  exact: ['--min-lines', '5', '--min-tokens', '50'],
+/** A jscpd run's facts: its flags, whether it checks that jscpd scanned every listed file, and whether it keeps a clone whose two copies are in one file. */
+interface RunFacts {
+  readonly flags: readonly string[];
+  readonly coverage: boolean;
+  readonly sameFile: boolean;
+}
+
+/**
+ * The jscpd runs, each with its facts. `scan` runs them concurrently, so their order means nothing: it
+ * only decides the order their problems print in, and is the record's key order, which `sort-keys` keeps.
+ */
+const RUNS: Vocabulary<Readonly<Record<Run, RunFacts>>> = new Vocabulary<Readonly<Record<Run, RunFacts>>>({
+  'cross-file': { coverage: false, flags: ['--min-lines', '5', '--min-tokens', '30'], sameFile: false },
+  exact: { coverage: true, flags: ['--min-lines', '5', '--min-tokens', '50'], sameFile: true },
 });
 
 /**
@@ -80,30 +89,35 @@ async function defaultRunner(argv: readonly string[], cwd: string): Promise<Outc
   return outcome;
 }
 
+/** What one jscpd run gave: its parsed report, or the reason it gave none. */
+type Reported = { readonly kind: 'report'; readonly report: unknown } | { readonly kind: 'none'; readonly reason: string };
+
 /**
  * Run jscpd once.
  *
  * @param {readonly string[]} flags - The run's flags.
  * @param {Readonly<Pick<Target, 'root' | 'roots'>>} target - The checkout and the roots jscpd reads.
  * @param {Runner} runner - How jscpd is started.
- * @returns {Promise<unknown>} The parsed report, or the reason it gave none.
+ * @returns {Promise<Reported>} The parsed report, or the reason it gave none.
  */
 async function reportOf(
   flags: readonly string[],
   target: Readonly<Pick<Target, 'root' | 'roots'>>,
   runner: Runner = defaultRunner,
-): Promise<unknown> {
+): Promise<Reported> {
   const folder = await mkdtemp(path.join(tmpdir(), 'jscpd-'));
   try {
     const outcome = await runner(command(flags, target.roots, folder), target.root);
-    const report = path.join(folder, REPORT);
     const written = await isFile(folder, REPORT);
-    const problem = noReport(outcome, written);
-    return problem ?? parsed(await readFile(report, 'utf8'), "jscpd's report");
+    const reason = noReport(outcome, written);
+    if (reason !== undefined) {
+      return { kind: 'none', reason };
+    }
+    return { kind: 'report', report: parsed(await readFile(path.join(folder, REPORT), 'utf8'), "jscpd's report") };
   } finally {
     await rm(folder, { force: true, recursive: true });
   }
 }
 
 export { COMMON, MAX_SIZE, reportOf, RUNS };
-export type { Runner, Target };
+export type { Reported, RunFacts, Runner, Target };
