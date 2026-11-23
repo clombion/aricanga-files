@@ -8,6 +8,7 @@
 
 import { UPSTREAM, pinned, pins } from '#lib/pins.ts';
 import { describe, expect, test } from 'vitest';
+import { ConfigError } from '#lib/config.ts';
 import { Exemptions } from '#lib/exemptions.ts';
 import type { Pin } from '#lib/pins.ts';
 
@@ -108,6 +109,117 @@ describe('the pin reader', () => {
       { tool: 'pnpm', version: '10.28.0', where: 'package.json packageManager' },
     ]);
     expect(() => pinned([{ importer: '.', manifest: { devDependencies: { oxlint: 1 } } }], LOCK)).toThrow(/is not a string/u);
+  });
+});
+
+describe('the lockfile reader', () => {
+  test("read only an importer's dependency groups, and a pin whose entry has no version as one with no version", () => {
+    expect.hasAssertions();
+    const lockText = [
+      'importers:',
+      '',
+      '  .:',
+      '    devDependencies:',
+      '      oxlint:',
+      '        specifier: 1.94.0',
+      '      vite:',
+      '        specifier: ^8.0.0',
+      '        version: 8.3.8',
+      '    dependenciesMeta:',
+      '      vite:',
+      '        injected: true',
+      '    publishDirectory: dist',
+      '',
+      '  a/empty:',
+      '',
+    ].join('\n');
+    const manifest = { devDependencies: { oxlint: '1.94.0', vite: '^8.0.0' } };
+    expect([pinned([{ importer: '.', manifest }], lockText), pinned([{ importer: 'a/empty', manifest }], lockText)]).toStrictEqual([
+      [
+        { tool: 'node', version: '', where: 'package.json engines' },
+        { tool: 'oxlint', version: '', where: 'pnpm-lock.yaml' },
+        { tool: 'pnpm', version: '', where: 'package.json packageManager' },
+        { tool: 'vite', version: '8.3.8', where: 'pnpm-lock.yaml' },
+      ],
+      [
+        { tool: 'oxlint', version: '', where: 'pnpm-lock.yaml' },
+        { tool: 'vite', version: '', where: 'pnpm-lock.yaml' },
+      ],
+    ]);
+  });
+
+  test('refuse a lockfile that is not YAML, naming the lockfile', () => {
+    expect.hasAssertions();
+    const conflicted = ['importers:', '<<<<<<< ours', '  .: {}', '=======', '  .:', '    dependencies: {}', '>>>>>>> theirs', ''].join(
+      '\n',
+    );
+    expect(() => pinned([{ importer: '.', manifest: {} }], conflicted)).toThrow(ConfigError);
+    expect(() => pinned([{ importer: '.', manifest: {} }], conflicted)).toThrow(/^pnpm-lock\.yaml is not YAML: /u);
+  });
+});
+
+describe('the lockfile reader over the group pnpm writes a pin in', () => {
+  test('read a pin that pnpm records in another dependency group than the manifest lists it in', () => {
+    expect.hasAssertions();
+    const lockText = [
+      'importers:',
+      '',
+      '  .:',
+      '    optionalDependencies:',
+      '      is-odd:',
+      '        specifier: 3.0.1',
+      '        version: 3.0.1',
+      '',
+    ].join('\n');
+    expect(
+      pinned(
+        [{ importer: '.', manifest: { devDependencies: { 'is-odd': '3.0.1' }, optionalDependencies: { 'is-odd': '3.0.1' } } }],
+        lockText,
+      ),
+    ).toStrictEqual([
+      { tool: 'is-odd', version: '3.0.1', where: 'pnpm-lock.yaml' },
+      { tool: 'node', version: '', where: 'package.json engines' },
+      { tool: 'pnpm', version: '', where: 'package.json packageManager' },
+    ]);
+  });
+});
+
+describe('the lockfile reader over the key forms pnpm writes', () => {
+  test('read each importer by the key pnpm writes: quoted, holding a colon, or with no dependencies', () => {
+    expect.hasAssertions();
+    const lockText = [
+      'importers:',
+      '',
+      "  '@s/p':",
+      '    devDependencies:',
+      '      oxlint:',
+      '        specifier: 1.94.0',
+      '        version: 1.94.0',
+      '',
+      '  a/sp ace: {}',
+      '',
+      '  a/x:y:',
+      '    devDependencies:',
+      '      vite:',
+      '        specifier: ^8.0.0',
+      '        version: 8.3.8',
+      '',
+    ].join('\n');
+    const manifest = { devDependencies: { oxlint: '1.94.0', vite: '^8.0.0' } };
+    expect(['@s/p', 'a/sp ace', 'a/x:y'].map((importer) => pinned([{ importer, manifest }], lockText))).toStrictEqual([
+      [
+        { tool: 'oxlint', version: '1.94.0', where: 'pnpm-lock.yaml' },
+        { tool: 'vite', version: '', where: 'pnpm-lock.yaml' },
+      ],
+      [
+        { tool: 'oxlint', version: '', where: 'pnpm-lock.yaml' },
+        { tool: 'vite', version: '', where: 'pnpm-lock.yaml' },
+      ],
+      [
+        { tool: 'oxlint', version: '', where: 'pnpm-lock.yaml' },
+        { tool: 'vite', version: '8.3.8', where: 'pnpm-lock.yaml' },
+      ],
+    ]);
   });
 });
 

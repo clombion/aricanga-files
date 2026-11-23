@@ -187,5 +187,6 @@ writes this table from `package.json` and `pnpm-lock.yaml`.
 | `vite` | [vitejs/vite](https://github.com/vitejs/vite) | `pnpm-lock.yaml` | 8.3.8 |
 | `vitest` | [vitest-dev/vitest](https://github.com/vitest-dev/vitest) | `pnpm-lock.yaml` | 5.1.1 |
 | `xstate` | [statelyai/xstate](https://github.com/statelyai/xstate) | `pnpm-lock.yaml` | 5.33.4 |
+| `yaml` | [eemeli/yaml](https://github.com/eemeli/yaml) | `pnpm-lock.yaml` | 2.9.1 |
 | `zod` | [colinhacks/zod](https://github.com/colinhacks/zod) | `pnpm-lock.yaml` | 4.6.7 |
 <!-- end: pins -->

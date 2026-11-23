@@ -2,8 +2,8 @@
  * The pinned tools: each with its upstream repository, where it is pinned, and its pin.
  *
  * The pins are the root `package.json`'s dependencies and devDependencies and the devDependencies
- * of every held workspace package, each at the version `pnpm-lock.yaml` holds, plus Node's
- * `engines.node` floor and pnpm's `packageManager`. `UPSTREAM` names each tool's repository; the
+ * of every held workspace package, each at the version `pnpm-lock.yaml` holds, read as YAML, plus
+ * Node's `engines.node` floor and pnpm's `packageManager`. `UPSTREAM` names each tool's repository; the
  * tool-upgrades check fails on a pin it does not name and on a row that pins nothing, and
  * `harness/lib/generated.ts` renders the table of `harness.md`.
  */
@@ -12,6 +12,7 @@ import { ConfigError, json, object } from './config.ts';
 import { textOf, textsOf, tracked } from './source-files.ts';
 import { engineRange } from './node-floor.ts';
 import { held } from './scope.ts';
+import { parse } from 'yaml';
 
 /** A pinned tool: its name, the file that pins it, and its version there. */
 interface Pin {
@@ -71,80 +72,25 @@ const UPSTREAM: ReadonlyMap<string, string> = new Map([
   ['vite', 'vitejs/vite'],
   ['vitest', 'vitest-dev/vitest'],
   ['xstate', 'statelyai/xstate'],
+  ['yaml', 'eemeli/yaml'],
   ['zod', 'colinhacks/zod'],
 ]);
 
 const LOCKFILE = 'pnpm-lock.yaml';
 const WORKSPACE = 'workspace:';
 
-/** A top-level key of the lockfile, such as `importers:`. */
-const TOP_LEVEL = /^\S/u;
-const IMPORTER_LINE = /^ {2}(?<importer>\S.*):$/u;
-const NAME_LINE = /^ {6}'?(?<name>[^':]+)'?:$/u;
-const VERSION_LINE = /^ {8}version: (?<version>[^(\s]+)/u;
 const PNPM_PREFIX = /^pnpm@/u;
 const MANIFEST_SUFFIX = /\/package\.json$/u;
 
-/** The index `findIndex` gives when nothing matches. */
-const NOT_FOUND = -1;
-
-/** The line after a header line. */
-const NEXT_LINE = 1;
-
-/** The index of a list's first item. */
-const FIRST = 0;
-
 /**
- * The lines of a block that starts after `start` and ends before the first line `ends` holds of.
- *
- * @param {readonly string[]} lines - The text's lines.
- * @param {number} start - The index of the block's header line.
- * @param {(line: string) => boolean} ends - Whether a line ends the block.
- * @returns {readonly string[]} The block's lines.
+ * The dependency groups pnpm writes in a lockfile importer (pnpm's `DEPENDENCIES_FIELDS`). A package a
+ * manifest lists in two groups is written once, in the group pnpm resolves it to (optional over dev),
+ * so a pin is looked up in every group, whatever group its manifest lists it in.
  */
-function blockAfter(lines: readonly string[], start: number, ends: (line: string) => boolean): readonly string[] {
-  if (start === NOT_FOUND) {
-    return [];
-  }
-  const rest = lines.slice(start + NEXT_LINE);
-  const end = rest.findIndex((line) => ends(line));
-  return end === NOT_FOUND ? rest : rest.slice(FIRST, end);
-}
+const LOCK_GROUPS: readonly string[] = ['optionalDependencies', 'dependencies', 'devDependencies'];
 
-/**
- * The versions an importer's block of the lockfile lists.
- *
- * @param {readonly string[]} block - The block's lines.
- * @returns {ReadonlyMap<string, string>} Each package's resolved version, by name.
- */
-function versionsIn(block: readonly string[]): ReadonlyMap<string, string> {
-  const found = new Map<string, string>();
-  let name = '';
-  for (const line of block) {
-    name = NAME_LINE.exec(line)?.groups?.['name'] ?? name;
-    const version = VERSION_LINE.exec(line)?.groups?.['version'];
-    if (name !== '' && version !== undefined) {
-      found.set(name, version);
-    }
-  }
-  return found;
-}
-
-/**
- * The resolved versions of one importer of a pnpm lockfile, by package name. The lockfile is read
- * as the indented text pnpm writes: `importers:` → `  <importer>:` → `    <group>:` →
- * `      <name>:` → `        version: <version>(<peers>)`.
- *
- * @param {string} lockText - The lockfile's text.
- * @param {string} importer - The importer, `.` for the root.
- * @returns {ReadonlyMap<string, string>} Each package's resolved version, by name.
- */
-function locked(lockText: string, importer: string): ReadonlyMap<string, string> {
-  const lines = lockText.split('\n');
-  const importers = blockAfter(lines, lines.indexOf('importers:'), (line) => TOP_LEVEL.test(line));
-  const start = importers.findIndex((line) => IMPORTER_LINE.exec(line)?.groups?.['importer'] === importer);
-  return versionsIn(blockAfter(importers, start, (line) => IMPORTER_LINE.test(line)));
-}
+/** The peers pnpm appends to a resolved version: `1.0.3(peer@2.0.0)`. */
+const PEERS = /\(.*$/u;
 
 /**
  * A manifest field's string entries, or a refusal naming the first that is not a string.
@@ -161,6 +107,58 @@ function strings(value: unknown, what: string): Readonly<Record<string, string>>
       }
       return [key, entry] as const;
     }),
+  );
+}
+
+/**
+ * A lockfile's text read as YAML, refusing text that is not YAML by naming the lockfile.
+ *
+ * @param {string} lockText - The lockfile's text.
+ * @returns {unknown} The parsed value.
+ */
+function yamlOf(lockText: string): unknown {
+  try {
+    return parse(lockText);
+  } catch (error: unknown) {
+    throw new ConfigError(`${LOCKFILE} is not YAML: ${String(error)}`, { cause: error });
+  }
+}
+
+/**
+ * The `importers` mapping of a pnpm lockfile, read as YAML: each importer by its key as YAML reads it
+ * (quoted or plain, `{}` for an importer with no dependencies). An importer holds its dependency
+ * groups and pnpm's other fields (`publishDirectory`, `dependenciesMeta`). Text that is not YAML (a
+ * merge conflict, a duplicate key) and a lockfile with no `importers` mapping refuse with `ConfigError`.
+ *
+ * @param {string} lockText - The lockfile's text.
+ * @returns {Readonly<Record<string, unknown>>} Each importer, by its key.
+ */
+function importerGroups(lockText: string): Readonly<Record<string, unknown>> {
+  const lock = object(yamlOf(lockText), LOCKFILE);
+  return object(lock['importers'], `${LOCKFILE} importers`);
+}
+
+/**
+ * The resolved versions of one importer, by package name, without their peers, from every dependency
+ * group pnpm writes (`LOCK_GROUPS`). The importer's other fields (`publishDirectory`,
+ * `dependenciesMeta`) are not read. An entry with no `version` is left out, so its pin reads as one
+ * with no version, the same as a package the lockfile does not hold.
+ *
+ * @param {string} lockText - The lockfile's text.
+ * @param {string} importer - The importer, `.` for the root.
+ * @returns {ReadonlyMap<string, string>} Each package's resolved version, by name.
+ */
+function locked(lockText: string, importer: string): ReadonlyMap<string, string> {
+  const fields = object(importerGroups(lockText)[importer] ?? {}, `${LOCKFILE} ${importer}`);
+  return new Map(
+    LOCK_GROUPS.flatMap((group) =>
+      Object.entries(object(Object.hasOwn(fields, group) ? fields[group] : {}, `${LOCKFILE} ${importer} ${group}`)).flatMap(
+        ([name, entry]: readonly [string, unknown]) => {
+          const { version } = object(entry, `${LOCKFILE} ${importer} ${group} ${name}`);
+          return typeof version === 'string' ? [[name, version.replace(PEERS, '')] as const] : [];
+        },
+      ),
+    ),
   );
 }
 
@@ -189,8 +187,8 @@ function rootPins(manifest: unknown): readonly Pin[] {
 function manifestPins(entry: Manifest, lockText: string): readonly Pin[] {
   const { importer, manifest } = entry;
   const fields = object(manifest, `${importer}/package.json`);
-  const versions = locked(lockText, importer);
   const groups = importer === '.' ? ['dependencies', 'devDependencies'] : ['devDependencies'];
+  const versions = locked(lockText, importer);
   const dependencies = groups.flatMap((group) =>
     Object.entries(strings(fields[group], `${importer} ${group}`))
       .filter(([, specifier]: readonly [string, string]) => !specifier.startsWith(WORKSPACE))
