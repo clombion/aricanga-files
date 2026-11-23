@@ -1,8 +1,11 @@
 /**
  * Vitest, under this project's settings, fails each planted test a bare configuration would pass.
  *
- * Each plant runs in a planted project whose config loads the gate's own `vitest.gate.config.ts` and
- * which holds a copy of the harness lib its setup file loads, as a spec of the `rebuild` project. A
+ * Each plant runs in a planted project whose config is the gate's own (`configOf` of
+ * `harness/lib/vitest-config.ts`) built over the planted project's population, a lone member no repository
+ * glob names, and which holds a copy of the harness lib its setup files load, as a spec of the
+ * `rebuild` project; every run reports the files it collected, so a plant that fails is told apart
+ * from one nothing collected. A
  * plant must fail under the gate config and pass once only its setting is reverted (vitest's own
  * `mergeConfig` over the gate's config): `.only` under `allowOnly: false`, a test with
  * no assertion under `requireAssertions`, an unimported `test` under `globals: false`, a test
@@ -15,10 +18,10 @@
 
 import { EXIT_CLEAN, EXIT_FINDINGS } from './exit-status.ts';
 import { describe, expect, test } from 'vitest';
+import { list, object, parsed } from '#lib/config.ts';
 import { Project } from '#lib/tools.ts';
 import { fromRoot } from '#lib/paths.ts';
 import { gateTest } from './gate-config.ts';
-import { object } from '#lib/config.ts';
 import { pathToFileURL } from 'node:url';
 
 const HARNESS_ID = 'vitest-settings';
@@ -110,28 +113,75 @@ function merge(...layers: readonly Overrides[]): Overrides {
   return merged;
 }
 
+/** How one plant run ended: its exit status, and how many test files Vitest collected. */
+interface PlantRun {
+  readonly status: number;
+  readonly files: number;
+}
+
+/**
+ * The planted config: the gate's own config built over the planted project's population, a lone
+ * foundation member in a directory no repository glob names, with `overrides` merged.
+ *
+ * @param {string} plantPath - The planted test's path.
+ * @param {Overrides} overrides - The overrides.
+ * @returns {string} The config module's text.
+ */
+function plantedConfig(plantPath: string, overrides: Overrides): string {
+  const gate = JSON.stringify(pathToFileURL(fromRoot('harness/lib/vitest-config.ts')).href);
+  const scope = JSON.stringify(pathToFileURL(fromRoot('harness/lib/scope.ts')).href);
+  const inputs = `{ listing: ['packages/plant/package.json', ${JSON.stringify(plantPath)}], read: async () => ${JSON.stringify(JSON.stringify({ aricanga: { role: 'foundation' } }))}, workspace: ['packages/plant/'] }`;
+  return [
+    "import { mergeConfig } from 'vitest/config';",
+    `import { configOf } from ${gate};`,
+    `import { populationOf } from ${scope};`,
+    `const held = await populationOf(${inputs});`,
+    `export default mergeConfig(configOf(held, () => []), ${JSON.stringify({ test: overrides })});`,
+    '',
+  ].join('\n');
+}
+
+/**
+ * How one plant ran under the gate config with `overrides` merged over its `test`.
+ *
+ * @param {Plant} plant - The planted project.
+ * @param {Overrides} overrides - The overrides.
+ * @returns {Promise<PlantRun>} Its exit status and the test files Vitest collected.
+ */
+async function run(plant: Plant, overrides: Overrides): Promise<PlantRun> {
+  const project = await Project.create({ copies: ['harness/lib'] });
+  try {
+    const path = `packages/plant/test/${plant.name}.test.ts`;
+    await project.write('vitest.planted.config.mts', plantedConfig(path, overrides));
+    await project.write(path, plant.text);
+    const done = await project.tool(
+      'vitest',
+      'run',
+      '--config',
+      'vitest.planted.config.mts',
+      '--project',
+      'rebuild',
+      '--reporter=json',
+      '--outputFile=report.json',
+      path,
+    );
+    const report = object(parsed(await project.read('report.json'), 'the Vitest report'), 'the Vitest report');
+    return { files: list(report['testResults'], 'the test file results').length, status: done.status };
+  } finally {
+    await project.remove();
+  }
+}
+
 /**
  * The exit status of one plant run under the gate config with `overrides` merged over its `test`.
  *
  * @param {Plant} plant - The planted project.
  * @param {Overrides} overrides - The overrides.
- * @returns {Promise<number>} The exit status of one plant run under the gate config with `overrides` merged over its `test`.
+ * @returns {Promise<number>} The exit status.
  */
 async function status(plant: Plant, overrides: Overrides): Promise<number> {
-  const gate = JSON.stringify(pathToFileURL(fromRoot('vitest.gate.config.ts')).href);
-  const project = await Project.create({ copies: ['harness/lib'] });
-  try {
-    await project.write(
-      'vitest.planted.config.mts',
-      `import { mergeConfig } from 'vitest/config';\nimport gate from ${gate};\nexport default mergeConfig(gate, ${JSON.stringify({ test: overrides })});\n`,
-    );
-    const path = `packages/foundation/plant/${plant.name}.test.ts`;
-    await project.write(path, plant.text);
-    const done = await project.tool('vitest', 'run', '--config', 'vitest.planted.config.mts', '--project', 'rebuild', path);
-    return done.status;
-  } finally {
-    await project.remove();
-  }
+  const ran = await run(plant, overrides);
+  return ran.status;
 }
 
 /**
@@ -179,9 +229,9 @@ describe('each setting', () => {
 });
 
 describe('the defaults the gate keeps', () => {
-  test.for(DEFAULTS)('fail the $name plant', async (plant) => {
+  test.for(DEFAULTS)('fail the $name plant, collected', async (plant) => {
     expect.hasAssertions();
-    await expect(status(plant, {})).resolves.toBe(EXIT_FINDINGS);
+    await expect(run(plant, {})).resolves.toStrictEqual({ files: 1, status: EXIT_FINDINGS });
   });
 
   test('the test timeout is set and bounded', async () => {
@@ -194,7 +244,7 @@ describe('the plants', () => {
   test('a clean spec passes under the gate config', async () => {
     expect.hasAssertions();
     const clean = { name: 'clean', ordered: false, revert: {}, text: `${IMPORTS}test('a', () => {\n  expect(1).toBe(1);\n});\n` };
-    await expect(status(clean, {})).resolves.toBe(EXIT_CLEAN);
+    await expect(run(clean, {})).resolves.toStrictEqual({ files: 1, status: EXIT_CLEAN });
   });
 });
 
