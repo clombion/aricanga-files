@@ -34,6 +34,16 @@ function missedImporters(held: Population, lockText: string): readonly string[] 
 }
 
 /**
+ * A scripted manifest entry declaring a role.
+ *
+ * @param {readonly [string, string]} entry - A member's directory and its role.
+ * @returns {readonly [string, string]} The manifest's path and text.
+ */
+function manifestEntry([dir, role]: readonly [string, string]): readonly [string, string] {
+  return [`${dir}package.json`, manifest(role)];
+}
+
+/**
  * A root's path, for `nearest`.
  *
  * @param {Readonly<{ root: string }>} item - An item with a root.
@@ -116,6 +126,30 @@ describe('a population', () => {
       workspace: ['packages/a/', 'packages/a/b/'],
     });
     expect(held.memberOf('packages/a/b/src/x.ts')?.dir).toBe('packages/a/b/');
+  });
+});
+
+describe('a population by tier', () => {
+  test("selects each tier's members once: the kernel, and every member that ships", async () => {
+    expect.hasAssertions();
+    const roles = {
+      'packages/e/': 'experience',
+      'packages/f/': 'foundation',
+      'packages/s/': 'system',
+      'packages/t/': 'test-infrastructure',
+      'packages/v/': 'view',
+    };
+    const dirs = Object.keys(roles);
+    const manifests = Object.entries(roles).map((entry: readonly [string, string]) => manifestEntry(entry));
+    const held = await populationOf({
+      listing: dirs.map((dir) => `${dir}package.json`),
+      read: reader(Object.fromEntries(manifests)),
+      workspace: ['packages/e/', 'packages/f/', 'packages/s/', 'packages/t/', 'packages/v/'],
+    });
+    expect([held.kernel.map((member) => member.dir), held.shipping.map((member) => member.dir)]).toStrictEqual([
+      ['packages/f/', 'packages/s/'],
+      ['packages/e/', 'packages/f/', 'packages/s/', 'packages/v/'],
+    ]);
   });
 });
 

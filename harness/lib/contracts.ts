@@ -26,7 +26,6 @@ import { inTypeOrImport, stringLiterals } from './contract-model.ts';
 import { isExportedType, listedExports } from './exports-of.ts';
 import { isProduction, nodes, pathOf, sourceOf, textOfNode } from './checker.ts';
 import type { Scan } from './checker.ts';
-import { factsOf } from './roles.ts';
 import { isEmpty } from './lists.ts';
 import { present } from './present.ts';
 
@@ -101,7 +100,7 @@ function contracts(scan: Scan, paths: readonly string[]): readonly Contract[] {
   return paths
     .filter((candidate) => {
       const member = scan.population.memberOf(candidate);
-      return member !== undefined && factsOf(member.role).kernel && isProduction(scan.population, candidate);
+      return member !== undefined && scan.population.kernel.includes(member) && isProduction(scan.population, candidate);
     })
     .flatMap((path) => {
       const file = sourceOf(scan, path);

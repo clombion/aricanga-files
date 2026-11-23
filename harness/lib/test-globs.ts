@@ -5,7 +5,6 @@
  */
 
 import type { Member, Population } from './scope.ts';
-import { factsOf } from './roles.ts';
 import { matches } from './globs.ts';
 
 /**
@@ -22,17 +21,13 @@ function liveGlobs(population: Population, members: readonly Member[], tail: str
 
 /**
  * The tests of the `rebuild` project: each shipping member's `*.test.ts` and `*.test.tsx`. A test
- * infrastructure package is run by Playwright, not by Vitest.
+ * infrastructure package's tests are not Vitest's: `test:browser` lists the Playwright configs.
  *
  * @param {Population} population - The population.
  * @returns {string[]} The include globs.
  */
 function testIncludes(population: Population): string[] {
-  return liveGlobs(
-    population,
-    population.members.filter((member) => factsOf(member.role).ships),
-    '**/*.test.{ts,tsx}',
-  );
+  return liveGlobs(population, population.shipping, '**/*.test.{ts,tsx}');
 }
 
 /**
@@ -42,11 +37,7 @@ function testIncludes(population: Population): string[] {
  * @returns {string[]} The coverage include globs of the members.
  */
 function coverageIncludes(population: Population): string[] {
-  return liveGlobs(
-    population,
-    population.members.filter((member) => factsOf(member.role).ships),
-    'src/**',
-  );
+  return liveGlobs(population, population.shipping, 'src/**');
 }
 
 export { coverageIncludes, testIncludes };

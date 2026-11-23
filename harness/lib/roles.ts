@@ -1,21 +1,20 @@
 /**
  * The roles a workspace package declares in its manifest (`"aricanga": { "role": … }`): a closed
- * vocabulary, each word with its facts. A list that varies by kind of package reads a fact here, never
- * a path.
+ * vocabulary, each word with its tier. A list that varies by kind of package reads the population's
+ * selection of a tier (`harness/lib/scope.ts`), never a path.
  */
 
 import { Vocabulary } from './exemptions.ts';
 
-/** What a role decides: whether its packages are the kernel, and whether they ship. */
-interface RoleFacts {
-  /** The Sans-IO kernel: its exported unions are contracts, and it holds no host API. */
-  readonly kernel: boolean;
-  /**
-   * Its modules are production code. A package that does not ship exists only to test: its modules
-   * are test support, coverage does not read them, and its tests run under Playwright, not Vitest.
-   */
-  readonly ships: boolean;
-}
+/**
+ * What a role decides, as one of three tiers:
+ *
+ * - `kernel`: the Sans-IO kernel. Its exported unions are contracts, it holds no host API, and it ships.
+ * - `product`: production code outside the kernel: a view, an experience.
+ * - `test-infrastructure`: a package that exists only to test. Its modules are test support and
+ *   coverage does not read them; which runner runs its tests is `test:browser`'s config list.
+ */
+type Tier = 'kernel' | 'product' | 'test-infrastructure';
 
 /**
  * A package's role. The words are this union; `ROLES` is typed by it, so `tsc` refuses a word
@@ -24,13 +23,22 @@ interface RoleFacts {
  */
 type Role = 'experience' | 'foundation' | 'system' | 'test-infrastructure' | 'view';
 
-/** Every role word with its facts: a word is a key, so it is declared once and carries its own facts. */
-const ROLES: Vocabulary<Readonly<Record<Role, RoleFacts>>> = new Vocabulary<Readonly<Record<Role, RoleFacts>>>({
-  experience: { kernel: false, ships: true },
-  foundation: { kernel: true, ships: true },
-  system: { kernel: true, ships: true },
-  'test-infrastructure': { kernel: false, ships: false },
-  view: { kernel: false, ships: true },
+/** Every role word with its tier: a word is a key, so it is declared once and carries its own tier. */
+const ROLES: Vocabulary<Readonly<Record<Role, Tier>>> = new Vocabulary<Readonly<Record<Role, Tier>>>({
+  experience: 'product',
+  foundation: 'kernel',
+  system: 'kernel',
+  'test-infrastructure': 'test-infrastructure',
+  view: 'product',
+});
+
+/** Whether each tier's packages ship: a tier is a key, so `tsc` refuses one without the fact. */
+const TIERS: Vocabulary<Readonly<Record<Tier, Readonly<{ ships: boolean }>>>> = new Vocabulary<
+  Readonly<Record<Tier, Readonly<{ ships: boolean }>>>
+>({
+  kernel: { ships: true },
+  product: { ships: true },
+  'test-infrastructure': { ships: false },
 });
 
 /** The role words, for a refusal to name. */
@@ -47,14 +55,24 @@ function isRole(word: unknown): word is Role {
 }
 
 /**
- * The facts of a role.
+ * The tier of a role.
  *
  * @param {Role} role - The role.
- * @returns {RoleFacts} Its facts.
+ * @returns {Tier} Its tier.
  */
-function factsOf(role: Role): RoleFacts {
+function tierOf(role: Role): Tier {
   return ROLES.of(role);
 }
 
-export { factsOf, isRole, ROLE_WORDS };
+/**
+ * Whether a role's packages ship: their modules are production code.
+ *
+ * @param {Role} role - The role.
+ * @returns {boolean} Whether they ship.
+ */
+function ships(role: Role): boolean {
+  return TIERS.of(ROLES.of(role)).ships;
+}
+
+export { isRole, ROLE_WORDS, ships, tierOf };
 export type { Role };

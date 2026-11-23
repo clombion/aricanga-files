@@ -16,7 +16,6 @@ import { api, mount, nextName } from './ts-session.ts';
 import { isIdentifier, isPrivateIdentifier, isStringLiteral } from 'typescript/unstable/ast';
 import type { Population } from './scope.ts';
 import { SymbolFlags } from 'typescript/unstable/sync';
-import { factsOf } from './roles.ts';
 import { isEmpty } from './lists.ts';
 import path from 'node:path';
 import { present } from './present.ts';
@@ -72,7 +71,7 @@ interface ScanOpening {
  */
 function isTestInfrastructure(population: Population, file: string): boolean {
   const member = population.memberOf(file);
-  return member !== undefined && !factsOf(member.role).ships;
+  return member !== undefined && !population.shipping.includes(member);
 }
 
 /**

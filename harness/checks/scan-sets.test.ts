@@ -18,7 +18,6 @@ import { population, typescriptFiles } from '#lib/scope.ts';
 import { Exemptions } from '#lib/exemptions.ts';
 import type { Population } from '#lib/scope.ts';
 import { Project } from '#lib/tools.ts';
-import { factsOf } from '#lib/roles.ts';
 import { join } from 'node:path/posix';
 import { tmpdir } from 'node:os';
 
@@ -71,7 +70,7 @@ const UNPROJECTED = new Exemptions({});
  * @returns {ReadonlySet<string>} The production project files.
  */
 function productionProjects(held: Population): ReadonlySet<string> {
-  return new Set(held.members.filter((member) => factsOf(member.role).ships).map((member) => `${member.dir}tsconfig.json`));
+  return new Set(held.shipping.map((member) => `${member.dir}tsconfig.json`));
 }
 
 /** A file in more than this many production projects is held twice. */

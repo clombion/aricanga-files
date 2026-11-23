@@ -5,7 +5,6 @@
 
 import { Accepted } from './exemptions.ts';
 import type { Population } from './scope.ts';
-import { factsOf } from './roles.ts';
 
 /** A root a rule covers, and its owner there (undefined: no module of the root may use the API). */
 interface Scope {
@@ -151,7 +150,7 @@ const SHAPES: readonly RuleShape[] = [
  * @returns {readonly Rule[]} The rules.
  */
 function rulesOf(population: Population): readonly Rule[] {
-  const kernel = population.members.filter((member) => factsOf(member.role).kernel).map((member) => member.dir);
+  const kernel = population.kernel.map((member) => member.dir);
   return SHAPES.map((shape) => ({
     name: shape.name,
     names: shape.names,

@@ -4,7 +4,7 @@
  */
 
 import { Accepted, Prefixes } from './exemptions.ts';
-import { ROLE_WORDS, isRole } from './roles.ts';
+import { ROLE_WORDS, isRole, ships, tierOf } from './roles.ts';
 import { json, list, object, report } from './config.ts';
 import { perRoot, textOf, tracked } from './source-files.ts';
 import { REPO_ROOT } from './paths.ts';
@@ -77,6 +77,10 @@ interface Population {
   readonly listing: readonly string[];
   /** The members, sorted by directory. */
   readonly members: readonly Member[];
+  /** The members whose role ships: their modules are production code. */
+  readonly shipping: readonly Member[];
+  /** The members of the Sans-IO kernel. */
+  readonly kernel: readonly Member[];
   /** The held directories: every member's and the harness's. */
   readonly roots: readonly MemberDir[];
   /** Whether a listed path is held: a root file, a harness file or a member's file. */
@@ -185,10 +189,12 @@ async function populationOf(inputs: Readonly<PopulationInputs>): Promise<Populat
   const memberOf = (target: string): Member | undefined => nearest(members, (member) => member.dir, target);
   return {
     holds: (target: string) => ROOT_FILES.has(target) || target.startsWith(HARNESS_ROOT) || memberOf(target) !== undefined,
+    kernel: members.filter((member) => tierOf(member.role) === 'kernel'),
     listing: inputs.listing,
     memberOf,
     members,
     roots: [...members.map((member) => member.dir), HARNESS_ROOT],
+    shipping: members.filter((member) => ships(member.role)),
   };
 }
 
