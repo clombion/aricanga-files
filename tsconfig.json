@@ -1,5 +1,6 @@
 {
   "compilerOptions": {
+    "allowImportingTsExtensions": true,
     "types": ["node"]
   },
   "extends": "./tsconfig.base.json",

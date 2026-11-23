@@ -203,4 +203,4 @@ async function typescriptFiles(): Promise<readonly string[]> {
 }
 
 export { DOC_ROOTS, POC, PopulationError, heldFiles, population, populationOf, typescriptFiles, workspacePackages };
-export type { Population };
+export type { Member, Population };

@@ -1,9 +1,10 @@
 /**
  * Vitest, under this project's settings, fails each planted test a bare configuration would pass.
  *
- * Each plant runs in a planted project holding a copy of `vitest.gate.config.ts` and the harness lib
- * its setup file loads, as a spec of the `rebuild` project. A plant must fail under the gate config and pass once only its setting is
- * reverted (vitest's own `mergeConfig` over the copy): `.only` under `allowOnly: false`, a test with
+ * Each plant runs in a planted project whose config loads the gate's own `vitest.gate.config.ts` and
+ * which holds a copy of the harness lib its setup file loads, as a spec of the `rebuild` project. A
+ * plant must fail under the gate config and pass once only its setting is reverted (vitest's own
+ * `mergeConfig` over the gate's config): `.only` under `allowOnly: false`, a test with
  * no assertion under `requireAssertions`, an unimported `test` under `globals: false`, a test
  * leaning on a spy, a global or an env variable a previous test left under `restoreMocks`,
  * `unstubGlobals` and `unstubEnvs`, and twenty order-dependent tests under `shuffle`. Plants that
@@ -15,8 +16,10 @@
 import { EXIT_CLEAN, EXIT_FINDINGS } from './exit-status.ts';
 import { describe, expect, test } from 'vitest';
 import { Project } from '#lib/tools.ts';
+import { fromRoot } from '#lib/paths.ts';
 import { gateTest } from './gate-config.ts';
 import { object } from '#lib/config.ts';
+import { pathToFileURL } from 'node:url';
 
 const HARNESS_ID = 'vitest-settings';
 
@@ -115,15 +118,16 @@ function merge(...layers: readonly Overrides[]): Overrides {
  * @returns {Promise<number>} The exit status of one plant run under the gate config with `overrides` merged over its `test`.
  */
 async function status(plant: Plant, overrides: Overrides): Promise<number> {
-  const project = await Project.create({ copies: ['vitest.gate.config.ts', 'harness/lib'] });
+  const gate = JSON.stringify(pathToFileURL(fromRoot('vitest.gate.config.ts')).href);
+  const project = await Project.create({ copies: ['harness/lib'] });
   try {
     await project.write(
-      'vitest.planted.config.ts',
-      `import { mergeConfig } from 'vitest/config';\nimport gate from './vitest.gate.config.ts';\nexport default mergeConfig(gate, ${JSON.stringify({ test: overrides })});\n`,
+      'vitest.planted.config.mts',
+      `import { mergeConfig } from 'vitest/config';\nimport gate from ${gate};\nexport default mergeConfig(gate, ${JSON.stringify({ test: overrides })});\n`,
     );
     const path = `packages/foundation/plant/${plant.name}.test.ts`;
     await project.write(path, plant.text);
-    const done = await project.tool('vitest', 'run', '--config', 'vitest.planted.config.ts', '--project', 'rebuild', path);
+    const done = await project.tool('vitest', 'run', '--config', 'vitest.planted.config.mts', '--project', 'rebuild', path);
     return done.status;
   } finally {
     await project.remove();

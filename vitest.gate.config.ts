@@ -1,25 +1,24 @@
-// The gate's test run: the rebuild's tests and the harness's checks. Every test starts from a clean
-// slate (mocks restored, globals and env unstubbed), runs in a shuffled order, must assert, and is
-// bounded. Coverage is written outside the checkout, so the gate writes no file.
+// The gate's test run: the shipping members' tests and the harness's checks, the members read from
+// the population (`harness/lib/test-globs.ts`). Every test starts from a clean slate (mocks restored,
+// globals and env unstubbed), runs in a shuffled order, must assert, and is bounded. Coverage is
+// written outside the checkout, so the gate writes no file.
 
+import { coverageIncludes, testIncludes } from './harness/lib/test-globs.ts';
 import type { ViteUserConfig } from 'vitest/config';
 import { defineConfig } from 'vitest/config';
 import path from 'node:path';
+import { population } from './harness/lib/scope.ts';
 import solid from '@solidjs/vite-plugin';
 import { tmpdir } from 'node:os';
+
+const held = await population();
 
 const config: ViteUserConfig = defineConfig({
   test: {
     allowOnly: false,
     coverage: {
-      exclude: ['**/*.test.ts'],
-      include: [
-        'packages/foundation/src/**',
-        'packages/systems/*/src/**',
-        'experiences/sandbox/src/**',
-        'harness/lib/**',
-        'harness/scripts/**',
-      ],
+      exclude: ['**/*.test.{ts,tsx}'],
+      include: [...coverageIncludes(held), 'harness/lib/**', 'harness/scripts/**'],
       provider: 'v8',
       reporter: ['text-summary', 'json'],
       reportsDirectory: path.join(tmpdir(), 'aricanga-coverage'),
@@ -35,7 +34,7 @@ const config: ViteUserConfig = defineConfig({
         plugins: [solid()],
         test: {
           environment: 'happy-dom',
-          include: ['packages/foundation/**/*.test.ts', 'packages/systems/**/*.test.ts', 'experiences/sandbox/**/*.test.ts'],
+          include: testIncludes(held),
           name: 'rebuild',
         },
       },
