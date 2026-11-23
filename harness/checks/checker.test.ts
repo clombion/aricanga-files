@@ -65,18 +65,31 @@ describe('a scan', () => {
 });
 
 describe('the module classifiers', () => {
-  test('reads a member whose role does not ship as test infrastructure, and its modules as not production', async () => {
+  test("reads a member whose role does not ship as test infrastructure, and its modules, tests, Playwright specs and test support as not production, and a module Playwright does not match and the harness's check support as production", async () => {
     expect.hasAssertions();
     const held = await populationOf({
       listing: ['packages/probe/package.json', 'packages/view/package.json'],
       read: reader({ 'packages/probe/package.json': manifest('test-infrastructure'), 'packages/view/package.json': manifest('view') }),
       workspace: ['packages/probe/', 'packages/view/'],
     });
-    const modules = ['packages/probe/src/b.ts', 'packages/view/src/v.tsx', 'packages/view/test/v.test.ts', 'harness/lib/a.ts'];
+    const modules = [
+      'packages/probe/src/b.ts',
+      'packages/view/src/v.tsx',
+      'packages/view/test/v.test.ts',
+      'packages/view/src/testing/t.ts',
+      'packages/view/src/v.spec.ts',
+      'packages/view/src/v.spec.tsx',
+      'harness/lib/a.ts',
+      'harness/checks/a.ts',
+    ];
     expect(modules.map((file) => [isTestInfrastructure(held, file), isProduction(held, file)])).toStrictEqual([
       [true, false],
       [false, true],
       [false, false],
+      [false, false],
+      [false, false],
+      [false, true],
+      [false, true],
       [false, true],
     ]);
   });

@@ -8,12 +8,13 @@
  */
 
 import type { Rule, RuleBase } from 'stylelint';
+import { heldFiles, population } from './scope.ts';
 import { isIdentifier, isNoSubstitutionTemplateLiteral, isTaggedTemplateExpression } from 'typescript/unstable/ast/is';
 import { nodes, parse as parseModule } from './ts-source.ts';
 import { Prefixes } from './exemptions.ts';
 import { Slot } from './lists.ts';
 import { fromRoot } from './paths.ts';
-import { heldFiles } from './scope.ts';
+import { isProduction } from './checker.ts';
 import { present } from './present.ts';
 import stylelint from 'stylelint';
 import { textsOf } from './source-files.ts';
@@ -47,9 +48,6 @@ interface Template {
 /** The files whose `css` tagged templates are sheets. */
 const MODULES = new Prefixes(['.ts', '.tsx']);
 
-/** The harness holds planted sheets and values in its checks; the scans read the product only. */
-const PLANTS = new Prefixes(['harness/']);
-
 /** The first line of a file or sheet. */
 const FIRST_LINE = 1;
 
@@ -63,14 +61,14 @@ const TEXT_START = 0;
 const SUBSTITUTION = '0';
 
 /**
- * The held files of the product with the given suffixes.
+ * The members' held files with the given suffixes: the product's, never the harness's planted sheets.
  *
  * @param {readonly string[]} suffixes - The suffixes.
  * @returns {Promise<readonly string[]>} The files.
  */
 async function productFiles(...suffixes: readonly string[]): Promise<readonly string[]> {
-  const files = await heldFiles(...suffixes);
-  return files.filter((path) => !PLANTS.starts(path));
+  const [files, held] = await Promise.all([heldFiles(...suffixes), population()]);
+  return files.filter((path) => held.memberOf(path) !== undefined);
 }
 
 /**
@@ -148,12 +146,14 @@ async function sheets(): Promise<readonly Sheet[]> {
 }
 
 /**
- * The product's modules and pages a class or custom property may be read from, without their sheets.
+ * The product's production modules and pages a class or custom property may be read from, without
+ * their sheets: a class only a test reads is unused.
  *
  * @returns {Promise<ReadonlyMap<string, string>>} Each reader's text, by path.
  */
 async function readers(): Promise<ReadonlyMap<string, string>> {
-  const files = await productFiles('.html', ...MODULES.values);
+  const [found, held] = await Promise.all([productFiles('.html', ...MODULES.values), population()]);
+  const files = found.filter((path) => isProduction(held, path));
   const texts = await textsOf(files);
   return new Map(texts.map(([path, text]: readonly [string, string]) => [path, withoutSheets(path, text)] as const));
 }

@@ -1,10 +1,13 @@
 /** The gate's Vitest globs: a shipping member's tests are collected and its sources covered. */
 
-import { coverageIncludes, testIncludes } from '#lib/test-globs.ts';
+import { VITEST_TESTS, coverageIncludes, testIncludes } from '#lib/test-globs.ts';
 import { describe, expect, test } from 'vitest';
+import { gateTest, globsOf } from './gate-config.ts';
+import { list, object } from '#lib/config.ts';
 import { manifest, reader } from './scope.plants.ts';
+import { populationOf, typescriptFiles } from '#lib/scope.ts';
 import type { Population } from '#lib/scope.ts';
-import { populationOf } from '#lib/scope.ts';
+import { matches } from '#lib/globs.ts';
 
 /**
  * A population of six members: a foundation with tests, a view whose tests are TSX, a
@@ -67,5 +70,27 @@ describe('the gate globs', () => {
   test("cover each shipping member's listed sources, and no test-infrastructure member's", async () => {
     expect.hasAssertions();
     expect(coverageIncludes(await planted())).toStrictEqual(['packages/core/src/**', 'packages/lib/src/**', 'packages/view/src/**']);
+  });
+});
+
+/**
+ * The Vitest tests among some files that no include collects.
+ *
+ * @param {readonly string[]} files - The files.
+ * @param {readonly string[]} includes - Every project's include globs.
+ * @returns {readonly string[]} The tests no project collects.
+ */
+function uncollected(files: readonly string[], includes: readonly string[]): readonly string[] {
+  return files.filter((path) => matches(VITEST_TESTS, path) && !includes.some((glob) => matches(glob, path)));
+}
+
+describe('the repository', () => {
+  test('collects every held Vitest test in a project of the gate config', async () => {
+    expect.hasAssertions();
+    const [files, settings] = await Promise.all([typescriptFiles(), gateTest()]);
+    const includes = list(settings['projects'], 'projects').flatMap((project) =>
+      globsOf(object(object(project, 'a project')['test'], 'a project test'), 'include'),
+    );
+    expect(uncollected(files, includes)).toStrictEqual([]);
   });
 });

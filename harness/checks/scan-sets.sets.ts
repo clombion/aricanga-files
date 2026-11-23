@@ -2,25 +2,10 @@
 
 import { Project, finished } from '#lib/tools.ts';
 import { REPO_ROOT, fromRoot } from '#lib/paths.ts';
-import { gateCoverage, globsOf } from './gate-config.ts';
 import { textsOf, tracked } from '#lib/source-files.ts';
 import { dirname } from 'node:path/posix';
-import { isTestInfrastructure } from '#lib/checker.ts';
-import { matches } from '#lib/globs.ts';
-import { population } from '#lib/scope.ts';
 import { projects } from '#lib/projects.ts';
 import { relativeTo } from '#lib/relative.ts';
-
-const TEST_FILE = /(?:\.test\.tsx?$|\/test\/|^harness\/checks\/)/u;
-/**
- * Whether a path is a test module: a test file, a file under a test folder, a harness check or a browser spec.
- *
- * @param {string} path - A repository path.
- * @returns {boolean} Whether it holds tests.
- */
-function isTestFile(path: string): boolean {
-  return TEST_FILE.test(path);
-}
 
 const UNFORMATTED = '\nconst   plantedUnformatted   =   1  ;\n';
 
@@ -94,18 +79,4 @@ async function projectMembers(): Promise<ReadonlyMap<string, ReadonlySet<string>
   return new Map(members);
 }
 
-/**
- * The non-test files the coverage `include` of Vitest reaches and its `exclude` does not take back.
- *
- * @param {readonly string[]} files - The held files.
- * @returns {Promise<ReadonlySet<string>>} The files coverage reaches, tests counted as reached.
- */
-async function coverageReached(files: readonly string[]): Promise<ReadonlySet<string>> {
-  const [coverage, held] = await Promise.all([gateCoverage(), population()]);
-  const include = globsOf(coverage, 'include');
-  const exclude = globsOf(coverage, 'exclude');
-  const covered = (path: string): boolean => include.some((glob) => matches(glob, path)) && !exclude.some((glob) => matches(glob, path));
-  return new Set(files.filter((path) => isTestFile(path) || isTestInfrastructure(held, path) || covered(path)));
-}
-
-export { coverageReached, isTestFile, oxfmtFiles, oxlintFiles, projectDirectory, projectMembers };
+export { oxfmtFiles, oxlintFiles, projectDirectory, projectMembers };

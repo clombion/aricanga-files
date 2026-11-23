@@ -10,22 +10,44 @@
 
 import { Exemptions, site } from '#lib/exemptions.ts';
 import { describe, expect, test } from 'vitest';
-import { heldFiles } from '#lib/scope.ts';
+import { isRunnerTest } from '#lib/test-globs.ts';
 import { skips } from './skips.scan.ts';
 import { textsOf } from '#lib/source-files.ts';
+import { typescriptFiles } from '#lib/scope.ts';
 
 const HARNESS_ID = 'skips';
 
 /** The tests allowed to skip, keyed by `site(path, owner)`. */
 const SKIPS = Exemptions.grouped({});
 
+/** A module that skips its one test, `a`. */
+const SKIPPING = "import { test } from 'vitest';\ntest.skip('a', () => {});";
+
+/**
+ * The skips in the modules a test runner runs (`isRunnerTest`), of the given modules.
+ *
+ * @param {readonly (readonly [string, string])[]} texts - Each module's path and text.
+ * @returns {readonly string[]} Each skip's site.
+ */
+function runnerSkips(texts: readonly (readonly [string, string])[]): readonly string[] {
+  return texts
+    .filter(([path]: readonly [string, string]) => isRunnerTest(path))
+    .flatMap(([path, text]: readonly [string, string]) => skips(path, text));
+}
+
 describe('the repository', () => {
   test('every skip is listed', async () => {
     expect.hasAssertions();
-    const held = await heldFiles('.test.ts', '.test.tsx', '.spec.ts');
-    const texts = await textsOf(held);
-    const found = texts.flatMap(([path, text]: readonly [string, string]) => skips(path, text));
-    expect(SKIPS.unexempted(found)).toStrictEqual([]);
+    const texts = await textsOf(await typescriptFiles());
+    expect(SKIPS.unexempted(runnerSkips(texts))).toStrictEqual([]);
+  });
+});
+
+describe('the census', () => {
+  test('reads every module a runner runs, and no other', () => {
+    expect.hasAssertions();
+    const planted = ['p/a.test.ts', 'p/b.test.tsx', 'p/c.spec.ts', 'p/d.spec.tsx', 'p/e.ts'].map((path) => [path, SKIPPING] as const);
+    expect(runnerSkips(planted)).toStrictEqual([site('p/a.test.ts', 'a'), site('p/b.test.tsx', 'a'), site('p/c.spec.ts', 'a')]);
   });
 });
 

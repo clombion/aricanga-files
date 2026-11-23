@@ -17,6 +17,7 @@ import { isIdentifier, isPrivateIdentifier, isStringLiteral } from 'typescript/u
 import type { Population } from './scope.ts';
 import { SymbolFlags } from 'typescript/unstable/sync';
 import { isEmpty } from './lists.ts';
+import { isRunnerTest } from './test-globs.ts';
 import path from 'node:path';
 import { present } from './present.ts';
 import { typescriptFiles } from './scope.ts';
@@ -36,7 +37,7 @@ const OPTIONS = {
   types: ['node', 'vite/client'],
 } as const;
 
-const TEST_FILE = /\.(?:test|spec)\.tsx?$/u;
+/** Test support's directories: a member's `test/`, `tests/` and `testing/`. */
 const TEST_DIRECTORY = /(?:^|\/)(?:test|tests|testing)\//u;
 /** A symbol's flags with none set. */
 const NO_FLAGS = 0;
@@ -75,8 +76,10 @@ function isTestInfrastructure(population: Population, file: string): boolean {
 }
 
 /**
- * A module that ships: not a Vitest test, a Playwright spec, test support under a `test/`, `tests/`
- * or `testing/` directory, or a module of a test infrastructure package. Every rule holds both
+ * A module that ships: not a module a test runner runs (`isRunnerTest`), test support under a
+ * `test/`, `tests/` or `testing/` directory, or a module of a test infrastructure package. The
+ * harness's check support (`harness/checks/`) is held as production is, so every check reads it. Whether coverage reads a module is the gate config's question,
+ * not this one: a shipping member's `src/testing/` is test support and covered. Every rule holds both
  * kinds. The distinction decides who counts as a reader of a production module's exports
  * (`type-exports.ts`), which modules declare closed sets (`declared-sets.scan.ts`), and, among the
  * kernel members' modules, which declare contracts (`contracts.ts`).
@@ -86,7 +89,7 @@ function isTestInfrastructure(population: Population, file: string): boolean {
  * @returns {boolean} Whether the module ships.
  */
 function isProduction(population: Population, file: string): boolean {
-  return !TEST_FILE.test(file) && !TEST_DIRECTORY.test(file) && !isTestInfrastructure(population, file);
+  return !isRunnerTest(file) && !TEST_DIRECTORY.test(file) && !isTestInfrastructure(population, file);
 }
 
 /**

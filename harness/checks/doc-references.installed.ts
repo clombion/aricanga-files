@@ -6,7 +6,7 @@
 import { REPO_ROOT, fromRoot } from '#lib/paths.ts';
 import { list, object, parsed, stringOf } from '#lib/config.ts';
 import { textsOf, tracked } from '#lib/source-files.ts';
-import { Prefixes } from '#lib/exemptions.ts';
+import { HARNESS_CHECKS } from '#lib/test-globs.ts';
 import type { Resolver } from './doc-references.resolve.ts';
 import type { Span } from '#lib/docs.ts';
 import { access } from 'node:fs/promises';
@@ -16,9 +16,6 @@ import { heldFiles } from '#lib/scope.ts';
 import { spanProblems } from './doc-references.resolve.ts';
 
 const QUOTED = /['"](?<value>[^'"\n]+)['"]/gu;
-
-/** The checks' own modules: their planted strings must never resolve a reference. */
-const PLANTS = new Prefixes(['harness/checks/']);
 
 /**
  * The listed manifests that carry a name, each name with its folder: the packages a reference may
@@ -113,7 +110,7 @@ async function installedPaths(spans: readonly Span[], resolver: Omit<Resolver, '
 async function quotedValues(): Promise<ReadonlySet<string>> {
   const found = new Set<string>();
   const files = await heldFiles('.ts', '.tsx', '.js', '.mjs', '.json');
-  const texts = await textsOf(files.filter((held) => !PLANTS.starts(held)));
+  const texts = await textsOf(files.filter((held) => !held.startsWith(HARNESS_CHECKS)));
   for (const [, text] of texts) {
     for (const match of text.matchAll(QUOTED)) {
       found.add(match.groups?.['value'] ?? '');

@@ -20,13 +20,14 @@ import {
 } from 'typescript/unstable/ast';
 import { isExportedType, listedExports } from './exports-of.ts';
 import { isProduction, nodes, resolved, sourceOf } from './checker.ts';
+import { HARNESS_CHECKS } from './test-globs.ts';
 import type { Population } from './scope.ts';
 import { Prefixes } from './exemptions.ts';
 import type { Scan } from './checker.ts';
 import { isEmpty } from './lists.ts';
 
-/** Modules that read the harness library's types without being production modules themselves. */
-const CHECK_ROOTS = new Prefixes(['harness/checks/']);
+/** The harness's own test project, whose modules may read a production module's unexported types. */
+const CHECK_ROOTS = new Prefixes([HARNESS_CHECKS]);
 
 /** An exported type and whether its doc comment carries `@public`. */
 interface ExportedType {

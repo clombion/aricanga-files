@@ -11,6 +11,7 @@ import { checkList, pinTable, taskTable } from './generated-render.ts';
 import { markdown, markdownDocs, markdownPaths } from './docs.ts';
 import { textsOf, tracked, writeText } from './source-files.ts';
 import { Accepted } from './exemptions.ts';
+import { HARNESS_CHECKS } from './test-globs.ts';
 import { UPSTREAM } from './upstream.ts';
 import { checkModules } from './checks.ts';
 import { pins } from './pins.ts';
@@ -47,7 +48,7 @@ const END_MARKER_LINES = 1;
  */
 async function checks(): Promise<string> {
   const listed = await tracked();
-  const texts = await textsOf(listed.filter((path) => path.startsWith('harness/checks/') && path.endsWith('.test.ts')));
+  const texts = await textsOf(listed.filter((path) => path.startsWith(HARNESS_CHECKS) && path.endsWith('.test.ts')));
   return checkList(checkModules(texts));
 }
 

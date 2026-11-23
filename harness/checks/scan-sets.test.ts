@@ -10,12 +10,13 @@
  * held by the clones check's own coverage of the listing; and knip's, once `knip.json` declares it.
  */
 
+import { Accepted, Exemptions } from '#lib/exemptions.ts';
 import { FLOOR, ListingError, listing, tracked } from '#lib/source-files.ts';
-import { coverageReached, isTestFile, oxfmtFiles, oxlintFiles, projectDirectory, projectMembers } from './scan-sets.sets.ts';
+import { coverageReached, testsOutsideCoverage } from './gate-config.ts';
 import { describe, expect, test } from 'vitest';
 import { mkdtemp, rm } from 'node:fs/promises';
+import { oxfmtFiles, oxlintFiles, projectDirectory, projectMembers } from './scan-sets.sets.ts';
 import { population, typescriptFiles } from '#lib/scope.ts';
-import { Exemptions } from '#lib/exemptions.ts';
 import type { Population } from '#lib/scope.ts';
 import { Project } from '#lib/tools.ts';
 import { join } from 'node:path/posix';
@@ -88,16 +89,25 @@ function unreached(files: readonly string[], sets: Readonly<Record<string, Reado
   return files.flatMap((path) => named.filter(([, reached]) => !reached.has(path)).map(([name]) => `${path}: ${name}`));
 }
 
+/** The planted modules the project check reads as tests. */
+const TESTS = new Accepted(['packages/foundation/src/a.test.ts', 'packages/foundation/test/b.test.ts']);
+
+/** The production projects, and which modules are tests or test support no production project may hold. */
+interface Production {
+  readonly projects: ReadonlySet<string>;
+  readonly isTest: (path: string) => boolean;
+}
+
 /**
  * The problem of one file's projects: in none, in two production projects, or a test in a production project.
  *
  * @param {string} path - The file.
  * @param {readonly string[]} holding - The projects holding it.
- * @param {ReadonlySet<string>} production - The production projects.
+ * @param {Production} production - The production projects, and which modules are tests.
  * @returns {readonly string[]} Its problem, if any.
  */
-function fileProblems(path: string, holding: readonly string[], production: ReadonlySet<string>): readonly string[] {
-  const inProduction = holding.filter((project) => production.has(project));
+function fileProblems(path: string, holding: readonly string[], production: Readonly<Production>): readonly string[] {
+  const inProduction = holding.filter((project) => production.projects.has(project));
   const [first] = inProduction;
   if (holding.length < ONE_PROJECT) {
     return [`${path}: in no TypeScript project`];
@@ -105,7 +115,7 @@ function fileProblems(path: string, holding: readonly string[], production: Read
   if (inProduction.length > ONE_PROJECT) {
     return [`${path}: in ${inProduction.length} production projects`];
   }
-  return isTestFile(path) && first !== undefined ? [`${path}: a test in the production project ${first}`] : [];
+  return production.isTest(path) && first !== undefined ? [`${path}: a test in the production project ${first}`] : [];
 }
 
 /**
@@ -113,13 +123,13 @@ function fileProblems(path: string, holding: readonly string[], production: Read
  *
  * @param {readonly string[]} files - The held files.
  * @param {ReadonlyMap<string, ReadonlySet<string>>} members - Each project's files, by project.
- * @param {ReadonlySet<string>} production - The production projects.
+ * @param {Production} production - The production projects, and which modules are tests.
  * @returns {readonly string[]} One problem per file.
  */
 function projectProblems(
   files: readonly string[],
   members: ReadonlyMap<string, ReadonlySet<string>>,
-  production: ReadonlySet<string>,
+  production: Readonly<Production>,
 ): readonly string[] {
   const projectsOf: readonly (readonly [string, ReadonlySet<string>])[] = [...members];
   return files.flatMap((path) =>
@@ -177,8 +187,8 @@ describe('the repository', () => {
 
   test('every held TypeScript file is in a project, once in production, and no test is in production', async () => {
     expect.hasAssertions();
-    const [files, members, held] = await Promise.all([typescriptFiles(), projectMembers(), population()]);
-    const problems = projectProblems(files, members, productionProjects(held));
+    const [files, members, held, isTest] = await Promise.all([typescriptFiles(), projectMembers(), population(), testsOutsideCoverage()]);
+    const problems = projectProblems(files, members, { isTest, projects: productionProjects(held) });
     expect(UNPROJECTED.unexempted(problems)).toStrictEqual([]);
   });
 
@@ -228,7 +238,10 @@ describe('the scan-set checks', () => {
           'loose.ts',
         ],
         members,
-        new Set(['packages/foundation/tsconfig.json', 'packages/systems/chat/tsconfig.json']),
+        {
+          isTest: (path) => TESTS.has(path),
+          projects: new Set(['packages/foundation/tsconfig.json', 'packages/systems/chat/tsconfig.json']),
+        },
       ),
     ).toStrictEqual([
       'packages/foundation/src/a.test.ts: a test in the production project packages/foundation/tsconfig.json',
