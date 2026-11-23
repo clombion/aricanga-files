@@ -1,6 +1,6 @@
 /** What the population's tests plant: scripted manifests, refusals as text, and git folders holding a workspace. */
 
-import { mkdtemp, writeFile } from 'node:fs/promises';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import type { Population } from '#lib/scope.ts';
 import { Scripted } from '#lib/scripted.ts';
 import path from 'node:path';
@@ -56,23 +56,29 @@ function manifest(role: string): string {
 }
 
 /**
- * A git folder holding a workspace whose root manifest is `rootManifest`, over the listing's floor.
+ * A git folder holding a workspace whose root manifest is `rootManifest`, over the listing's floor,
+ * handed to `use` and removed once `use` settles.
  *
  * @param {string} prefix - The folder's name prefix.
  * @param {string} rootManifest - The root `package.json`'s text.
- * @returns {Promise<string>} The folder.
+ * @param {(folder: string) => Promise<Value>} use - What the test does in the folder.
+ * @returns {Promise<Value>} What `use` answers.
  */
-async function workspaceFolder(prefix: string, rootManifest: string): Promise<string> {
+async function inWorkspaceFolder<Value>(prefix: string, rootManifest: string, use: (folder: string) => Promise<Value>): Promise<Value> {
   const folder = await mkdtemp(path.join(tmpdir(), prefix));
-  await writeFile(path.join(folder, 'package.json'), rootManifest);
-  await writeFile(path.join(folder, 'pnpm-workspace.yaml'), "packages:\n  - 'a/*'\n");
-  await Promise.all(
-    Array.from({ length: FILLER }, async (_value, index) => {
-      await writeFile(path.join(folder, `f${index}.txt`), '');
-    }),
-  );
-  await run(['git', 'init', '-q'], { cwd: folder, timeoutMs: GIT_TIMEOUT_MS });
-  return folder;
+  try {
+    await writeFile(path.join(folder, 'package.json'), rootManifest);
+    await writeFile(path.join(folder, 'pnpm-workspace.yaml'), "packages:\n  - 'a/*'\n");
+    await Promise.all(
+      Array.from({ length: FILLER }, async (_value, index) => {
+        await writeFile(path.join(folder, `f${index}.txt`), '');
+      }),
+    );
+    await run(['git', 'init', '-q'], { cwd: folder, timeoutMs: GIT_TIMEOUT_MS });
+    return await use(folder);
+  } finally {
+    await rm(folder, { force: true, recursive: true });
+  }
 }
 
 /** The importers block pnpm 10.28.0 writes for workspaces whose directories need YAML quoting. */
@@ -105,4 +111,4 @@ const QUOTED_KEYS: string = [
   '',
 ].join('\n');
 
-export { manifest, QUOTED_KEYS, reader, refusalOf, workspaceFolder };
+export { inWorkspaceFolder, manifest, QUOTED_KEYS, reader, refusalOf };

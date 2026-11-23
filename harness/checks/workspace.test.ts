@@ -4,8 +4,8 @@ import { describe, expect, test } from 'vitest';
 import { mkdir, rm, symlink, writeFile } from 'node:fs/promises';
 import { packagesOf, workspacePackages } from '#lib/workspace.ts';
 import { ConfigError } from '#lib/config.ts';
+import { inWorkspaceFolder } from './scope.plants.ts';
 import path from 'node:path';
-import { workspaceFolder } from './scope.plants.ts';
 
 /**
  * The JSON answer pnpm gives, listing packages at the given paths.
@@ -20,8 +20,7 @@ function answer(paths: readonly unknown[]): string {
 describe('pnpm', () => {
   test("refuses a workspace whose root manifest is broken, naming the root and pnpm's reason, which pnpm writes to stderr", async () => {
     expect.hasAssertions();
-    const folder = await workspaceFolder('unlistable-', '{');
-    try {
+    await inWorkspaceFolder('unlistable-', '{', async (folder) => {
       const refusal = await workspacePackages(folder)
         .then(() => 'listed')
         .catch(String);
@@ -30,15 +29,12 @@ describe('pnpm', () => {
         refusal.includes('"status":1'),
         refusal.includes("while parsing '{'"),
       ]).toStrictEqual([true, true, true]);
-    } finally {
-      await rm(folder, { force: true, recursive: true });
-    }
+    });
   });
 
   test("refuses a workspace whose member manifest is broken with pnpm's reason, which pnpm writes to stdout", async () => {
     expect.hasAssertions();
-    const folder = await workspaceFolder('broken-member-', '{}');
-    try {
+    await inWorkspaceFolder('broken-member-', '{}', async (folder) => {
       await mkdir(path.join(folder, 'a', 'x'), { recursive: true });
       await writeFile(path.join(folder, 'a', 'x', 'package.json'), '{"name":"x",');
       const refusal = await workspacePackages(folder)
@@ -47,24 +43,22 @@ describe('pnpm', () => {
       expect([refusal.includes('"status":1'), refusal.includes('ERR_PNPM_JSON_PARSE'), refusal.includes('a/x/package.json')]).toStrictEqual(
         [true, true, true],
       );
-    } finally {
-      await rm(folder, { force: true, recursive: true });
-    }
+    });
   });
 
   test('answers the same packages through a symlink to the root', async () => {
     expect.hasAssertions();
-    const folder = await workspaceFolder('linked-', '{}');
-    const link = `${folder}-link`;
-    try {
-      await mkdir(path.join(folder, 'a', 'x'), { recursive: true });
-      await writeFile(path.join(folder, 'a', 'x', 'package.json'), '{"name":"x"}');
-      await symlink(folder, link);
-      await expect(workspacePackages(link)).resolves.toStrictEqual(['', 'a/x/']);
-    } finally {
-      await rm(link, { force: true });
-      await rm(folder, { force: true, recursive: true });
-    }
+    await inWorkspaceFolder('linked-', '{}', async (folder) => {
+      const link = `${folder}-link`;
+      try {
+        await mkdir(path.join(folder, 'a', 'x'), { recursive: true });
+        await writeFile(path.join(folder, 'a', 'x', 'package.json'), '{"name":"x"}');
+        await symlink(folder, link);
+        await expect(workspacePackages(link)).resolves.toStrictEqual(['', 'a/x/']);
+      } finally {
+        await rm(link, { force: true });
+      }
+    });
   });
 });
 
