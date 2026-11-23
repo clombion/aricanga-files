@@ -9,6 +9,7 @@ import { readFile, stat, writeFile } from 'node:fs/promises';
 import { REPO_ROOT } from './paths.ts';
 import { isolatedEnv } from './tools.ts';
 import path from 'node:path';
+import { providedFor } from './provided.ts';
 import { run } from './process.ts';
 import { succeeded } from './exit-status.ts';
 
@@ -117,12 +118,17 @@ async function listingOutput(argv: readonly string[], root: string, refuse: (out
 }
 
 /**
- * List `root` through git, refusing a listing git could not give or gave short.
+ * List `root` through git, refusing a listing git could not give or gave short; in a worker of the
+ * gate's run, the listing its config provided for `root` (`provided.ts`).
  *
  * @param {string} root - The directory to list.
  * @returns {Promise<readonly string[]>} The files, as POSIX paths relative to `root`.
  */
 async function list(root: string): Promise<readonly string[]> {
+  const given = await providedFor(root);
+  if (given !== undefined) {
+    return given.listing;
+  }
   const stdout = await listingOutput(
     ['git', 'ls-files', '-z', '--cached', '--others', '--exclude-standard'],
     root,

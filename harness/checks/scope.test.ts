@@ -4,8 +4,8 @@ import { LOCKFILE, lockOf } from '#lib/pins.ts';
 import { POC, population, populationOf } from '#lib/scope.ts';
 import { QUOTED_KEYS, manifest, reader, refusalOf, workspaceFolder } from './scope.plants.ts';
 import { describe, expect, test } from 'vitest';
+import { mkdir, rm, writeFile } from 'node:fs/promises';
 import { perRoot, textOf } from '#lib/source-files.ts';
-import { rm, writeFile } from 'node:fs/promises';
 import type { Population } from '#lib/scope.ts';
 import { PopulationError } from '#lib/workspace.ts';
 import { dirOfImporter } from '#lib/package-dirs.ts';
@@ -155,6 +155,21 @@ describe('the records', () => {
   test('subtracts each POC entry as a directory, not as a prefix of a name', () => {
     expect.hasAssertions();
     expect([POC.starts('utils/x.js'), POC.starts('utils2/x.js'), POC.starts('packages/tests/a.ts')]).toStrictEqual([true, false, true]);
+  });
+});
+
+describe('a checkout', () => {
+  test("computes a checkout's population from pnpm's workspace, git's listing and each member's manifest", async () => {
+    expect.hasAssertions();
+    const folder = await workspaceFolder('computed-', '{}');
+    try {
+      await mkdir(path.join(folder, 'a', 'x'), { recursive: true });
+      await writeFile(path.join(folder, 'a', 'x', 'package.json'), manifest('view'));
+      const held = await population(folder);
+      expect(held.members).toStrictEqual([{ dir: 'a/x/', role: 'view' }]);
+    } finally {
+      await rm(folder, { force: true, recursive: true });
+    }
   });
 });
 

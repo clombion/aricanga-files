@@ -13,6 +13,7 @@ import { perRoot, textOf, tracked } from './source-files.ts';
 import { REPO_ROOT } from './paths.ts';
 import type { Role } from './roles.ts';
 import { isEmpty } from './lists.ts';
+import { providedFor } from './provided.ts';
 
 /** The harness's own place: held, and not a workspace package. */
 const HARNESS_ROOT: MemberDir = 'harness/';
@@ -56,6 +57,8 @@ interface Member {
 
 /** The harness's population over one listing. */
 interface Population {
+  /** The checkout it was computed for; none for a planted population, which no checkout holds. */
+  readonly root: string | undefined;
   /** The listing it was computed over. */
   readonly listing: readonly string[];
   /** The members, sorted by directory. */
@@ -74,6 +77,8 @@ interface Population {
 
 /** What a population is computed from. */
 interface PopulationInputs {
+  /** The checkout the listing and the workspace were read from; none for a planted population. */
+  readonly root?: string;
   /** The repository-relative listing. */
   readonly listing: readonly string[];
   /** The workspace packages pnpm lists, by directory. */
@@ -99,11 +104,12 @@ function declaredWord(manifest: string, text: string): unknown {
 /**
  * A population built from its listing and its members, whatever computed them.
  *
+ * @param {string | undefined} root - The checkout it was computed for; none for a planted population.
  * @param {readonly string[]} listing - The listing.
  * @param {readonly Member[]} members - The members, sorted by directory.
  * @returns {Population} The population.
  */
-function assembled(listing: readonly string[], members: readonly Member[]): Population {
+function assembled(root: string | undefined, listing: readonly string[], members: readonly Member[]): Population {
   const memberOf = (target: string): Member | undefined => nearest(members, (member) => member.dir, target);
   return {
     holds: (target: string) => ROOT_FILES.has(target) || target.startsWith(HARNESS_ROOT) || memberOf(target) !== undefined,
@@ -111,6 +117,7 @@ function assembled(listing: readonly string[], members: readonly Member[]): Popu
     listing,
     memberOf,
     members,
+    root,
     roots: [...members.map((member) => member.dir), HARNESS_ROOT],
     shipping: members.filter((member) => ships(member.role)),
   };
@@ -161,16 +168,21 @@ async function populationOf(inputs: Readonly<PopulationInputs>): Promise<Populat
       return [dir, declaredWord(manifestOf(dir), text)];
     }),
   );
-  return assembled(inputs.listing, membersOf(words));
+  return assembled(inputs.root, inputs.listing, membersOf(words));
 }
 
 /**
- * The population of a checkout, computed from its listing and pnpm's workspace.
+ * The population of a checkout: in a worker of the gate's run, the one its config computed and
+ * provided (`provided.ts`); elsewhere computed from its listing and pnpm's workspace.
  *
  * @param {string} root - The checkout.
  * @returns {Promise<Population>} The population.
  */
 async function computed(root: string): Promise<Population> {
+  const given = await providedFor(root);
+  if (given !== undefined) {
+    return assembled(given.root, given.listing, given.members);
+  }
   const [listing, workspace] = await Promise.all([tracked(root), workspacePackages(root)]);
   const found = await populationOf({
     listing,
@@ -178,6 +190,7 @@ async function computed(root: string): Promise<Population> {
       const text = await textOf(listed, root);
       return text;
     },
+    root,
     workspace,
   });
   return found;
