@@ -128,7 +128,9 @@ list.
 ## generated-docs: Every generated block of the docs is current
 
 - **Holds:** every generated block equals a fresh render, names a known generator, and every
-  generator has a block; the markers pair up.
+  generator has a block; the markers pair up. A block renders the same under any process locale:
+  the check renders under the gate's locale and under Lithuanian, whose collation orders letters
+  otherwise, so every block is ordered by code unit.
 - **Owner:** `GENERATORS` in `harness/lib/generated.ts`, run by `harness/scripts/gen-docs.ts`.
 - **Write it:** a new generated table adds a generator and a pair of markers in the doc that shows
   it; `pnpm run fix` writes it.
