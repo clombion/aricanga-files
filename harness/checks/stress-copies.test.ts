@@ -1,14 +1,11 @@
 /** A flake-hunt copy's result: its status and output when it finished, and how it ended when it did not. */
 
+import { NOT_FINISHED, copyResult } from '#lib/stress.ts';
 import { describe, expect, test } from 'vitest';
 import { EXIT_FINDINGS } from '#lib/exit-status.ts';
-import { copyResult } from '#lib/stress.ts';
 
 /** A planted copy's seed. */
 const SEED = 7;
-
-/** The status of a copy that did not finish. */
-const NOT_FINISHED = -1;
 
 /** A planted copy's bound, in milliseconds. */
 const BOUND_MS = 10;

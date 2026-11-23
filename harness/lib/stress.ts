@@ -42,6 +42,12 @@ const NOT_FINISHED = -1;
 /** The fewest copies, repeats or seed a hunt accepts. */
 const LEAST = 1;
 
+/** `Array#indexOf`'s answer for an item the list does not hold: an index, not a process's status. */
+const NOT_FOUND = -1;
+
+/** How far after its flag a flag's value sits. */
+const VALUE_AFTER_FLAG = 1;
+
 /** The defaults of a hunt's counts. */
 const DEFAULT_COPIES = 4;
 const DEFAULT_REPEATS = 2;
@@ -113,7 +119,7 @@ async function hunt(options: Hunt): Promise<readonly CopyResult[]> {
  */
 function flag(args: readonly string[], name: string): string | undefined {
   const at = args.indexOf(name);
-  return at === NOT_FINISHED ? undefined : args.at(at + LEAST);
+  return at === NOT_FOUND ? undefined : args.at(at + VALUE_AFTER_FLAG);
 }
 
 /**
@@ -139,7 +145,7 @@ function count(args: readonly string[], name: string, fallback: number): number 
  * @returns {Hunt} The hunt.
  */
 function huntOf(args: readonly string[]): Hunt {
-  const flagValues = new Set(args.flatMap((arg, index) => (FLAGS.has(arg) ? [index + LEAST] : [])));
+  const flagValues = new Set(args.flatMap((arg, index) => (FLAGS.has(arg) ? [index + VALUE_AFTER_FLAG] : [])));
   const filters = args.filter((arg, index) => !FLAGS.has(arg) && !flagValues.has(index));
   return {
     config: 'vitest.gate.config.ts',
@@ -151,5 +157,5 @@ function huntOf(args: readonly string[]): Hunt {
   };
 }
 
-export { copyResult, hunt, huntOf };
+export { copyResult, hunt, huntOf, NOT_FINISHED };
 export type { CopyResult, Hunt };
