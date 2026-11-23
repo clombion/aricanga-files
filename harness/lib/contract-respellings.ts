@@ -266,7 +266,9 @@ function heldByContext(checker: Readonly<Checker>, node: Expression, word: strin
 function respellings(scan: Scan, file: SourceFile, known: readonly Contract[]): readonly ContractSite[] {
   const path = pathOf(file);
   const reached = reachedPackages(scan, file);
-  const reachable = known.filter((contract) => reached.has(contract.ownerPackage));
+  const reachable = known.filter((contract) =>
+    reached.has(present(scan.population.memberOf(contract.owner), `the member holding ${contract.owner}`).dir),
+  );
   const owned = known.filter((contract) => contract.owner === path);
   return nodes(file).flatMap((node): ContractSite[] => {
     if (!(isStringLiteral(node) || isNoSubstitutionTemplateLiteral(node)) || inTypeOrImport(node)) {

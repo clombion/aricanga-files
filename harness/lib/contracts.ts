@@ -37,14 +37,10 @@ const LEAST_WORDS = 2;
  *
  * @param {Readonly<Checker>} checker - The scan's checker.
  * @param {Type} type - The union.
- * @param {Readonly<{ name: string; path: string; ownerPackage: string }>} declared - The union's name, module and member.
+ * @param {Readonly<{ name: string; path: string }>} declared - The union's name and module.
  * @returns {readonly Contract[]} A contract per discriminant.
  */
-function discriminants(
-  checker: Readonly<Checker>,
-  type: Type,
-  declared: Readonly<{ name: string; path: string; ownerPackage: string }>,
-): readonly Contract[] {
+function discriminants(checker: Readonly<Checker>, type: Type, declared: Readonly<{ name: string; path: string }>): readonly Contract[] {
   const members = type.isUnionType() ? type.getTypes() : [];
   const [first] = members;
   if (first === undefined || !members.every((member) => member.isObjectType())) {
@@ -62,7 +58,6 @@ function discriminants(
           {
             name: `${declared.name}['${property.name}']`,
             owner: declared.path,
-            ownerPackage: declared.ownerPackage,
             words: new Set(complete),
           },
         ]
@@ -81,12 +76,11 @@ function discriminants(
 function contractsOf(scan: Scan, statement: TypeAliasDeclaration, path: string): readonly Contract[] {
   const symbol = present(scan.checker.getSymbolAtLocation(statement.name), `the symbol of the type alias ${statement.name.text}`);
   const type = scan.checker.getDeclaredTypeOfSymbol(symbol);
-  const ownerPackage = present(scan.population.memberOf(path), `the member holding ${path}`).dir;
   const words = stringLiterals(type);
   if (words !== undefined && words.length >= LEAST_WORDS) {
-    return [{ name: statement.name.text, owner: path, ownerPackage, words: new Set(words) }];
+    return [{ name: statement.name.text, owner: path, words: new Set(words) }];
   }
-  return discriminants(scan.checker, type, { name: statement.name.text, ownerPackage, path });
+  return discriminants(scan.checker, type, { name: statement.name.text, path });
 }
 
 /**

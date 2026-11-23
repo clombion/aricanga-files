@@ -4,10 +4,9 @@ import { isExportDeclaration, isImportDeclaration, isSourceFile, isTypeNode } fr
 import type { Node } from 'typescript/unstable/ast';
 import type { Type } from 'typescript/unstable/sync';
 
-/** A closed union: the module that owns it, its member's directory, its name, and its words. */
+/** A closed union: the module that owns it, its name, and its words. */
 interface Contract {
   readonly owner: string;
-  readonly ownerPackage: string;
   readonly name: string;
   readonly words: Readonly<ReadonlySet<string>>;
 }

@@ -10,7 +10,7 @@
  * Markdown is parsed by `markdown-doc.ts` on the grammar of `markdown-text.ts`.
  */
 
-import { DOC_ROOTS, population } from './scope.ts';
+import { DOC_ROOTS, heldFiles, population } from './scope.ts';
 import type { Prose, Span } from './markdown-text.ts';
 import { comments, parse } from './ts-source.ts';
 import { spansOf, withoutSpans } from './markdown-text.ts';
@@ -174,10 +174,8 @@ function codeComments(path: string, text: string): readonly CommentLine[] {
  * @returns {Promise<readonly (readonly [string, string])[]>} Each file with its text.
  */
 async function codeTexts(): Promise<readonly (readonly [string, string])[]> {
-  const held = await population();
-  const texts = await textsOf(
-    held.listing.filter((path) => held.holds(path) && (SCRIPT.ends(path) || STYLE.ends(path) || CONFIG.ends(path))),
-  );
+  const held = await heldFiles();
+  const texts = await textsOf(held.filter((path) => SCRIPT.ends(path) || STYLE.ends(path) || CONFIG.ends(path)));
   return texts;
 }
 

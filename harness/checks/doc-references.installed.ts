@@ -26,7 +26,7 @@ const PLANTS = new Prefixes(['harness/checks/']);
  *
  * @returns {Promise<readonly (readonly [string, string])[]>} Each package's name and folder.
  */
-async function workspaces(): Promise<readonly (readonly [string, string])[]> {
+async function namedPackages(): Promise<readonly (readonly [string, string])[]> {
   const listed = await tracked();
   const texts = await textsOf(listed.filter((path) => path.endsWith('package.json') && !path.includes('node_modules/')));
   return texts.flatMap(([path, text]: readonly [string, string]) => {
@@ -63,7 +63,7 @@ async function installedOnDisk(path: string): Promise<boolean> {
     return true;
   }
   const inner = path.replace(/^node_modules\//u, '');
-  const known = await workspaces();
+  const known = await namedPackages();
   if (known.some(([name]) => inner === name || inner.startsWith(`${name}/`))) {
     return true;
   }
