@@ -14,7 +14,7 @@
  * cannot see a collection built at run time, nor tolerance applied inside a helper of another module.
  */
 
-import { Exemptions, StaleExemptionError, site } from '#lib/exemptions.ts';
+import { Exemptions, KINDS, StaleExemptionError, Vocabulary, site } from '#lib/exemptions.ts';
 import { UNCONSULTED, UNDECLARED, findings } from './exemption-lists.fence.ts';
 import { describe, expect, test } from 'vitest';
 import type { Finding } from './exemption-lists.fence.ts';
@@ -30,6 +30,27 @@ const ADOPTING = new Exemptions({
 });
 
 const PLANT = 'harness/checks/plant.test.ts';
+
+/** A declaration of each kind that nothing consults: typed by the kinds, so a kind without one fails to compile. */
+const UNCONSULTED_PLANTS: Vocabulary<Readonly<Record<(typeof KINDS.words)[number], string>>> = new Vocabulary<
+  Readonly<Record<(typeof KINDS.words)[number], string>>
+>({
+  Accepted: "const NAME = new Accepted(['a']);",
+  CountedExemptions: "const NAME = new CountedExemptions({ a: { count: 1, reason: 'why' } });",
+  Exemptions: "const NAME = new Exemptions({ a: 'why' });",
+  Prefixes: "const NAME = new Prefixes(['a']);",
+  Vocabulary: 'const NAME = new Vocabulary({ a: { x: true } });',
+});
+
+/**
+ * Whether an export of the exemption owner is a declaration class: a class, and not an error.
+ *
+ * @param {unknown} value - The export.
+ * @returns {boolean} Whether it declares lists.
+ */
+function isDeclarationClass(value: unknown): boolean {
+  return typeof value === 'function' && Function.prototype.toString.call(value).startsWith('class ') && !(value.prototype instanceof Error);
+}
 
 /** The ways a module consults a list, each as the body of `check(x)`. */
 const CONSULTS = [
@@ -134,12 +155,8 @@ describe('the fence', () => {
   });
 
   test.each([
-    "const NAME = new Exemptions({ a: 'why' });",
+    ...KINDS.words.map((kind) => UNCONSULTED_PLANTS.of(kind)),
     "const NAME = Exemptions.grouped({ why: ['a'] });\nexport const size = NAME.entries.size;",
-    "const NAME = new CountedExemptions({ a: { count: 1, reason: 'why' } });",
-    "const NAME = new Accepted(['a']);",
-    "const NAME = new Prefixes(['a']);",
-    'const NAME = new Vocabulary({ a: { x: true } });',
   ])('sees a declaration nothing consults: %j', async (source) => {
     expect.hasAssertions();
     await expect(findings({ [PLANT]: source })).resolves.toStrictEqual([{ name: 'NAME', path: PLANT, problem: UNCONSULTED }]);
@@ -159,6 +176,18 @@ describe('the fence', () => {
     expect.hasAssertions();
     const adopting = new Exemptions({ [site(PLANT, 'GONE')]: 'planted' });
     expect(() => adopting.unexemptedBy([], keyOf)).toThrow(StaleExemptionError);
+  });
+});
+
+describe('the declaration kinds', () => {
+  test('knows every declaration kind the exemption owner exports, and no other class it exports', async () => {
+    expect.hasAssertions();
+    const exemptions: Readonly<Record<string, unknown>> = await import('#lib/exemptions.ts');
+    const classes = Object.entries(exemptions)
+      .filter(([, value]: readonly [string, unknown]) => isDeclarationClass(value))
+      .map(([name]: readonly [string, unknown]) => name)
+      .toSorted();
+    expect(classes).toStrictEqual([...KINDS.words].toSorted());
   });
 });
 

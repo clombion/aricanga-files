@@ -16,11 +16,8 @@ import {
 import { dirname, join, normalize } from 'node:path/posix';
 import { importsFrom, parse } from '#lib/ts-source.ts';
 import { object, parsed } from '#lib/config.ts';
-import { Accepted } from '#lib/exemptions.ts';
+import { KINDS } from '#lib/exemptions.ts';
 import { textOf } from '#lib/source-files.ts';
-
-/** Declarations whose consult is a call that fails on a stale entry. */
-const CONSULTED_BY_CALL = new Accepted(['Exemptions', 'CountedExemptions']);
 
 const UNDECLARED = 'a literal collection consulted as a list: declare it';
 const UNCONSULTED = 'a declaration nothing consults: delete it';
@@ -89,7 +86,7 @@ function namesModule(path: string, target: string, patterns: readonly (readonly 
  * @returns {boolean} Whether a user consults it.
  */
 function isConsulted(name: string, kind: string, users: readonly SourceFile[]): boolean {
-  return CONSULTED_BY_CALL.has(kind)
+  return KINDS.has(kind) && KINDS.of(kind) === 'call'
     ? users.some((user) => staleFailingReceivers(user).has(name))
     : users.some((user) => reads(user).has(name));
 }

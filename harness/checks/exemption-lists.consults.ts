@@ -2,6 +2,7 @@
  * What a harness module declares and consults, read off its syntax tree for the `exemption-lists` fence.
  */
 
+import { Accepted, KINDS } from '#lib/exemptions.ts';
 import type { Expression, Node, SourceFile } from '#lib/ts-source.ts';
 import {
   isArrayLiteralExpression,
@@ -22,13 +23,10 @@ import {
   isVariableDeclaration,
   isVariableStatement,
 } from 'typescript/unstable/ast/is';
-import { Accepted } from '#lib/exemptions.ts';
 import type { CallExpression } from 'typescript/unstable/ast';
 import { SyntaxKind } from 'typescript/unstable/ast';
 import { nodes } from '#lib/ts-source.ts';
 
-/** The five declarations of `harness/lib/exemptions.ts`. */
-const DECLARATIONS = new Accepted(['Exemptions', 'CountedExemptions', 'Accepted', 'Prefixes', 'Vocabulary']);
 const STALE_FAILING_CALLS = new Accepted(['unexempted', 'unexemptedBy', 'mismatches', 'assertExact']);
 const CONSULTING_METHODS = new Accepted([
   'includes',
@@ -83,7 +81,7 @@ function builder(built: Expression): Expression | undefined {
  */
 function declaration(value: Expression): string | undefined {
   const callee = builder(unwrap(value));
-  return callee !== undefined && isIdentifier(callee) && DECLARATIONS.has(callee.text) ? callee.text : undefined;
+  return callee !== undefined && isIdentifier(callee) && KINDS.has(callee.text) ? callee.text : undefined;
 }
 
 /**

@@ -3,7 +3,8 @@
  * tolerated key carries a reason and fails once it matches nothing; a defined value, prefix or word
  * need not match.
  *
- * Five declarations cover every list a check consults, one module each under `exemptions/`:
+ * The declaration kinds, `KINDS`, cover every list a check consults, one module each under
+ * `exemptions/`, each with how it is consulted:
  *
  * - `Exemptions`: keys a rule tolerates, each with its reason; an entry no finding matches fails.
  * - `CountedExemptions`: keys a rule tolerates a fixed number of times; a count off either way fails.
@@ -18,6 +19,25 @@
  * reading them checks nothing. The defining kinds hand out what they define: `Accepted.values`, and
  * `Vocabulary.words` with each word's facts.
  */
+
+import { Vocabulary } from './exemptions/vocabulary.ts';
+
+/** How a declaration of a kind is consulted: by a call that fails on a stale entry, or by any read. */
+type Consulted = 'call' | 'read';
+
+/** A declaration kind: a class this module exports, by name. */
+type Kind = 'Accepted' | 'CountedExemptions' | 'Exemptions' | 'Prefixes' | 'Vocabulary';
+
+/** Every declaration kind with how it is consulted; the exemption fence reads it. */
+const KINDS: Vocabulary<Readonly<Record<Kind, Consulted>>> = new Vocabulary<Readonly<Record<Kind, Consulted>>>({
+  Accepted: 'read',
+  CountedExemptions: 'call',
+  Exemptions: 'call',
+  Prefixes: 'read',
+  Vocabulary: 'read',
+});
+
+export { KINDS };
 
 export { Accepted } from './exemptions/accepted.ts';
 export { CountedExemptions } from './exemptions/counted.ts';
