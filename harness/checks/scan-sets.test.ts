@@ -19,7 +19,7 @@ import { oxfmtFiles, oxlintFiles, projectDirectory, projectMembers } from './sca
 import { population, typescriptFiles } from '#lib/scope.ts';
 import type { Population } from '#lib/scope.ts';
 import { Project } from '#lib/tools.ts';
-import { join } from 'node:path/posix';
+import { plantedPopulation } from '#lib/scan-hooks.ts';
 import { tmpdir } from 'node:os';
 
 const HARNESS_ID = 'scan-sets';
@@ -155,7 +155,7 @@ describe('the listing', () => {
 
   test('refuses a folder git cannot list', async () => {
     expect.hasAssertions();
-    const folder = await mkdtemp(join(tmpdir(), 'unlisted-'));
+    const folder = await mkdtemp(`${tmpdir()}/unlisted-`);
     try {
       await expect(tracked(folder)).rejects.toThrow(ListingError);
     } finally {
@@ -194,11 +194,14 @@ describe('the repository', () => {
 
   test("a shipping member's project is a production project, a test-infrastructure member's is not", async () => {
     expect.hasAssertions();
-    const production = productionProjects(await population());
-    expect([production.has('packages/foundation/tsconfig.json'), production.has('packages/characterisation/tsconfig.json')]).toStrictEqual([
-      true,
-      false,
-    ]);
+    const held = await plantedPopulation(
+      [],
+      [
+        ['packages/core/', 'foundation'],
+        ['packages/probe/', 'test-infrastructure'],
+      ],
+    );
+    expect([...productionProjects(held)]).toStrictEqual(['packages/core/tsconfig.json']);
   });
 
   test('knip declares its scan set', async () => {
