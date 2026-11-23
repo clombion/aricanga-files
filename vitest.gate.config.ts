@@ -5,6 +5,7 @@
 import type { ViteUserConfig } from 'vitest/config';
 import { defineConfig } from 'vitest/config';
 import path from 'node:path';
+import solid from '@solidjs/vite-plugin';
 import { tmpdir } from 'node:os';
 
 const config: ViteUserConfig = defineConfig({
@@ -30,6 +31,8 @@ const config: ViteUserConfig = defineConfig({
     projects: [
       {
         extends: true,
+        // The sandbox's parts are Solid JSX, compiled by Solid's own plugin.
+        plugins: [solid()],
         test: {
           environment: 'happy-dom',
           include: ['packages/foundation/**/*.test.ts', 'packages/systems/**/*.test.ts', 'experiences/sandbox/**/*.test.ts'],

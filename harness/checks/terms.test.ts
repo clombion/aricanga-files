@@ -21,14 +21,7 @@ const HARNESS_ID = 'terms';
 const MARKDOWN = new Prefixes(['.md']);
 
 /** Uses of a retired term whose code cannot change yet, keyed by `site(path, term)`. */
-const EXEMPT = Exemptions.grouped({
-  'the sandbox Lit component exists until #24 replaces it with a Solid part': [
-    site('experiences/sandbox/src/main.ts', 'Lit'),
-    site('experiences/sandbox/test/sk-message.test.ts', 'Lit'),
-    site('experiences/sandbox/src/sk-message.ts', 'Lit'),
-    site('experiences/sandbox/test/skeleton.test.ts', 'Lit'),
-  ],
-});
+const EXEMPT = new Exemptions({});
 
 /** The parsed terms file. */
 interface Terms {

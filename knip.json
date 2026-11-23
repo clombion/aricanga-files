@@ -52,7 +52,10 @@
       "project": ["src/**/*.ts!"]
     },
     "experiences/sandbox": {
-      "project": ["src/**/*.ts!"]
+      "project": ["src/**/*.{ts,tsx}!", "test/**/*.ts"],
+      "playwright": {
+        "config": ["playwright.sandbox.config.ts"]
+      }
     },
     "packages/characterisation": {
       "project": ["src/**/*.{ts,tsx}", "tests/**/*.ts"],

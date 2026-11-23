@@ -1,9 +1,9 @@
 // Sandbox experience: the Phase 0 walking skeleton.
 // Thread: ink (compiled to story.json by the Vite ink plugin) → InkRuntime →
-// stub reduce (system-chat) → Lit <sk-message> render. Real contracts/physics
-// arrive in Phases 1–2; the real Aricanga experience is ported in Phase 3.
+// stub reduce (system-chat) → <sk-message>, which mounts the Solid message part. Real
+// contracts/physics arrive in Phases 1–2; the real Aricanga experience is ported in Phase 3.
 
-import { SkMessage, defineSkMessage } from './sk-message';
+import { SkMessage, defineSkMessage } from '#parts/sk-message';
 import { InkRuntime } from '@narratives/foundation';
 import { reduceStep } from '@narratives/system-chat';
 
@@ -26,7 +26,7 @@ function messagesOf(storyJson: string): SkMessage[] {
     if (step.text !== '') {
       const vm = reduceStep(step);
       const element = new SkMessage();
-      element.text = vm.speaker === '' ? vm.text : `${vm.speaker}: ${vm.text}`;
+      element.show({ text: vm.speaker === '' ? vm.text : `${vm.speaker}: ${vm.text}` });
       elements.push(element);
     }
   }

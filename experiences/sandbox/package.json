@@ -4,15 +4,21 @@
   "private": true,
   "type": "module",
   "imports": {
-    "#src/*": "./src/*.ts"
+    "#src/*": "./src/*.ts",
+    "#parts/*": "./src/parts/*.tsx"
   },
   "dependencies": {
     "@narratives/foundation": "workspace:*",
     "@narratives/system-chat": "workspace:*",
-    "lit": "^3.3.3"
+    "@solidjs/web": "2.0.3",
+    "solid-js": "2.0.3",
+    "vite": "8.3.8"
   },
   "devDependencies": {
+    "@narratives/characterisation": "workspace:*",
     "@narratives/system-cards": "workspace:*",
+    "@solidjs/compiler": "2.0.2",
+    "@solidjs/vite-plugin": "3.0.1",
     "inkjs": "^2.4.0"
   }
 }

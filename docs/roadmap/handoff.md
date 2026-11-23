@@ -25,8 +25,15 @@ them is missing from the phase branch.
   tables (`host/effects.ts`); `Host.fetchData(request, deliver)` delivers through a callback.
   Absence is `undefined`, never `null`.
 - **View decision**: Solid 2.0 (ADR-0002), with its runtime characterised in three engines and
-  five projects (`packages/characterisation`, ADR-0008). No Part exists yet; the sandbox still
-  renders through the Phase 0 custom element in `experiences/sandbox/src/sk-message.ts`.
+  five projects (`packages/characterisation`, ADR-0008).
+- **Baseline Part** (#24): the sandbox renders each message through `<sk-message>`
+  (`experiences/sandbox/src/parts/sk-message.tsx`), a custom element that renders one Solid root,
+  the `Message` part behind an `<Errored>` boundary, into its shadow root on connect and disposes
+  it on disconnect. Its stylesheet is a `css` template built through CSSOM (`src/sheet.ts`). Parts
+  live under `src/parts/` and import as `#parts/…`. `packages/characterisation/browsers.ts` builds
+  the real-browser Playwright suite both browser configurations use; the sandbox's spec is
+  `experiences/sandbox/test/sk-message.spec.ts`. `lit` is retired: the `retired-packages` check
+  refuses an import of it or a dependency on it anywhere in the workspace.
 - **Harness**: about 35 checks under `harness/checks`, each with planted violations; the project
   oxlint plugin under `harness/lint-rules` (its README lists every rule); TypeScript 7 at its
   strictest, each setting proven by a plant.
@@ -83,9 +90,9 @@ change meets:
 
 ## Next
 
-1. Phase 3 Step 3, the view layer on Solid: the keyed snapshot adapter (#28), the sandbox's
-   baseline Part replacing its Phase 0 element (#24), the real-browser Part harness (#30), then the Parts of #31
-   to #41. The `planned` rows of `HARNESS_STATUS.md` for the view layer (console guard, CSP bundle
+1. Phase 3 Step 3, the view layer on Solid: the keyed snapshot adapter (#28), which replaces
+   the element's own signal with the experience's store, the real-browser Part harness (#30),
+   then the Parts of #31 to #41. The `planned` rows of `HARNESS_STATUS.md` for the view layer (console guard, CSP bundle
    and frame, owners flat, part failure, typed classes, elements, layout) land with the first
    Parts.
 2. The closedworld census layer, #51 to #56, in their blocked-by order.

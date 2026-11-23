@@ -2,8 +2,9 @@
 
 import { describe, expect, test, vi } from 'vitest';
 import type { MockInstance } from 'vitest';
-import { SkMessage } from '#src/sk-message';
+import { SkMessage } from '#parts/sk-message';
 import { compileInk } from '@narratives/foundation/testing';
+import { flush } from 'solid-js';
 import { start } from '#src/main';
 
 /** A story with a narrated line, a line spoken by a speaker, and a line with no text. */
@@ -44,7 +45,7 @@ function messageTexts(root: Readonly<Pick<ParentNode, 'querySelectorAll'>>): rea
     if (!(element instanceof SkMessage)) {
       throw new TypeError('the boot rendered an sk-message element that is no SkMessage');
     }
-    texts.push(element.text);
+    texts.push(element.shadowRoot?.textContent ?? '');
   }
   return texts;
 }
@@ -58,6 +59,9 @@ describe('the sandbox boot', () => {
     });
     const root = page();
     await start(root);
+    // The messages render once the page holds them: the boot fills an `#app` the test never connects.
+    document.body.append(root);
+    flush();
     const texts = messageTexts(root);
     expect(requested).toHaveBeenCalledWith('/story.json');
     expect(texts).toStrictEqual(['Narrated.', 'Pat: Spoken.']);

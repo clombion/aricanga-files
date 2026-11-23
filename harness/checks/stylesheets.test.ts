@@ -131,7 +131,7 @@ describe('the lint, on planted sheets', () => {
 
   test('reads a stylesheet written in a module', async () => {
     expect.hasAssertions();
-    const module = "import { css } from 'lit';\nexport const styles = css`\n  .a {\n    color: #fff;\n  }\n`;\n";
+    const module = "import { css } from '#src/sheet';\nexport const styles = css`\n  .a {\n    color: #fff;\n  }\n`;\n";
     expect(sheetsOf('plant/part.ts', module).map((sheet) => sheet.line)).toStrictEqual([CSS_TEMPLATE_LINE]);
     await expect(lintText('plant/part.ts', module)).resolves.toContain('scale-unlimited/declaration-strict-value');
   });

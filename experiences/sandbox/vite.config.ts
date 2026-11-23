@@ -1,9 +1,10 @@
-import type { Connect, Plugin } from 'vite';
+import type { Connect, Plugin, UserConfigFnPromise } from 'vite';
 import { Compiler } from 'inkjs/full';
 import type { ServerResponse } from 'node:http';
 import { defineConfig } from 'vite';
 import { fileURLToPath } from 'node:url';
 import { readFile } from 'node:fs/promises';
+import solid from '@solidjs/vite-plugin';
 
 /** What the middleware writes the story through. */
 type StoryResponse = Readonly<Pick<ServerResponse, 'end' | 'setHeader'>>;
@@ -50,9 +51,9 @@ function compileInk(story: string): Plugin {
   };
 }
 
-export default defineConfig(async () => ({
+const config: UserConfigFnPromise = defineConfig(async () => ({
   build: { emptyOutDir: true, outDir: 'build' },
-  plugins: [compileInk(await compiledStory())],
+  plugins: [compileInk(await compiledStory()), solid()],
   resolve: {
     alias: {
       '@narratives/foundation': fromHere('../../packages/foundation/src/index.ts'),
@@ -60,3 +61,5 @@ export default defineConfig(async () => ({
     },
   },
 }));
+
+export default config;

@@ -24,7 +24,7 @@ generated blocks of the docs. `pnpm run fix` writes this table from `package.jso
 | `pnpm run deadcode` | `pnpm run lock:check && knip --production --treat-config-hints-as-errors && knip --treat-config-hints-as-errors` |
 | `pnpm run build:check` | `pnpm run lock:check && node harness/scripts/build-check.ts` |
 | `pnpm run test` | `pnpm run lock:check && vitest run --config vitest.gate.config.ts --coverage && node harness/scripts/coverage-floor.ts` |
-| `pnpm run test:browser` | `pnpm run lock:check && playwright test -c packages/characterisation/playwright.characterisation.config.ts --grep-invert @performance && playwright test -c packages/characterisation/playwright.characterisation.config.ts --grep @performance --workers=1` |
+| `pnpm run test:browser` | `pnpm run lock:check && playwright test -c packages/characterisation/playwright.characterisation.config.ts --grep-invert @performance && playwright test -c packages/characterisation/playwright.characterisation.config.ts --grep @performance --workers=1 && playwright test -c experiences/sandbox/playwright.sandbox.config.ts` |
 | `pnpm run test:stress` | `pnpm run lock:check && node harness/scripts/stress.ts` |
 | `pnpm run fix` | `oxlint --fix && oxfmt && node harness/scripts/gen-docs.ts` |
 <!-- end: tasks -->
@@ -59,6 +59,7 @@ list.
 - `project-lint-rules` (`harness/checks/project-lint-rules.test.ts`): Every project lint rule fires on its must-fire fixtures and passes its must-stay-clean ones under the repository's oxlint.
 - `pushed-subjects` (`harness/checks/pushed.test.ts`): The pre-push hook refuses a `fixup!`, `squash!` or `amend!` commit in the pushed range.
 - `repo-paths` (`harness/checks/repo-paths.test.ts`): No harness module but `harness/lib/paths.ts` computes the repository root or a path from its own location.
+- `retired-packages` (`harness/checks/retired-packages.test.ts`): No file of the workspace imports a retired package, and no manifest depends on one.
 - `scan-sets` (`harness/checks/scan-sets.test.ts`): The file listing is over its floor, and every held TypeScript file is reached by every tool's scan set.
 - `skips` (`harness/checks/skips.test.ts`): Every skip in the tests is listed with its reason, so a test cannot stop running unnoticed.
 - `structure` (`harness/checks/structure.test.ts`): No module is both `.ts` and `.tsx`, and no build output is committed under the held roots.

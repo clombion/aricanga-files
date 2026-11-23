@@ -51,6 +51,7 @@ Whether this project implements each check of [harness.md](harness.md). A status
 | pushed-subjects | No fixup, squash or amend commit is pushed | implemented | `harness/checks/pushed.test.ts` | | |
 | refusals | Every refusal is defined with its remedy, in one module | planned | | | the kernel's refusals are spread over its modules; one owner comes with the census layer |
 | repo-paths | One module computes the repository root | implemented | `harness/checks/repo-paths.test.ts` | | |
+| retired-packages | No module imports a retired package and no manifest depends on one | implemented | `harness/checks/retired-packages.test.ts` | | |
 | scan-sets | Every held file is reached by every tool's scan set | implemented | `harness/checks/scan-sets.test.ts` | | |
 | skips | Every skip is listed with its reason | implemented | `harness/checks/skips.test.ts` | | |
 | staged-checks | The commit and push hooks check exactly what is committed, in a worktree of their own | planned | | | the hooks run on the working tree today |

@@ -24,6 +24,7 @@ const HARNESS_ID = 'scan-sets';
 /** Held files a scan set leaves out while the gap is being closed, keyed by `<path>: <scan set>`. */
 const UNREACHED = Exemptions.grouped({
   'adopting: configuration modules no test imports; include them in coverage and import them from the settings checks': [
+    'experiences/sandbox/playwright.sandbox.config.ts: coverage',
     'experiences/sandbox/vite.config.ts: coverage',
     'vitest.gate.config.ts: coverage',
   ],
@@ -58,11 +59,7 @@ const UNREACHED = Exemptions.grouped({
 });
 
 /** Project problems carried while the gap is being closed, keyed by the problem. */
-const UNPROJECTED = Exemptions.grouped({
-  'adopting: add vite.config.ts to the sandbox projects, so its build config is type-checked': [
-    'experiences/sandbox/vite.config.ts: in no TypeScript project',
-  ],
-});
+const UNPROJECTED = new Exemptions({});
 
 const PRODUCTION_PROJECT = /^(?:packages\/(?:foundation|systems\/[^/]+)|experiences\/[^/]+)\/tsconfig\.json$/u;
 /** A file in more than this many production projects is held twice. */

@@ -33,6 +33,10 @@ const SCANNED = new Accepted(['.ts', '.tsx', '.js', '.mjs', '.css']);
 
 /** The suppressions the code holds, keyed by `site(path, tool:rule)`, with their counts and reasons. */
 const SUPPRESSIONS = new CountedExemptions({
+  [site('experiences/sandbox/src/sheet.ts', 'oxlint:node/no-sync')]: {
+    count: 1,
+    reason: 'replaceSync is CSSOM, not Node I/O: the async replace would let a shadow root paint unstyled first',
+  },
   [site('packages/foundation/src/sim/system.ts', 'oxlint:typescript/no-unsafe-type-assertion')]: {
     count: 2,
     reason: 'stateOf and viewOf: the erasure owner reads a system value back after proving the owner id matches',

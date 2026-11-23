@@ -70,3 +70,4 @@ experiences/*/utils/translation/.env
 
 # Characterisation suite (Playwright) output
 packages/characterisation/.output/
+experiences/sandbox/.output/

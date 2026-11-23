@@ -1,28 +1,29 @@
-// End-to-end smoke for the walking skeleton: ink compiles,
-// flows through the stub reduce, and renders as a Lit component in the DOM.
+// End-to-end smoke for the walking skeleton: ink compiles, flows through the stub reduce, and
+// renders as the Solid message part in the DOM.
 
 import { describe, expect, test } from 'vitest';
-import { SkMessage } from '#src/sk-message';
+import { SkMessage } from '#parts/sk-message';
 import { compileInk } from '@narratives/foundation/testing';
+import { flush } from 'solid-js';
 import { readFile } from 'node:fs/promises';
 import { run } from '#src/main';
 
 /**
- * The first message the thread rendered into `host`, once Lit has rendered it.
+ * The first message the thread rendered into `host`, once Solid has flushed it.
  * @param {ParentNode} host Where the thread rendered.
- * @returns {Promise<SkMessage>} The rendered message element.
+ * @returns {SkMessage} The rendered message element.
  */
-async function firstMessage(host: Readonly<Pick<ParentNode, 'querySelector'>>): Promise<SkMessage> {
+function firstMessage(host: Readonly<Pick<ParentNode, 'querySelector'>>): SkMessage {
   const element = host.querySelector('sk-message');
   if (!(element instanceof SkMessage)) {
     throw new TypeError('the thread rendered no sk-message element');
   }
-  await element.updateComplete;
+  flush();
   return element;
 }
 
 describe('the walking skeleton', () => {
-  test('ink → reduce → Lit render', async () => {
+  test('ink → reduce → Solid render', async () => {
     expect.hasAssertions();
     // Read via a cwd-relative path (happy-dom makes import.meta.url non-file).
     const json = compileInk(await readFile('experiences/sandbox/story.ink', 'utf8'));
@@ -31,7 +32,7 @@ describe('the walking skeleton', () => {
     run(host, json);
 
     // AC #3: the component rendered.
-    const element = await firstMessage(host);
+    const element = firstMessage(host);
     // The text flowed through.
     expect(element.shadowRoot?.textContent).toContain('walking skeleton');
     // AC #2: the speaker tag was parsed by reduce.

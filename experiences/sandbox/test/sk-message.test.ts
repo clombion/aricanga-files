@@ -1,39 +1,59 @@
-// Component test in happy-dom: the render proof for the Lit baseline, which #24
-// replaces with a Solid part.
+// The message element's lifecycle in happy-dom: it renders its part into its shadow root on connect,
+// follows a new view-model, and disposes the root on disconnect. The real-browser proof is the
+// sandbox's Playwright spec, `experiences/sandbox/test/sk-message.spec.ts`.
 
-import { SkMessage, defineSkMessage } from '#src/sk-message';
+import { SkMessage, defineSkMessage } from '#parts/sk-message';
 import { describe, expect, test } from 'vitest';
+import { flush } from 'solid-js';
 
 /**
  * A registered message element showing `text`, connected and rendered.
  * @param {string} text The text it shows.
- * @returns {Promise<SkMessage>} The element.
+ * @returns {SkMessage} The element.
  */
-async function connected(text: string): Promise<SkMessage> {
+function connected(text: string): SkMessage {
   defineSkMessage();
   const element = new SkMessage();
-  element.text = text;
+  element.show({ text });
   document.body.append(element);
-  await element.updateComplete;
+  flush();
   return element;
 }
 
+/**
+ * The text of the bubble a part rendered into a shadow root, or `undefined` when it shows none.
+ * @param {ParentNode | null} root The element's shadow root.
+ * @returns {string | undefined} The bubble's text.
+ */
+function bubbleText(root: Readonly<Pick<ParentNode, 'querySelector'>> | null): string | undefined {
+  return root?.querySelector('p[part="bubble"]')?.textContent ?? undefined;
+}
+
 describe('sk-message', () => {
-  test('registers and renders into shadow DOM', async () => {
+  test('registers once and renders its part into its shadow root', () => {
     expect.hasAssertions();
-    const element = await connected('hello');
-    // AC #4: registered.
+    const element = connected('hello');
+    defineSkMessage();
     expect(customElements.get('sk-message')).toBe(SkMessage);
-    // AC #1: rendered into the shadow root.
-    expect(element.shadowRoot?.querySelector('p')?.textContent).toBe('hello');
+    expect(bubbleText(element.shadowRoot)).toBe('hello');
   });
 
-  test('reacts to a change of its text', async () => {
+  test('a new view-model updates the text', () => {
     expect.hasAssertions();
-    const element = await connected('hello');
-    element.text = 'world';
-    await element.updateComplete;
-    // AC #2: reactive.
-    expect(element.shadowRoot?.querySelector('p')?.textContent).toBe('world');
+    const element = connected('hello');
+    element.show({ text: 'world' });
+    flush();
+    expect(bubbleText(element.shadowRoot)).toBe('world');
+  });
+
+  test('disconnecting disposes the root, and reconnecting renders it afresh', () => {
+    expect.hasAssertions();
+    const element = connected('hello');
+    element.remove();
+    flush();
+    expect(element.shadowRoot?.hasChildNodes()).toBe(false);
+    document.body.append(element);
+    flush();
+    expect(bubbleText(element.shadowRoot)).toBe('hello');
   });
 });
