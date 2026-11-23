@@ -2,7 +2,8 @@
  * The owner registry: for each guarded API, which module of each root may use it.
  *
  * A `Rule` names the qualified names of the declarations that make up an API and, for each root it
- * covers, that root's owner (the module allowed to use it there), or none when no module may.
+ * covers (each kernel member's directory and the roots `owner-rules.ts` writes), that root's owner
+ * (the module allowed to use it there), or none when no module may.
  * The scan asks TypeScript's checker what each name resolves to, so an aliased import, a destructured
  * binding, a `globalThis.` or `window.` chain and an element access all resolve to the declaration
  * they stand for. It matches uses, never imports or types: importing a type to annotate with it is
@@ -37,10 +38,10 @@ import {
   isVariableDeclaration,
 } from 'typescript/unstable/ast';
 import { isPlatform, nameText, nodes, pathOf, qualifiedName } from './checker.ts';
-import { RULES } from './owner-rules.ts';
 import type { Rule } from './owner-rules.ts';
 import type { Scan } from './checker.ts';
 import type { Symbol as TsSymbol } from 'typescript/unstable/sync';
+import { rulesOf } from './owner-rules.ts';
 import { site } from './exemptions.ts';
 
 /** One use of a guarded API outside its owner: the file it is in and the rule it breaks. */
@@ -216,10 +217,12 @@ function breaks(rule: Rule, found: readonly string[]): boolean {
 function sites(scan: Scan, file: SourceFile): readonly Site[] {
   const path = pathOf(file);
   const found = uses(scan, file);
-  return RULES.filter((rule) => {
-    const scope = rule.scopes.find((candidate) => path.startsWith(candidate.root));
-    return scope !== undefined && scope.owner !== path && breaks(rule, found);
-  }).map((rule) => ({ path, rule: rule.name }));
+  return rulesOf(scan.population)
+    .filter((rule) => {
+      const scope = rule.scopes.find((candidate) => path.startsWith(candidate.root));
+      return scope !== undefined && scope.owner !== path && breaks(rule, found);
+    })
+    .map((rule) => ({ path, rule: rule.name }));
 }
 
 /**
@@ -234,6 +237,6 @@ function ownerUses(scan: Scan, file: SourceFile, rule: Rule): boolean {
   return breaks(rule, uses(scan, file));
 }
 
-export { RULES } from './owner-rules.ts';
+export { rulesOf, SHAPES } from './owner-rules.ts';
 export { keyOf, ownerUses, sites };
 export type { Site };

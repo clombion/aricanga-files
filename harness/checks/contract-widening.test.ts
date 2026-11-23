@@ -63,6 +63,7 @@ const RESPELLED: readonly (readonly [string, string])[] = [
     'packages/systems/__respell_10.ts',
     `${IMPORT}import type { Gone } from './__nowhere';\nexport type Kept = Gone;\nexport const w = 'off';\n`,
   ],
+  ['packages/foundation/test/__respell_12.ts', "export const w = 'on';\n"],
 ];
 
 const NEAR_MISSES: readonly (readonly [string, string])[] = [
@@ -87,6 +88,12 @@ const NEAR_MISSES: readonly (readonly [string, string])[] = [
   ],
 ];
 
+/** Unions a kernel member declares in its test support: under `src/testing/` and under `test/`. */
+const SUPPORT: readonly (readonly [string, string])[] = [
+  ['packages/foundation/src/testing/__support.ts', "export type Step = 'go' | 'stop';\n"],
+  ['packages/systems/chat/test/__ledger.ts', "export type Ruling = { readonly kind: 'kept' } | { readonly kind: 'dropped' };\n"],
+];
+
 const OWNER_TEXT =
   "export type Mode = 'on' | 'off';\nexport type Msg = { readonly tag: 'ping' } | { readonly tag: 'pong'; readonly n: number };\nexport const DEFAULT = 'on';\n";
 
@@ -97,6 +104,7 @@ const plants = new Map<string, string>([
   ),
   ...RESPELLED,
   ...NEAR_MISSES,
+  ...SUPPORT,
 ]);
 
 const plantedScan = usePlanted(plants);
@@ -140,6 +148,14 @@ describe('the scan', () => {
     expect(planted().map((contract) => [contract.name, [...contract.words].toSorted()])).toStrictEqual([
       ['Mode', ['off', 'on']],
       ["Msg['tag']", ['ping', 'pong']],
+    ]);
+  });
+
+  test("derives no contract from a kernel member's test support", () => {
+    expect.hasAssertions();
+    expect(contracts(plantedScan(), [OWNER, ...SUPPORT.map(([path]) => path)]).map((contract) => contract.name)).toStrictEqual([
+      'Mode',
+      "Msg['tag']",
     ]);
   });
 

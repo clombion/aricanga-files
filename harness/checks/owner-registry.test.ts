@@ -8,8 +8,10 @@
  * pure constructor call, the owner itself, and a root the rule does not cover.
  */
 
-import { RULES, keyOf, ownerUses, sites } from '#lib/owners.ts';
+import { SHAPES, keyOf, ownerUses, rulesOf, sites } from '#lib/owners.ts';
 import { describe, expect, test } from 'vitest';
+import { manifest, reader } from './scope.plants.ts';
+import { population, populationOf } from '#lib/scope.ts';
 import { scannedFiles, sourceOf } from '#lib/checker.ts';
 import { usePlanted, useScan } from '#lib/scan-hooks.ts';
 import type { Scan } from '#lib/checker.ts';
@@ -17,6 +19,8 @@ import type { Site } from '#lib/owners.ts';
 import { tracked } from '#lib/source-files.ts';
 
 const HARNESS_ID = 'owner-registry';
+
+const RULES = rulesOf(await population());
 
 /** One plant per rule and call form: [rule, source]. */
 const FORMS: readonly (readonly [string, string])[] = [
@@ -149,9 +153,11 @@ function sitesIn(scanOf: () => Scan, paths: readonly string[]): Site[] {
   return paths.flatMap((path) => sites(scan, sourceOf(scan, path)));
 }
 
-/** Each owned scope, as the rule's name, its owner module and the rule. */
-const OWNED = RULES.flatMap((rule) =>
-  rule.scopes.flatMap((scope) => (scope.owner === undefined ? [] : [[rule.name, scope.owner, rule] as const])),
+/** Each declared owner, kernel owners included, as the rule's name, its owner module and the rule as declared. */
+const OWNED = SHAPES.flatMap((shape) =>
+  [shape.kernelOwner, ...shape.scopes.map((scope) => scope.owner)].flatMap((owner) =>
+    owner === undefined ? [] : [[shape.name, owner, shape] as const],
+  ),
 );
 
 describe('the repository', () => {
@@ -190,6 +196,36 @@ describe('the scan', () => {
   test.each(NEAR_MISSES.map(([path]) => path))('lets the near miss %s through', (path) => {
     expect.hasAssertions();
     expect(sitesIn(plantedScan, [path])).toStrictEqual([]);
+  });
+});
+
+describe('the rules', () => {
+  test('cover each kernel member, and give a kernel owner the member that holds it', async () => {
+    expect.hasAssertions();
+    const held = await populationOf({
+      listing: ['packages/foundation/package.json', 'packages/systems/x/package.json', 'packages/view/package.json'],
+      read: reader({
+        'packages/foundation/package.json': manifest('foundation'),
+        'packages/systems/x/package.json': manifest('system'),
+        'packages/view/package.json': manifest('view'),
+      }),
+      workspace: ['packages/foundation/', 'packages/systems/x/', 'packages/view/'],
+    });
+    const rules = rulesOf(held);
+    expect(['clock', 'json-parse'].map((name) => rules.find((rule) => rule.name === name)?.scopes)).toStrictEqual([
+      [
+        { owner: undefined, root: 'packages/foundation/' },
+        { owner: undefined, root: 'packages/systems/x/' },
+        { owner: undefined, root: 'experiences/sandbox/' },
+        { owner: undefined, root: 'harness/' },
+      ],
+      [
+        { owner: 'packages/foundation/src/host/codec.ts', root: 'packages/foundation/' },
+        { owner: undefined, root: 'packages/systems/x/' },
+        { owner: undefined, root: 'experiences/sandbox/' },
+        { owner: 'harness/lib/config.ts', root: 'harness/' },
+      ],
+    ]);
   });
 });
 

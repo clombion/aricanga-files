@@ -4,7 +4,7 @@ import { isExportDeclaration, isImportDeclaration, isSourceFile, isTypeNode } fr
 import type { Node } from 'typescript/unstable/ast';
 import type { Type } from 'typescript/unstable/sync';
 
-/** A closed union: the module that owns it, its package, its name, and its words. */
+/** A closed union: the module that owns it, its member's directory, its name, and its words. */
 interface Contract {
   readonly owner: string;
   readonly ownerPackage: string;
@@ -18,26 +18,6 @@ interface ContractSite {
   readonly contract: string;
   readonly form: 'widened' | 'asserted' | 'respelled';
   readonly code: string;
-}
-
-/** The index `indexOf` gives when nothing matches. */
-const NOT_FOUND = -1;
-
-/** The length of the slash a package directory ends with. */
-const SLASH = 1;
-
-/** The index of a path's first character. */
-const PATH_START = 0;
-
-/**
- * The package directory of a module: the path up to its `src/` (`packages/systems/chat/`).
- *
- * @param {string} path - The module's path.
- * @returns {string} Its package directory, or the path when it has no `src/`.
- */
-function packageOf(path: string): string {
-  const index = path.indexOf('/src/');
-  return index === NOT_FOUND ? path : path.slice(PATH_START, index + SLASH);
 }
 
 /**
@@ -73,5 +53,5 @@ function inTypeOrImport(node: Node): boolean {
   return false;
 }
 
-export { inTypeOrImport, packageOf, stringLiterals };
+export { inTypeOrImport, stringLiterals };
 export type { Contract, ContractSite };

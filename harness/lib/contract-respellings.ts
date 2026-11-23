@@ -26,11 +26,11 @@ import {
   isStringLiteral,
   isSwitchStatement,
 } from 'typescript/unstable/ast';
-import { inTypeOrImport, packageOf } from './contract-model.ts';
 import { nameText, nodes, pathOf, textOfNode } from './checker.ts';
 import { Accepted } from './exemptions.ts';
 import type { Scan } from './checker.ts';
 import { heldAsKey } from './contract-keys.ts';
+import { inTypeOrImport } from './contract-model.ts';
 import { present } from './present.ts';
 import { relative as relativeTo } from './paths.ts';
 
@@ -218,23 +218,24 @@ function comparedTypes(checker: Readonly<Checker>, literal: Node): readonly Type
 }
 
 /**
- * The packages a module imports from, by where its import specifiers resolve.
+ * The members a module reaches: its own, and those its import specifiers resolve into. A module in no
+ * member reaches only the members it imports from.
  *
  * @param {Scan} scan - The open scan.
  * @param {SourceFile} file - The module.
- * @returns {ReadonlySet<string>} The packages, its own included.
+ * @returns {ReadonlySet<string>} The members' directories, its own included.
  */
 function reachedPackages(scan: Scan, file: SourceFile): ReadonlySet<string> {
-  const found = new Set<string>([packageOf(pathOf(file))]);
+  const paths = [pathOf(file)];
   for (const statement of file.statements) {
     const specifier = isImportDeclaration(statement) || isExportDeclaration(statement) ? statement.moduleSpecifier : undefined;
     for (const declaration of specifier === undefined ? [] : (scan.checker.getSymbolAtLocation(specifier)?.declarations ?? [])) {
       if (!declaration.path.includes('/node_modules/')) {
-        found.add(packageOf(relativeTo(declaration.path)));
+        paths.push(relativeTo(declaration.path));
       }
     }
   }
-  return found;
+  return new Set(paths.flatMap((path) => scan.population.memberOf(path)?.dir ?? []));
 }
 
 /**

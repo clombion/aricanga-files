@@ -79,7 +79,8 @@ function isTestInfrastructure(population: Population, file: string): boolean {
  * A module that ships: not a Vitest test, a Playwright spec, test support under a `test/`, `tests/`
  * or `testing/` directory, or a module of a test infrastructure package. Every rule holds both
  * kinds. The distinction decides who counts as a reader of a production module's exports
- * (`type-exports.ts`) and which modules declare closed sets (`declared-sets.scan.ts`).
+ * (`type-exports.ts`), which modules declare closed sets (`declared-sets.scan.ts`), and, among the
+ * kernel members' modules, which declare contracts (`contracts.ts`).
  *
  * @param {Population} population - The population.
  * @param {string} file - A repository-relative path.

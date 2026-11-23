@@ -22,16 +22,13 @@ import {
   isPropertyAccessExpression,
   isTypeAliasDeclaration,
 } from 'typescript/unstable/ast';
-import { inTypeOrImport, packageOf, stringLiterals } from './contract-model.ts';
+import { inTypeOrImport, stringLiterals } from './contract-model.ts';
 import { isExportedType, listedExports } from './exports-of.ts';
-import { nodes, pathOf, sourceOf, textOfNode } from './checker.ts';
-import { Prefixes } from './exemptions.ts';
+import { isProduction, nodes, pathOf, sourceOf, textOfNode } from './checker.ts';
 import type { Scan } from './checker.ts';
+import { factsOf } from './roles.ts';
 import { isEmpty } from './lists.ts';
 import { present } from './present.ts';
-
-/** The roots whose exported unions are contracts: the kernel's packages. */
-const CONTRACT_ROOTS: Prefixes = new Prefixes(['packages/foundation/src/', 'packages/systems/']);
 
 /** The fewest words a union holds to be a contract. */
 const LEAST_WORDS = 2;
@@ -41,10 +38,14 @@ const LEAST_WORDS = 2;
  *
  * @param {Readonly<Checker>} checker - The scan's checker.
  * @param {Type} type - The union.
- * @param {Readonly<{ name: string; path: string }>} declared - The union's name and module.
+ * @param {Readonly<{ name: string; path: string; ownerPackage: string }>} declared - The union's name, module and member.
  * @returns {readonly Contract[]} A contract per discriminant.
  */
-function discriminants(checker: Readonly<Checker>, type: Type, declared: Readonly<{ name: string; path: string }>): readonly Contract[] {
+function discriminants(
+  checker: Readonly<Checker>,
+  type: Type,
+  declared: Readonly<{ name: string; path: string; ownerPackage: string }>,
+): readonly Contract[] {
   const members = type.isUnionType() ? type.getTypes() : [];
   const [first] = members;
   if (first === undefined || !members.every((member) => member.isObjectType())) {
@@ -62,7 +63,7 @@ function discriminants(checker: Readonly<Checker>, type: Type, declared: Readonl
           {
             name: `${declared.name}['${property.name}']`,
             owner: declared.path,
-            ownerPackage: packageOf(declared.path),
+            ownerPackage: declared.ownerPackage,
             words: new Set(complete),
           },
         ]
@@ -81,11 +82,12 @@ function discriminants(checker: Readonly<Checker>, type: Type, declared: Readonl
 function contractsOf(scan: Scan, statement: TypeAliasDeclaration, path: string): readonly Contract[] {
   const symbol = present(scan.checker.getSymbolAtLocation(statement.name), `the symbol of the type alias ${statement.name.text}`);
   const type = scan.checker.getDeclaredTypeOfSymbol(symbol);
+  const ownerPackage = present(scan.population.memberOf(path), `the member holding ${path}`).dir;
   const words = stringLiterals(type);
   if (words !== undefined && words.length >= LEAST_WORDS) {
-    return [{ name: statement.name.text, owner: path, ownerPackage: packageOf(path), words: new Set(words) }];
+    return [{ name: statement.name.text, owner: path, ownerPackage, words: new Set(words) }];
   }
-  return discriminants(scan.checker, type, { name: statement.name.text, path });
+  return discriminants(scan.checker, type, { name: statement.name.text, ownerPackage, path });
 }
 
 /**
@@ -97,7 +99,10 @@ function contractsOf(scan: Scan, statement: TypeAliasDeclaration, path: string):
  */
 function contracts(scan: Scan, paths: readonly string[]): readonly Contract[] {
   return paths
-    .filter((candidate) => CONTRACT_ROOTS.starts(candidate))
+    .filter((candidate) => {
+      const member = scan.population.memberOf(candidate);
+      return member !== undefined && factsOf(member.role).kernel && isProduction(scan.population, candidate);
+    })
     .flatMap((path) => {
       const file = sourceOf(scan, path);
       const listed = listedExports(file);
