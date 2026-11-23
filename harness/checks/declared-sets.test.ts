@@ -31,7 +31,7 @@ const PLANTS: Readonly<Record<string, string>> = {
 const RESTATED = [['packages/foundation/src/__sets_owner.ts#Receipt', 'packages/systems/__sets_restated.ts#Status']];
 
 describe('closed sets of words', () => {
-  const planted = usePlanted(new Map(Object.entries(PLANTS)));
+  const planted = usePlanted(new Map(Object.entries(PLANTS)), [['packages/foundation/', 'foundation']]);
   const repository = useScan();
 
   test('a set restated in another module is found in any order; a derived alias, a derived subset, a single word and a wider set pass', () => {

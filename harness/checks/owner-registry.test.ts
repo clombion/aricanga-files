@@ -138,7 +138,13 @@ const PLANTED: readonly Plant[] = [
 ];
 const plants = new Map(PLANTED.map((plant) => [plant.path, plant.text] as const));
 const expected: readonly Site[] = PLANTED.flatMap((plant) => (plant.rule === undefined ? [] : [{ path: plant.path, rule: plant.rule }]));
-const plantedScan = usePlanted(plants);
+const plantedScan = usePlanted(plants, [
+  ['experiences/sandbox/', 'experience'],
+  ['packages/characterisation/', 'test-infrastructure'],
+  ['packages/foundation/', 'foundation'],
+  ['packages/systems/cards/', 'system'],
+  ['packages/systems/chat/', 'system'],
+]);
 const repoScan = useScan();
 
 /**

@@ -107,7 +107,10 @@ const plants = new Map<string, string>([
   ...SUPPORT,
 ]);
 
-const plantedScan = usePlanted(plants);
+const plantedScan = usePlanted(plants, [
+  ['packages/foundation/', 'foundation'],
+  ['packages/systems/chat/', 'system'],
+]);
 const repoScan = useScan();
 const planted = (): readonly Contract[] => contracts(plantedScan(), [OWNER]);
 
