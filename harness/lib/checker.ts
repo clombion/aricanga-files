@@ -14,8 +14,9 @@ import type { Node, SourceFile } from 'typescript/unstable/ast';
 import { REPO_ROOT, relative } from './paths.ts';
 import { api, mount, nextName } from './ts-session.ts';
 import { isIdentifier, isPrivateIdentifier, isStringLiteral } from 'typescript/unstable/ast';
-import { Prefixes } from './exemptions.ts';
+import type { Population } from './scope.ts';
 import { SymbolFlags } from 'typescript/unstable/sync';
+import { factsOf } from './roles.ts';
 import { isEmpty } from './lists.ts';
 import path from 'node:path';
 import { present } from './present.ts';
@@ -36,9 +37,6 @@ const OPTIONS = {
   types: ['node', 'vite/client'],
 } as const;
 
-/** Test infrastructure packages: they exist only to test, so every module of theirs is test support. */
-const TEST_PACKAGES = new Prefixes(['packages/characterisation/']);
-
 const TEST_FILE = /\.(?:test|spec)\.tsx?$/u;
 const TEST_DIRECTORY = /(?:^|\/)(?:test|tests|testing)\//u;
 /** A symbol's flags with none set. */
@@ -51,37 +49,44 @@ interface Scan {
   readonly program: Readonly<Program>;
   readonly checker: Readonly<Checker>;
   readonly paths: readonly string[];
+  /** The population the scan reads roles from. */
+  readonly population: Population;
   readonly close: () => void;
 }
 
 /** How a scan mounts its files, opens and releases its project, and the paths it covers. */
 interface ScanOpening {
   readonly paths: readonly string[];
+  readonly population: Population;
   readonly mount: () => () => void;
   readonly open: () => Readonly<{ checker: Readonly<Checker>; program: Readonly<Program> }> | undefined;
   readonly release: () => void;
 }
 
 /**
- * Whether a module belongs to a test infrastructure package (run by Playwright, not by Vitest).
+ * Whether a module belongs to a test infrastructure package: a member whose role does not ship.
  *
+ * @param {Population} population - The population.
  * @param {string} file - A repository-relative path.
  * @returns {boolean} Whether its package exists only to test.
  */
-function isTestInfrastructure(file: string): boolean {
-  return TEST_PACKAGES.starts(file);
+function isTestInfrastructure(population: Population, file: string): boolean {
+  const member = population.memberOf(file);
+  return member !== undefined && !factsOf(member.role).ships;
 }
 
 /**
  * A module that ships: not a Vitest test, a Playwright spec, test support under a `test/`, `tests/`
  * or `testing/` directory, or a module of a test infrastructure package. Every rule holds both
- * kinds; the distinction only says who counts as a reader of a production module's exports.
+ * kinds. The distinction decides who counts as a reader of a production module's exports
+ * (`type-exports.ts`) and which modules declare closed sets (`declared-sets.scan.ts`).
  *
+ * @param {Population} population - The population.
  * @param {string} file - A repository-relative path.
  * @returns {boolean} Whether the module ships.
  */
-function isProduction(file: string): boolean {
-  return !TEST_FILE.test(file) && !TEST_DIRECTORY.test(file) && !isTestInfrastructure(file);
+function isProduction(population: Population, file: string): boolean {
+  return !TEST_FILE.test(file) && !TEST_DIRECTORY.test(file) && !isTestInfrastructure(population, file);
 }
 
 /**
@@ -125,7 +130,7 @@ function scanOver(opening: Readonly<ScanOpening>): Scan {
       opening.release();
       unmount();
     };
-    return { checker: project.checker, close, paths: opening.paths, program: project.program };
+    return { checker: project.checker, close, paths: opening.paths, population: opening.population, program: project.program };
   } catch (error) {
     opening.release();
     unmount();
@@ -139,9 +144,10 @@ function scanOver(opening: Readonly<ScanOpening>): Scan {
  *
  * @param {readonly string[]} paths - The repository-relative paths to cover.
  * @param {Readonly<Record<string, string>>} sources - Overlaid texts, by repository-relative path.
+ * @param {Population} population - The population the scan reads roles from.
  * @returns {Scan} The open scan.
  */
-function openScan(paths: readonly string[], sources: Readonly<Record<string, string>> = {}): Scan {
+function openScan(paths: readonly string[], sources: Readonly<Record<string, string>>, population: Population): Scan {
   const config = path.join(REPO_ROOT, '.harness-scan', nextName(), 'tsconfig.json');
   return scanOver({
     mount: () => mount(mounted(config, paths, sources)),
@@ -150,6 +156,7 @@ function openScan(paths: readonly string[], sources: Readonly<Record<string, str
         .updateSnapshot({ openProjects: [config] })
         .getProject(config),
     paths,
+    population,
     release: () => {
       api().updateSnapshot({ closeProjects: [config] });
     },

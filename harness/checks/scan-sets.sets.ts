@@ -7,10 +7,11 @@ import { dirname } from 'node:path/posix';
 import { gateCoverage } from './gate-config.ts';
 import { isTestInfrastructure } from '#lib/checker.ts';
 import { matches } from '#lib/globs.ts';
+import { population } from '#lib/scope.ts';
 import { projects } from '#lib/projects.ts';
 import { relativeTo } from '#lib/relative.ts';
 
-const TEST_FILE = /(?:\.test\.tsx?$|\/test\/|^harness\/checks\/|^packages\/characterisation\/tests\/)/u;
+const TEST_FILE = /(?:\.test\.tsx?$|\/test\/|^harness\/checks\/)/u;
 /**
  * Whether a path is a test module: a test file, a file under a test folder, a harness check or a browser spec.
  *
@@ -110,11 +111,11 @@ function globs(list: unknown): readonly string[] {
  * @returns {Promise<ReadonlySet<string>>} The files coverage reaches, tests counted as reached.
  */
 async function coverageReached(files: readonly string[]): Promise<ReadonlySet<string>> {
-  const coverage = await gateCoverage();
+  const [coverage, held] = await Promise.all([gateCoverage(), population()]);
   const include = globs(coverage['include']);
   const exclude = globs(coverage['exclude']);
   const covered = (path: string): boolean => include.some((glob) => matches(glob, path)) && !exclude.some((glob) => matches(glob, path));
-  return new Set(files.filter((path) => isTestFile(path) || isTestInfrastructure(path) || covered(path)));
+  return new Set(files.filter((path) => isTestFile(path) || isTestInfrastructure(held, path) || covered(path)));
 }
 
 export { coverageReached, isTestFile, oxfmtFiles, oxlintFiles, projectDirectory, projectMembers };

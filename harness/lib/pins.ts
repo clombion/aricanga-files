@@ -1,18 +1,19 @@
 /**
- * The pinned tools: each with its upstream repository, where it is pinned, and its pin.
+ * The pinned tools, each with its upstream repository, where it is pinned, and its pin; and the
+ * lockfile's importers, read for the population's independent check (`harness/checks/scope.test.ts`).
  *
  * The pins are the root `package.json`'s dependencies and devDependencies and the devDependencies
- * of every held workspace package, each at the version `pnpm-lock.yaml` holds, read as YAML, plus
- * Node's `engines.node` floor and pnpm's `packageManager`. `UPSTREAM` names each tool's repository; the
+ * of every held manifest (each member's, and `harness/lint-rules/package.json`), each at the version
+ * `pnpm-lock.yaml` holds, read as YAML, plus Node's `engines.node` floor and pnpm's `packageManager`. `UPSTREAM` names each tool's repository; the
  * tool-upgrades check fails on a pin it does not name and on a row that pins nothing, and
  * `harness/lib/generated.ts` renders the table of `harness.md`.
  */
 
 import { ConfigError, json, object } from './config.ts';
-import { textOf, textsOf, tracked } from './source-files.ts';
+import { textOf, textsOf } from './source-files.ts';
 import { engineRange } from './node-floor.ts';
-import { held } from './scope.ts';
 import { parse } from 'yaml';
+import { population } from './scope.ts';
 
 /** A pinned tool: its name, the file that pins it, and its version there. */
 interface Pin {
@@ -163,6 +164,17 @@ function locked(lockText: string, importer: string): ReadonlyMap<string, string>
 }
 
 /**
+ * The importers a pnpm lockfile records: one per workspace package `pnpm install` wrote, `.` for the
+ * root, each as the directory pnpm names it.
+ *
+ * @param {string} lockText - The lockfile's text.
+ * @returns {readonly string[]} The importers.
+ */
+function importers(lockText: string): readonly string[] {
+  return Object.keys(importerGroups(lockText));
+}
+
+/**
  * The root manifest's pins beyond its dependencies: Node's floor and pnpm's `packageManager`.
  *
  * @param {unknown} manifest - The root `package.json`.
@@ -216,8 +228,10 @@ function pinned(manifests: readonly Manifest[], lockText: string): readonly Pin[
  * @returns {Promise<readonly Pin[]>} The pins.
  */
 async function pins(): Promise<readonly Pin[]> {
-  const listed = await tracked();
-  const texts = await textsOf(listed.filter((path) => path === 'package.json' || (held(path) && path.endsWith('/package.json'))));
+  const held = await population();
+  const texts = await textsOf(
+    held.listing.filter((path) => path === 'package.json' || (held.holds(path) && path.endsWith('/package.json'))),
+  );
   const manifests = texts.map(([path, text]: readonly [string, string]) => ({
     importer: path === 'package.json' ? '.' : path.replace(MANIFEST_SUFFIX, ''),
     manifest: json(text),
@@ -226,5 +240,5 @@ async function pins(): Promise<readonly Pin[]> {
   return pinned(manifests, lockText);
 }
 
-export { pinned, pins, UPSTREAM };
+export { importers, LOCKFILE, pinned, pins, UPSTREAM };
 export type { Pin };

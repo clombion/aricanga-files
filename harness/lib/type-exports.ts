@@ -20,6 +20,7 @@ import {
 } from 'typescript/unstable/ast';
 import { isExportedType, listedExports } from './exports-of.ts';
 import { isProduction, nodes, resolved, sourceOf } from './checker.ts';
+import type { Population } from './scope.ts';
 import { Prefixes } from './exemptions.ts';
 import type { Scan } from './checker.ts';
 import { isEmpty } from './lists.ts';
@@ -37,12 +38,13 @@ interface ExportedType {
 /**
  * Whether `reader` counts as a reader of a type `declarer` exports.
  *
+ * @param {Population} population - The population.
  * @param {string} reader - The module that names the type.
  * @param {string} declarer - The module that exports it.
  * @returns {boolean} Whether the naming counts as a read.
  */
-function reads(reader: string, declarer: string): boolean {
-  return reader !== declarer && (!isProduction(declarer) || isProduction(reader) || CHECK_ROOTS.starts(reader));
+function reads(population: Population, reader: string, declarer: string): boolean {
+  return reader !== declarer && (!isProduction(population, declarer) || isProduction(population, reader) || CHECK_ROOTS.starts(reader));
 }
 
 /**
@@ -159,7 +161,7 @@ function unread(scan: Scan): readonly ExportedType[] {
   const readElsewhere = new Set(
     [...readers(scan)].flatMap(([id, paths]: readonly [number, ReadonlySet<string>]) => {
       const type = exported.get(id);
-      return type !== undefined && [...paths].some((path) => reads(path, type.path)) ? [id] : [];
+      return type !== undefined && [...paths].some((path) => reads(scan.population, path, type.path)) ? [id] : [];
     }),
   );
   return [...exported]

@@ -20,9 +20,9 @@
 
 import { EXIT_FAILURE, EXIT_SUCCESS } from './output.ts';
 import { MAX_SIZE, RUNS, reportOf } from './dupes-run.ts';
-import { ROOTS, typescriptFiles } from './scope.ts';
 import type { Runner, Target } from './dupes-run.ts';
 import { cloneKey, clones, scanned } from './dupes-report.ts';
+import { population, typescriptFiles } from './scope.ts';
 import { readFile, stat } from 'node:fs/promises';
 import type { Clone } from './dupes-report.ts';
 import { Exemptions } from './exemptions.ts';
@@ -143,9 +143,9 @@ async function scan(target: Target, allowed: Readonly<Exemptions>, runner?: Runn
  * @returns {Promise<number>} The exit status.
  */
 async function main(streams: Streams, runner?: Runner): Promise<number> {
-  const listed = await typescriptFiles();
-  const directories = ROOTS.map((root) => root.replace(TRAILING_SLASH, ''));
-  const rootFiles = listed.filter((file) => !ROOTS.some((root) => file.startsWith(root)));
+  const [listed, held] = await Promise.all([typescriptFiles(), population()]);
+  const directories = held.roots.map((root) => root.replace(TRAILING_SLASH, ''));
+  const rootFiles = listed.filter((file) => !held.roots.some((root) => file.startsWith(root)));
   const problems = await scan({ listed, root: REPO_ROOT, roots: [...directories, ...rootFiles] }, ALLOWED, runner);
   for (const problem of problems) {
     streams.err(`${problem}\n`);

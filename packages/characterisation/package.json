@@ -25,5 +25,8 @@
   "devDependencies": {
     "@solidjs/compiler": "2.0.2",
     "@solidjs/vite-plugin": "3.0.1"
+  },
+  "aricanga": {
+    "role": "test-infrastructure"
   }
 }

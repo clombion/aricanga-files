@@ -21,7 +21,8 @@ const QUOTED = /['"](?<value>[^'"\n]+)['"]/gu;
 const PLANTS = new Prefixes(['harness/checks/']);
 
 /**
- * The listed workspace packages: their names and folders.
+ * The listed manifests that carry a name, each name with its folder: the packages a reference may
+ * name, the POC's included. Membership of the workspace is `harness/lib/scope.ts`'s question.
  *
  * @returns {Promise<readonly (readonly [string, string])[]>} Each package's name and folder.
  */

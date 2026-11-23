@@ -11,5 +11,8 @@
   },
   "dependencies": {
     "@narratives/foundation": "workspace:*"
+  },
+  "aricanga": {
+    "role": "system"
   }
 }

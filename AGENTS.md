@@ -9,9 +9,10 @@ Issues as [docs/roadmap/issues.md](docs/roadmap/issues.md) describes.
 
 ## Scope
 
-The harness holds the rebuild: `packages/foundation`, `packages/systems`,
-`packages/characterisation`, `experiences/sandbox` and `harness` itself, tests, scripts and
-configuration included, all under the same rules as production code. The POC reference
+The harness holds the rebuild: every workspace package pnpm lists whose manifest git lists, less the
+POC reference, and `harness` itself, tests, scripts and configuration included, all under the same
+rules as production code (`harness/lib/scope.ts`). A workspace package declares its role in its
+manifest, `"aricanga": { "role": … }`, one of the roles of `harness/lib/roles.ts`. The POC reference
 (`packages/framework`, `packages/tests`, `packages/test-utils`, `experiences/aricanga`, `utils`)
 is a read-only behavioural oracle outside the harness until it is deleted (ADR-0006).
 

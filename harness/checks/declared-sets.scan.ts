@@ -60,7 +60,7 @@ function setsOf(scan: Scan, path: string): readonly DeclaredSet[] {
  */
 function twiceDeclared(scan: Scan): readonly (readonly string[])[] {
   const owners = new Map<string, string[]>();
-  for (const path of scan.paths.filter((file) => isProduction(file))) {
+  for (const path of scan.paths.filter((file) => isProduction(scan.population, file))) {
     for (const declared of setsOf(scan, path)) {
       const key = JSON.stringify(declared.words);
       owners.set(key, [...(owners.get(key) ?? []), `${declared.path}#${declared.name}`]);

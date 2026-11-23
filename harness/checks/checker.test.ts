@@ -1,7 +1,10 @@
 /** The scan's readers: a path it does not cover is refused, and a missing symbol has no name. */
 
 import { describe, expect, test } from 'vitest';
-import { qualifiedName, scanOver, sourceOf } from '#lib/checker.ts';
+import { isProduction, isTestInfrastructure, qualifiedName, scanOver, sourceOf } from '#lib/checker.ts';
+import { manifest, reader } from './scope.plants.ts';
+import { population, populationOf } from '#lib/scope.ts';
+import type { Population } from '#lib/scope.ts';
 import type { ScanOpening } from '#lib/checker.ts';
 import { present } from '#lib/present.ts';
 import { usePlanted } from '#lib/scan-hooks.ts';
@@ -13,9 +16,10 @@ const NO_PROJECTS = new Map<string, ReturnType<ScanOpening['open']>>();
  * A scan opening whose session holds no project, recording what it mounted, opened and released.
  *
  * @param {Pick<string[], 'push'>} events - Where each step is recorded, in order.
+ * @param {Population} held - The population.
  * @returns {ScanOpening} The opening.
  */
-function noProject(events: Readonly<Pick<string[], 'push'>>): ScanOpening {
+function noProject(events: Readonly<Pick<string[], 'push'>>, held: Population): ScanOpening {
   return {
     mount: () => {
       events.push('mount');
@@ -28,6 +32,7 @@ function noProject(events: Readonly<Pick<string[], 'push'>>): ScanOpening {
       return NO_PROJECTS.get('planted');
     },
     paths: [],
+    population: held,
     release: () => {
       events.push('release');
     },
@@ -50,10 +55,29 @@ describe('a scan', () => {
     expect(qualifiedName(checker, symbol)).toBeUndefined();
   });
 
-  test('refused for a project the session lacks, releases the project and unmounts its files', () => {
+  test('refused for a project the session lacks, releases the project and unmounts its files', async () => {
     expect.hasAssertions();
     const events: string[] = [];
-    expect(() => scanOver(noProject(events))).toThrow('the scan project');
+    const held = await population();
+    expect(() => scanOver(noProject(events, held))).toThrow('the scan project');
     expect(events).toStrictEqual(['mount', 'open', 'release', 'unmount']);
+  });
+});
+
+describe('the module classifiers', () => {
+  test('reads a member whose role does not ship as test infrastructure, and its modules as not production', async () => {
+    expect.hasAssertions();
+    const held = await populationOf({
+      listing: ['packages/probe/package.json', 'packages/view/package.json'],
+      read: reader({ 'packages/probe/package.json': manifest('test-infrastructure'), 'packages/view/package.json': manifest('view') }),
+      workspace: ['packages/probe/', 'packages/view/'],
+    });
+    const modules = ['packages/probe/src/b.ts', 'packages/view/src/v.tsx', 'packages/view/test/v.test.ts', 'harness/lib/a.ts'];
+    expect(modules.map((file) => [isTestInfrastructure(held, file), isProduction(held, file)])).toStrictEqual([
+      [true, false],
+      [false, true],
+      [false, false],
+      [false, true],
+    ]);
   });
 });

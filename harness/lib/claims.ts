@@ -10,8 +10,6 @@
  * A phrase written inside a code span is a quotation, not a claim.
  */
 
-import { ROOTS } from './scope.ts';
-
 /** A claim of a single owner, up to the end of its clause. */
 const CLAIM = /\b(?:the (?:one|only) (?:owner|module|place|reader|writer)|nowhere else|stated once)\b[^.;:]*/giu;
 
@@ -20,6 +18,9 @@ const LOCATES_ITSELF = /\bimport\.meta\.(?:url|dirname|filename)\b/u;
 
 /** The harness's library and scripts: the roots of the probes that hold the harness's own claims. */
 const HARNESS_CODE: readonly string[] = ['harness/lib/', 'harness/scripts/'];
+
+/** The probe roots of a claim held over every held TypeScript file: the empty prefix every path starts with. */
+const EVERY_HELD_FILE: readonly string[] = [''];
 
 /** A pattern that must match in `owner` and in no other held TypeScript file under `roots`. */
 interface Probe {
@@ -57,7 +58,7 @@ function clauses(text: string): readonly string[] {
  * @param {readonly string[]} roots - Where else the pattern must not match.
  * @returns {Probe} The probe.
  */
-function probe(pattern: Readonly<RegExp>, owner: string, roots: readonly string[] = ROOTS): Probe {
+function probe(pattern: Readonly<RegExp>, owner: string, roots: readonly string[] = EVERY_HELD_FILE): Probe {
   return { owner, pattern, roots };
 }
 

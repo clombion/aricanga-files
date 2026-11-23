@@ -10,12 +10,13 @@
  * Markdown is parsed by `markdown-doc.ts` on the grammar of `markdown-text.ts`.
  */
 
-import { DOC_ROOTS, held } from './scope.ts';
+import { DOC_ROOTS, population } from './scope.ts';
 import type { Prose, Span } from './markdown-text.ts';
 import { comments, parse } from './ts-source.ts';
 import { spansOf, withoutSpans } from './markdown-text.ts';
-import { textOf, textsOf, tracked } from './source-files.ts';
+import { textOf, textsOf } from './source-files.ts';
 import { Doc } from './markdown-doc.ts';
+import type { Population } from './scope.ts';
 import { Prefixes } from './exemptions.ts';
 
 /** A comment line: its number and its text. */
@@ -56,11 +57,12 @@ async function markdown(path: string): Promise<Doc> {
 /**
  * Whether a listed path is a Markdown file of current text.
  *
+ * @param {Population} held - The population.
  * @param {string} path - The path.
  * @returns {boolean} Whether it is current Markdown.
  */
-function isCurrentMarkdown(path: string): boolean {
-  return path.endsWith('.md') && (held(path) || DOC_ROOTS.some((root) => path.startsWith(root))) && !HISTORY.starts(path);
+function isCurrentMarkdown(held: Population, path: string): boolean {
+  return path.endsWith('.md') && (held.holds(path) || DOC_ROOTS.some((root) => path.startsWith(root))) && !HISTORY.starts(path);
 }
 
 /**
@@ -69,8 +71,8 @@ function isCurrentMarkdown(path: string): boolean {
  * @returns {Promise<readonly string[]>} The files.
  */
 async function markdownPaths(): Promise<readonly string[]> {
-  const listed = await tracked();
-  return listed.filter((path) => isCurrentMarkdown(path));
+  const held = await population();
+  return held.listing.filter((path) => isCurrentMarkdown(held, path));
 }
 
 /**
@@ -172,8 +174,10 @@ function codeComments(path: string, text: string): readonly CommentLine[] {
  * @returns {Promise<readonly (readonly [string, string])[]>} Each file with its text.
  */
 async function codeTexts(): Promise<readonly (readonly [string, string])[]> {
-  const listed = await tracked();
-  const texts = await textsOf(listed.filter((path) => held(path) && (SCRIPT.ends(path) || STYLE.ends(path) || CONFIG.ends(path))));
+  const held = await population();
+  const texts = await textsOf(
+    held.listing.filter((path) => held.holds(path) && (SCRIPT.ends(path) || STYLE.ends(path) || CONFIG.ends(path))),
+  );
   return texts;
 }
 

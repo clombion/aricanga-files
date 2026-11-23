@@ -64,44 +64,59 @@ async function listing(stdout: string, root: string, floor: number = FLOOR): Pro
   return paths;
 }
 
-const cache = new Map<string, Promise<readonly string[]>>();
+/**
+ * One computation per root as spelled, started once and shared by every caller of this instance,
+ * concurrent first callers included. `compute` starts only after its pending result is cached, so a
+ * failure, a throw included, rejects every caller of that computation and leaves the cache: the
+ * next call computes again.
+ *
+ * @param {(root: string) => Promise<Value>} compute - The computation over a root.
+ * @returns {(root: string) => Promise<Value>} The computation, remembered per root.
+ */
+function perRoot<Value>(compute: (root: string) => Promise<Value>): (root: string) => Promise<Value> {
+  const cache = new Map<string, Promise<Value>>();
+  const computing = async (root: string): Promise<Value> => {
+    await Promise.resolve();
+    try {
+      const found = await compute(root);
+      return found;
+    } catch (error: unknown) {
+      cache.delete(root);
+      throw error;
+    }
+  };
+  const remembered = async (root: string): Promise<Value> => {
+    const pending = computing(root);
+    cache.set(root, pending);
+    const found = await pending;
+    return found;
+  };
+  return async (root: string): Promise<Value> => {
+    const found = await (cache.get(root) ?? remembered(root));
+    return found;
+  };
+}
 
 /**
- * List `root` through git, refusing a listing git could not give or gave short. A failed listing
- * leaves the cache, so the next call lists again.
+ * List `root` through git, refusing a listing git could not give or gave short.
  *
  * @param {string} root - The directory to list.
  * @returns {Promise<readonly string[]>} The files, as POSIX paths relative to `root`.
  */
 async function list(root: string): Promise<readonly string[]> {
-  try {
-    const outcome = await run(['git', 'ls-files', '-z', '--cached', '--others', '--exclude-standard'], {
-      cwd: root,
-      timeoutMs: LISTING_TIMEOUT_MS,
-    });
-    if (outcome.kind !== 'finished' || !succeeded(outcome)) {
-      throw new ListingError(`git could not list ${root}: ${JSON.stringify(outcome)}`);
-    }
-    const found = await listing(outcome.stdout, root);
-    return found;
-  } catch (error: unknown) {
-    cache.delete(root);
-    throw error;
+  const outcome = await run(['git', 'ls-files', '-z', '--cached', '--others', '--exclude-standard'], {
+    cwd: root,
+    timeoutMs: LISTING_TIMEOUT_MS,
+  });
+  if (outcome.kind !== 'finished' || !succeeded(outcome)) {
+    throw new ListingError(`git could not list ${root}: ${JSON.stringify(outcome)}`);
   }
-}
-
-/**
- * The listing of `root`, started once and shared by every caller.
- *
- * @param {string} root - The directory to list.
- * @returns {Promise<readonly string[]>} The listing in progress or done.
- */
-async function remembered(root: string): Promise<readonly string[]> {
-  const pending = list(root);
-  cache.set(root, pending);
-  const found = await pending;
+  const found = await listing(outcome.stdout, root);
   return found;
 }
+
+/** The listing of each root, listed once per root. */
+const listings = perRoot(list);
 
 /**
  * Every file git tracks or would track under `root`.
@@ -110,18 +125,19 @@ async function remembered(root: string): Promise<readonly string[]> {
  * @returns {Promise<readonly string[]>} The files, as POSIX paths relative to `root`.
  */
 async function tracked(root: string = REPO_ROOT): Promise<readonly string[]> {
-  const found = await (cache.get(root) ?? remembered(root));
+  const found = await listings(root);
   return found;
 }
 
 /**
  * The text of a listed file; bytes that are not UTF-8 read as replacement characters.
  *
- * @param {string} listed - The file's repository-relative path.
+ * @param {string} file - The file's path relative to `root`.
+ * @param {string} root - The listed directory; the repository by default.
  * @returns {Promise<string>} Its text.
  */
-async function textOf(listed: string): Promise<string> {
-  const text = await readFile(path.join(REPO_ROOT, listed), 'utf8');
+async function textOf(file: string, root: string = REPO_ROOT): Promise<string> {
+  const text = await readFile(path.join(root, file), 'utf8');
   return text;
 }
 
@@ -163,4 +179,4 @@ async function writeText(listed: string, text: string): Promise<void> {
   await writeFile(path.join(REPO_ROOT, listed), text, 'utf8');
 }
 
-export { FLOOR, isFile, ListingError, listing, textAt, textOf, textsOf, tracked, writeText };
+export { FLOOR, isFile, ListingError, listing, perRoot, textAt, textOf, textsOf, tracked, writeText };

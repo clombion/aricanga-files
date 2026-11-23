@@ -85,9 +85,10 @@ keeps that file true.
 
 ### Scope
 
-The harness holds the rebuild: `packages/foundation`, `packages/systems/*`,
-`packages/characterisation`, `experiences/sandbox`, and the harness's own tests
-and scripts. The POC (`packages/framework`, `packages/tests`,
+The harness holds the rebuild: every workspace package pnpm lists whose manifest
+git lists, less the POC, each declaring its role in its manifest
+(`"aricanga": { "role": … }`, a role of `harness/lib/roles.ts`), and the harness's
+own tests and scripts. The POC (`packages/framework`, `packages/tests`,
 `packages/test-utils`, `experiences/aricanga`, `utils`) is a read-only behavioural
 oracle deleted in Phase 7; it stays outside the harness and keeps its own
 linters until then.

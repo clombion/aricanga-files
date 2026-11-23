@@ -27,7 +27,6 @@ const HARNESS_ID = 'exemption-lists';
 const ADOPTING = new Exemptions({
   [site('harness/checks/boundaries.test.ts', 'BOUNDARY_RULES')]: 'adopting: declare it as an Accepted and ask .has',
   [site('harness/checks/gate.test.ts', 'GATE_TESTS')]: 'adopting: declare it as an Accepted of the commands check must run',
-  [site('harness/lib/scope.ts', 'ROOTS')]: 'adopting: declare it as Prefixes and ask .starts',
 });
 
 const PLANT = 'harness/checks/plant.test.ts';

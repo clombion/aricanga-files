@@ -4,6 +4,7 @@ import { afterAll, beforeAll } from 'vitest';
 import { openScan, scannedFiles } from './checker.ts';
 import type { Scan } from './checker.ts';
 import { Slot } from './lists.ts';
+import { population } from './scope.ts';
 import { present } from './present.ts';
 
 /** How long opening a scan of the whole repository may take, in milliseconds. */
@@ -22,8 +23,8 @@ function useScan(
 ): () => Scan {
   const opened = new Slot<Scan>();
   beforeAll(async () => {
-    const files = await paths();
-    opened.put(openScan(files, sources()));
+    const [files, held] = await Promise.all([paths(), population()]);
+    opened.put(openScan(files, sources(), held));
   }, OPEN_TIMEOUT_MS);
 
   afterAll(() => {

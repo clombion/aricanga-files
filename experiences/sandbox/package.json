@@ -20,5 +20,8 @@
     "@solidjs/compiler": "2.0.2",
     "@solidjs/vite-plugin": "3.0.1",
     "inkjs": "^2.4.0"
+  },
+  "aricanga": {
+    "role": "experience"
   }
 }
