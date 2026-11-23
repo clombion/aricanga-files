@@ -42,7 +42,7 @@ const OXLINT_CONFIG_FILES: readonly string[] = ['.oxlintrc.json', 'harness/lint-
 const FIXTURE_NAME = /^harness\/lint-rules\/fixtures\/(?<rule>[a-z-]+)\/(?<kind>fire|clean)(?:-[a-z0-9-]+)?\.fixture$/u;
 const PATH_LINE = /^\/\/ path: (?<path>\S+)\n/u;
 
-/** Where the workspace installs Solid: the characterisation package, its only consumer so far. */
+/** Where the workspace installs Solid for the planted lint project: the characterisation package's own install. */
 const SOLID_HOME = fromRoot('packages', 'characterisation', 'node_modules');
 
 /**

@@ -12,7 +12,12 @@ Issues as [docs/roadmap/issues.md](docs/roadmap/issues.md) describes.
 The harness holds the rebuild: every workspace package pnpm lists whose manifest git lists, less the
 POC reference, and `harness` itself, tests, scripts and configuration included, all under the same
 rules as production code (`harness/lib/scope.ts`). A workspace package declares its role in its
-manifest, `"aricanga": { "role": … }`, one of the roles of `harness/lib/roles.ts`. The POC reference
+manifest, `"aricanga": { "role": … }`, one of the roles of `harness/lib/roles.ts`. A new member is held,
+type-checked, tested and covered with no list to edit; five lists still name members by hand and need
+the new one added: the owner rules' non-kernel roots (`harness/lib/owner-rules.ts`, which the owner
+registry's member test holds), `knip.json`'s workspaces, the overrides of `.oxlintrc.json`,
+`test:browser`'s config list in `package.json`, and the apps of `harness/checks/build-check.test.ts`
+(a member with a `vite.config.ts`). The POC reference
 (`packages/framework`, `packages/tests`, `packages/test-utils`, `experiences/aricanga`, `utils`)
 is a read-only behavioural oracle outside the harness until it is deleted (ADR-0006).
 

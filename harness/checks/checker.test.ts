@@ -1,4 +1,4 @@
-/** The scan's readers: a path it does not cover is refused, and a missing symbol has no name. */
+/** The scan's readers (a path it does not cover is refused, and a missing symbol has no name) and the module classifiers. */
 
 import { describe, expect, test } from 'vitest';
 import { isProduction, isTestInfrastructure, qualifiedName, scanOver, sourceOf } from '#lib/checker.ts';

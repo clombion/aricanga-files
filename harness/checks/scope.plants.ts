@@ -75,7 +75,7 @@ async function workspaceFolder(prefix: string, rootManifest: string): Promise<st
   return folder;
 }
 
-/** The importers block pnpm 10.28.0 wrote for workspaces whose directories need YAML quoting (`verif-58-1a-r3/phase-5-work/quoting*`). */
+/** The importers block pnpm 10.28.0 writes for workspaces whose directories need YAML quoting. */
 const QUOTED_KEYS: string = [
   "lockfileVersion: '9.0'",
   '',
