@@ -8,7 +8,8 @@ import type { Member, Population } from './scope.ts';
 import { matches } from './globs.ts';
 
 /**
- * A member's glob, kept when a listed file matches it.
+ * A member's glob, kept when one of the member's own listed files matches it: a file of a member
+ * nested in it is the nested member's (`memberOf`), not this one's.
  *
  * @param {Population} population - The population.
  * @param {readonly Member[]} members - The members.
@@ -16,7 +17,12 @@ import { matches } from './globs.ts';
  * @returns {string[]} Each member's live glob.
  */
 function liveGlobs(population: Population, members: readonly Member[], tail: string): string[] {
-  return members.map((member) => `${member.dir}${tail}`).filter((glob) => population.listing.some((file) => matches(glob, file)));
+  return members.flatMap((member) => {
+    const glob = `${member.dir}${tail}`;
+    return population.listing.some((file) => file.startsWith(member.dir) && population.memberOf(file) === member && matches(glob, file))
+      ? [glob]
+      : [];
+  });
 }
 
 /**
