@@ -24,8 +24,17 @@ type Tier = 'kernel' | 'product' | 'test-infrastructure';
  */
 type Role = 'experience' | 'foundation' | 'system' | 'test-infrastructure' | 'view';
 
+/** Each role's tier, as a literal, so a type can read which roles ship. */
+type RoleTiers = Readonly<{
+  experience: 'product';
+  foundation: 'kernel';
+  system: 'kernel';
+  'test-infrastructure': 'test-infrastructure';
+  view: 'product';
+}>;
+
 /** Every role word with its tier: a word is a key, so it is declared once and carries its own tier. */
-const ROLES: Vocabulary<Readonly<Record<Role, Tier>>> = new Vocabulary<Readonly<Record<Role, Tier>>>({
+const ROLES: Vocabulary<RoleTiers> = new Vocabulary<RoleTiers>({
   experience: 'product',
   foundation: 'kernel',
   system: 'kernel',
@@ -50,6 +59,9 @@ const TIERS: Vocabulary<TierFacts> = new Vocabulary<TierFacts>({
   product: { ships: true },
   'test-infrastructure': { ships: false },
 });
+
+/** The roles whose tier ships. */
+type ShippingRole = { [Each in Role]: TierFacts[RoleTiers[Each]]['ships'] extends true ? Each : never }[Role];
 
 /** The role words, for a refusal to name. */
 const ROLE_WORDS: readonly string[] = ROLES.words;
@@ -97,4 +109,4 @@ function isTestInfrastructure(role: Role): boolean {
 }
 
 export { isRole, isTestInfrastructure, ROLE_WORDS, ships, tierOf };
-export type { Role, Tier };
+export type { Role, ShippingRole, Tier };

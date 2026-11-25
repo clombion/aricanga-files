@@ -11,10 +11,10 @@
  */
 
 import type { Member, Population } from './scope.ts';
+import type { Role, ShippingRole } from './roles.ts';
 import type { GateOverride } from './oxlint-shape.ts';
 import { HARNESS_CODE } from './oxlint-files.ts';
 import type { MemberDir } from './package-dirs.ts';
-import type { Role } from './roles.ts';
 import { Vocabulary } from './exemptions.ts';
 import { isEmpty } from './lists.ts';
 import { pocNames } from './scope.ts';
@@ -27,10 +27,12 @@ type Importer = Role | 'harness';
  * nothing; a system foundation; a view foundation (a system reaches it by injection, never by
  * import); an experience foundation, systems and views; the harness and the test infrastructure any
  * shipping member. No role imports its own role's other members. The test infrastructure is no
- * cell: every importer may import it by name, and the scan refuses it to a production module. Every
- * importer's row is read by one builder.
+ * cell (a cell is a `ShippingRole`, so `tsc` refuses it there): every importer may import it by
+ * name, and the scan refuses it to a production module. Every importer's row is read by one builder.
  */
-const MAY: Vocabulary<Readonly<Record<Importer, readonly Role[]>>> = new Vocabulary<Readonly<Record<Importer, readonly Role[]>>>({
+const MAY: Vocabulary<Readonly<Record<Importer, readonly ShippingRole[]>>> = new Vocabulary<
+  Readonly<Record<Importer, readonly ShippingRole[]>>
+>({
   experience: ['foundation', 'system', 'view'],
   foundation: [],
   harness: ['experience', 'foundation', 'system', 'view'],
@@ -98,7 +100,7 @@ function allowed(importer: Importer): string {
  */
 function groupsOf(held: Population, importing: Readonly<Importing>): Group[] {
   const { importer, own } = importing;
-  const forbidden = held.shipping.filter((other) => other.dir !== own && !MAY.of(importer).includes(other.role));
+  const forbidden = held.shipping.filter((other) => other.dir !== own && !MAY.of(importer).some((role) => role === other.role));
   const groups: readonly Group[] = [
     specifiers(
       namesOf(forbidden),
