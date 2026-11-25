@@ -2,12 +2,11 @@
 
 import { describe, expect, test } from 'vitest';
 import { isProduction, isTestInfrastructure, qualifiedName, scanOver, sourceOf } from '#lib/checker.ts';
-import { manifest, reader } from './scope.plants.ts';
-import { population, populationOf } from '#lib/scope.ts';
+import { plantedPopulation, usePlanted } from '#lib/scan-hooks.ts';
 import type { Population } from '#lib/scope.ts';
 import type { ScanOpening } from '#lib/checker.ts';
+import { population } from '#lib/scope.ts';
 import { present } from '#lib/present.ts';
-import { usePlanted } from '#lib/scan-hooks.ts';
 
 /** A session's projects, by project file: this one holds none. */
 const NO_PROJECTS = new Map<string, ReturnType<ScanOpening['open']>>();
@@ -39,7 +38,7 @@ function noProject(events: Readonly<Pick<string[], 'push'>>, held: Population): 
   };
 }
 
-const scan = usePlanted(new Map([['planted/one.ts', 'export const one = 1;\n']]), [['planted/', 'foundation']]);
+const scan = usePlanted([['planted/one.ts', 'export const one = 1;\n']], [['planted/', 'foundation']]);
 
 describe('a scan', () => {
   test('refuses a path it does not cover, naming it', () => {
@@ -67,11 +66,13 @@ describe('a scan', () => {
 describe('the module classifiers', () => {
   test("reads a member whose role does not ship as test infrastructure, and its modules, tests, Playwright specs and test support as not production, and a module Playwright does not match and the harness's check support as production", async () => {
     expect.hasAssertions();
-    const held = await populationOf({
-      listing: ['packages/probe/package.json', 'packages/view/package.json'],
-      read: reader({ 'packages/probe/package.json': manifest('test-infrastructure'), 'packages/view/package.json': manifest('view') }),
-      workspace: ['packages/probe/', 'packages/view/'],
-    });
+    const held = await plantedPopulation(
+      [],
+      [
+        ['packages/probe/', 'test-infrastructure'],
+        ['packages/view/', 'view'],
+      ],
+    );
     const modules = [
       'packages/probe/src/b.ts',
       'packages/view/src/v.tsx',

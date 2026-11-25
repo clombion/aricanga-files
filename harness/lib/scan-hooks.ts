@@ -1,17 +1,22 @@
 /**
- * A check's scans: opened before its tests, closed after them, read through the returned function. A
- * repository scan covers the repository's population; a planted scan covers a population of its plants
- * and the members it declares, never the repository's. A scan's files are its population's
- * (`openScan`), so its files and its population come from one listing.
+ * A check's scans and planted populations. A scan is opened before its tests, closed after them, and
+ * read through the returned function. A repository scan covers the repository's population; a planted
+ * scan covers a population of its plants and the members it declares, never the repository's. A
+ * scan's files are its population's (`openScan`), so its files and its population come from one
+ * listing. A planted population is built by the rule a checkout's is (`populationOf`) and refuses
+ * what production never holds: a member or a plant given twice, a plant no member or the harness
+ * holds, a plant at a member's manifest, a declared member the population leaves out (a POC
+ * directory).
  */
 
+import { Slot, isEmpty } from './lists.ts';
 import { afterAll, beforeAll } from 'vitest';
 import { population, populationOf } from './scope.ts';
 import type { MemberDir } from './package-dirs.ts';
 import type { Population } from './scope.ts';
+import { PopulationError } from './workspace.ts';
 import type { Role } from './roles.ts';
 import type { Scan } from './checker.ts';
-import { Slot } from './lists.ts';
 import { manifestOf } from './package-dirs.ts';
 import { openScan } from './checker.ts';
 import { present } from './present.ts';
@@ -23,24 +28,46 @@ const OPEN_TIMEOUT_MS = 120_000;
 type PlantedMember = readonly [MemberDir, Role];
 
 /**
- * The population of planted files and planted members: each member's manifest declares its role.
+ * The entries of a list declared more than once, by their key, each named once.
  *
- * @param {readonly string[]} files - The planted files.
+ * @param {readonly string[]} keys - The keys, in the order given.
+ * @returns {readonly string[]} Each key given twice or more.
+ */
+function declaredTwice(keys: readonly string[]): readonly string[] {
+  return [...new Set(keys.filter((key, index) => keys.indexOf(key) !== index))];
+}
+
+/**
+ * The population of planted files and planted members: each member's manifest is listed, declares
+ * its role, and is a workspace package; there is no checkout. The members and the plants are lists of
+ * entries, so a directory or a path given twice reaches here however the list was built (a literal,
+ * a spread, `Object.fromEntries` would each have collapsed it), and every state production never
+ * builds is refused at once, each named.
+ *
+ * @param {readonly string[]} files - The planted files besides the manifests.
  * @param {readonly PlantedMember[]} members - The planted members.
  * @returns {Promise<Population>} The planted population.
  */
 async function plantedPopulation(files: readonly string[], members: readonly PlantedMember[]): Promise<Population> {
-  const manifests = new Map(
-    members.map(([dir, role]: PlantedMember) => [manifestOf(dir), JSON.stringify({ aricanga: { role } })] as const),
-  );
+  const manifests = new Map(members.map(([dir, role]) => [manifestOf(dir), JSON.stringify({ aricanga: { role } })] as const));
   const found = await populationOf({
     listing: [...files, ...manifests.keys()],
     read: async (listed: string): Promise<string> => {
       const text = await Promise.resolve(present(manifests.get(listed), `the planted manifest ${listed}`));
       return text;
     },
-    workspace: members.map(([dir]: PlantedMember) => dir),
+    workspace: members.map(([dir]) => dir),
   });
+  const refused = [
+    ...declaredTwice(members.map(([dir]) => dir)).map((dir) => `${dir} is declared twice`),
+    ...declaredTwice(files).map((planted) => `${planted} is planted twice`),
+    ...files.filter((planted) => manifests.has(planted)).map((planted) => `${planted} is a planted manifest`),
+    ...members.filter(([dir]) => !found.members.some((member) => member.dir === dir)).map(([dir]) => `${dir} is declared and is no member`),
+    ...files.filter((planted) => !found.holds(planted)).map((planted) => `${planted} is held by no planted member or the harness`),
+  ];
+  if (!isEmpty(refused)) {
+    throw new PopulationError(`a planted population refused: ${refused.join('; ')}`);
+  }
   return found;
 }
 
@@ -76,13 +103,16 @@ function useScan(): () => Scan {
 /**
  * A scan over planted sources for the check's tests, covering the plants' own population.
  *
- * @param {Readonly<ReadonlyMap<string, string>>} plants - Each planted file's text, by path.
+ * @param {readonly (readonly [string, string])[]} plants - Each planted file's path and text; a path given twice is refused.
  * @param {readonly PlantedMember[]} members - The members the plants sit in.
  * @returns {() => Scan} Reads the open scan.
  */
-function usePlanted(plants: Readonly<ReadonlyMap<string, string>>, members: readonly PlantedMember[]): () => Scan {
+function usePlanted(plants: readonly (readonly [string, string])[], members: readonly PlantedMember[]): () => Scan {
   return scanFor(async () => {
-    const found = await plantedPopulation([...plants.keys()], members);
+    const found = await plantedPopulation(
+      plants.map(([path]) => path),
+      members,
+    );
     return found;
   }, Object.fromEntries(plants));
 }

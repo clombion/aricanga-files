@@ -14,24 +14,27 @@ import { twiceDeclared } from './declared-sets.scan.ts';
 const HARNESS_ID = 'declared-sets';
 
 /** A closed set, its restatement in another module, a reordered restatement, and the near misses. */
-const PLANTS: Readonly<Record<string, string>> = {
-  'packages/foundation/src/__sets_owner.ts': "export type Receipt = 'sent' | 'delivered' | 'read';\nexport type Single = 'only';\n",
-  'packages/systems/__sets_read.ts': [
-    "import type { Receipt } from '../foundation/src/__sets_owner';",
-    "export type Arrived = Exclude<Receipt, 'sent'>;",
-    'export type Mirror = Receipt;',
-    "export type Again = 'only';",
-    "export type Wider = 'sent' | 'delivered' | 'read' | 'lost';",
-    '',
-  ].join('\n'),
-  'packages/systems/__sets_restated.ts': "export type Status = 'read' | 'sent' | 'delivered';\n",
-};
+const PLANTS: readonly (readonly [string, string])[] = [
+  ['packages/foundation/src/__sets_owner.ts', "export type Receipt = 'sent' | 'delivered' | 'read';\nexport type Single = 'only';\n"],
+  [
+    'packages/systems/__sets_read.ts',
+    [
+      "import type { Receipt } from '../foundation/src/__sets_owner';",
+      "export type Arrived = Exclude<Receipt, 'sent'>;",
+      'export type Mirror = Receipt;',
+      "export type Again = 'only';",
+      "export type Wider = 'sent' | 'delivered' | 'read' | 'lost';",
+      '',
+    ].join('\n'),
+  ],
+  ['packages/systems/__sets_restated.ts', "export type Status = 'read' | 'sent' | 'delivered';\n"],
+];
 
 /** The one restatement among the plants: the owner's set, and the second alias that writes it out again. */
 const RESTATED = [['packages/foundation/src/__sets_owner.ts#Receipt', 'packages/systems/__sets_restated.ts#Status']];
 
 describe('closed sets of words', () => {
-  const planted = usePlanted(new Map(Object.entries(PLANTS)), [
+  const planted = usePlanted(PLANTS, [
     ['packages/foundation/', 'foundation'],
     ['packages/systems/', 'system'],
   ]);

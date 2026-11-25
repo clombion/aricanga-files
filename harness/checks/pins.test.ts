@@ -2,8 +2,8 @@
 
 import { describe, expect, test } from 'vitest';
 import { lockOf, pinned, pinsOf } from '#lib/pins.ts';
-import { manifest, reader } from './scope.plants.ts';
-import { populationOf } from '#lib/scope.ts';
+import { plantedPopulation } from '#lib/scan-hooks.ts';
+import { reader } from './scope.plants.ts';
 
 const LOCK = `lockfileVersion: '9.0'
 
@@ -36,11 +36,7 @@ packages:
 describe('the pins of a population', () => {
   test('read the root and the members, and no other listed manifest', async () => {
     expect.hasAssertions();
-    const held = await populationOf({
-      listing: ['package.json', 'packages/app/package.json', 'harness/lint-rules/package.json'],
-      read: reader({ 'packages/app/package.json': manifest('view') }),
-      workspace: ['', 'packages/app/'],
-    });
+    const held = await plantedPopulation(['package.json', 'harness/lint-rules/package.json'], [['packages/app/', 'view']]);
     const texts = {
       'package.json': JSON.stringify({
         devDependencies: { oxlint: '1.94.0' },

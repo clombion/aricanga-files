@@ -101,7 +101,7 @@ const SUPPORT: readonly (readonly [string, string])[] = [
 const OWNER_TEXT =
   "export type Mode = 'on' | 'off';\nexport type Msg = { readonly tag: 'ping' } | { readonly tag: 'pong'; readonly n: number };\nexport const DEFAULT = 'on';\n";
 
-const plants = new Map<string, string>([
+const plants: readonly (readonly [string, string])[] = [
   [OWNER, OWNER_TEXT],
   ...PLANTS.map(
     ([body]: readonly [string, ...unknown[]], index) => [`packages/systems/__widen_${index}.ts`, `${IMPORT}${PICK}${body}`] as const,
@@ -109,7 +109,7 @@ const plants = new Map<string, string>([
   ...RESPELLED,
   ...NEAR_MISSES,
   ...SUPPORT,
-]);
+];
 
 const plantedScan = usePlanted(plants, [
   ['packages/foundation/', 'foundation'],

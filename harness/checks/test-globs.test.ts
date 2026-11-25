@@ -4,10 +4,10 @@ import { VITEST_TESTS, coverageIncludes, testIncludes } from '#lib/test-globs.ts
 import { describe, expect, test } from 'vitest';
 import { gateTest, globsOf } from './gate-config.ts';
 import { list, object } from '#lib/config.ts';
-import { manifest, reader } from './scope.plants.ts';
-import { populationOf, typescriptFiles } from '#lib/scope.ts';
 import type { Population } from '#lib/scope.ts';
 import { matches } from '#lib/globs.ts';
+import { plantedPopulation } from '#lib/scan-hooks.ts';
+import { typescriptFiles } from '#lib/scope.ts';
 
 /**
  * A population of six members: a foundation with tests, a view whose tests are TSX, a
@@ -17,14 +17,8 @@ import { matches } from '#lib/globs.ts';
  * @returns {Promise<Population>} The population.
  */
 async function planted(): Promise<Population> {
-  const held = await populationOf({
-    listing: [
-      'packages/bare/package.json',
-      'packages/core/package.json',
-      'packages/probe/package.json',
-      'packages/view/package.json',
-      'packages/lib/package.json',
-      'packages/spec/package.json',
+  const held = await plantedPopulation(
+    [
       'packages/lib/src/l.ts',
       'packages/spec/test/s.test.ts',
       'packages/core/src/a.ts',
@@ -34,16 +28,15 @@ async function planted(): Promise<Population> {
       'packages/view/src/v.tsx',
       'packages/view/test/v.test.tsx',
     ],
-    read: reader({
-      'packages/bare/package.json': manifest('experience'),
-      'packages/core/package.json': manifest('foundation'),
-      'packages/lib/package.json': manifest('view'),
-      'packages/probe/package.json': manifest('test-infrastructure'),
-      'packages/spec/package.json': manifest('view'),
-      'packages/view/package.json': manifest('view'),
-    }),
-    workspace: ['', 'packages/bare/', 'packages/core/', 'packages/lib/', 'packages/probe/', 'packages/spec/', 'packages/view/'],
-  });
+    [
+      ['packages/bare/', 'experience'],
+      ['packages/core/', 'foundation'],
+      ['packages/lib/', 'view'],
+      ['packages/probe/', 'test-infrastructure'],
+      ['packages/spec/', 'view'],
+      ['packages/view/', 'view'],
+    ],
+  );
   return held;
 }
 
@@ -59,11 +52,13 @@ describe('the gate globs', () => {
 
   test("keep no glob of a member whose only matching files are a nested member's", async () => {
     expect.hasAssertions();
-    const nested = await populationOf({
-      listing: ['packages/a/package.json', 'packages/a/b/package.json', 'packages/a/b/test/t.test.ts'],
-      read: reader({ 'packages/a/b/package.json': manifest('test-infrastructure'), 'packages/a/package.json': manifest('foundation') }),
-      workspace: ['packages/a/', 'packages/a/b/'],
-    });
+    const nested = await plantedPopulation(
+      ['packages/a/b/test/t.test.ts'],
+      [
+        ['packages/a/', 'foundation'],
+        ['packages/a/b/', 'test-infrastructure'],
+      ],
+    );
     expect(testIncludes(nested)).toStrictEqual([]);
   });
 

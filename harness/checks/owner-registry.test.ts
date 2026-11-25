@@ -11,12 +11,11 @@
 import { CANONICAL, FORMS, IN_A_TEST, MEMBERS, NEAR_MISSES, UNGUARDED, unguarded } from './owner-registry.plants.ts';
 import { SHAPES, keyOf, ownerUses, rulesOf, sites } from '#lib/owners.ts';
 import { describe, expect, test } from 'vitest';
-import { manifest, reader } from './scope.plants.ts';
 import { plantedPopulation, usePlanted, useScan } from '#lib/scan-hooks.ts';
-import { population, populationOf } from '#lib/scope.ts';
 import type { Rule } from '#lib/owner-rules.ts';
 import type { Scan } from '#lib/checker.ts';
 import type { Site } from '#lib/owners.ts';
+import { population } from '#lib/scope.ts';
 import { present } from '#lib/present.ts';
 import { sourceOf } from '#lib/checker.ts';
 import { tracked } from '#lib/source-files.ts';
@@ -65,7 +64,7 @@ const PLANTED: readonly Plant[] = [
   { path: IN_A_TEST, rule: 'random', text: 'Math.random();\n' },
   ...NEAR_MISSES.map(([path, text]: readonly [string, string]) => ({ path, text })),
 ];
-const plants = new Map(PLANTED.map((plant) => [plant.path, plant.text] as const));
+const plants: readonly (readonly [string, string])[] = PLANTED.map((plant) => [plant.path, plant.text] as const);
 const expected: readonly Site[] = PLANTED.flatMap((plant) => (plant.rule === undefined ? [] : [{ path: plant.path, rule: plant.rule }]));
 const plantedScan = usePlanted(plants, MEMBERS);
 const repoScan = useScan();
@@ -141,7 +140,7 @@ describe('the scan', () => {
   test('sees each planted call form and each planted root', () => {
     expect.hasAssertions();
     expect(CANONICAL.map(([name]) => name).toSorted()).toStrictEqual(RULES.map((rule) => rule.name).toSorted());
-    const planted = [...plants.keys()].filter((path) => /__(?:form|root|in_a_test)/u.test(path));
+    const planted = plants.map(([path]) => path).filter((path) => /__(?:form|root|in_a_test)/u.test(path));
     const found = sitesIn(plantedScan, planted)
       .map((site) => keyOf(site))
       .toSorted();
@@ -152,7 +151,12 @@ describe('the scan', () => {
     expect.hasAssertions();
     const roots = RULES.flatMap((rule) => rule.scopes.map((scope) => `${scope.root}__root_${rule.name}.ts`));
     const forms = FORMS.map((_form, index) => `packages/foundation/src/__form_${index}.ts`);
-    expect([...plants.keys()].filter((path) => /__(?:form|root)_/u.test(path)).toSorted()).toStrictEqual([...roots, ...forms].toSorted());
+    expect(
+      plants
+        .map(([path]) => path)
+        .filter((path) => /__(?:form|root)_/u.test(path))
+        .toSorted(),
+    ).toStrictEqual([...roots, ...forms].toSorted());
   });
 
   test.each(NEAR_MISSES.map(([path]) => path))('lets the near miss %s through', (path) => {
@@ -164,15 +168,14 @@ describe('the scan', () => {
 describe('the rules', () => {
   test('cover each kernel member, and give a kernel owner the member that holds it', async () => {
     expect.hasAssertions();
-    const held = await populationOf({
-      listing: ['packages/foundation/package.json', 'packages/systems/x/package.json', 'packages/view/package.json'],
-      read: reader({
-        'packages/foundation/package.json': manifest('foundation'),
-        'packages/systems/x/package.json': manifest('system'),
-        'packages/view/package.json': manifest('view'),
-      }),
-      workspace: ['packages/foundation/', 'packages/systems/x/', 'packages/view/'],
-    });
+    const held = await plantedPopulation(
+      [],
+      [
+        ['packages/foundation/', 'foundation'],
+        ['packages/systems/x/', 'system'],
+        ['packages/view/', 'view'],
+      ],
+    );
     const rules = rulesOf(held);
     expect(['clock', 'json-parse'].map((name) => rules.find((rule) => rule.name === name)?.scopes)).toStrictEqual([
       [

@@ -21,10 +21,10 @@ const UNGUARDED: Exemptions = new Exemptions({
 
 /** The planted members the plants sit in: a kernel member of each kernel role, and the literal roots' members. */
 const MEMBERS: readonly PlantedMember[] = [
-  ['packages/foundation/', 'foundation'],
-  ['packages/systems/chat/', 'system'],
   ['experiences/sandbox/', 'experience'],
   ['packages/characterisation/', 'test-infrastructure'],
+  ['packages/foundation/', 'foundation'],
+  ['packages/systems/chat/', 'system'],
 ];
 
 /** One plant per rule and call form: [rule, source]. */

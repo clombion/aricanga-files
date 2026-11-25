@@ -10,6 +10,7 @@ import type { Population } from '#lib/scope.ts';
 import { PopulationError } from '#lib/workspace.ts';
 import { dirOfImporter } from '#lib/package-dirs.ts';
 import path from 'node:path';
+import { plantedPopulation } from '#lib/scan-hooks.ts';
 
 /**
  * The lockfile's importers, as directories, that the population neither holds nor subtracts as POC.
@@ -23,16 +24,6 @@ function missedImporters(held: Population, lockText: string): readonly string[] 
   return [...lockOf(lockText).keys()]
     .map((importer) => dirOfImporter(importer))
     .filter((dir) => dir !== '' && !POC.starts(dir) && !members.has(dir));
-}
-
-/**
- * A scripted manifest entry declaring a role.
- *
- * @param {readonly [string, string]} entry - A member's directory and its role.
- * @returns {readonly [string, string]} The manifest's path and text.
- */
-function manifestEntry([dir, role]: readonly [string, string]): readonly [string, string] {
-  return [`${dir}package.json`, manifest(role)];
 }
 
 /** The fields a refusal's text leads with: its class, its source and its first words. */
@@ -127,23 +118,38 @@ describe('a population refused', () => {
   });
 });
 
+describe('a planted population', () => {
+  test("refuses at once what production never holds: a member or a plant given twice, a plant in no member or the harness, a plant at a member's manifest, a declared member that is no member", async () => {
+    expect.hasAssertions();
+    const planting = plantedPopulation(
+      ['utils/x.ts', 'packages/a/x.ts', 'packages/a/x.ts', 'packages/a/package.json', 'harness/x.ts'],
+      [
+        ['packages/a/', 'view'],
+        ['packages/a/', 'system'],
+        ['packages/framework/', 'view'],
+      ],
+    );
+    await expect(planting).rejects.toThrow(
+      new PopulationError(
+        'a planted population refused: packages/a/ is declared twice; packages/a/x.ts is planted twice; packages/a/package.json is a planted manifest; packages/framework/ is declared and is no member; utils/x.ts is held by no planted member or the harness',
+      ),
+    );
+  });
+});
+
 describe('a population by tier', () => {
   test("selects each tier's members once: the kernel, and every member that ships", async () => {
     expect.hasAssertions();
-    const roles = {
-      'packages/e/': 'experience',
-      'packages/f/': 'foundation',
-      'packages/s/': 'system',
-      'packages/t/': 'test-infrastructure',
-      'packages/v/': 'view',
-    };
-    const dirs = Object.keys(roles);
-    const manifests = Object.entries(roles).map((entry: readonly [string, string]) => manifestEntry(entry));
-    const held = await populationOf({
-      listing: dirs.map((dir) => `${dir}package.json`),
-      read: reader(Object.fromEntries(manifests)),
-      workspace: ['packages/e/', 'packages/f/', 'packages/s/', 'packages/t/', 'packages/v/'],
-    });
+    const held = await plantedPopulation(
+      [],
+      [
+        ['packages/e/', 'experience'],
+        ['packages/f/', 'foundation'],
+        ['packages/s/', 'system'],
+        ['packages/t/', 'test-infrastructure'],
+        ['packages/v/', 'view'],
+      ],
+    );
     expect([held.kernel.map((member) => member.dir), held.shipping.map((member) => member.dir)]).toStrictEqual([
       ['packages/f/', 'packages/s/'],
       ['packages/e/', 'packages/f/', 'packages/s/', 'packages/v/'],

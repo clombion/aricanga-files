@@ -10,7 +10,7 @@ import { listingOutput } from './source-files.ts';
 import { realpath } from 'node:fs/promises';
 import { relativeTo } from './relative.ts';
 
-/** A refusal of a population that cannot be read: pnpm failed, or a member's role is refused. */
+/** A refusal of a population: pnpm could not list the workspace, a member's role is refused, or a planted population holds what production never holds. */
 class PopulationError extends Error {
   public override readonly name = 'PopulationError';
 }
