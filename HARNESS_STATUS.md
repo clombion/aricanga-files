@@ -11,7 +11,7 @@ Whether this project implements each check of [harness.md](harness.md). A status
 | id | check | status | where | reason | evidence |
 |---|---|---|---|---|---|
 | agent-environment | An agent works in its own folder and runs only locked tools | implemented | `AGENTS.md` | | |
-| boundaries | The module boundaries hold under oxlint | implemented | `harness/checks/boundaries.test.ts` | | |
+| boundaries | The module boundaries hold under oxlint, and no production module imports a non-production one | implemented | `harness/checks/boundaries.test.ts`, `harness/lib/production-imports.ts` | | |
 | browser-leaks | No page is left open and no pointer is left down between browser tests | not implemented | | no-op/not relevant | surface probe `browser-tests`: the characterisation suite is the only browser suite, and each fixture runs in a page Playwright opens and closes per test |
 | build-check | The gate builds every held Vite app in check mode | implemented | `harness/checks/build-check.test.ts` | | |
 | clones | No copied code, and jscpd scans every listed file | implemented | `harness/checks/clones.test.ts` | | |

@@ -25,7 +25,6 @@ const HARNESS_ID = 'exemption-lists';
 
 /** Consulted literal lists the harness still holds while the fence is adopted, keyed by `site(path, name)`. */
 const ADOPTING = new Exemptions({
-  [site('harness/checks/boundaries.test.ts', 'BOUNDARY_RULES')]: 'adopting: declare it as an Accepted and ask .has',
   [site('harness/checks/gate.test.ts', 'GATE_TESTS')]: 'adopting: declare it as an Accepted of the commands check must run',
 });
 

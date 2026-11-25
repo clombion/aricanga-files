@@ -4,37 +4,38 @@
  * every subpath (`name/**`, a case-sensitive pattern holding a slash, so it never matches another
  * package or a relative path), the members its role may not import (`MAY`, the role matrix), the
  * POC's packages, and every relative climb, so a module reaches another member only by name. Each
- * reason is its own refusal with its own message. A member's non-production modules (its runner tests, runner configs and test
- * directories, below its directory, as `isProduction` reads them) get a second override after it,
- * the same less the test infrastructure: of the lint's two overrides, only they may import it.
+ * reason is its own refusal with its own message. The lint grants every module the test
+ * infrastructure by name: the `boundaries` check's scan alone holds that a production module
+ * imports no non-production module, the test infrastructure included, by any form and through any
+ * chain (`production-imports.ts`).
  */
 
 import type { Member, Population } from './scope.ts';
-import { RUNNER_CONFIGS, RUNNER_TESTS, TEST_DIRECTORIES, liveGlobs } from './test-globs.ts';
 import { HARNESS_CODE } from './oxlint-files.ts';
 import type { MemberDir } from './package-dirs.ts';
 import type { OxlintOverride } from 'oxlint';
 import type { Role } from './roles.ts';
 import { Vocabulary } from './exemptions.ts';
 import { isEmpty } from './lists.ts';
-import { isTestInfrastructure } from './roles.ts';
 import { pocNames } from './scope.ts';
 
 /** Who imports: a member, by its role, or the harness. */
 type Importer = Role | 'harness';
 
 /**
- * The roles each importer's modules may import, a member's own package aside: foundation nothing; a
- * system foundation; a view foundation (a system reaches it by injection, never by import); an
- * experience foundation, systems and views; the harness and the test infrastructure any member. No
- * role imports its own role's other members. Every importer's row is read by one builder.
+ * The shipping roles each importer's modules may import, a member's own package aside: foundation
+ * nothing; a system foundation; a view foundation (a system reaches it by injection, never by
+ * import); an experience foundation, systems and views; the harness and the test infrastructure any
+ * shipping member. No role imports its own role's other members. The test infrastructure is no
+ * cell: every importer may import it by name, and the scan refuses it to a production module. Every
+ * importer's row is read by one builder.
  */
 const MAY: Vocabulary<Readonly<Record<Importer, readonly Role[]>>> = new Vocabulary<Readonly<Record<Importer, readonly Role[]>>>({
   experience: ['foundation', 'system', 'view'],
   foundation: [],
-  harness: ['experience', 'foundation', 'system', 'test-infrastructure', 'view'],
+  harness: ['experience', 'foundation', 'system', 'view'],
   system: ['foundation'],
-  'test-infrastructure': ['experience', 'foundation', 'system', 'test-infrastructure', 'view'],
+  'test-infrastructure': ['experience', 'foundation', 'system', 'view'],
   view: ['foundation'],
 });
 
@@ -48,11 +49,10 @@ interface Group {
   readonly message: string;
 }
 
-/** Whose modules a set of groups refuses: the importer, its own member (none for the harness), and whether the modules are production code. */
+/** Whose modules a set of groups refuses: the importer, and its own member (none for the harness). */
 interface Importing {
   readonly importer: Importer;
   readonly own: MemberDir | undefined;
-  readonly production: boolean;
 }
 
 /**
@@ -85,28 +85,24 @@ function namesOf(members: readonly Member[]): string[] {
  */
 function allowed(importer: Importer): string {
   const roles = MAY.of(importer);
-  return isEmpty(roles) ? 'no other member' : `only ${roles.join(', ')} members, by name`;
+  return isEmpty(roles) ? 'no member but the test infrastructure' : `only ${roles.join(', ')} members and the test infrastructure, by name`;
 }
 
 /**
- * The groups an importer's modules are refused, each with its reason: the members its row does not
- * allow (the test infrastructure apart, refused to production modules only), the POC, every climb.
+ * The groups an importer's modules are refused, each with its reason: the shipping members its row
+ * does not allow, the POC, every climb.
  *
  * @param {Population} held - The population.
- * @param {Importing} importing - Whose modules: the importer, its own member (whose package it may import), whether they are production.
+ * @param {Importing} importing - Whose modules: the importer, and its own member (whose package it may import).
  * @returns {Group[]} The non-empty groups.
  */
 function groupsOf(held: Population, importing: Readonly<Importing>): Group[] {
-  const { importer, own, production } = importing;
-  const forbidden = held.members.filter((other) => other.dir !== own && !MAY.of(importer).includes(other.role));
+  const { importer, own } = importing;
+  const forbidden = held.shipping.filter((other) => other.dir !== own && !MAY.of(importer).includes(other.role));
   const groups: readonly Group[] = [
     specifiers(
-      namesOf(forbidden.filter((other) => !isTestInfrastructure(other.role))),
+      namesOf(forbidden),
       `${importer} modules import ${allowed(importer)} (the role matrix: MAY in harness/lib/import-boundaries.ts)`,
-    ),
-    specifiers(
-      production ? namesOf(forbidden.filter((other) => isTestInfrastructure(other.role))) : [],
-      'only a non-production module (a runner test, a runner config, a test directory) imports the test infrastructure',
     ),
     specifiers(pocNames(held), 'nothing in the rebuild imports the POC (ADR-0006, "Scope")'),
     { group: [...CLIMBS], message: 'a module reaches another member only by its package name, never by a relative climb', names: [] },
@@ -137,34 +133,16 @@ function refusing(files: readonly string[], groups: readonly Group[]): OxlintOve
 }
 
 /**
- * A member's overrides: its directory under its role's refusals, and, where it has any and they
- * differ, its non-production modules under the same less the test infrastructure.
+ * The import boundaries over a population: each member's directory under its role's refusals, then
+ * the harness code's.
  *
  * @param {Population} held - The population.
- * @param {Member} member - The member.
- * @returns {OxlintOverride[]} The overrides, the member's first.
- */
-function memberBoundaries(held: Population, member: Member): OxlintOverride[] {
-  const production = groupsOf(held, { importer: member.role, own: member.dir, production: true });
-  const tests = groupsOf(held, { importer: member.role, own: member.dir, production: false });
-  const tails = [...RUNNER_TESTS, ...RUNNER_CONFIGS, ...TEST_DIRECTORIES.map((dir) => `**/${dir}/**`)];
-  const nonProduction = tails.flatMap((tail) => liveGlobs(held, [member], tail));
-  return [
-    refusing([`${member.dir}**`], production),
-    ...(production.length === tests.length || isEmpty(nonProduction) ? [] : [refusing(nonProduction, tests)]),
-  ];
-}
-
-/**
- * The import boundaries over a population: each member's overrides, then the harness code's.
- *
- * @param {Population} held - The population.
- * @returns {OxlintOverride[]} The overrides.
+ * @returns {OxlintOverride[]} The overrides, one per member and one for the harness.
  */
 function boundariesOf(held: Population): OxlintOverride[] {
   return [
-    ...held.members.flatMap((member) => memberBoundaries(held, member)),
-    refusing(HARNESS_CODE, groupsOf(held, { importer: 'harness', own: undefined, production: true })),
+    ...held.members.map((member) => refusing([`${member.dir}**`], groupsOf(held, { importer: member.role, own: member.dir }))),
+    refusing(HARNESS_CODE, groupsOf(held, { importer: 'harness', own: undefined })),
   ];
 }
 

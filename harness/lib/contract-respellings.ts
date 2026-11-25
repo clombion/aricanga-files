@@ -16,9 +16,7 @@ import {
   isCallExpression,
   isCaseBlock,
   isCaseClause,
-  isExportDeclaration,
   isIdentifier,
-  isImportDeclaration,
   isNoSubstitutionTemplateLiteral,
   isObjectLiteralExpression,
   isPropertyAccessExpression,
@@ -31,8 +29,8 @@ import { Accepted } from './exemptions.ts';
 import type { Scan } from './checker.ts';
 import { heldAsKey } from './contract-keys.ts';
 import { holdsNoRuntimeValue } from './ts-source.ts';
+import { importedModules } from './imports-of.ts';
 import { present } from './present.ts';
-import { relative as relativeTo } from './paths.ts';
 
 /** How deep into type arguments a word is looked for. */
 const MAX_DEPTH = 3;
@@ -226,16 +224,7 @@ function comparedTypes(checker: Readonly<Checker>, literal: Node): readonly Type
  * @returns {ReadonlySet<string>} The members' directories, its own included.
  */
 function reachedPackages(scan: Scan, file: SourceFile): ReadonlySet<string> {
-  const paths = [pathOf(file)];
-  for (const statement of file.statements) {
-    const specifier = isImportDeclaration(statement) || isExportDeclaration(statement) ? statement.moduleSpecifier : undefined;
-    for (const declaration of specifier === undefined ? [] : (scan.checker.getSymbolAtLocation(specifier)?.declarations ?? [])) {
-      if (!declaration.path.includes('/node_modules/')) {
-        paths.push(relativeTo(declaration.path));
-      }
-    }
-  }
-  return new Set(paths.flatMap((path) => scan.population.memberOf(path)?.dir ?? []));
+  return new Set([pathOf(file), ...importedModules(scan, file)].flatMap((path) => scan.population.memberOf(path)?.dir ?? []));
 }
 
 /**

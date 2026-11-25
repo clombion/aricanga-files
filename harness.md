@@ -35,7 +35,7 @@ Each check module under `harness/checks/` declares its `HARNESS_ID`; `pnpm run f
 list.
 
 <!-- generated: checks -->
-- `boundaries` (`harness/checks/boundaries.test.ts`): The module boundaries hold under oxlint: one import that must fail and one that must pass per boundary.
+- `boundaries` (`harness/checks/boundaries.test.ts`): The module boundaries hold: oxlint refuses each import a role may not make, and no production module imports a non-production one.
 - `build-check` (`harness/checks/build-check.test.ts`): The gate builds every held Vite app in check mode, and a build that fails or writes into the checkout fails.
 - `clones` (`harness/checks/clones.test.ts`): `harness/scripts/dupes.ts` finds a planted clone at its floor and past it, and fails when jscpd scans less than git lists.
 - `contract-widening` (`harness/checks/contract-widening.test.ts`): A contract union is never widened to `string`, and its words are not respelled outside its owner.
