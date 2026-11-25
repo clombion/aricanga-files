@@ -165,6 +165,9 @@ const SHAPES: readonly Plant[] = [
       'import { Accepted } from "./exemptions.ts";\nexport const words: unknown = new Vocabulary({ word: new Accepted(["a"]) });\n',
     ],
     ['symbol', 'const key = Symbol("k");\nexport const words: unknown = new Vocabulary({ word: { [key]: { note: "a" } } });\n'],
+    ['numeric', 'export const words: unknown = new Vocabulary({ 1: "one", word: "a" });\n'],
+    ['undefined', 'export const words: unknown = new Vocabulary({ word: undefined });\n'],
+    ['set', 'export const words: unknown = new Vocabulary({ word: new Set<string>() });\n'],
   ].map(([shape = '', text = '']: readonly string[]): Plant => ({
     codes: ['TS2345'],
     path: `src/vocabulary-${shape}.ts`,

@@ -123,7 +123,7 @@ describe('a vocabulary', () => {
     expect([
       Object.isFrozen(vocabulary.words),
       Object.isFrozen(vocabulary.of('word')),
-      Reflect.set(flags, 'length', 'b'.length),
+      Reflect.set(flags, flags.indexOf('a'), 'b'),
       flags,
     ]).toStrictEqual([true, true, false, ['a']]);
   });
@@ -140,7 +140,7 @@ describe('a vocabulary', () => {
 });
 
 describe("a vocabulary's facts", () => {
-  test('refuses a fact its freeze cannot reach: a class instance over a list the caller keeps, a getter, a function typed as an object', () => {
+  test('refuses a fact its freeze cannot reach, naming where it is: a class instance over a list the caller keeps, a getter, a function typed as an object', () => {
     expect.hasAssertions();
     const held = ['a'];
     const view = new HeldView(held);
@@ -149,10 +149,10 @@ describe("a vocabulary's facts", () => {
         return held.join(',');
       },
     };
-    expect(() => new Vocabulary({ word: { view } })).toThrow(NO_PLAIN_DATA);
-    expect(() => new Vocabulary({ word: getter })).toThrow(NO_PLAIN_DATA);
+    expect(() => new Vocabulary({ word: { view } })).toThrow(`${NO_PLAIN_DATA}: a class instance at the facts.word.view`);
+    expect(() => new Vocabulary({ word: getter })).toThrow(`${NO_PLAIN_DATA}: an accessor at the facts.word.first`);
     const call: object = (): string => held.join(',');
-    expect(() => new Vocabulary({ word: { call } })).toThrow(NO_PLAIN_DATA);
+    expect(() => new Vocabulary({ word: { call } })).toThrow(`${NO_PLAIN_DATA}: a function at the facts.word.call`);
   });
 
   test('reads and freezes the same parts: every own key, a symbol or a non-enumerable one included', () => {

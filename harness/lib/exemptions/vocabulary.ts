@@ -29,46 +29,55 @@ type IsFact<Value> = Value extends string | number | boolean | null
 type OpenKeys<Words> = { [Word in keyof Words]-?: Record<string, never> extends Pick<Words, Word> ? Word : never }[keyof Words];
 
 /**
- * `Words` when its keys are a closed set of words, each required, and each fact is plain data;
- * `never` when any string, a pattern of strings or an optional word is a key, so `of` never types an
- * absent word's facts as present, or when a fact is no plain data (`IsFact`).
+ * `Words` when its keys are a closed set of words, each a required string, and each fact is plain
+ * data; `never` when any string, a pattern of strings or an optional word is a key, so `of` never
+ * types an absent word's facts as present, when a key is a number or a symbol, which `words` and
+ * `has` would type as no word, or when a fact is no plain data (`IsFact`).
  */
 type Closed<Words> = [OpenKeys<Words>] extends [never]
-  ? false extends { [Word in keyof Words]-?: IsFact<Words[Word]> }[keyof Words]
-    ? never
-    : Words
+  ? [Exclude<keyof Words, string>] extends [never]
+    ? false extends { [Word in keyof Words]-?: IsFact<Words[Word]> }[keyof Words]
+      ? never
+      : Words
+    : never
   : never;
 
 /** The refusal of a fact the freeze cannot reach. */
 const NO_PLAIN_DATA = "a vocabulary's fact is no plain data";
 
+/** A value reached from the facts, with the keys that lead to it from the record. */
+type Reached = readonly [unknown, string];
+
 /**
  * The values an object holds, under every own key, a string or a symbol, enumerable or not, so the
- * fields the refusal reads are the fields the freeze walks. An object that is no plain data at its
- * own level is refused: one whose prototype is not `Object`'s, `null` or `Array`'s (a class
- * instance), or that holds an accessor, since its freeze would not reach what the accessor returns.
+ * fields the refusal reads are the fields the freeze walks, each with the keys that lead to it. An
+ * object that is no plain data at its own level is refused, naming where it is: one whose prototype
+ * is not `Object`'s, `null` or `Array`'s (a class instance), or that holds an accessor, since its
+ * freeze would not reach what the accessor returns.
  *
  * @param {object} part - The object.
- * @returns {readonly unknown[]} Its fields' values.
+ * @param {string} where - The keys that lead to it.
+ * @returns {readonly Reached[]} Its fields' values, each with where it is.
  */
-function fieldsOf(part: Readonly<object>): readonly unknown[] {
+function fieldsOf(part: Readonly<object>, where: string): readonly Reached[] {
   const prototype: unknown = Object.getPrototypeOf(part);
   if (prototype !== Object.prototype && prototype !== null && prototype !== Array.prototype) {
-    throw new ExemptionError(`${NO_PLAIN_DATA}: a class instance`);
+    throw new ExemptionError(`${NO_PLAIN_DATA}: a class instance at ${where}`);
   }
-  return Reflect.ownKeys(part).map((key) => {
+  return Reflect.ownKeys(part).map((key): Reached => {
     const field = Reflect.getOwnPropertyDescriptor(part, key);
+    const at = `${where}.${String(key)}`;
     if (field === undefined || !Object.hasOwn(field, 'value')) {
-      throw new ExemptionError(`${NO_PLAIN_DATA}: an accessor`);
+      throw new ExemptionError(`${NO_PLAIN_DATA}: an accessor at ${at}`);
     }
     const value: unknown = field.value;
-    return value;
+    return [value, at];
   });
 }
 
 /**
  * Every object and array reachable from the facts, each once, so a cycle ends; a function, or a part
- * that is no plain data (`fieldsOf`), is refused. The walk reads a list of values it appends each
+ * that is no plain data (`fieldsOf`), is refused, naming the keys that lead to it. The walk reads a list of values it appends each
  * part's fields to, so a deep chain does not grow the call stack, and gathers each part once, so it
  * is linear in the parts and their fields.
  *
@@ -77,15 +86,15 @@ function fieldsOf(part: Readonly<object>): readonly unknown[] {
  */
 function partsOf(facts: unknown): ReadonlySet<object> {
   const parts = new Set<object>();
-  const values: unknown[] = [facts];
+  const values: Reached[] = [[facts, 'the facts']];
   // An array's iterator reads its length at every step, so it reaches each value pushed while it runs.
-  for (const value of values) {
+  for (const [value, where] of values) {
     if (typeof value === 'function') {
-      throw new ExemptionError(`${NO_PLAIN_DATA}: a function`);
+      throw new ExemptionError(`${NO_PLAIN_DATA}: a function at ${where}`);
     }
     if (typeof value === 'object' && value !== null && !parts.has(value)) {
       parts.add(value);
-      for (const field of fieldsOf(value)) {
+      for (const field of fieldsOf(value, where)) {
         values.push(field);
       }
     }
