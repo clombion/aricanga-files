@@ -50,9 +50,6 @@ const ROOT_FILES = new Accepted<string>([
   '.node-version',
 ]);
 
-/** The current text the docs checks read: the agent brief, the harness docs and the roadmap. */
-const DOC_ROOTS: readonly string[] = ['docs/roadmap/', 'harness/', 'packages/characterisation/'];
-
 /**
  * A held workspace package: its directory, its manifest as the population read it, and the role that
  * manifest declares (`role` is `manifest.aricanga.role`; both are set by their one constructor,
@@ -270,5 +267,5 @@ async function typescriptFiles(): Promise<readonly string[]> {
   return typescriptOf(held);
 }
 
-export { DOC_ROOTS, HARNESS_ROOT, POC, POC_DIRS, heldFiles, pocPackages, population, populationOf, typescriptFiles, typescriptOf };
+export { HARNESS_ROOT, POC, POC_DIRS, heldFiles, pocPackages, population, populationOf, typescriptFiles, typescriptOf };
 export type { Member, Population };

@@ -11,7 +11,9 @@ import { apps, checkBuild } from '#lib/build.ts';
 import { describe, expect, test } from 'vitest';
 import { EXIT_CLEAN } from '#lib/exit-status.ts';
 import { Project } from '#lib/tools.ts';
+import { importerOf } from '#lib/package-dirs.ts';
 import { inSequence } from '#lib/lists.ts';
+import { population } from '#lib/scope.ts';
 
 const HARNESS_ID = 'build-check';
 
@@ -46,8 +48,12 @@ async function plantedBuild(main: string, config: string): ReturnType<typeof che
 describe('the repository', () => {
   test('builds every held app and writes nothing into the checkout', async () => {
     expect.hasAssertions();
-    const found = await apps();
-    expect(found).toStrictEqual(['experiences/sandbox', 'packages/characterisation']);
+    const [found, held] = await Promise.all([apps(), population()]);
+    const memberApps = held.members
+      .filter((member) => held.listing.includes(`${member.dir}vite.config.ts`))
+      .map((member) => importerOf(member.dir));
+    expect(memberApps).not.toStrictEqual([]);
+    expect(found).toStrictEqual(expect.arrayContaining(memberApps));
     const results = await inSequence(found, async (app) => {
       const result = await checkBuild(app);
       return result;

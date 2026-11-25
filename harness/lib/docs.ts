@@ -10,9 +10,9 @@
  * Markdown is parsed by `markdown-doc.ts` on the grammar of `markdown-text.ts`.
  */
 
-import { DOC_ROOTS, heldFiles, population } from './scope.ts';
 import type { Prose, Span } from './markdown-text.ts';
 import { comments, parse } from './ts-source.ts';
+import { heldFiles, population } from './scope.ts';
 import { spansOf, withoutSpans } from './markdown-text.ts';
 import { textOf, textsOf } from './source-files.ts';
 import { Doc } from './markdown-doc.ts';
@@ -24,6 +24,9 @@ type CommentLine = readonly [number, string];
 
 /** The history files: they record what happened, so current-text checks leave them out. */
 const HISTORY: Prefixes = new Prefixes(['docs/roadmap/tasks/', 'CHANGELOG.md']);
+
+/** The roadmap: current text the population does not hold. */
+const ROADMAP = 'docs/roadmap/';
 
 /** The code files whose comments are current text, by suffix. */
 const SCRIPT = new Prefixes(['.ts', '.tsx', '.js', '.mjs', '.cjs']);
@@ -62,7 +65,7 @@ async function markdown(path: string): Promise<Doc> {
  * @returns {boolean} Whether it is current Markdown.
  */
 function isCurrentMarkdown(held: Population, path: string): boolean {
-  return path.endsWith('.md') && (held.holds(path) || DOC_ROOTS.some((root) => path.startsWith(root))) && !HISTORY.starts(path);
+  return path.endsWith('.md') && (held.holds(path) || path.startsWith(ROADMAP)) && !HISTORY.starts(path);
 }
 
 /**
