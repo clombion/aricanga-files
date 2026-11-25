@@ -39,6 +39,7 @@ Whether this project implements each check of [harness.md](harness.md). A status
 | json-files | Every held JSON file is strict JSON a reader cannot misread, and no manifest lists a dependency twice | implemented | `harness/checks/json-files.test.ts` | | |
 | layout | Layout holds at phone and desktop widths, with no shift when a control toggles and reflow at 320 px | planned | | | Phase 3 Step 3: the phone chrome is the first layout |
 | lint-settings | oxlint fails each planted violation of a rule the harness rests on | implemented | `harness/checks/lint-settings.test.ts` | | |
+| manifest-reads | Only the population reads a `package.json` for its fields | implemented | `harness/checks/manifest-reads.test.ts` | | |
 | meta-readers | Every contract field is read, through a named function | planned | | | the census layer of closedworld |
 | mutation-testing | A mutant of each owner is killed by a test | planned | | | Stryker over the kernel, once the view layer lands |
 | network-guard | A test cannot reach another host | implemented | `harness/checks/network-guard.test.ts` | | |

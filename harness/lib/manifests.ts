@@ -66,15 +66,17 @@ interface Manifests {
 }
 
 /**
- * A manifest read as the JSON object it holds; text that cannot be read or is not a JSON object
- * refuses with the boundary's own error (`ConfigError` naming the manifest, or the reader's).
+ * A manifest's text, as its read ends, parsed as the JSON object it holds; text that cannot be read
+ * or is not a JSON object refuses with the boundary's own error (`ConfigError` naming the manifest,
+ * or the reader's). Each caller reads the manifest where it names its path, so the manifest-reads
+ * check sees this module read it.
  *
  * @param {string} path - The manifest's path.
- * @param {(listed: string) => Promise<string>} read - Reads a listed file's text.
+ * @param {Promise<string>} reading - The read of its text.
  * @returns {Promise<Fields>} Its fields.
  */
-async function fieldsAt(path: string, read: (listed: string) => Promise<string>): Promise<Fields> {
-  const text = await read(path);
+async function fieldsOf(path: string, reading: Promise<string>): Promise<Fields> {
+  const text = await reading;
   return object(parsed(text, path), path);
 }
 
@@ -111,7 +113,7 @@ async function settled<Value>(work: Promise<Value>): Promise<PromiseSettledResul
  */
 async function memberRead(dir: MemberDir, read: (listed: string) => Promise<string>): Promise<MemberRead> {
   const path = manifestOf(dir);
-  const fields = await settled(fieldsAt(path, read));
+  const fields = await settled(fieldsOf(path, read(path)));
   if (fields.status === 'rejected') {
     return { kind: 'unread', refused: { path, reason: fields.reason } };
   }
@@ -129,7 +131,7 @@ async function memberRead(dir: MemberDir, read: (listed: string) => Promise<stri
  */
 async function rootRead(read: (listed: string) => Promise<string>): Promise<RootRead> {
   const path = manifestOf('');
-  const outcome = await settled(fieldsAt(path, read));
+  const outcome = await settled(fieldsOf(path, read(path)));
   return outcome.status === 'fulfilled'
     ? { fields: outcome.value, refused: [] }
     : { fields: undefined, refused: [{ path, reason: outcome.reason }] };
