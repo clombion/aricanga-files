@@ -142,6 +142,12 @@ function honoured(rules: readonly Rule[]): readonly string[] {
     .toSorted();
 }
 
+/** The listing pnpm gives of a workspace with a package at the harness's root. */
+const AT_HARNESS_ROOT = [
+  { dir: '', name: undefined },
+  { dir: 'harness/', name: undefined },
+] as const;
+
 describe('the repository', () => {
   test('no guarded API is used outside its owner', () => {
     expect.hasAssertions();
@@ -249,7 +255,7 @@ describe('the rules over each tier', () => {
     const held = await populationOf({
       listing: ['package.json', 'harness/package.json'],
       read: readAtHarness,
-      workspace: ['', 'harness/'],
+      workspace: AT_HARNESS_ROOT,
     });
     expect(() => rulesOf(held)).toThrow(
       /^the owner rule process-start holds the root harness\/ twice: a member sits at the harness's root$/u,

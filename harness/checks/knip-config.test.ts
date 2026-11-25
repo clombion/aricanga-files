@@ -8,6 +8,8 @@
 import { EXIT_CLEAN, EXIT_FINDINGS } from '#lib/exit-status.ts';
 import { deadcodeRuns, knip, writeKnipConfig } from '#lib/deadcode.ts';
 import { describe, expect, test } from 'vitest';
+import { listing, reader } from './scope.plants.ts';
+import { pocNames, populationOf } from '#lib/scope.ts';
 import { Project } from '#lib/tools.ts';
 import { inSequence } from '#lib/lists.ts';
 import { knipConfigOf } from '#lib/knip-config.ts';
@@ -88,10 +90,10 @@ describe('the knip configuration of a planted population', () => {
       },
     });
     expect(config.ignoreWorkspaces).toStrictEqual([
-      'packages/framework',
-      'packages/tests',
-      'packages/test-utils',
       'experiences/aricanga',
+      'packages/framework',
+      'packages/test-utils',
+      'packages/tests',
       'utils',
     ]);
   });
@@ -108,6 +110,40 @@ describe('the knip configuration of a planted population', () => {
       [EXIT_CLEAN, false],
       [EXIT_FINDINGS, true],
     ]);
+  });
+});
+
+describe("a population's POC, and knip's configuration of it", () => {
+  test('reads the POC by kind, ignores every POC directory as a workspace, and a POC package as a dependency where a held manifest declares it, by any spec', async () => {
+    expect.hasAssertions();
+    const held = await populationOf({
+      listing: ['package.json', 'experiences/aricanga/package.json', 'packages/framework/package.json', 'utils/a.js'],
+      read: reader({ 'package.json': JSON.stringify({ optionalDependencies: { '@narratives/framework': 'link:packages/framework' } }) }),
+      workspace: listing([''], ['experiences/aricanga/', 'aricanga'], ['packages/framework/', '@narratives/framework']),
+    });
+    const config = knipConfigOf(held);
+    expect([held.poc, config.ignoreWorkspaces]).toStrictEqual([
+      {
+        directories: ['packages/tests/', 'packages/test-utils/', 'utils/'],
+        packages: [
+          { dir: 'experiences/aricanga/', name: 'aricanga' },
+          { dir: 'packages/framework/', name: '@narratives/framework' },
+        ],
+      },
+      ['experiences/aricanga', 'packages/framework', 'packages/test-utils', 'packages/tests', 'utils'],
+    ]);
+    expect(config.ignoreDependencies).toContain('@narratives/framework');
+    expect(config.ignoreDependencies).not.toContain('aricanga');
+  });
+
+  test('keeps a POC package pnpm lists with no name, which no name refuses, and reads no POC manifest', async () => {
+    expect.hasAssertions();
+    const nameless = await populationOf({
+      listing: ['package.json', 'packages/framework/package.json'],
+      read: reader({ 'package.json': '{}' }),
+      workspace: listing([''], ['packages/framework/']),
+    });
+    expect([nameless.poc.packages, pocNames(nameless)]).toStrictEqual([[{ dir: 'packages/framework/', name: undefined }], []]);
   });
 });
 

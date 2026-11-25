@@ -8,7 +8,7 @@
  * harness may import any member, never the POC.
  */
 
-import { HARNESS_ROOT, packageName, pocPackages } from './scope.ts';
+import { HARNESS_ROOT, pocNames } from './scope.ts';
 import type { Member, Population } from './scope.ts';
 import { RUNNER_CONFIGS, RUNNER_TESTS, TEST_DIRECTORIES, liveGlobs } from './test-globs.ts';
 import type { OxlintOverride } from 'oxlint';
@@ -43,7 +43,7 @@ const CLIMB = '**/../**';
  * @returns {string[]} The patterns, none for a member with no name.
  */
 function specifiers(member: Member): string[] {
-  const name = packageName(member);
+  const { name } = member;
   return name === undefined ? [] : [name, `${name}/*`];
 }
 
@@ -70,7 +70,7 @@ function refusing(files: readonly string[], group: readonly string[], who: strin
  */
 function memberBoundaries(held: Population, member: Member): OxlintOverride[] {
   const forbidden = held.members.filter((other) => other.dir !== member.dir && !MAY.of(member.role).includes(other.role));
-  const shared = [...pocPackages(held), CLIMB];
+  const shared = [...pocNames(held), CLIMB];
   const production = [...forbidden.flatMap((other) => specifiers(other)), ...shared];
   const tests = [...forbidden.filter((other) => !isTestInfrastructure(other.role)).flatMap((other) => specifiers(other)), ...shared];
   const tails = [...RUNNER_TESTS, ...RUNNER_CONFIGS, ...TEST_DIRECTORIES.map((dir) => `**/${dir}/**`)];
@@ -92,7 +92,7 @@ function memberBoundaries(held: Population, member: Member): OxlintOverride[] {
 function boundariesOf(held: Population): OxlintOverride[] {
   return [
     ...held.members.flatMap((member) => memberBoundaries(held, member)),
-    refusing([`${HARNESS_ROOT}**`], [...pocPackages(held), CLIMB], 'the harness'),
+    refusing([`${HARNESS_ROOT}**`], [...pocNames(held), CLIMB], 'the harness'),
   ];
 }
 

@@ -5,14 +5,15 @@
  */
 
 import { HARNESS_CHECKS, VITEST_TESTS, liveGlobs } from './test-globs.ts';
-import { HARNESS_ROOT, POC_DIRS, pocPackages } from './scope.ts';
+import { HARNESS_ROOT, pocNames } from './scope.ts';
 import type { Member, Population } from './scope.ts';
 import type { KnipConfiguration } from 'knip';
+import { dependencyNames } from './dependencies.ts';
 import { importerOf } from './package-dirs.ts';
 import { isEmpty } from './lists.ts';
 import { ships } from './roles.ts';
 
-/** The dependencies no held module imports: the POC's (its workspace packages are read from the manifests) and the tools' own. */
+/** The dependencies no held module imports: the POC's (its own packages are the population's POC record) and the tools' own. */
 const IGNORED_DEPENDENCIES: readonly string[] = [
   '@ai-sdk/anthropic',
   '@ai-sdk/google',
@@ -107,8 +108,24 @@ function workspaceOf(held: Population, member: Member): Workspace {
 }
 
 /**
+ * The POC's package names some held manifest (the root's or a member's) declares a dependency on, in
+ * any group and by any spec.
+ *
+ * @param {Population} held - The population.
+ * @returns {string[]} The names, sorted.
+ */
+function declaredPocNames(held: Population): string[] {
+  const declared = new Set(
+    [held.rootManifest, ...held.members.map((member) => member.manifest)].flatMap((manifest) => dependencyNames(manifest)),
+  );
+  return pocNames(held).filter((name) => declared.has(name));
+}
+
+/**
  * The knip configuration over a population: the harness as the root workspace, each member a
- * workspace of its own, the POC ignored.
+ * workspace of its own, every POC directory ignored as a workspace (knip reads a plain directory there
+ * too: it leaves the root workspace) and the POC's packages, where a held manifest declares them, as
+ * dependencies.
  *
  * @param {Population} held - The population.
  * @returns {KnipConfiguration} The configuration.
@@ -116,8 +133,8 @@ function workspaceOf(held: Population, member: Member): Workspace {
 function knipConfigOf(held: Population): KnipConfiguration {
   return {
     ...SETTINGS,
-    ignoreDependencies: [...IGNORED_DEPENDENCIES, ...pocPackages(held)],
-    ignoreWorkspaces: POC_DIRS.map((dir) => importerOf(dir)),
+    ignoreDependencies: [...IGNORED_DEPENDENCIES, ...declaredPocNames(held)],
+    ignoreWorkspaces: [...held.poc.packages.map((entry) => entry.dir), ...held.poc.directories].map((dir) => importerOf(dir)).toSorted(),
     workspaces: {
       '.': {
         entry: [`${HARNESS_ROOT}scripts/*.ts`, `${HARNESS_CHECKS}${VITEST_TESTS}`],

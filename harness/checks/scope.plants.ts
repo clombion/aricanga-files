@@ -1,8 +1,10 @@
 /** What the population's tests plant: scripted manifests, refusals as text, and git folders holding a workspace. */
 
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import type { Dir } from '#lib/package-dirs.ts';
 import type { Population } from '#lib/scope.ts';
 import { Scripted } from '#lib/scripted.ts';
+import type { WorkspacePackage } from '#lib/workspace.ts';
 import path from 'node:path';
 import { run } from '#lib/process.ts';
 import { tmpdir } from 'node:os';
@@ -29,6 +31,25 @@ function reader(texts: Readonly<Record<string, string>>): (listed: string) => Pr
   const files = new Files(texts);
   return async (listed: string): Promise<string> => {
     const text = await Promise.resolve(files.answer(listed));
+    return text;
+  };
+}
+
+/**
+ * A reader of planted texts for which one listed file is gone from disk, as a git index can list a
+ * deleted file.
+ *
+ * @param {string} gone - The file that cannot be read.
+ * @param {Readonly<Record<string, string>>} texts - The other files' texts.
+ * @returns {(listed: string) => Promise<string>} The reader.
+ */
+function withoutFile(gone: string, texts: Readonly<Record<string, string>>): (listed: string) => Promise<string> {
+  const read = reader(texts);
+  return async (listed: string): Promise<string> => {
+    if (listed === gone) {
+      throw new Error(`ENOENT: no such file or directory, open '${gone}'`);
+    }
+    const text = await read(listed);
     return text;
   };
 }
@@ -62,6 +83,17 @@ async function causedRefusal(computing: Promise<Population>): Promise<readonly [
     return [String(error), causes];
   }
   return ['not refused', []];
+}
+
+/**
+ * The listing pnpm gives of some packages: each directory, with the name pnpm reads from its manifest
+ * (none where it declares none).
+ *
+ * @param {readonly (readonly [Dir, string?])[]} packages - Each package's directory and name.
+ * @returns {readonly WorkspacePackage[]} The listing.
+ */
+function listing(...packages: readonly (readonly [Dir, string?])[]): readonly WorkspacePackage[] {
+  return packages.map(([dir, name]) => ({ dir, name }));
 }
 
 /**
@@ -159,4 +191,4 @@ packages:
     resolution: {integrity: sha512-x}
 `;
 
-export { BOM, causedRefusal, inWorkspaceFolder, LOCK, manifest, QUOTED_KEYS, reader, refusalOf };
+export { BOM, causedRefusal, inWorkspaceFolder, listing, LOCK, manifest, QUOTED_KEYS, reader, refusalOf, withoutFile };

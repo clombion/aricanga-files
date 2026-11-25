@@ -26,10 +26,10 @@ const HARNESS_ID = 'deadcode';
 const KNIP_IGNORES = Exemptions.grouped({
   'pinned by the view-layer brief; loaded by @solidjs/vite-plugin, not imported': ['ignoreDependencies:@solidjs/compiler'],
   'poc: the POC reference is outside the harness until it is deleted (#50)': [
-    'ignoreWorkspaces:packages/framework',
-    'ignoreWorkspaces:packages/tests',
-    'ignoreWorkspaces:packages/test-utils',
     'ignoreWorkspaces:experiences/aricanga',
+    'ignoreWorkspaces:packages/framework',
+    'ignoreWorkspaces:packages/test-utils',
+    'ignoreWorkspaces:packages/tests',
     'ignoreWorkspaces:utils',
   ],
   'poc: the POC reference uses it until it is deleted (#50)': [

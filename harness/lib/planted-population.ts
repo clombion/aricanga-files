@@ -1,6 +1,7 @@
 /**
  * The population of planted files and planted members, built by the rule a checkout's is
- * (`populationOf`): each member's manifest is listed, declares its role, and is a workspace package;
+ * (`populationOf`): each member's manifest is listed, declares its role, and is a workspace package
+ * named, as pnpm names it, by its manifest's `name`;
  * the root's manifest is read with them; there is no checkout. The members and the plants are lists
  * of entries, so a directory or a path given twice reaches here however the list was built (a
  * literal, a spread or `Object.fromEntries` would each have collapsed it), and every state production
@@ -61,6 +62,17 @@ function givenRefusals(declared: readonly Declared[], files: readonly string[], 
     ...declared.filter(({ fields }) => Object.hasOwn(fields, 'aricanga')).map(({ dir }) => `${dir}'s fields hold aricanga`),
     ...files.filter((planted) => texts.has(planted)).map((planted) => `${planted} is a planted manifest`),
   ];
+}
+
+/**
+ * A planted member's package name, as pnpm reads it from its manifest: the `name` its fields hold, when a string.
+ *
+ * @param {Fields} fields - The planted manifest's fields.
+ * @returns {string | undefined} The name.
+ */
+function nameOf(fields: Fields): string | undefined {
+  const name: unknown = fields['name'];
+  return typeof name === 'string' ? name : undefined;
 }
 
 /**
@@ -134,7 +146,7 @@ async function plantedPopulation(files: readonly string[], members: readonly Pla
   const building = populationOf({
     listing: [...files, ...texts.keys()],
     read: readerOf(texts),
-    workspace: declared.map(({ dir }) => dir),
+    workspace: declared.map(({ dir, fields }) => ({ dir, name: nameOf(fields) })),
   });
   const [built] = await Promise.allSettled([building]);
   if (built.status === 'rejected') {

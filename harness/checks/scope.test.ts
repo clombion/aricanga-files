@@ -1,6 +1,6 @@
 /** The population: pnpm's workspace packages whose manifests git lists, less the POC, each with its role. */
 
-import { BOM, causedRefusal, inWorkspaceFolder, manifest, reader, refusalOf } from './scope.plants.ts';
+import { BOM, causedRefusal, inWorkspaceFolder, listing, manifest, reader, refusalOf, withoutFile } from './scope.plants.ts';
 import { LOCKFILE, lockOf } from '#lib/pins.ts';
 import { POC, population, populationOf } from '#lib/scope.ts';
 import { describe, expect, test } from 'vitest';
@@ -32,25 +32,6 @@ function missedImporters(held: Population, lockText: string): readonly string[] 
 const REFUSAL_HEAD = 3;
 
 /**
- * A reader of planted texts for which one listed file is gone from disk, as a git index can list a
- * deleted file.
- *
- * @param {string} gone - The file that cannot be read.
- * @param {Readonly<Record<string, string>>} texts - The other files' texts.
- * @returns {(listed: string) => Promise<string>} The reader.
- */
-function withoutFile(gone: string, texts: Readonly<Record<string, string>>): (listed: string) => Promise<string> {
-  const read = reader(texts);
-  return async (listed: string): Promise<string> => {
-    if (listed === gone) {
-      throw new Error(`ENOENT: no such file or directory, open '${gone}'`);
-    }
-    const text = await read(listed);
-    return text;
-  };
-}
-
-/**
  * The refusal of a one-member population whose manifest is `text`, with its first cause's head.
  *
  * @param {string} text - The manifest's text.
@@ -60,7 +41,7 @@ async function refusalHead(text: string): Promise<readonly string[]> {
   const computing = populationOf({
     listing: ['packages/c/package.json'],
     read: reader({ 'package.json': '{}', 'packages/c/package.json': text }),
-    workspace: ['packages/c/'],
+    workspace: listing(['packages/c/']),
   });
   const [refusal, causes] = await causedRefusal(computing);
   return [refusal, ...causes.map((cause) => cause.split(':', REFUSAL_HEAD).join(':'))];
@@ -72,9 +53,11 @@ describe('a population', () => {
     const held = await populationOf({
       listing: ['package.json', 'packages/view/package.json', 'packages/view/src/a.ts', 'packages/framework/package.json'],
       read: reader({ 'package.json': '{}', 'packages/view/package.json': manifest('view') }),
-      workspace: ['', 'packages/view/', 'packages/ignored/', 'packages/framework/'],
+      workspace: listing([''], ['packages/view/', 'x'], ['packages/ignored/'], ['packages/framework/']),
     });
-    expect(held.members).toStrictEqual([{ dir: 'packages/view/', manifest: { aricanga: { role: 'view' }, name: 'x' }, role: 'view' }]);
+    expect(held.members).toStrictEqual([
+      { dir: 'packages/view/', manifest: { aricanga: { role: 'view' }, name: 'x' }, name: 'x', role: 'view' },
+    ]);
     expect([held.holds('packages/view/src/a.ts'), held.holds('packages/framework/src/a.ts'), held.holds('harness/lib/a.ts')]).toStrictEqual(
       [true, false, true],
     );
@@ -89,7 +72,7 @@ describe('a population', () => {
           populationOf({
             listing: ['packages/a/package.json'],
             read: reader({ 'package.json': '{}', 'packages/a/package.json': text }),
-            workspace: ['packages/a/'],
+            workspace: listing(['packages/a/', 'x']),
           }),
         );
         return refusal;
@@ -100,7 +83,9 @@ describe('a population', () => {
       'PopulationError: packages/a/package.json: aricanga.role is "widget"; a workspace package declares one of the roles of harness/lib/roles.ts (experience, foundation, system, test-infrastructure, view)',
     ]);
   });
+});
 
+describe('a nested population', () => {
   test('answers the nearest member of a nested path', async () => {
     expect.hasAssertions();
     const held = await populationOf({
@@ -110,7 +95,7 @@ describe('a population', () => {
         'packages/a/b/package.json': manifest('system'),
         'packages/a/package.json': manifest('foundation'),
       }),
-      workspace: ['packages/a/', 'packages/a/b/'],
+      workspace: listing(['packages/a/', 'x'], ['packages/a/b/', 'x']),
     });
     expect(held.memberOf('packages/a/b/src/x.ts')?.dir).toBe('packages/a/b/');
   });
@@ -121,7 +106,11 @@ describe("a population's root manifest", () => {
     expect.hasAssertions();
     const roots = await Promise.all(
       ['{"aricanga":null}', '{"aricanga":"system"}'].map(async (text) => {
-        const held = await populationOf({ listing: ['package.json'], read: reader({ 'package.json': text }), workspace: [''] });
+        const held = await populationOf({
+          listing: ['package.json'],
+          read: reader({ 'package.json': text }),
+          workspace: listing(['']),
+        });
         return JSON.stringify(held.rootManifest);
       }),
     );
@@ -140,7 +129,7 @@ describe('a population refused', () => {
     const computing = populationOf({
       listing: ['packages/a/package.json', 'packages/b/package.json'],
       read: roles,
-      workspace: ['packages/a/', 'packages/b/'],
+      workspace: listing(['packages/a/', 'x'], ['packages/b/', 'b']),
     });
     const bad = await refusalOf(computing);
     const texts = [`${BOM}${manifest('view')}`, JSON.stringify({ aricanga: 'system' }), '{"aricanga":null}'];
@@ -181,7 +170,7 @@ describe('a population whose manifests cannot be read', () => {
         'packages/c/package.json': manifest('sytem'),
         'packages/d/package.json': JSON.stringify({ aricanga: 'system' }),
       }),
-      workspace: ['packages/a/', 'packages/b/', 'packages/c/', 'packages/d/'],
+      workspace: listing(['packages/a/', 'x'], ['packages/b/'], ['packages/c/', 'x'], ['packages/d/']),
     });
     const [refusal, causes] = await causedRefusal(computing);
     expect([refusal, causes.map((cause) => cause.split(':', REFUSAL_HEAD).join(':'))]).toStrictEqual([
@@ -230,13 +219,13 @@ describe('the records', () => {
 });
 
 describe('a checkout', () => {
-  test("computes a checkout's population from pnpm's workspace, git's listing and each member's manifest", async () => {
+  test("computes a checkout's population from pnpm's workspace, each member named as pnpm lists it, git's listing and each member's manifest", async () => {
     expect.hasAssertions();
     await inWorkspaceFolder('computed-', '{}', async (folder) => {
       await mkdir(path.join(folder, 'a', 'x'), { recursive: true });
       await writeFile(path.join(folder, 'a', 'x', 'package.json'), manifest('view'));
       const held = await population(folder);
-      expect(held.members).toStrictEqual([{ dir: 'a/x/', manifest: { aricanga: { role: 'view' }, name: 'x' }, role: 'view' }]);
+      expect(held.members).toStrictEqual([{ dir: 'a/x/', manifest: { aricanga: { role: 'view' }, name: 'x' }, name: 'x', role: 'view' }]);
     });
   });
 });

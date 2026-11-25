@@ -1,6 +1,6 @@
 /**
- * The reading of a population's manifests (`scope.ts` asks it): every manifest, the root's and each
- * member's, read at one moment, and the member each declares. pnpm parses every manifest of the
+ * The reading of a population's manifests (`scope.ts` asks it): the root's and each member's, read
+ * at one moment, and the member each declares, named as pnpm lists it. pnpm parses every manifest of the
  * workspace before it lists it (`workspace.ts`), and refuses the first that is not JSON as a
  * `PopulationError` naming that file alone; what reaches this module is what pnpm accepted. Of that,
  * one refusal names everything wrong at once, each case by its own words: each manifest that cannot
@@ -13,9 +13,8 @@
  */
 
 import { ConfigError, absentAs, object, parsed } from './config.ts';
+import type { ListedPackage, Member } from './scope.ts';
 import { ROLE_WORDS, isRole } from './roles.ts';
-import type { Member } from './scope.ts';
-import type { MemberDir } from './package-dirs.ts';
 import { PopulationError } from './workspace.ts';
 import { isEmpty } from './lists.ts';
 import { manifestOf } from './package-dirs.ts';
@@ -44,7 +43,7 @@ interface Refused {
  * `aricanga` that is no object.
  */
 type MemberRead =
-  | Readonly<{ kind: 'read'; dir: MemberDir; manifest: ReadManifest }>
+  | Readonly<{ kind: 'read'; listed: ListedPackage; manifest: ReadManifest }>
   | Readonly<{ kind: 'unread' | 'undeclared'; refused: Refused }>;
 
 /** The root's manifest as its read ends: its fields, or its refusal. */
@@ -107,12 +106,12 @@ async function settled<Value>(work: Promise<Value>): Promise<PromiseSettledResul
 /**
  * A member's manifest read, then its declaration, each refusal kept by its case.
  *
- * @param {MemberDir} dir - The member's directory.
+ * @param {ListedPackage} listed - The member's package, as pnpm lists it.
  * @param {(listed: string) => Promise<string>} read - Reads a listed file's text.
  * @returns {Promise<MemberRead>} How its read ends.
  */
-async function memberRead(dir: MemberDir, read: (listed: string) => Promise<string>): Promise<MemberRead> {
-  const path = manifestOf(dir);
+async function memberRead(listed: ListedPackage, read: (listed: string) => Promise<string>): Promise<MemberRead> {
+  const path = manifestOf(listed.dir);
   const fields = await settled(fieldsOf(path, read(path)));
   if (fields.status === 'rejected') {
     return { kind: 'unread', refused: { path, reason: fields.reason } };
@@ -120,7 +119,7 @@ async function memberRead(dir: MemberDir, read: (listed: string) => Promise<stri
   const declaration = await settled(declarationOf(path, fields.value));
   return declaration.status === 'rejected'
     ? { kind: 'undeclared', refused: { path, reason: declaration.reason } }
-    : { dir, kind: 'read', manifest: { declaration: declaration.value, fields: fields.value } };
+    : { kind: 'read', listed, manifest: { declaration: declaration.value, fields: fields.value } };
 }
 
 /**
@@ -140,14 +139,15 @@ async function rootRead(read: (listed: string) => Promise<string>): Promise<Root
 /**
  * The member a manifest declares, or the line refusing the word it declares that names no role.
  *
- * @param {MemberDir} dir - The member's directory.
+ * @param {ListedPackage} listed - The member's package, as pnpm lists it: its directory and name.
  * @param {ReadManifest} manifest - Its manifest, as read.
  * @returns {Declared} The member, or its refusal's line.
  */
-function declaredBy(dir: MemberDir, manifest: Readonly<ReadManifest>): Declared {
+function declaredBy(listed: ListedPackage, manifest: Readonly<ReadManifest>): Declared {
   const word = manifest.declaration['role'];
+  const { dir, name } = listed;
   return isRole(word)
-    ? { kind: 'member', member: { dir, manifest: manifest.fields, role: word } }
+    ? { kind: 'member', member: { dir, manifest: manifest.fields, name, role: word } }
     : { kind: 'refused', line: `${manifestOf(dir)}: aricanga.role is ${JSON.stringify(word)}` };
 }
 
@@ -192,21 +192,20 @@ function refuseAll(refused: RefusedManifests, lines: readonly string[]): void {
  * Every manifest of a population read at one moment, the root's and each member's, and the members
  * they declare; one refusal names each manifest refused, by its case, and each role refused, at once.
  *
- * @param {readonly MemberDir[]} dirs - The members' directories.
+ * @param {readonly ListedPackage[]} packages - The members' packages, as pnpm lists them.
  * @param {(listed: string) => Promise<string>} read - Reads a listed file's text.
  * @returns {Promise<Manifests>} The root's manifest and the members.
  */
-async function manifestsOf(dirs: readonly MemberDir[], read: (listed: string) => Promise<string>): Promise<Manifests> {
+async function manifestsOf(packages: readonly ListedPackage[], read: (listed: string) => Promise<string>): Promise<Manifests> {
   const rootReading = rootRead(read);
   const memberReads = Promise.all(
-    dirs.map(async (dir): Promise<MemberRead> => {
-      const ended = await memberRead(dir, read);
+    packages.map(async (listed): Promise<MemberRead> => {
+      const ended = await memberRead(listed, read);
       return ended;
     }),
   );
-  const root = await rootReading;
-  const reads = await memberReads;
-  const declared = reads.flatMap((entry) => (entry.kind === 'read' ? [declaredBy(entry.dir, entry.manifest)] : []));
+  const [root, reads] = await Promise.all([rootReading, memberReads]);
+  const declared = reads.flatMap((entry) => (entry.kind === 'read' ? [declaredBy(entry.listed, entry.manifest)] : []));
   const members = declared.flatMap((entry) => (entry.kind === 'member' ? [entry.member] : []));
   refuseAll(
     {
@@ -215,7 +214,10 @@ async function manifestsOf(dirs: readonly MemberDir[], read: (listed: string) =>
     },
     declared.flatMap((entry) => (entry.kind === 'refused' ? [entry.line] : [])),
   );
-  return { members, rootManifest: present(root.fields, 'the root manifest') };
+  return {
+    members,
+    rootManifest: present(root.fields, 'the root manifest'),
+  };
 }
 
 export { manifestsOf };

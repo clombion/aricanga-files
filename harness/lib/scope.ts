@@ -4,15 +4,16 @@
  */
 
 import { Accepted, Prefixes } from './exemptions.ts';
-import type { Dir, MemberDir } from './package-dirs.ts';
 import type { Role, Tier } from './roles.ts';
-import { isEmpty, partitioned } from './lists.ts';
+import { byCodeUnit, isEmpty, partitioned } from './lists.ts';
 import { manifestOf, nearestOf } from './package-dirs.ts';
 import { perRoot, textOf, tracked } from './source-files.ts';
 import { ships, tierOf } from './roles.ts';
 import type { Fields } from './manifests.ts';
+import type { MemberDir } from './package-dirs.ts';
 import { REPO_ROOT } from './paths.ts';
 import { ROOT_MODULES } from './config-modules.ts';
+import type { WorkspacePackage } from './workspace.ts';
 import { manifestsOf } from './manifests.ts';
 import { providedFor } from './provided.ts';
 import { workspacePackages } from './workspace.ts';
@@ -20,7 +21,11 @@ import { workspacePackages } from './workspace.ts';
 /** The harness's own place: held, and not a workspace package. */
 const HARNESS_ROOT: MemberDir = 'harness/';
 
-/** The POC reference (ADR-0006, "Scope"): read-only, outside the harness until it is deleted. Each entry is a directory. */
+/**
+ * The POC reference (ADR-0006, "Scope"): read-only, outside the harness until it is deleted. Its one
+ * declaration, by directory; which of them are packages, and their names, the population reads from
+ * pnpm's listing (`Population.poc`).
+ */
 const POC_DIRS: readonly MemberDir[] = [
   'packages/framework/',
   'packages/tests/',
@@ -51,14 +56,27 @@ const ROOT_FILES = new Accepted<string>([
 ]);
 
 /**
- * A held workspace package: its directory, its manifest as the population read it, and the role that
- * manifest declares (`role` is `manifest.aricanga.role`; both are set by their one constructor,
- * `declaredBy` in `manifests.ts`).
+ * A held workspace package: its directory and name as pnpm lists them, its manifest as the
+ * population read it, and the role that manifest declares (`role` is `manifest.aricanga.role`; all
+ * are set by their one constructor, `declaredBy` in `manifests.ts`).
  */
 interface Member {
   readonly dir: MemberDir;
+  readonly name: string | undefined;
   readonly role: Role;
   readonly manifest: Fields;
+}
+
+/** A package pnpm lists below the root, a member's or the POC's: its directory, and its name (none: it is imported by no name). */
+interface ListedPackage {
+  readonly dir: MemberDir;
+  readonly name: string | undefined;
+}
+
+/** The POC as the population reads it: its packages (pnpm lists them, each with its name), and its plain directories. */
+interface Poc {
+  readonly packages: readonly ListedPackage[];
+  readonly directories: readonly MemberDir[];
 }
 
 /** The harness's population over one listing. */
@@ -71,6 +89,8 @@ interface Population {
   readonly rootManifest: Fields;
   /** The members, sorted by directory. */
   readonly members: readonly Member[];
+  /** The POC, by kind of entry. */
+  readonly poc: Poc;
   /** The members whose role ships: their modules are production code. */
   readonly shipping: readonly Member[];
   /** The members whose role does not ship, the test infrastructure: all their modules are test support. With `shipping`, one partition of the members. */
@@ -91,18 +111,19 @@ interface PopulationInputs {
   readonly root?: string;
   /** The repository-relative listing. */
   readonly listing: readonly string[];
-  /** The workspace packages pnpm lists, by directory. */
-  readonly workspace: readonly Dir[];
+  /** The workspace packages pnpm lists, each with its directory and name. */
+  readonly workspace: readonly WorkspacePackage[];
   /** Reads a listed file's text. */
   readonly read: (listed: string) => Promise<string>;
 }
 
-/** What a population is assembled from, whatever computed it: its checkout (none for a planted one), listing, root manifest and members. */
+/** What a population is assembled from, whatever computed it: its checkout (none for a planted one), listing, root manifest, members and the POC's packages. */
 interface Parts {
   readonly root: string | undefined;
   readonly listing: readonly string[];
   readonly rootManifest: Fields;
   readonly members: readonly Member[];
+  readonly pocPackages: readonly ListedPackage[];
 }
 
 /**
@@ -112,7 +133,8 @@ interface Parts {
  * @returns {Population} The population.
  */
 function assembled(parts: Readonly<Parts>): Population {
-  const { listing, members, root, rootManifest } = parts;
+  const { listing, members, pocPackages, root, rootManifest } = parts;
+  const packageDirs = new Set<string>(pocPackages.map((entry) => entry.dir));
   const memberOf = nearestOf(members, (member) => member.dir);
   const tiered = (tier: Tier): readonly Member[] => members.filter((member) => tierOf(member.role) === tier);
   const [shipping, testInfrastructure] = partitioned(members, (member) => ships(member.role));
@@ -126,7 +148,7 @@ function assembled(parts: Readonly<Parts>): Population {
     listing,
     memberOf,
     members,
-
+    poc: { directories: POC_DIRS.filter((dir) => !packageDirs.has(dir)), packages: pocPackages },
     root,
     rootManifest,
     roots: [...members.map((member) => member.dir), HARNESS_ROOT],
@@ -137,15 +159,18 @@ function assembled(parts: Readonly<Parts>): Population {
 }
 
 /**
- * The member directories of a listing: pnpm's packages whose manifests are listed, less the root and
- * the POC, sorted.
+ * The packages of a listing on one side of the POC: pnpm's packages whose manifests are listed, less
+ * the root, outside the POC (the members) or inside it (the POC's packages), sorted by directory.
  *
  * @param {PopulationInputs} inputs - The listing and pnpm's workspace packages.
- * @returns {readonly MemberDir[]} The members' directories.
+ * @param {boolean} inPoc - Which side: the POC's packages, or the members.
+ * @returns {readonly ListedPackage[]} The packages, each with its directory and name.
  */
-function memberDirs(inputs: Readonly<PopulationInputs>): readonly MemberDir[] {
+function packagesOn(inputs: Readonly<PopulationInputs>, inPoc: boolean): readonly ListedPackage[] {
   const listed = new Set(inputs.listing);
-  return inputs.workspace.filter((dir): dir is MemberDir => dir !== '' && listed.has(manifestOf(dir)) && !POC.starts(dir)).toSorted();
+  return inputs.workspace
+    .filter((entry): entry is ListedPackage => entry.dir !== '' && listed.has(manifestOf(entry.dir)) && POC.starts(entry.dir) === inPoc)
+    .toSorted((one, other) => byCodeUnit(one.dir, other.dir));
 }
 
 /**
@@ -155,9 +180,8 @@ function memberDirs(inputs: Readonly<PopulationInputs>): readonly MemberDir[] {
  * @returns {Promise<Population>} The population.
  */
 async function populationOf(inputs: Readonly<PopulationInputs>): Promise<Population> {
-  const dirs = memberDirs(inputs);
-  const { members, rootManifest } = await manifestsOf(dirs, inputs.read);
-  return assembled({ listing: inputs.listing, members, root: inputs.root, rootManifest });
+  const { members, rootManifest } = await manifestsOf(packagesOn(inputs, false), inputs.read);
+  return assembled({ listing: inputs.listing, members, pocPackages: packagesOn(inputs, true), root: inputs.root, rootManifest });
 }
 
 /**
@@ -201,39 +225,13 @@ async function population(root: string = REPO_ROOT): Promise<Population> {
 }
 
 /**
- * A member's package name, as its manifest declares it.
- *
- * @param {Member} member - The member.
- * @returns {string | undefined} Its name.
- */
-function packageName(member: Member): string | undefined {
-  const name: unknown = member.manifest['name'];
-  return typeof name === 'string' ? name : undefined;
-}
-
-/** The manifest groups a package's dependencies are declared in. */
-const DEPENDENCY_GROUPS: readonly string[] = ['dependencies', 'devDependencies', 'peerDependencies'];
-
-/**
- * The POC's packages a held manifest names: the root's and the members' `workspace:` dependencies
- * naming no member.
+ * The POC's package names, as pnpm lists them.
  *
  * @param {Population} held - The population.
  * @returns {string[]} The names, sorted.
  */
-function pocPackages(held: Population): string[] {
-  const members = new Set(held.members.map((member) => packageName(member)));
-  const declared = [held.rootManifest, ...held.members.map((member) => member.manifest)].flatMap((manifest) =>
-    DEPENDENCY_GROUPS.flatMap((group) => {
-      const deps: unknown = manifest[group];
-      return typeof deps === 'object' && deps !== null
-        ? Object.entries(deps).flatMap(([name, spec]: readonly [string, unknown]) =>
-            typeof spec === 'string' && spec.startsWith('workspace:') ? [name] : [],
-          )
-        : [];
-    }),
-  );
-  return [...new Set(declared.filter((name) => !members.has(name)))].toSorted();
+function pocNames(held: Population): string[] {
+  return held.poc.packages.flatMap((entry) => (entry.name === undefined ? [] : [entry.name])).toSorted();
 }
 
 /**
@@ -278,5 +276,5 @@ async function typescriptFiles(): Promise<readonly string[]> {
   return typescriptOf(held);
 }
 
-export { HARNESS_ROOT, POC, POC_DIRS, heldFiles, packageName, pocPackages, population, populationOf, typescriptFiles, typescriptOf };
-export type { Member, Population };
+export { HARNESS_ROOT, POC, heldFiles, pocNames, population, populationOf, typescriptFiles, typescriptOf };
+export type { Member, Parts, ListedPackage, Population };

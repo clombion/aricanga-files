@@ -78,7 +78,10 @@ describe('pnpm', () => {
         await mkdir(path.join(folder, 'a', 'x'), { recursive: true });
         await writeFile(path.join(folder, 'a', 'x', 'package.json'), '{"name":"x"}');
         await symlink(folder, link);
-        await expect(workspacePackages(link)).resolves.toStrictEqual(['', 'a/x/']);
+        await expect(workspacePackages(link)).resolves.toStrictEqual([
+          { dir: '', name: undefined },
+          { dir: 'a/x/', name: 'x' },
+        ]);
       } finally {
         await rm(link, { force: true });
       }
@@ -126,7 +129,7 @@ describe("pnpm's listing", () => {
         vi.stubEnv('XDG_DATA_HOME', data);
         vi.stubEnv('npm_config_registry', 'http://127.0.0.1:9/');
         vi.stubEnv('npm_config_fetch_retries', '0');
-        await expect(workspacePackages(folder)).resolves.toStrictEqual(['']);
+        await expect(workspacePackages(folder)).resolves.toStrictEqual([{ dir: '', name: undefined }]);
       } finally {
         await rm(data, { force: true, recursive: true });
       }
@@ -135,9 +138,16 @@ describe("pnpm's listing", () => {
 });
 
 describe("pnpm's answer", () => {
-  test("reads each package's path relative to the workspace, and refuses a path that is no string", () => {
+  test("reads each package's path relative to the workspace and its name, none where pnpm gives no string, and refuses a path that is no string", () => {
     expect.hasAssertions();
-    expect(packagesOf(answer(['/w', '/w/a/x']), '/w')).toStrictEqual(['', 'a/x/']);
+    expect(packagesOf(answer(['/w', '/w/a/x']), '/w')).toStrictEqual([
+      { dir: '', name: 'x' },
+      { dir: 'a/x/', name: 'x' },
+    ]);
+    expect(packagesOf(JSON.stringify([{ path: '/w/a' }, { name: 1, path: '/w/b' }]), '/w')).toStrictEqual([
+      { dir: 'a/', name: undefined },
+      { dir: 'b/', name: undefined },
+    ]);
     expect(() => packagesOf(answer([undefined]), '/w')).toThrow(new ConfigError('pnpm ls entry 0 ("x") path is not a string: undefined'));
   });
 });

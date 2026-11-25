@@ -6,16 +6,10 @@
  * population, or another checkout's, reads none here and its caller computes.
  */
 
-import type { Member, Population } from './scope.ts';
-import type { Fields } from './manifests.ts';
+import type { Parts, Population } from './scope.ts';
 
-/** The population a run provides, as plain data: its checkout, listing, root manifest and members. */
-interface ProvidedPopulation {
-  readonly root: string;
-  readonly listing: readonly string[];
-  readonly rootManifest: Fields;
-  readonly members: readonly Member[];
-}
+/** The population a run provides, as plain data: the parts it is assembled from (`scope.ts`), of a checkout. */
+type ProvidedPopulation = Readonly<Omit<Parts, 'root'> & { root: string }>;
 
 declare module 'vitest' {
   interface ProvidedContext {
@@ -37,7 +31,15 @@ const WORKER_STATE = '__vitest_worker__';
 function provision(held: Population): { population?: ProvidedPopulation } {
   return held.root === undefined
     ? {}
-    : { population: { listing: held.listing, members: held.members, root: held.root, rootManifest: held.rootManifest } };
+    : {
+        population: {
+          listing: held.listing,
+          members: held.members,
+          pocPackages: held.poc.packages,
+          root: held.root,
+          rootManifest: held.rootManifest,
+        },
+      };
 }
 
 /**
