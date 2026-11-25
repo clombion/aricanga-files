@@ -36,17 +36,12 @@ packages:
 describe('the pins of a population', () => {
   test('read the root and the members, and no other listed manifest', async () => {
     expect.hasAssertions();
-    const held = await plantedPopulation(['package.json', 'harness/lint-rules/package.json'], [['packages/app/', 'view']]);
-    const texts = {
-      'package.json': JSON.stringify({
-        devDependencies: { oxlint: '1.94.0' },
-        engines: { node: '>=22.18.0' },
-        packageManager: 'pnpm@10.28.0',
-      }),
-      'packages/app/package.json': JSON.stringify({ devDependencies: { vite: '^8.0.0' } }),
-      'pnpm-lock.yaml': LOCK,
-    };
-    await expect(pinsOf(held, reader(texts))).resolves.toStrictEqual([
+    const held = await plantedPopulation(
+      ['harness/lint-rules/package.json'],
+      [['packages/app/', 'view', { devDependencies: { vite: '^8.0.0' } }]],
+      { devDependencies: { oxlint: '1.94.0' }, engines: { node: '>=22.18.0' }, packageManager: 'pnpm@10.28.0' },
+    );
+    await expect(pinsOf(held, reader({ 'pnpm-lock.yaml': LOCK }))).resolves.toStrictEqual([
       { tool: 'node', version: '>=22.18.0', where: ['package.json engines'] },
       { tool: 'oxlint', version: '1.94.0', where: ['pnpm-lock.yaml (.)'] },
       { tool: 'pnpm', version: '10.28.0', where: ['package.json packageManager'] },

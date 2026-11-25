@@ -5,17 +5,18 @@
  *
  * The pins are the root `package.json`'s dependencies and devDependencies and each member's
  * devDependencies, each at the version `pnpm-lock.yaml` locks under that package's importer, plus
- * Node's `engines.node` floor and pnpm's `packageManager`. The manifests read are the population's:
- * the root and the members, never another listed `package.json`. A tool locked at two versions is
+ * Node's `engines.node` floor and pnpm's `packageManager`. The manifests read are the population's,
+ * as it read them at one moment: the root's and the members', never another listed `package.json`. A tool locked at two versions is
  * two pins. `UPSTREAM` names each tool's repository; the tool-upgrades check fails on a pin it does
  * not name (`upstream.ts`), on a pin with no version and on a row that pins nothing, and `harness/lib/generated.ts`
  * renders the table of `harness.md`.
  */
 
-import { ConfigError, object, parsed } from './config.ts';
+import { ConfigError, object } from './config.ts';
 import { byCodeUnit, isEmpty } from './lists.ts';
 import { importerOf, manifestOf } from './package-dirs.ts';
 import type { Dir } from './package-dirs.ts';
+import type { Fields } from './manifests.ts';
 import type { Population } from './scope.ts';
 import { engineRange } from './node-floor.ts';
 import { parse } from 'yaml';
@@ -38,10 +39,10 @@ interface Found {
   readonly importers: readonly string[];
 }
 
-/** A workspace package's parsed manifest, by its directory. */
-interface Manifest {
+/** A workspace package's manifest, as the population read it (a JSON object), by its directory. */
+interface DirManifest {
   readonly dir: Dir;
-  readonly manifest: unknown;
+  readonly manifest: Fields;
 }
 
 /** A lockfile read once: each importer's resolved versions, by package name, by importer. */
@@ -144,11 +145,11 @@ function lockOf(lockText: string): Lock {
 /**
  * The root manifest's pins beyond its dependencies: Node's floor and pnpm's `packageManager`.
  *
- * @param {unknown} manifest - The root `package.json`.
+ * @param {Fields} manifest - The root `package.json`.
  * @returns {readonly Found[]} The two pins.
  */
-function rootPins(manifest: unknown): readonly Found[] {
-  const { packageManager } = object(manifest, 'package.json');
+function rootPins(manifest: Fields): readonly Found[] {
+  const { packageManager } = manifest;
   return [
     { file: 'package.json engines', importers: [], tool: 'node', version: engineRange(manifest) },
     {
@@ -163,13 +164,12 @@ function rootPins(manifest: unknown): readonly Found[] {
 /**
  * The pins of one manifest at the versions the lockfile holds under its importer.
  *
- * @param {Manifest} entry - The manifest and its directory.
+ * @param {DirManifest} entry - The manifest and its directory.
  * @param {Lock} lock - The lockfile, read once.
  * @returns {readonly Found[]} Its pins.
  */
-function manifestPins(entry: Manifest, lock: Lock): readonly Found[] {
-  const { dir, manifest } = entry;
-  const fields = object(manifest, manifestOf(dir));
+function manifestPins(entry: DirManifest, lock: Lock): readonly Found[] {
+  const { dir, manifest: fields } = entry;
   const groups = dir === '' ? ['dependencies', 'devDependencies'] : ['devDependencies'];
   const versions = lock.get(importerOf(dir));
   const dependencies = groups.flatMap((group) =>
@@ -182,7 +182,7 @@ function manifestPins(entry: Manifest, lock: Lock): readonly Found[] {
         version: versions?.get(tool),
       })),
   );
-  return dir === '' ? [...dependencies, ...rootPins(manifest)] : dependencies;
+  return dir === '' ? [...dependencies, ...rootPins(fields)] : dependencies;
 }
 
 /**
@@ -215,11 +215,11 @@ function inputsOf(found: readonly Found[]): readonly string[] {
  * a tool locked at two versions is two pins, each naming every input that pins it at its version;
  * ordered by tool, then version, by code unit (`KEY_SEPARATOR` sorts below every character a name holds).
  *
- * @param {readonly Manifest[]} manifests - The manifests.
+ * @param {readonly DirManifest[]} manifests - The manifests.
  * @param {string} lockText - The lockfile's text, read once here.
  * @returns {readonly Pin[]} The pins.
  */
-function pinned(manifests: readonly Manifest[], lockText: string): readonly Pin[] {
+function pinned(manifests: readonly DirManifest[], lockText: string): readonly Pin[] {
   const lock = lockOf(lockText);
   const found = manifests.flatMap((entry) => manifestPins(entry, lock));
   const byKey = new Map(found.map((input) => [keyOf(input), found.filter((other) => keyOf(other) === keyOf(input))] as const));
@@ -232,23 +232,19 @@ function pinned(manifests: readonly Manifest[], lockText: string): readonly Pin[
 }
 
 /**
- * The pins of a population: the root's manifest and each member's, at the versions the lockfile holds.
+ * The pins of a population: its root manifest and each member's, as the population read them, at the
+ * versions the lockfile holds.
  *
  * @param {Population} held - The population.
- * @param {(listed: string) => Promise<string>} read - Reads a listed file's text.
+ * @param {(listed: string) => Promise<string>} read - Reads a listed file's text: the lockfile.
  * @returns {Promise<readonly Pin[]>} The pins.
  */
 async function pinsOf(held: Population, read: (listed: string) => Promise<string>): Promise<readonly Pin[]> {
-  const dirs: readonly Dir[] = ['', ...held.members.map((member) => member.dir)];
-  const [manifests, lockText] = await Promise.all([
-    Promise.all(
-      dirs.map(async (dir): Promise<Manifest> => {
-        const text = await read(manifestOf(dir));
-        return { dir, manifest: parsed(text, manifestOf(dir)) };
-      }),
-    ),
-    read(LOCKFILE),
-  ]);
+  const manifests: readonly DirManifest[] = [
+    { dir: '', manifest: held.rootManifest },
+    ...held.members.map((member): DirManifest => ({ dir: member.dir, manifest: member.manifest })),
+  ];
+  const lockText = await read(LOCKFILE);
   return pinned(manifests, lockText);
 }
 

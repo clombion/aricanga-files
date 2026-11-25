@@ -25,7 +25,7 @@ import { adrProblems, fenceProblems, key, linkProblems, spanProblems } from './d
 import { describe, expect, test } from 'vitest';
 import { installedPaths, oxlintRuleIds, quotedValues } from './doc-references.installed.ts';
 import type { Resolver } from './doc-references.resolve.ts';
-import { repoTasks } from '#lib/config.ts';
+import { repoTasks } from '#lib/repo-tasks.ts';
 import { tracked } from '#lib/source-files.ts';
 
 const HARNESS_ID = 'doc-references';

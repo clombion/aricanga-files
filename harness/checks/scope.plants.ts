@@ -13,6 +13,9 @@ const GIT_TIMEOUT_MS = 10_000;
 /** The files a listing needs to pass the listing's floor. */
 const FILLER = 50;
 
+/** A byte-order mark: pnpm reads a manifest that starts with one, and `JSON.parse` refuses it. */
+const BOM = '\uFEFF';
+
 /** A reader of listed files that answers only the files its test scripted. */
 class Files extends Scripted<string> {}
 
@@ -43,6 +46,22 @@ async function refusalOf(computing: Promise<Population>): Promise<string> {
     return String(error);
   }
   throw new Error('the population was not refused');
+}
+
+/**
+ * The refusal of a computation and the refusals its cause gathers, as text.
+ *
+ * @param {Promise<Population>} computing - The computation.
+ * @returns {Promise<readonly [string, readonly string[]]>} The refusal, and each of its cause's.
+ */
+async function causedRefusal(computing: Promise<Population>): Promise<readonly [string, readonly string[]]> {
+  try {
+    await computing;
+  } catch (error: unknown) {
+    const causes = error instanceof Error && error.cause instanceof AggregateError ? error.cause.errors.map(String) : [];
+    return [String(error), causes];
+  }
+  return ['not refused', []];
 }
 
 /**
@@ -111,4 +130,4 @@ const QUOTED_KEYS: string = [
   '',
 ].join('\n');
 
-export { inWorkspaceFolder, manifest, QUOTED_KEYS, reader, refusalOf };
+export { BOM, causedRefusal, inWorkspaceFolder, manifest, QUOTED_KEYS, reader, refusalOf };

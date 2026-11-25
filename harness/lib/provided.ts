@@ -7,11 +7,13 @@
  */
 
 import type { Member, Population } from './scope.ts';
+import type { Fields } from './manifests.ts';
 
-/** The population a run provides, as plain data: its checkout, listing and members. */
+/** The population a run provides, as plain data: its checkout, listing, root manifest and members. */
 interface ProvidedPopulation {
   readonly root: string;
   readonly listing: readonly string[];
+  readonly rootManifest: Fields;
   readonly members: readonly Member[];
 }
 
@@ -33,7 +35,9 @@ const WORKER_STATE = '__vitest_worker__';
  * @returns {{ population?: ProvidedPopulation }} The provided context.
  */
 function provision(held: Population): { population?: ProvidedPopulation } {
-  return held.root === undefined ? {} : { population: { listing: held.listing, members: held.members, root: held.root } };
+  return held.root === undefined
+    ? {}
+    : { population: { listing: held.listing, members: held.members, root: held.root, rootManifest: held.rootManifest } };
 }
 
 /**

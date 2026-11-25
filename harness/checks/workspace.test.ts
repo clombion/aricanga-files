@@ -1,12 +1,16 @@
-/** The workspace packages pnpm lists: listed relative to the root's realpath, and refused with pnpm's own reason. */
+/**
+ * The workspace packages pnpm lists: listed relative to the root's realpath, and refused with pnpm's own reason; a
+ * checkout's manifests, as pnpm and then the population read them.
+ */
 
+import { BOM, causedRefusal, inWorkspaceFolder, manifest, refusalOf } from './scope.plants.ts';
 import { describe, expect, test, vi } from 'vitest';
 import { mkdir, rm, symlink, writeFile } from 'node:fs/promises';
 import { packagesOf, workspacePackages } from '#lib/workspace.ts';
 import { ConfigError } from '#lib/config.ts';
 import { finished } from '#lib/tools.ts';
-import { inWorkspaceFolder } from './scope.plants.ts';
 import path from 'node:path';
+import { population } from '#lib/scope.ts';
 import { tmpdir } from 'node:os';
 
 /** A pnpm version to pin that the machine's pnpm is not, and the one to pin when it is. */
@@ -82,11 +86,41 @@ describe('pnpm', () => {
   });
 });
 
+describe("a checkout's manifests", () => {
+  test('refuses a member manifest that is not JSON where pnpm lists the workspace, naming that file alone', async () => {
+    expect.hasAssertions();
+    await inWorkspaceFolder('unparsed-', '{}', async (folder) => {
+      await mkdir(path.join(folder, 'a', 'x'), { recursive: true });
+      await mkdir(path.join(folder, 'a', 'y'), { recursive: true });
+      await writeFile(path.join(folder, 'a', 'x', 'package.json'), '{"name":');
+      await writeFile(path.join(folder, 'a', 'y', 'package.json'), manifest('sytem'));
+      const refusal = await refusalOf(population(folder));
+      expect([
+        refusal.startsWith('PopulationError: pnpm could not list the workspace'),
+        ['ERR_PNPM_JSON_PARSE', 'a/x/package.json', 'a/y/'].map((part) => refusal.includes(part)),
+      ]).toStrictEqual([true, [true, true, false]]);
+    });
+  });
+
+  test('reaches the reading of the manifests with one pnpm reads and JSON.parse refuses, and names it', async () => {
+    expect.hasAssertions();
+    await inWorkspaceFolder('marked-', '{}', async (folder) => {
+      await mkdir(path.join(folder, 'a', 'x'), { recursive: true });
+      await writeFile(path.join(folder, 'a', 'x', 'package.json'), `${BOM}${manifest('view')}`);
+      const [refusal, causes] = await causedRefusal(population(folder));
+      expect([refusal, causes.map((cause) => cause.startsWith('ConfigError: a/x/package.json is not JSON: SyntaxError'))]).toStrictEqual([
+        "ConfigError: the manifests a/x/package.json cannot be read; each refusal is this one's cause",
+        [true],
+      ]);
+    });
+  });
+});
+
 describe("pnpm's listing", () => {
   test('lists a workspace whose packageManager names another pnpm, fetching nothing', async () => {
     expect.hasAssertions();
-    const manifest = JSON.stringify({ packageManager: `pnpm@${await anotherPnpm()}` });
-    await inWorkspaceFolder('managed-', manifest, async (folder) => {
+    const pinning = JSON.stringify({ packageManager: `pnpm@${await anotherPnpm()}` });
+    await inWorkspaceFolder('managed-', pinning, async (folder) => {
       const data = `${folder}-data`;
       try {
         vi.stubEnv('XDG_DATA_HOME', data);
@@ -104,6 +138,6 @@ describe("pnpm's answer", () => {
   test("reads each package's path relative to the workspace, and refuses a path that is no string", () => {
     expect.hasAssertions();
     expect(packagesOf(answer(['/w', '/w/a/x']), '/w')).toStrictEqual(['', 'a/x/']);
-    expect(() => packagesOf(answer([undefined]), '/w')).toThrow(new ConfigError('a pnpm package path is not a string: undefined'));
+    expect(() => packagesOf(answer([undefined]), '/w')).toThrow(new ConfigError('pnpm ls entry 0 ("x") path is not a string: undefined'));
   });
 });

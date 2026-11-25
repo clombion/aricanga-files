@@ -7,9 +7,10 @@
  */
 
 import { bin, finished } from './tools.ts';
-import { object, parsed, repoTasks } from './config.ts';
+import { object, parsed } from './config.ts';
 import type { Finished } from './process.ts';
 import { present } from './present.ts';
+import { repoTasks } from './repo-tasks.ts';
 import { textOf } from './source-files.ts';
 
 /** The ignore lists of `knip.json` that list plain entries. */

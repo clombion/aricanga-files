@@ -15,9 +15,9 @@ import {
 } from './exemption-lists.consults.ts';
 import { dirname, join, normalize } from 'node:path/posix';
 import { importsFrom, parse } from '#lib/ts-source.ts';
-import { object, parsed } from '#lib/config.ts';
 import { KINDS } from '#lib/exemptions.ts';
-import { textOf } from '#lib/source-files.ts';
+import { object } from '#lib/config.ts';
+import { population } from '#lib/scope.ts';
 
 const UNDECLARED = 'a literal collection consulted as a list: declare it';
 const UNCONSULTED = 'a declaration nothing consults: delete it';
@@ -30,14 +30,13 @@ interface Finding {
 }
 
 /**
- * The root `package.json` `imports` patterns, each with its target.
+ * The root `package.json` `imports` patterns, each with its target, as the population read the manifest.
  *
  * @returns {Promise<readonly (readonly [string, string])[]>} Each pattern and its target.
  */
 async function subpathPatterns(): Promise<readonly (readonly [string, string])[]> {
-  const text = await textOf('package.json');
-  const manifest = object(parsed(text, 'package.json'), 'package.json');
-  const imports = object(manifest['imports'] ?? {}, 'imports');
+  const held = await population();
+  const imports = object(held.rootManifest['imports'] ?? {}, 'imports');
   return Object.entries(imports).flatMap(([pattern, target]: readonly [string, unknown]) =>
     typeof target === 'string' ? [[pattern, target] as const] : [],
   );

@@ -16,7 +16,7 @@ import { UPSTREAM } from './upstream.ts';
 import { checkModules } from './checks.ts';
 import { matches } from './globs.ts';
 import { pins } from './pins.ts';
-import { repoTasks } from './config.ts';
+import { repoTasks } from './repo-tasks.ts';
 
 /** Each generator, by the name of the blocks it renders. */
 type Generators = ReadonlyMap<string, () => Promise<string>>;

@@ -5,15 +5,16 @@
 
 import { Accepted, Prefixes } from './exemptions.ts';
 import type { Dir, MemberDir } from './package-dirs.ts';
-import { PopulationError, workspacePackages } from './workspace.ts';
-import { ROLE_WORDS, isRole, ships, tierOf } from './roles.ts';
 import { manifestOf, nearestOf } from './package-dirs.ts';
-import { object, parsed } from './config.ts';
 import { perRoot, textOf, tracked } from './source-files.ts';
+import { ships, tierOf } from './roles.ts';
+import type { Fields } from './manifests.ts';
 import { REPO_ROOT } from './paths.ts';
 import type { Role } from './roles.ts';
 import { isEmpty } from './lists.ts';
+import { manifestsOf } from './manifests.ts';
 import { providedFor } from './provided.ts';
+import { workspacePackages } from './workspace.ts';
 
 /** The harness's own place: held, and not a workspace package. */
 const HARNESS_ROOT: MemberDir = 'harness/';
@@ -46,13 +47,15 @@ const ROOT_FILES = new Accepted<string>([
 /** The current text the docs checks read: the agent brief, the harness docs and the roadmap. */
 const DOC_ROOTS: readonly string[] = ['docs/roadmap/', 'harness/', 'packages/characterisation/'];
 
-/** Where a member's declared word sits in its entry. */
-const ROLE_AT = 1;
-
-/** A held workspace package: its directory and the role its manifest declares. */
+/**
+ * A held workspace package: its directory, its manifest as the population read it, and the role that
+ * manifest declares (`role` is `manifest.aricanga.role`; both are set by their one constructor,
+ * `declaredBy` in `manifests.ts`).
+ */
 interface Member {
   readonly dir: MemberDir;
   readonly role: Role;
+  readonly manifest: Fields;
 }
 
 /** The harness's population over one listing. */
@@ -61,6 +64,8 @@ interface Population {
   readonly root: string | undefined;
   /** The listing it was computed over. */
   readonly listing: readonly string[];
+  /** The root's manifest, read with the members' at one moment. */
+  readonly rootManifest: Fields;
   /** The members, sorted by directory. */
   readonly members: readonly Member[];
   /** The members whose role ships: their modules are production code. */
@@ -87,29 +92,22 @@ interface PopulationInputs {
   readonly read: (listed: string) => Promise<string>;
 }
 
-/**
- * A member's role word as its manifest's text declares it, whatever it is; text that is not JSON, or
- * an `aricanga` that is no object, refuses with `ConfigError` naming the manifest.
- *
- * @param {string} manifest - The manifest's path.
- * @param {string} text - Its text.
- * @returns {unknown} Its `aricanga.role`.
- */
-function declaredWord(manifest: string, text: string): unknown {
-  const fields = object(parsed(text, manifest), manifest);
-  const declared = fields['aricanga'] === undefined ? {} : object(fields['aricanga'], `${manifest} aricanga`);
-  return declared['role'];
+/** What a population is assembled from, whatever computed it: its checkout (none for a planted one), listing, root manifest and members. */
+interface Parts {
+  readonly root: string | undefined;
+  readonly listing: readonly string[];
+  readonly rootManifest: Fields;
+  readonly members: readonly Member[];
 }
 
 /**
- * A population built from its listing and its members, whatever computed them.
+ * A population built from its parts, whatever computed them.
  *
- * @param {string | undefined} root - The checkout it was computed for; none for a planted population.
- * @param {readonly string[]} listing - The listing.
- * @param {readonly Member[]} members - The members, sorted by directory.
+ * @param {Parts} parts - Its checkout, listing, root manifest and members, sorted by directory.
  * @returns {Population} The population.
  */
-function assembled(root: string | undefined, listing: readonly string[], members: readonly Member[]): Population {
+function assembled(parts: Readonly<Parts>): Population {
+  const { listing, members, root, rootManifest } = parts;
   const memberOf = nearestOf(members, (member) => member.dir);
   return {
     holds: (target: string) => ROOT_FILES.has(target) || target.startsWith(HARNESS_ROOT) || memberOf(target) !== undefined,
@@ -118,6 +116,7 @@ function assembled(root: string | undefined, listing: readonly string[], members
     memberOf,
     members,
     root,
+    rootManifest,
     roots: [...members.map((member) => member.dir), HARNESS_ROOT],
     shipping: members.filter((member) => ships(member.role)),
   };
@@ -136,25 +135,6 @@ function memberDirs(inputs: Readonly<PopulationInputs>): readonly MemberDir[] {
 }
 
 /**
- * The members of their declared role words, refusing every word that names no role at once.
- *
- * @param {readonly (readonly [MemberDir, unknown])[]} words - Each member directory with its declared word.
- * @returns {readonly Member[]} The members.
- */
-function membersOf(words: readonly (readonly [MemberDir, unknown])[]): readonly Member[] {
-  const roled = words.filter((entry: readonly [MemberDir, unknown]): entry is readonly [MemberDir, Role] => isRole(entry[ROLE_AT]));
-  if (roled.length !== words.length) {
-    const lines = words
-      .filter((entry: readonly [MemberDir, unknown]) => !isRole(entry[ROLE_AT]))
-      .map(([dir, word]: readonly [MemberDir, unknown]) => `${manifestOf(dir)}: aricanga.role is ${JSON.stringify(word)}`);
-    throw new PopulationError(
-      `${lines.join('; ')}; a workspace package declares one of the roles of harness/lib/roles.ts (${ROLE_WORDS.join(', ')})`,
-    );
-  }
-  return roled.map(([dir, role]: readonly [MemberDir, Role]) => ({ dir, role }));
-}
-
-/**
  * The population of a listing.
  *
  * @param {PopulationInputs} inputs - The listing, pnpm's workspace packages and the reader.
@@ -162,13 +142,8 @@ function membersOf(words: readonly (readonly [MemberDir, unknown])[]): readonly 
  */
 async function populationOf(inputs: Readonly<PopulationInputs>): Promise<Population> {
   const dirs = memberDirs(inputs);
-  const words = await Promise.all(
-    dirs.map(async (dir): Promise<readonly [MemberDir, unknown]> => {
-      const text = await inputs.read(manifestOf(dir));
-      return [dir, declaredWord(manifestOf(dir), text)];
-    }),
-  );
-  return assembled(inputs.root, inputs.listing, membersOf(words));
+  const { members, rootManifest } = await manifestsOf(dirs, inputs.read);
+  return assembled({ listing: inputs.listing, members, root: inputs.root, rootManifest });
 }
 
 /**
@@ -181,7 +156,7 @@ async function populationOf(inputs: Readonly<PopulationInputs>): Promise<Populat
 async function computed(root: string): Promise<Population> {
   const given = await providedFor(root);
   if (given !== undefined) {
-    return assembled(given.root, given.listing, given.members);
+    return assembled(given);
   }
   const [listing, workspace] = await Promise.all([tracked(root), workspacePackages(root)]);
   const found = await populationOf({

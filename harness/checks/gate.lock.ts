@@ -1,7 +1,7 @@
 /** The lock check of the `gate` check: the task's command, run in a planted project. */
 
 import { Project } from '#lib/tools.ts';
-import { repoTasks } from '#lib/config.ts';
+import { repoTasks } from '#lib/repo-tasks.ts';
 
 const LOCK_CHECK = 'lock:check';
 

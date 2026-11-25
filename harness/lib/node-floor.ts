@@ -3,7 +3,8 @@
  * the repository runs on (type stripping of `.ts` scripts needs 22.18), as a single `>=x.y.z`.
  */
 
-import { object, parsed } from './config.ts';
+import { object } from './config.ts';
+import { population } from './scope.ts';
 import { textOf } from './source-files.ts';
 
 /** A version as major, minor and patch. */
@@ -91,13 +92,13 @@ function declaredFloor(manifest: unknown): Version {
 }
 
 /**
- * The repository's declared floor.
+ * The repository's declared floor, from the root manifest as the population read it.
  *
  * @returns {Promise<Version>} The floor `engines.node` states.
  */
 async function repoFloor(): Promise<Version> {
-  const text = await textOf('package.json');
-  return declaredFloor(parsed(text, 'package.json'));
+  const held = await population();
+  return declaredFloor(held.rootManifest);
 }
 
 /**

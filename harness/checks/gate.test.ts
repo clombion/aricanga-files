@@ -13,9 +13,10 @@
 import { EXIT_CLEAN, EXIT_FINDINGS } from '#lib/exit-status.ts';
 import type { Hook, Task } from '#lib/config.ts';
 import { LOCK_CHECK, lockCheckAfter, lockCheckArguments } from './gate.lock.ts';
-import { closure, hooks, repoHooks, repoTasks, runsTask, tasks } from '#lib/config.ts';
+import { closure, hooks, repoHooks, runsTask, tasks } from '#lib/config.ts';
 import { describe, expect, test } from 'vitest';
 import { Accepted } from '#lib/exemptions.ts';
+import { repoTasks } from '#lib/repo-tasks.ts';
 
 const HARNESS_ID = 'gate';
 

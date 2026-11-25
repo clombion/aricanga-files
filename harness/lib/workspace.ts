@@ -1,6 +1,9 @@
 /**
- * The answer pnpm gives to "which packages are in this workspace", read as directories, and the refusal of a
- * population that cannot be read. pnpm is the source of the population's members (`scope.ts`).
+ * The answer pnpm gives to "which packages are in this workspace", read as directories, and
+ * `PopulationError`, the refusal of a population's own states: pnpm could not list it (a manifest
+ * it cannot parse among them, the first one named alone), a role word names no role, a planted
+ * population holds what production never holds. pnpm is the source of the population's members
+ * (`scope.ts`).
  */
 
 import { list, object, parsed, stringOf } from './config.ts';
@@ -17,15 +20,16 @@ class PopulationError extends Error {
 
 /**
  * The packages of `pnpm ls --json`'s output, as directories relative to the workspace's realpath.
- * An entry whose `path` is no string is refused.
+ * An entry whose `path` is no string is refused, naming the entry by its place and its name.
  *
  * @param {string} stdout - pnpm's output.
  * @param {string} base - The workspace root's realpath.
  * @returns {readonly Dir[]} Each package's directory.
  */
 function packagesOf(stdout: string, base: string): readonly Dir[] {
-  return list(parsed(stdout, 'pnpm ls'), 'pnpm ls').map((entry) => {
-    const where = stringOf(object(entry, 'a pnpm package')['path'], 'a pnpm package path');
+  return list(parsed(stdout, 'pnpm ls'), 'pnpm ls').map((entry, index) => {
+    const fields = object(entry, `pnpm ls entry ${index}`);
+    const where = stringOf(fields['path'], `pnpm ls entry ${index} (${JSON.stringify(fields['name'])}) path`);
     return dirOf(relativeTo(base, where));
   });
 }
