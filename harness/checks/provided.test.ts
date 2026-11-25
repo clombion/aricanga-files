@@ -3,7 +3,7 @@
 import { describe, expect, test, vi } from 'vitest';
 import { REPO_ROOT } from '#lib/paths.ts';
 import { configOf } from '#lib/vitest-config.ts';
-import { plantedPopulation } from '#lib/scan-hooks.ts';
+import { plantedPopulation } from '#lib/planted-population.ts';
 import { population } from '#lib/scope.ts';
 import { providedFor } from '#lib/provided.ts';
 import { runPlanted } from '#lib/planted-vitest.ts';

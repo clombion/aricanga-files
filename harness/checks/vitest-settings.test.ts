@@ -129,13 +129,12 @@ interface PlantRun {
  */
 function plantedConfig(plantPath: string, overrides: Overrides): string {
   const gate = JSON.stringify(pathToFileURL(fromRoot('harness/lib/vitest-config.ts')).href);
-  const scope = JSON.stringify(pathToFileURL(fromRoot('harness/lib/scope.ts')).href);
-  const inputs = `{ listing: ['packages/plant/package.json', ${JSON.stringify(plantPath)}], read: async () => ${JSON.stringify(JSON.stringify({ aricanga: { role: 'foundation' } }))}, workspace: ['packages/plant/'] }`;
+  const scope = JSON.stringify(pathToFileURL(fromRoot('harness/lib/planted-population.ts')).href);
   return [
     "import { mergeConfig } from 'vitest/config';",
     `import { configOf } from ${gate};`,
-    `import { populationOf } from ${scope};`,
-    `const held = await populationOf(${inputs});`,
+    `import { plantedPopulation } from ${scope};`,
+    `const held = await plantedPopulation([${JSON.stringify(plantPath)}], [['packages/plant/', 'foundation']]);`,
     `export default mergeConfig(configOf(held, () => []), ${JSON.stringify({ test: overrides })});`,
     '',
   ].join('\n');

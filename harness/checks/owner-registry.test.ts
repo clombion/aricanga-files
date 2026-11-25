@@ -11,10 +11,11 @@
 import { CANONICAL, FORMS, IN_A_TEST, MEMBERS, NEAR_MISSES, UNGUARDED, unguarded } from './owner-registry.plants.ts';
 import { SHAPES, keyOf, ownerUses, rulesOf, sites } from '#lib/owners.ts';
 import { describe, expect, test } from 'vitest';
-import { plantedPopulation, usePlanted, useScan } from '#lib/scan-hooks.ts';
+import { usePlanted, useScan } from '#lib/scan-hooks.ts';
 import type { Rule } from '#lib/owner-rules.ts';
 import type { Scan } from '#lib/checker.ts';
 import type { Site } from '#lib/owners.ts';
+import { plantedPopulation } from '#lib/planted-population.ts';
 import { population } from '#lib/scope.ts';
 import { present } from '#lib/present.ts';
 import { sourceOf } from '#lib/checker.ts';

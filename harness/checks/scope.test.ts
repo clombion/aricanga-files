@@ -10,7 +10,7 @@ import type { Population } from '#lib/scope.ts';
 import { PopulationError } from '#lib/workspace.ts';
 import { dirOfImporter } from '#lib/package-dirs.ts';
 import path from 'node:path';
-import { plantedPopulation } from '#lib/scan-hooks.ts';
+import { plantedPopulation } from '#lib/planted-population.ts';
 
 const HARNESS_ID = 'population';
 

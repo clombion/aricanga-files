@@ -2,11 +2,12 @@
 
 import { describe, expect, test } from 'vitest';
 import { isProduction, isTestInfrastructure, qualifiedName, scanOver, sourceOf } from '#lib/checker.ts';
-import { plantedPopulation, usePlanted } from '#lib/scan-hooks.ts';
 import type { Population } from '#lib/scope.ts';
 import type { ScanOpening } from '#lib/checker.ts';
+import { plantedPopulation } from '#lib/planted-population.ts';
 import { population } from '#lib/scope.ts';
 import { present } from '#lib/present.ts';
+import { usePlanted } from '#lib/scan-hooks.ts';
 
 /** A session's projects, by project file: this one holds none. */
 const NO_PROJECTS = new Map<string, ReturnType<ScanOpening['open']>>();

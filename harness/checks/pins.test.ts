@@ -2,7 +2,7 @@
 
 import { describe, expect, test } from 'vitest';
 import { lockOf, pinned, pinsOf } from '#lib/pins.ts';
-import { plantedPopulation } from '#lib/scan-hooks.ts';
+import { plantedPopulation } from '#lib/planted-population.ts';
 import { reader } from './scope.plants.ts';
 
 const LOCK = `lockfileVersion: '9.0'

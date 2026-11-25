@@ -5,7 +5,7 @@ import { coverageOf, gateTest, globsOf, projectsOf } from './gate-config.ts';
 import { describe, expect, test } from 'vitest';
 import type { Population } from '#lib/scope.ts';
 import { matches } from '#lib/globs.ts';
-import { plantedPopulation } from '#lib/scan-hooks.ts';
+import { plantedPopulation } from '#lib/planted-population.ts';
 import { typescriptFiles } from '#lib/scope.ts';
 
 const HARNESS_ID = 'test-globs';

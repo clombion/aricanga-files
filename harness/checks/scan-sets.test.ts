@@ -19,7 +19,7 @@ import { oxfmtFiles, oxlintFiles, projectDirectory, projectMembers } from './sca
 import { population, typescriptFiles } from '#lib/scope.ts';
 import type { Population } from '#lib/scope.ts';
 import { Project } from '#lib/tools.ts';
-import { plantedPopulation } from '#lib/scan-hooks.ts';
+import { plantedPopulation } from '#lib/planted-population.ts';
 import { tmpdir } from 'node:os';
 
 const HARNESS_ID = 'scan-sets';

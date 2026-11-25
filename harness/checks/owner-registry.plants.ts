@@ -1,7 +1,7 @@
 /** The owner registry's plants: one per rule and call form, a canonical use per rule, a use in a test, and the near misses. */
 
 import { Exemptions } from '#lib/exemptions.ts';
-import type { PlantedMember } from '#lib/scan-hooks.ts';
+import type { PlantedMember } from '#lib/planted-population.ts';
 import type { Population } from '#lib/scope.ts';
 import type { Rule } from '#lib/owner-rules.ts';
 import { nearestOf } from '#lib/package-dirs.ts';
