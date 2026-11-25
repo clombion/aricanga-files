@@ -14,7 +14,7 @@ import { PLUGIN_NAME, RULES } from '#lint-rules/plugin.ts';
 import { describe, expect, test } from 'vitest';
 import { Accepted } from '#lib/exemptions.ts';
 import type { Fixture } from '#lib/lint-rules.ts';
-import { object } from '#lib/config.ts';
+import type { GateOxlintConfig } from '#lib/oxlint-shape.ts';
 import { oxlintConfig } from '#lib/config-modules.ts';
 import { textOf } from '#lib/source-files.ts';
 
@@ -104,16 +104,15 @@ function settingProblems(name: string, setting: unknown, rules: readonly string[
 /**
  * What breaks "the config turns on exactly the plugin's rules, as errors".
  *
- * @param {unknown} config - The config.
+ * @param {Pick<GateOxlintConfig, 'jsPlugins' | 'rules'>} config - The config.
  * @param {readonly string[]} rules - The rules.
  * @returns {readonly string[]} What breaks "the config turns on exactly the plugin's rules, as errors".
  */
-function configProblems(config: unknown, rules: readonly string[]): readonly string[] {
-  const fields = object(config, 'oxlint.config.ts');
-  const plugins: readonly unknown[] = Array.isArray(fields['jsPlugins']) ? fields['jsPlugins'] : [];
+function configProblems(config: Pick<GateOxlintConfig, 'jsPlugins' | 'rules'>, rules: readonly string[]): readonly string[] {
+  const plugins: readonly unknown[] = config.jsPlugins ?? [];
   const loaded = plugins.includes(PLUGIN_PATH) ? [] : [`jsPlugins does not load ${PLUGIN_PATH}`];
   const prefix = `${PLUGIN_NAME}/`;
-  const settings = object(fields['rules'] ?? {}, 'rules');
+  const settings: Readonly<Record<string, unknown>> = config.rules;
   const configured = Object.keys(settings).filter((name) => name.startsWith(prefix));
   const wrong = configured.flatMap((name) => settingProblems(name, settings[name], rules));
   const on = new Set(configured.map((name) => name.slice(prefix.length)));
@@ -237,7 +236,7 @@ describe('the check', () => {
 
   test('sees a rule the config leaves off, one it adds, one it only warns on, and a missing plugin', () => {
     expect.hasAssertions();
-    const config = {
+    const config: Pick<GateOxlintConfig, 'jsPlugins' | 'rules'> = {
       jsPlugins: ['eslint-plugin-solid'],
       rules: { 'aricanga/env': 'warn', 'aricanga/gone': 'error', 'solid/no-destructure': 'error' },
     };
@@ -247,7 +246,10 @@ describe('the check', () => {
       'aricanga/gone: not a rule of the plugin',
       'aricanga/json: not turned on',
     ]);
-    const near = { jsPlugins: [PLUGIN_PATH], rules: { 'aricanga/env': ['error', { owners: [] }], 'aricanga/json': 'error' } };
+    const near: Pick<GateOxlintConfig, 'jsPlugins' | 'rules'> = {
+      jsPlugins: [PLUGIN_PATH],
+      rules: { 'aricanga/env': ['error', { owners: [] }], 'aricanga/json': 'error' },
+    };
     expect(configProblems(near, ['env', 'json'])).toStrictEqual([]);
   });
 

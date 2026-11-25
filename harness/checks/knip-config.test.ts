@@ -6,7 +6,7 @@
  */
 
 import { EXIT_CLEAN, EXIT_FINDINGS } from '#lib/exit-status.ts';
-import { deadcodeRuns, knip, writeKnipConfig } from '#lib/deadcode.ts';
+import { deadcodeRuns, knip, planted, writeKnipConfig } from '#lib/deadcode.ts';
 import { describe, expect, test } from 'vitest';
 import { listing, reader } from './scope.plants.ts';
 import { pocNames, populationOf } from '#lib/scope.ts';
@@ -60,7 +60,7 @@ async function plantedRuns(): Promise<readonly (readonly [number, boolean])[]> {
     await writeKnipConfig(project, { ...knipConfigOf(held), ignoreWorkspaces: [] });
     const runs = await deadcodeRuns();
     const done = await inSequence(runs, async (args) => {
-      const run = await knip(project.root, args);
+      const run = await knip(project.root, planted(args));
       return [run.status, (run.stdout + run.stderr).includes('packages/core/test/orphan.ts')] as const;
     });
     return done;
@@ -101,7 +101,7 @@ describe('the knip configuration of a planted population', () => {
   test('gives a member no glob the listing leaves empty', async () => {
     expect.hasAssertions();
     const held = await plantedPopulation(['packages/core/src/index.ts'], [['packages/core/', 'system']]);
-    expect(knipConfigOf(held).workspaces?.['packages/core']).toStrictEqual({ project: ['src/**/*.{ts,tsx}!'] });
+    expect(knipConfigOf(held).workspaces['packages/core']).toStrictEqual({ project: ['src/**/*.{ts,tsx}!'] });
   });
 
   test("reports an orphan in a member's test support, in default mode", async () => {

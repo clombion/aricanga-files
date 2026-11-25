@@ -7,7 +7,6 @@
 import { HARNESS_CHECKS, VITEST_TESTS, liveGlobs } from './test-globs.ts';
 import { HARNESS_ROOT, pocNames } from './scope.ts';
 import type { Member, Population } from './scope.ts';
-import type { KnipConfiguration } from 'knip';
 import { dependencyNames } from './dependencies.ts';
 import { importerOf } from './package-dirs.ts';
 import { isEmpty } from './lists.ts';
@@ -29,8 +28,27 @@ const IGNORED_DEPENDENCIES: readonly string[] = [
   '@solidjs/compiler',
 ];
 
+/** A workspace of the gate's knip configuration: its globs as lists, its Playwright configs, if any. */
+interface KnipWorkspace {
+  readonly entry?: readonly string[];
+  readonly project: readonly string[];
+  readonly playwright?: false | Readonly<{ config: readonly string[] }>;
+}
+
+/**
+ * The gate's knip configuration, narrower than knip's own type: every glob and ignore a list of
+ * strings, and no field that excuses a file from an issue type (`ignoreFiles`, `ignoreIssues`), so
+ * each reader reads it as written and the strictness check need not look for them.
+ */
+interface KnipConfig {
+  readonly rules: Readonly<Record<string, 'error'>>;
+  readonly ignoreDependencies: readonly string[];
+  readonly ignoreWorkspaces: readonly string[];
+  readonly workspaces: Readonly<Record<string, KnipWorkspace>>;
+}
+
 /** The settings every population shares. */
-const SETTINGS: KnipConfiguration = {
+const SETTINGS: Pick<KnipConfig, 'rules'> = {
   rules: {
     binaries: 'error',
     catalog: 'error',
@@ -51,9 +69,6 @@ const SETTINGS: KnipConfiguration = {
     unresolved: 'error',
   },
 };
-
-/** A workspace's settings, as knip reads them. */
-type Workspace = NonNullable<KnipConfiguration['workspaces']>[string];
 
 /** The TypeScript modules a project glob reads under a directory. */
 const MODULES = '**/*.{ts,tsx}';
@@ -100,9 +115,9 @@ function projectOf(held: Population, member: Member): string[] {
  *
  * @param {Population} held - The population.
  * @param {Member} member - The member.
- * @returns {Workspace} Its settings.
+ * @returns {KnipWorkspace} Its settings.
  */
-function workspaceOf(held: Population, member: Member): Workspace {
+function workspaceOf(held: Population, member: Member): KnipWorkspace {
   const configs = ownFiles(held, member).filter((file) => PLAYWRIGHT_CONFIG.test(file));
   return isEmpty(configs) ? { project: projectOf(held, member) } : { playwright: { config: configs }, project: projectOf(held, member) };
 }
@@ -128,9 +143,9 @@ function declaredPocNames(held: Population): string[] {
  * dependencies.
  *
  * @param {Population} held - The population.
- * @returns {KnipConfiguration} The configuration.
+ * @returns {KnipConfig} The configuration.
  */
-function knipConfigOf(held: Population): KnipConfiguration {
+function knipConfigOf(held: Population): KnipConfig {
   return {
     ...SETTINGS,
     ignoreDependencies: [...IGNORED_DEPENDENCIES, ...declaredPocNames(held)],
@@ -147,3 +162,4 @@ function knipConfigOf(held: Population): KnipConfiguration {
 }
 
 export { knipConfigOf };
+export type { KnipConfig };

@@ -12,10 +12,12 @@
 
 import { EXIT_CLEAN, EXIT_FINDINGS } from '#lib/exit-status.ts';
 import type { Hook, Task } from '#lib/config.ts';
-import { LOCK_CHECK, lockCheckAfter, lockCheckArguments } from './gate.lock.ts';
-import { closure, hooks, repoHooks, runsTask, tasks } from '#lib/config.ts';
+import { LOCK_CHECK, lockCheckAfter, lockCheckArguments, unnamed } from './gate.lock.ts';
+import { closure, hooks, object, repoHooks, runsTask, tasks } from '#lib/config.ts';
 import { describe, expect, test } from 'vitest';
 import { Accepted } from '#lib/exemptions.ts';
+import { ROOT_CONFIG_MODULES } from '#lib/config-modules.ts';
+import { population } from '#lib/scope.ts';
 import { repoTasks } from '#lib/repo-tasks.ts';
 
 const HARNESS_ID = 'gate';
@@ -154,6 +156,9 @@ function scriptsOf(read: ReadonlyMap<string, Task>): Readonly<Record<string, str
   return Object.fromEntries([...read.values()].map((task) => [task.name, task.script]));
 }
 
+/** How many entries an empty list holds. */
+const NONE = 0;
+
 describe('the repository', () => {
   test('the gate writes nothing and runs locked tools', async () => {
     expect.hasAssertions();
@@ -166,6 +171,24 @@ describe('the repository', () => {
     const [repoTaskMap, repoHookList] = await Promise.all([repoTasks(), repoHooks()]);
     const commands = [...repoTaskMap.values()].flatMap((task) => task.commands);
     expect(runnerProblems([...commands, ...repoHookList.map((hook) => hook.run)])).toStrictEqual([]);
+  });
+
+  test('every task names the configuration module of each computed-config tool it runs, so no rival file a tool would discover is read', async () => {
+    expect.hasAssertions();
+    const repoTaskMap = await repoTasks();
+    const commands = [...repoTaskMap.values()].flatMap((task) => task.commands);
+    expect([
+      unnamed(commands, ['oxlint', '-c', ROOT_CONFIG_MODULES.oxlint]),
+      unnamed(commands, ['knip', '--config', ROOT_CONFIG_MODULES.knip]),
+      commands.filter((command) => command.startsWith('oxlint')).length > NONE,
+    ]).toStrictEqual([[], [], true]);
+  });
+
+  test("maps no root file into the harness's imports but the config modules it loads typed", async () => {
+    expect.hasAssertions();
+    const held = await population();
+    const imports = Object.keys(object(held.rootManifest['imports'], 'imports')).filter((key) => key.startsWith('#root/'));
+    expect(imports).toStrictEqual([`#root/${ROOT_CONFIG_MODULES.knip}`, `#root/${ROOT_CONFIG_MODULES.oxlint}`]);
   });
 
   test('the hooks run the gate', async () => {

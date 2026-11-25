@@ -6,10 +6,11 @@
  */
 
 import { BROWSER_TESTS, RUNNER_TESTS, TEST_SUPPORT, liveGlobs } from './test-globs.ts';
+import type { GateOverride, GateOxlintConfig } from './oxlint-shape.ts';
 import type { Member, Population } from './scope.ts';
-import type { OxlintConfig, OxlintOverride } from 'oxlint';
 import { ROOT_MODULE_FILES, unheldPatterns } from './oxlint-files.ts';
 import { HARNESS_ROOT } from './scope.ts';
+import type { OxlintConfig } from 'oxlint';
 import { RULES } from './oxlint-rules.ts';
 import type { Role } from './roles.ts';
 import { Vocabulary } from './exemptions.ts';
@@ -179,11 +180,11 @@ function memberRules(held: Population): NonNullable<OxlintConfig['rules']> {
  * harness's own restrictions, and the import boundaries (`import-boundaries.ts`).
  *
  * @param {Population} held - The population.
- * @returns {OxlintOverride[]} The overrides.
+ * @returns {GateOverride[]} The overrides.
  */
-function memberOverrides(held: Population): OxlintOverride[] {
+function memberOverrides(held: Population): GateOverride[] {
   const reducers = roleGlobs(held, REDUCER);
-  const purity: OxlintOverride[] = isEmpty(reducers)
+  const purity: GateOverride[] = isEmpty(reducers)
     ? []
     : [
         {
@@ -219,9 +220,9 @@ function memberOverrides(held: Population): OxlintOverride[] {
  * The oxlint configuration over a population.
  *
  * @param {Population} held - The population.
- * @returns {OxlintConfig} The configuration.
+ * @returns {GateOxlintConfig} The configuration.
  */
-function oxlintConfigOf(held: Population): OxlintConfig {
+function oxlintConfigOf(held: Population): GateOxlintConfig {
   return {
     ...SETTINGS,
     ignorePatterns: [...unheldPatterns(held), BUILD_OUTPUT],

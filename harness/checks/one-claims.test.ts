@@ -11,7 +11,7 @@ import type { Claim, Probe } from '#lib/claims.ts';
 import { Doc, currentText } from '#lib/docs.ts';
 import { Exemptions, StaleExemptionError, site } from '#lib/exemptions.ts';
 import { describe, expect, test } from 'vitest';
-import type { DeepReadonly } from './readonly.ts';
+import type { DeepReadonly } from '#lib/readonly.ts';
 import type { Prose } from '#lib/docs.ts';
 import { textsOf } from '#lib/source-files.ts';
 import { typescriptFiles } from '#lib/scope.ts';

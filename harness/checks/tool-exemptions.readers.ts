@@ -1,7 +1,8 @@
 /** The readers of each tool's configuration: every glob it holds, as an entry the `tool-exemptions` check matches. */
 
-import { absentAs, list, object, strings } from '#lib/config.ts';
+import { absentAs, object, strings } from '#lib/config.ts';
 import { coverageOf, globsOf, projectsOf, testOf } from './gate-config.ts';
+import type { GateOxlintConfig } from '#lib/oxlint-shape.ts';
 import type { OxlintField } from '#lint-rules/globs.ts';
 
 /** How a tool reads a glob: from the root, as the harness's matcher reads it, or as one of oxlint's fields reads it. */
@@ -17,25 +18,13 @@ interface Entry {
 /**
  * oxlint's ignore patterns and override file globs.
  *
- * @param {unknown} config - The config.
- * @returns {Entry[]} oxlint's ignore patterns and override file globs.
+ * @param {Pick<GateOxlintConfig, 'ignorePatterns' | 'overrides'>} config - The config.
+ * @returns {Entry[]} oxlint's ignore patterns and override file globs; an override's glob is keyed by itself, never by the override's place.
  */
-function oxlintEntries(config: unknown): Entry[] {
-  const fields = object(config, 'oxlint.config.ts');
-  const overrides = list(absentAs(fields['overrides'], []), 'oxlint.config.ts overrides');
+function oxlintEntries(config: Pick<GateOxlintConfig, 'ignorePatterns' | 'overrides'>): Entry[] {
   return [
-    ...strings(absentAs(fields['ignorePatterns'], []), 'ignorePatterns').map((glob): Entry => ({
-      glob,
-      reading: 'ignorePatterns',
-      tool: 'oxlint ignorePatterns',
-    })),
-    ...overrides.flatMap((override: unknown, index) =>
-      strings(absentAs(object(override, `override ${index}`)['files'], []), `override ${index} files`).map((glob): Entry => ({
-        glob,
-        reading: 'files',
-        tool: `oxlint overrides[${index}]`,
-      })),
-    ),
+    ...config.ignorePatterns.map((glob): Entry => ({ glob, reading: 'ignorePatterns', tool: 'oxlint ignorePatterns' })),
+    ...config.overrides.flatMap((override) => override.files.map((glob): Entry => ({ glob, reading: 'files', tool: 'oxlint overrides' }))),
   ];
 }
 
@@ -73,27 +62,6 @@ function oxfmtEntries(config: unknown): Entry[] {
 }
 
 /**
- * The `ignore` of `knip`, at the top level and per workspace.
- *
- * @param {unknown} config - The config.
- * @returns {Entry[]} The `ignore` of `knip`, at the top level and per workspace.
- */
-function knipEntries(config: unknown): Entry[] {
-  const fields = object(config, 'knip.config.ts');
-  const workspaces = object(fields['workspaces'] ?? {}, 'workspaces');
-  return [
-    ...strings(absentAs(fields['ignore'], []), 'ignore').map((glob): Entry => ({ glob, reading: 'root', tool: 'knip ignore' })),
-    ...Object.entries(workspaces).flatMap(([workspace, settings]: readonly [string, unknown]) =>
-      strings(absentAs(object(settings, workspace)['ignore'], []), `${workspace}.ignore`).map((glob): Entry => ({
-        glob: workspace === '.' ? glob : `${workspace}/${glob}`,
-        reading: 'root',
-        tool: `knip workspaces[${workspace}].ignore`,
-      })),
-    ),
-  ];
-}
-
-/**
  * The `ignoreFiles` of `stylelint` and the lines of `.stylelintignore`.
  *
  * @param {unknown} config - The config.
@@ -115,5 +83,5 @@ function stylelintEntries(config: unknown, ignoreFile: string): Entry[] {
   ];
 }
 
-export { knipEntries, oxfmtEntries, oxlintEntries, stylelintEntries, vitestEntries };
+export { oxfmtEntries, oxlintEntries, stylelintEntries, vitestEntries };
 export type { Entry };

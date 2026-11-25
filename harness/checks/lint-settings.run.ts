@@ -1,11 +1,13 @@
 /** Runs of the locked oxlint over planted projects, for the `lint-settings` check. */
 
-import { OXLINT_CONFIG_FILES, PLANTED_OXLINT_CONFIG, codeOf, oxlintDiagnostics, writeOxlintConfig } from '#lib/lint-rules.ts';
-import { object, parsed } from '#lib/config.ts';
+import type { AnyOxlintConfig, GateOxlintConfig } from '#lib/oxlint-shape.ts';
+import { OXLINT_CONFIG_FILES, codeOf, oxlintDiagnostics, plantedLintRun, writeOxlintConfig } from '#lib/lint-rules.ts';
 import { PLANTS } from './lint-settings.plants.ts';
 import { Project } from '#lib/tools.ts';
 import { oxlintConfig } from '#lib/config-modules.ts';
+import { parsed } from '#lib/config.ts';
 
+/** A config's rule settings or options, as plain values. */
 type Options = Readonly<Record<string, unknown>>;
 
 interface Lint {
@@ -16,9 +18,9 @@ interface Lint {
 /**
  * The repository's oxlint config, as oxlint loads it.
  *
- * @returns {Promise<Options>} The config's top-level fields.
+ * @returns {Promise<GateOxlintConfig>} The config.
  */
-async function repoConfig(): Promise<Options> {
+async function repoConfig(): Promise<GateOxlintConfig> {
   const loaded = await oxlintConfig();
   return loaded;
 }
@@ -26,16 +28,15 @@ async function repoConfig(): Promise<Options> {
 /**
  * A copy of the repository's oxlint config with `options` merged over its options.
  *
- * @param {Options} options - Options to merge over the config's.
- * @param {Options} rules - Rule settings to merge over the config's.
- * @returns {Promise<Options>} The config.
+ * @param {AnyOxlintConfig} merged - The options and rule settings to merge over the config's.
+ * @returns {Promise<AnyOxlintConfig>} The config.
  */
-async function config(options: Options, rules: Options = {}): Promise<Options> {
+async function config(merged: AnyOxlintConfig = {}): Promise<AnyOxlintConfig> {
   const repo = await repoConfig();
   return {
     ...repo,
-    options: { ...object(repo['options'] ?? {}, 'options'), ...options },
-    rules: { ...object(repo['rules'] ?? {}, 'rules'), ...rules },
+    options: { ...repo.options, ...merged.options },
+    rules: { ...repo.rules, ...merged.rules },
   };
 }
 
@@ -57,10 +58,10 @@ function codesByFile(report: unknown): ReadonlyMap<string, readonly string[]> {
  * One run of the locked oxlint over `files` in a planted project under `configText`.
  *
  * @param {Readonly<Record<string, string>>} files - Each planted file's text, by path.
- * @param {Options} planted - The config the run reads.
+ * @param {AnyOxlintConfig} planted - The config the run reads.
  * @returns {Promise<Lint>} The run's exit status and codes.
  */
-async function lint(files: Readonly<Record<string, string>>, planted: Options): Promise<Lint> {
+async function lint(files: Readonly<Record<string, string>>, planted: AnyOxlintConfig): Promise<Lint> {
   const project = await Project.create({ copies: [...OXLINT_CONFIG_FILES, 'tsconfig.base.json'] });
   try {
     await writeOxlintConfig(project, planted);
@@ -69,7 +70,7 @@ async function lint(files: Readonly<Record<string, string>>, planted: Options): 
       JSON.stringify({ compilerOptions: { jsx: 'preserve', types: [] }, extends: './tsconfig.base.json', include: ['src'] }),
     );
     await project.writeAll(Object.entries(files));
-    const done = await project.tool('oxlint', '-c', PLANTED_OXLINT_CONFIG, '--format', 'json', ...Object.keys(files));
+    const done = await project.tool('oxlint', ...(await plantedLintRun()), '--format', 'json', ...Object.keys(files));
     return { codes: codesByFile(parsed(done.stdout, "oxlint's report")), status: done.status };
   } finally {
     await project.remove();
@@ -84,7 +85,7 @@ async function lint(files: Readonly<Record<string, string>>, planted: Options): 
 async function plantedCodes(): Promise<readonly [Options, Options]> {
   const planted = Object.entries(PLANTS);
   const texts = Object.fromEntries(planted.map(([path, [text]]: readonly [string, readonly [string, readonly string[]]]) => [path, text]));
-  const run = await lint(texts, await config({}));
+  const run = await lint(texts, await config());
   const found = run.codes;
   return [
     Object.fromEntries(planted.map(([path]: readonly [string, unknown]) => [path, found.get(path) ?? []])),

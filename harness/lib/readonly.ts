@@ -1,4 +1,4 @@
-/** A deeply readonly view of a type the checks read but do not own, such as a TypeScript syntax node. */
+/** A deeply readonly view of a type the harness reads but does not own, such as a TypeScript syntax node or a tool's configuration. */
 
 /** `Value` with every property, at every depth, readonly; functions are kept as they are, and a pattern is `Readonly<RegExp>`. */
 type DeepReadonly<Value> = Value extends (...args: readonly never[]) => unknown

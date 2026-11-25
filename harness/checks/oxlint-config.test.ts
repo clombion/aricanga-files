@@ -6,8 +6,8 @@
  * oxlint's globs) with the listed lintable files the population holds.
  */
 
+import { ROOT_CONFIG_MODULES, defaultExport, knipConfig, oxlintConfig } from '#lib/config-modules.ts';
 import { describe, expect, test } from 'vitest';
-import { list, object, strings } from '#lib/config.ts';
 import { EXIT_CLEAN } from '#lib/exit-status.ts';
 import type { Population } from '#lib/scope.ts';
 import { REPO_ROOT } from '#lib/paths.ts';
@@ -31,7 +31,7 @@ interface MemberSettings {
   readonly mechanics: unknown;
   readonly flags: unknown;
   readonly owners: unknown;
-  readonly files: readonly unknown[];
+  readonly files: readonly (readonly string[])[];
 }
 
 /**
@@ -43,9 +43,9 @@ interface MemberSettings {
  */
 function memberSettings(held: Population): MemberSettings {
   const config = oxlintConfigOf(held);
-  const rules = config.rules ?? {};
+  const { rules } = config;
   return {
-    files: list(config.overrides ?? [], 'overrides').map((override: unknown) => object(override, 'an override')['files']),
+    files: config.overrides.map((override) => override.files),
     flags: rules['aricanga/flags'],
     mechanics: rules['aricanga/mechanics'],
     owners: rules['aricanga/store-owner'],
@@ -111,7 +111,7 @@ describe('the Node env of test support', () => {
     );
     const { files } = memberSettings(held);
     // No system has a reducer surface here, so the node override comes first.
-    const node = strings(files.at(PURITY), 'the node override files');
+    const [node = []] = files;
     const inNode = (file: string): boolean => node.some((glob) => fieldMatches('files', glob, file));
     expect(
       ['packages/test/kit/src/a.ts', 'packages/ok/test/b.ts', 'packages/ok/src/test/c.ts', 'packages/ok/src/d.ts'].map((file) =>
@@ -125,11 +125,21 @@ describe('the oxlint configuration of a population with no mechanics', () => {
   test('turns the Solid ban off where no member has a mechanics module, since its files may not be empty', async () => {
     expect.hasAssertions();
     const held = await plantedPopulation(['ui/view/src/a.tsx'], [['ui/view/', 'view']]);
-    expect(oxlintConfigOf(held).rules?.['aricanga/mechanics']).toBe('off');
+    expect(oxlintConfigOf(held).rules['aricanga/mechanics']).toBe('off');
   });
 });
 
 describe('the repository', () => {
+  test("loads oxlint's and knip's configurations, typed, from the root modules the tasks name", async () => {
+    expect.hasAssertions();
+    const [oxlint, knip] = await Promise.all([oxlintConfig(), knipConfig()]);
+    const [oxlintModule, knipModule] = await Promise.all([
+      defaultExport(ROOT_CONFIG_MODULES.oxlint),
+      defaultExport(ROOT_CONFIG_MODULES.knip),
+    ]);
+    expect([JSON.stringify(oxlint), JSON.stringify(knip)]).toStrictEqual([JSON.stringify(oxlintModule), JSON.stringify(knipModule)]);
+  });
+
   test('oxlint, as the lint task runs it, lints exactly the listed lintable files the population holds', async () => {
     expect.hasAssertions();
     const [linted, held] = await Promise.all([lintedFiles(REPO_ROOT), population()]);

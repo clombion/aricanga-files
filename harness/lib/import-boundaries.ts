@@ -11,9 +11,9 @@
  */
 
 import type { Member, Population } from './scope.ts';
+import type { GateOverride } from './oxlint-shape.ts';
 import { HARNESS_CODE } from './oxlint-files.ts';
 import type { MemberDir } from './package-dirs.ts';
-import type { OxlintOverride } from 'oxlint';
 import type { Role } from './roles.ts';
 import { Vocabulary } from './exemptions.ts';
 import { isEmpty } from './lists.ts';
@@ -115,9 +115,9 @@ function groupsOf(held: Population, importing: Readonly<Importing>): Group[] {
  *
  * @param {readonly string[]} files - The files.
  * @param {readonly Group[]} groups - The refused groups.
- * @returns {OxlintOverride} The override.
+ * @returns {GateOverride} The override.
  */
-function refusing(files: readonly string[], groups: readonly Group[]): OxlintOverride {
+function refusing(files: readonly string[], groups: readonly Group[]): GateOverride {
   return {
     files: [...files],
     rules: {
@@ -137,9 +137,9 @@ function refusing(files: readonly string[], groups: readonly Group[]): OxlintOve
  * the harness code's.
  *
  * @param {Population} held - The population.
- * @returns {OxlintOverride[]} The overrides, one per member and one for the harness.
+ * @returns {GateOverride[]} The overrides, one per member and one for the harness.
  */
-function boundariesOf(held: Population): OxlintOverride[] {
+function boundariesOf(held: Population): GateOverride[] {
   return [
     ...held.members.map((member) => refusing([`${member.dir}**`], groupsOf(held, { importer: member.role, own: member.dir }))),
     refusing(HARNESS_CODE, groupsOf(held, { importer: 'harness', own: undefined })),

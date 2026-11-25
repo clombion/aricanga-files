@@ -3,7 +3,7 @@
  *
  * The globs read: oxlint's `ignorePatterns` and each override's `files`; the gate's Vitest config,
  * its coverage `include` and `exclude` and each project's `include`; and, once their configuration exists, oxfmt's
- * `ignorePatterns`, knip's `ignore` (top level and per workspace) and stylelint's `ignoreFiles`
+ * `ignorePatterns` and stylelint's `ignoreFiles`
  * and `.stylelintignore`. A glob that matches nothing either names a path that is gone or a policy
  * for files that do not exist yet: the first is deleted, the second is declared in `POLICIES` with
  * its reason, and a declared policy that starts matching listed files fails as stale.
@@ -13,13 +13,14 @@ import { ConfigError, parsed } from '#lib/config.ts';
 import { Exemptions, site } from '#lib/exemptions.ts';
 import { describe, expect, test } from 'vitest';
 import { fieldMatches, matches } from '#lint-rules/globs.ts';
-import { knipConfig, oxlintConfig } from '#lib/config-modules.ts';
-import { knipEntries, oxfmtEntries, oxlintEntries, stylelintEntries, vitestEntries } from './tool-exemptions.readers.ts';
+import { oxfmtEntries, oxlintEntries, stylelintEntries, vitestEntries } from './tool-exemptions.readers.ts';
 import { textOf, tracked } from '#lib/source-files.ts';
 import type { Entry } from './tool-exemptions.readers.ts';
 import type { OxlintField } from '#lint-rules/globs.ts';
 import { Project } from '#lib/tools.ts';
 import { gateConfig } from './gate-config.ts';
+import { oxlintConfig } from '#lib/config-modules.ts';
+import { plantedLintRun } from '#lib/lint-rules.ts';
 
 const HARNESS_ID = 'tool-exemptions';
 
@@ -49,10 +50,9 @@ async function listedJson(path: string): Promise<unknown> {
 }
 
 async function repoEntries(): Promise<Entry[]> {
-  const [vitest, oxfmt, knip, stylelint, oxlint, listed] = await Promise.all([
+  const [vitest, oxfmt, stylelint, oxlint, listed] = await Promise.all([
     gateConfig(),
     listedJson('.oxfmtrc.json'),
-    knipConfig(),
     listedJson('.stylelintrc.json'),
     oxlintConfig(),
     tracked(),
@@ -62,7 +62,6 @@ async function repoEntries(): Promise<Entry[]> {
     ...oxlintEntries(oxlint),
     ...vitestEntries(vitest),
     ...(oxfmt === undefined ? [] : oxfmtEntries(oxfmt)),
-    ...knipEntries(knip),
     ...stylelintEntries(stylelint ?? {}, stylelintIgnore),
   ];
 }
@@ -117,7 +116,7 @@ async function oxlintMatched(field: OxlintField, glob: string): Promise<readonly
         ? { categories: {}, ignorePatterns: [glob], rules: { 'no-debugger': 'error' } }
         : { categories: {}, overrides: [{ files: [glob], rules: { 'no-debugger': 'error' } }], rules: { 'no-debugger': 'off' } };
     await project.write('planted.json', JSON.stringify(config));
-    const done = await project.tool('oxlint', '-c', 'planted.json', '--format', 'unix', '.');
+    const done = await project.tool('oxlint', ...(await plantedLintRun('planted.json')), '--format', 'unix', '.');
     const reported = new Set(done.stdout.split('\n').flatMap((line) => FIELD_FILES.filter((file) => line.startsWith(`${file}:`))));
     return field === 'ignorePatterns'
       ? FIELD_FILES.filter((file) => !reported.has(file))
@@ -137,10 +136,13 @@ describe("oxlint's fields", () => {
 
   test("the census reads a glob with the other field's anchor as dead", () => {
     expect.hasAssertions();
-    const entries = oxlintEntries({ ignorePatterns: ['./docs/**', '/docs/**'], overrides: [{ files: ['/docs/x.md', './docs/x.md'] }] });
+    const entries = oxlintEntries({
+      ignorePatterns: ['./docs/**', '/docs/**'],
+      overrides: [{ files: ['/docs/x.md', './docs/x.md'], rules: {} }],
+    });
     expect(deadEntries(entries, ['docs/x.md'])).toStrictEqual([
       { glob: './docs/**', reading: 'ignorePatterns', tool: 'oxlint ignorePatterns' },
-      { glob: '/docs/x.md', reading: 'files', tool: 'oxlint overrides[0]' },
+      { glob: '/docs/x.md', reading: 'files', tool: 'oxlint overrides' },
     ]);
   });
 });
@@ -152,11 +154,14 @@ describe('the readers', () => {
     expect.hasAssertions();
     const entries = oxlintEntries({
       ignorePatterns: ['docs/**', 'gone/**'],
-      overrides: [{ files: ['packages/plant/**'] }, { files: ['packages/gone/**'] }],
+      overrides: [
+        { files: ['packages/plant/**'], rules: {} },
+        { files: ['packages/gone/**'], rules: {} },
+      ],
     });
     expect(deadEntries(entries, LISTED)).toStrictEqual([
       { glob: 'gone/**', reading: 'ignorePatterns', tool: 'oxlint ignorePatterns' },
-      { glob: 'packages/gone/**', reading: 'files', tool: 'oxlint overrides[1]' },
+      { glob: 'packages/gone/**', reading: 'files', tool: 'oxlint overrides' },
     ]);
   });
 
@@ -175,11 +180,6 @@ describe('the readers', () => {
     ]);
   });
 
-  test('refuses a glob that is not a string, naming its place', () => {
-    expect.hasAssertions();
-    expect(() => oxlintEntries({ ignorePatterns: ['docs/**', true] })).toThrow(new ConfigError('ignorePatterns[1] is not a string: true'));
-  });
-
   test("refuses a gate config with no projects, as every reader of the gate's config does", () => {
     expect.hasAssertions();
     expect(() => vitestEntries({ test: { coverage: { exclude: [], include: [] } } })).toThrow(
@@ -191,14 +191,10 @@ describe('the readers', () => {
 describe('the readers of the other tools', () => {
   const LISTED = ['packages/plant/src/a.ts', 'packages/plant/src/a.test.ts', 'packages/plant/src/b.css', 'docs/x.md'];
 
-  test('reads oxfmt, knip and stylelint ignores', () => {
+  test('reads oxfmt and stylelint ignores', () => {
     expect.hasAssertions();
     expect(oxfmtEntries({ ignorePatterns: ['docs/**'] })).toStrictEqual([
       { glob: 'docs/**', reading: 'root', tool: 'oxfmt ignorePatterns' },
-    ]);
-    expect(knipEntries({ ignore: ['docs/**'], workspaces: { 'packages/plant': { ignore: ['src/b.css'] } } })).toStrictEqual([
-      { glob: 'docs/**', reading: 'root', tool: 'knip ignore' },
-      { glob: 'packages/plant/src/b.css', reading: 'root', tool: 'knip workspaces[packages/plant].ignore' },
     ]);
     expect(stylelintEntries({ ignoreFiles: ['**/b.css'] }, '# a comment\n\ngone/**\n')).toStrictEqual([
       { glob: '**/b.css', reading: 'root', tool: 'stylelint ignoreFiles' },
@@ -219,13 +215,9 @@ describe('the readers of the other tools', () => {
 describe('a tool config', () => {
   test('refuses a field written as JSON null where a list is read: null is not an absent field', () => {
     expect.hasAssertions();
-    expect(() => oxlintEntries(parsed('{"overrides":null}', 'a planted config'))).toThrow(
-      new ConfigError('oxlint.config.ts overrides is not a list: null'),
-    );
     expect(() => oxfmtEntries(parsed('{"ignorePatterns":null}', 'a planted config'))).toThrow(
       new ConfigError('ignorePatterns is not a list: null'),
     );
-    expect(() => knipEntries(parsed('{"ignore":null}', 'a planted config'))).toThrow(new ConfigError('ignore is not a list: null'));
   });
 });
 

@@ -1,25 +1,20 @@
 /**
  * The one owner of the unused-code scan: knip, run the way the `deadcode` task runs it (production
- * mode, then default mode, each treating a configuration hint as an error), at its strictest. Every
- * issue type knip's schema names is an error, no file is excused from an issue type, and each entry
- * of the remaining ignore lists is held by the harness to a reason. knip hints a stale dependency,
- * binary or workspace ignore itself.
+ * mode, then default mode, each naming its configuration module and treating a configuration hint as
+ * an error), at its strictest. Every issue type knip's schema names is an error, no file is excused
+ * from an issue type (the configuration's type holds no such field), and each entry of the ignore
+ * lists is held by the harness to a reason. knip hints a stale dependency or workspace ignore itself.
+ * A planted run makes the task's invocations with its own configuration file (`planted`).
  */
 
 import { bin, finished } from './tools.ts';
-import { object, parsed, strings } from './config.ts';
+import { object, parsed } from './config.ts';
+import { substituted, toolRuns } from './repo-tasks.ts';
 import type { Finished } from './process.ts';
+import type { KnipConfig } from './knip-config.ts';
 import type { Project } from './tools.ts';
 import { knipConfig } from './config-modules.ts';
-import { present } from './present.ts';
-import { repoTasks } from './repo-tasks.ts';
 import { textOf } from './source-files.ts';
-
-/** The ignore lists of knip's configuration that list plain entries. */
-const LISTED_IGNORES: readonly string[] = ['ignoreWorkspaces', 'ignoreDependencies', 'ignoreBinaries', 'ignoreFiles'];
-
-/** The words of a `knip` command after the binary's name. */
-const AFTER_BINARY = 1;
 
 /**
  * The knip invocations of the `deadcode` task.
@@ -27,19 +22,32 @@ const AFTER_BINARY = 1;
  * @returns {Promise<readonly (readonly string[])[]>} Each invocation's arguments, without the binary.
  */
 async function deadcodeRuns(): Promise<readonly (readonly string[])[]> {
-  const tasks = await repoTasks();
-  const { commands } = present(tasks.get('deadcode'), 'the deadcode task');
-  return commands.filter((command) => command.startsWith('knip')).map((command) => command.split(' ').slice(AFTER_BINARY));
+  const runs = await toolRuns('deadcode', 'knip');
+  return runs;
 }
 
 /** The configuration file of a planted knip run: JSON, which knip reads without loading a module. */
 const PLANTED_KNIP_CONFIG = 'knip.json';
 
+/** The flag that names knip's configuration file, followed by the file. */
+const CONFIG_FLAG = '--config';
+
+/**
+ * A knip invocation of the task, as a planted run makes it: the same words, its configuration the
+ * planted file in place of the one the task names.
+ *
+ * @param {readonly string[]} args - The task's arguments.
+ * @returns {readonly string[]} The planted run's arguments.
+ */
+function planted(args: readonly string[]): readonly string[] {
+  return substituted(args, CONFIG_FLAG, PLANTED_KNIP_CONFIG);
+}
+
 /**
  * Write a knip configuration into a planted project, as the file its knip run reads.
  *
  * @param {Readonly<Project>} project - The planted project.
- * @param {object} config - The configuration.
+ * @param {object} config - The configuration, as JSON.
  */
 async function writeKnipConfig(project: Readonly<Project>, config: object): Promise<void> {
   await project.write(PLANTED_KNIP_CONFIG, JSON.stringify(config));
@@ -58,22 +66,17 @@ async function knip(cwd: string, args: readonly string[]): Promise<Finished> {
 }
 
 /**
- * Every ignore entry of a knip configuration, as a key: `ignoreWorkspaces:<workspace>`,
- * `ignoreDependencies:<package>`, `ignoreBinaries:<binary>`, `ignoreFiles:<glob>` or
- * `ignoreIssues:<glob>:<issue type>`.
+ * Every ignore entry of the gate's knip configuration, as a key: `ignoreWorkspaces:<workspace>` or
+ * `ignoreDependencies:<package>`; it holds no other ignore (`KnipConfig`).
  *
- * @param {unknown} config - The configuration.
+ * @param {KnipConfig} config - The configuration.
  * @returns {readonly string[]} The entries' keys.
  */
-function ignoreEntries(config: unknown): readonly string[] {
-  const fields = object(config, 'knip.config.ts');
-  const listed = LISTED_IGNORES.flatMap((field) =>
-    strings(Object.hasOwn(fields, field) ? fields[field] : [], field).map((entry) => `${field}:${entry}`),
-  );
-  const issues = Object.entries(object(fields['ignoreIssues'] ?? {}, 'ignoreIssues')).flatMap(([glob, types]: readonly [string, unknown]) =>
-    strings(types, `ignoreIssues.${glob}`).map((type) => `ignoreIssues:${glob}:${type}`),
-  );
-  return [...listed, ...issues];
+function ignoreEntries(config: KnipConfig): readonly string[] {
+  return [
+    ...config.ignoreWorkspaces.map((entry) => `ignoreWorkspaces:${entry}`),
+    ...config.ignoreDependencies.map((entry) => `ignoreDependencies:${entry}`),
+  ];
 }
 
 /**
@@ -99,21 +102,16 @@ async function issueTypes(): Promise<readonly string[]> {
 }
 
 /**
- * What keeps a knip configuration from knip's strictest setting: an issue type whose rule is not
- * `error`, or a file excused from an issue type (`ignoreIssues`, `ignoreFiles`).
+ * What keeps the gate's knip configuration from knip's strictest setting: an issue type knip names
+ * whose rule the configuration does not set (its type sets a rule only at `error`, and writes no
+ * file excuse).
  *
- * @param {unknown} config - The configuration.
+ * @param {KnipConfig} config - The configuration.
  * @param {readonly string[]} types - The issue types knip names.
  * @returns {readonly string[]} Each problem.
  */
-function strictnessProblems(config: unknown, types: readonly string[]): readonly string[] {
-  const rules = object(object(config, 'knip.config.ts')['rules'] ?? {}, 'rules');
-  return [
-    ...types.filter((type) => rules[type] !== 'error').map((type) => `rule ${type} is not error`),
-    ...ignoreEntries(config)
-      .filter((entry) => entry.startsWith('ignoreIssues:') || entry.startsWith('ignoreFiles:'))
-      .map((entry) => `a file is excused: ${entry}`),
-  ];
+function strictnessProblems(config: KnipConfig, types: readonly string[]): readonly string[] {
+  return types.filter((type) => !Object.hasOwn(config.rules, type)).map((type) => `rule ${type} is not set at error`);
 }
 
-export { deadcodeRuns, ignoreEntries, issueTypes, knip, repoIgnoreEntries, strictnessProblems, writeKnipConfig };
+export { deadcodeRuns, ignoreEntries, issueTypes, knip, planted, repoIgnoreEntries, strictnessProblems, writeKnipConfig };

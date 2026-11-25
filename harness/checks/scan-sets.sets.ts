@@ -1,16 +1,16 @@
 /** The scan sets of the `scan-sets` check: the files each tool reaches, read from the tool itself. */
 
-import { ConfigError, absentAs, object, strings } from '#lib/config.ts';
 import type { Dir, MemberDir } from '#lib/package-dirs.ts';
 import { Project, finished } from '#lib/tools.ts';
-import { REPO_ROOT, fromRoot } from '#lib/paths.ts';
+import { REPO_ROOT, fromRoot, relative } from '#lib/paths.ts';
 import { dirOfImporter, nearestOf } from '#lib/package-dirs.ts';
 import { textsOf, tracked } from '#lib/source-files.ts';
+import { ConfigError } from '#lib/config.ts';
 import { dirname } from 'node:path/posix';
 import { knipConfig } from '#lib/config-modules.ts';
+import { lintedFiles } from '#lib/lint-rules.ts';
 import { matches } from '#lint-rules/globs.ts';
 import { projects } from '#lib/projects.ts';
-import { relativeTo } from '#lib/relative.ts';
 
 const UNFORMATTED = '\nconst   plantedUnformatted   =   1  ;\n';
 
@@ -25,13 +25,13 @@ function lines(stdout: string): readonly string[] {
 }
 
 /**
- * The files oxlint lints in the checkout, from its own listing.
+ * The files oxlint lints in the checkout, from its own listing as the lint task runs it (`lintedFiles`).
  *
  * @returns {Promise<ReadonlySet<string>>} The files oxlint lints.
  */
 async function oxlintFiles(): Promise<ReadonlySet<string>> {
-  const done = await finished([fromRoot('node_modules', '.bin', 'oxlint'), '--debug=files'], { cwd: REPO_ROOT });
-  return new Set(lines(done.stdout));
+  const listed = await lintedFiles(REPO_ROOT);
+  return new Set(listed.files);
 }
 
 /**
@@ -57,6 +57,9 @@ async function oxfmtFiles(files: readonly string[]): Promise<ReadonlySet<string>
 /** A knip glob's production mark, which does not change what it matches. */
 const PRODUCTION_MARK = /!$/u;
 
+/** A workspace's settings as the reach check reads them: its project and entry globs. */
+type Globbed = Readonly<{ entry?: readonly string[]; project: readonly string[] }>;
+
 /** A workspace of knip's configuration: its directory and the globs of its project and entries. */
 interface KnipWorkspace {
   readonly dir: Dir;
@@ -70,16 +73,12 @@ type MemberWorkspace = KnipWorkspace & { readonly dir: MemberDir };
  * A workspace of knip's configuration, by its importer-spelled name.
  *
  * @param {string} name - The workspace's name (`.` for the root).
- * @param {unknown} settings - Its settings.
+ * @param {Globbed} settings - Its settings.
  * @returns {KnipWorkspace} Its directory and globs, repository-relative.
  */
-function knipWorkspace(name: string, settings: unknown): KnipWorkspace {
+function knipWorkspace(name: string, settings: Globbed): KnipWorkspace {
   const dir = dirOfImporter(name);
-  const fields = object(settings, name);
-  const globs = [
-    ...strings(absentAs(fields['project'], []), `${name}.project`),
-    ...strings(absentAs(fields['entry'], []), `${name}.entry`),
-  ];
+  const globs = [...settings.project, ...(settings.entry ?? [])];
   const negated = globs.find((glob) => glob.startsWith('!'));
   if (negated !== undefined) {
     throw new ConfigError(`${name}: the reach check reads no negated knip glob, and the configuration holds ${negated}`);
@@ -106,9 +105,7 @@ function isMemberWorkspace(workspace: KnipWorkspace): workspace is MemberWorkspa
  */
 async function knipFiles(files: readonly string[]): Promise<ReadonlySet<string>> {
   const config = await knipConfig();
-  const workspaces = Object.entries(object(absentAs(config['workspaces'], {}), 'workspaces')).map(
-    ([name, settings]: readonly [string, unknown]) => knipWorkspace(name, settings),
-  );
+  const workspaces = Object.entries(config.workspaces).map(([name, settings]: readonly [string, Globbed]) => knipWorkspace(name, settings));
   const root = workspaces.find((workspace) => !isMemberWorkspace(workspace));
   const holding = nearestOf(
     workspaces.filter((workspace) => isMemberWorkspace(workspace)),
@@ -140,7 +137,7 @@ async function projectMembers(): Promise<ReadonlyMap<string, ReadonlySet<string>
   const members = await Promise.all(
     all.map(async (project) => {
       const done = await finished([fromRoot('node_modules', '.bin', 'tsc'), '--listFilesOnly', '-p', project], { cwd: REPO_ROOT });
-      const listed = lines(done.stdout).map((path) => relativeTo(REPO_ROOT, path));
+      const listed = lines(done.stdout).map((path) => relative(path));
       return [project, new Set(listed.filter((path) => path.startsWith(projectDirectory(project))))] as const;
     }),
   );

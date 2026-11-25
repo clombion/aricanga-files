@@ -1,6 +1,6 @@
 /** The planted oxlint runs and config reads of the `boundaries` check. */
 
-import { OXLINT_CONFIG_FILES, PLANTED_OXLINT_CONFIG, oxlintDiagnostics, writeOxlintConfig } from '#lib/lint-rules.ts';
+import { OXLINT_CONFIG_FILES, oxlintDiagnostics, plantedLintRun, writeOxlintConfig } from '#lib/lint-rules.ts';
 import { list, object, parsed } from '#lib/config.ts';
 import { Accepted } from '#lib/exemptions.ts';
 import type { Diagnostic } from '#lib/lint-rules.ts';
@@ -33,8 +33,7 @@ async function boundaryDiagnostics(fixtures: readonly Fixture[]): Promise<readon
     await project.writeAll(fixtures.map((fixture) => [fixture.path, fixture.text] as const));
     const outcome = await project.tool(
       'oxlint',
-      '-c',
-      PLANTED_OXLINT_CONFIG,
+      ...(await plantedLintRun()),
       '-A',
       'all',
       '--format',
@@ -68,9 +67,8 @@ function at(found: readonly Diagnostic[], fixture: Readonly<Fixture>): readonly 
  * @returns {readonly unknown[]} Each override's files and each reason's refused members.
  */
 function bounded(held: Population): readonly unknown[] {
-  return list(oxlintConfigOf(held).overrides ?? [], 'overrides').flatMap((override: unknown) => {
-    const { files, rules } = object(override, 'an override');
-    const setting = object(rules, 'its rules')['no-restricted-imports'];
+  return oxlintConfigOf(held).overrides.flatMap(({ files, rules }) => {
+    const setting = rules['no-restricted-imports'];
     if (setting === undefined) {
       return [];
     }

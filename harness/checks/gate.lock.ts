@@ -47,4 +47,19 @@ async function lockCheckAfter(written: string, current: string): Promise<{ reado
   }
 }
 
-export { LOCK_CHECK, lockCheckAfter, lockCheckArguments };
+/** The first word of a command: the tool it runs. */
+const FIRST = 0;
+
+/**
+ * The commands that run a tool without naming its configuration module.
+ *
+ * @param {readonly string[]} commands - The commands.
+ * @param {readonly [string, string, string]} naming - The tool, its configuration flag and the module.
+ * @returns {readonly string[]} The commands that run the tool and name no module.
+ */
+function unnamed(commands: readonly string[], naming: readonly [string, string, string]): readonly string[] {
+  const [tool, flag, module] = naming;
+  return commands.filter((command) => command.split(' ')[FIRST] === tool && !command.includes(`${flag} ${module}`));
+}
+
+export { LOCK_CHECK, lockCheckAfter, lockCheckArguments, unnamed };

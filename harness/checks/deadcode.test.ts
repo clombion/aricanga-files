@@ -9,13 +9,24 @@
  */
 
 import { EXIT_CLEAN, EXIT_FINDINGS } from '#lib/exit-status.ts';
-import { deadcodeRuns, ignoreEntries, issueTypes, knip, repoIgnoreEntries, strictnessProblems, writeKnipConfig } from '#lib/deadcode.ts';
+import { ROOT_CONFIG_MODULES, knipConfig } from '#lib/config-modules.ts';
+import {
+  deadcodeRuns,
+  ignoreEntries,
+  issueTypes,
+  knip,
+  planted,
+  repoIgnoreEntries,
+  strictnessProblems,
+  writeKnipConfig,
+} from '#lib/deadcode.ts';
 import { describe, expect, test } from 'vitest';
+import { runsOf, substituted } from '#lib/repo-tasks.ts';
 import { Exemptions } from '#lib/exemptions.ts';
+import type { KnipConfig } from '#lib/knip-config.ts';
 import { Project } from '#lib/tools.ts';
 import { REPO_ROOT } from '#lib/paths.ts';
 import { inSequence } from '#lib/lists.ts';
-import { knipConfig } from '#lib/config-modules.ts';
 
 const HARNESS_ID = 'deadcode';
 
@@ -75,7 +86,7 @@ async function plantedRuns(files: Readonly<Record<string, string>>, config: obje
     await project.writeAll(Object.entries(files));
     const runs = await deadcodeRuns();
     const done = await inSequence(runs, async (args) => {
-      const run = await knip(project.root, args);
+      const run = await knip(project.root, planted(args));
       return { output: run.stdout + run.stderr, status: run.status };
     });
     return done;
@@ -116,11 +127,11 @@ const CLEAN = {
 };
 
 describe('the repository', () => {
-  test('the deadcode task runs knip in production mode and in default mode, treating hints as errors', async () => {
+  test('the deadcode task runs knip on its configuration module in production mode and in default mode, treating hints as errors', async () => {
     expect.hasAssertions();
     await expect(deadcodeRuns()).resolves.toStrictEqual([
-      ['--production', '--treat-config-hints-as-errors'],
-      ['--treat-config-hints-as-errors'],
+      ['--config', ROOT_CONFIG_MODULES.knip, '--production', '--treat-config-hints-as-errors'],
+      ['--config', ROOT_CONFIG_MODULES.knip, '--treat-config-hints-as-errors'],
     ]);
   });
 
@@ -186,40 +197,31 @@ describe('the deadcode check, on a planted package', () => {
 });
 
 describe('the deadcode check, on planted configs', () => {
-  test('refuses an issue type below error and a file excused from an issue type', () => {
+  test('refuses an issue type whose rule is not set, and keys each ignore entry', () => {
     expect.hasAssertions();
-    const strict = { rules: { exports: 'error', types: 'error' } };
-    expect(strictnessProblems(strict, ['exports', 'types'])).toStrictEqual([]);
-    expect(
-      strictnessProblems({ ignoreFiles: ['src/y.ts'], ignoreIssues: { 'src/x.ts': ['exports'] }, rules: { exports: 'warn' } }, [
-        'exports',
-        'types',
-      ]),
-    ).toStrictEqual([
-      'rule exports is not error',
-      'rule types is not error',
-      'a file is excused: ignoreFiles:src/y.ts',
-      'a file is excused: ignoreIssues:src/x.ts:exports',
+    const config: KnipConfig = { ignoreDependencies: ['d'], ignoreWorkspaces: ['w'], rules: { exports: 'error' }, workspaces: {} };
+    expect([strictnessProblems(config, ['exports', 'types']), ignoreEntries(config)]).toStrictEqual([
+      ['rule types is not set at error'],
+      ['ignoreWorkspaces:w', 'ignoreDependencies:d'],
     ]);
   });
 
-  test('keys every kind of ignore entry', () => {
+  test("names the planted file in a planted run, in place of the task's configuration module", () => {
     expect.hasAssertions();
-    expect(
-      ignoreEntries({
-        ignoreBinaries: ['b'],
-        ignoreDependencies: ['d'],
-        ignoreFiles: ['f'],
-        ignoreIssues: { 'src/x.ts': ['exports', 'types'] },
-        ignoreWorkspaces: ['w'],
-      }),
-    ).toStrictEqual([
-      'ignoreWorkspaces:w',
-      'ignoreDependencies:d',
-      'ignoreBinaries:b',
-      'ignoreFiles:f',
-      'ignoreIssues:src/x.ts:exports',
-      'ignoreIssues:src/x.ts:types',
+    expect(planted(['--config', 'knip.config.ts', '--production'])).toStrictEqual(['--config', 'knip.json', '--production']);
+  });
+
+  test("reads a tool's invocations by its binary, the first word exactly, and replaces only the config flag's value", () => {
+    expect.hasAssertions();
+    expect(runsOf(['knipx --config x.ts', 'knip --config knip.config.ts --production', 'pnpm run knip', 'knip'], 'knip')).toStrictEqual([
+      ['--config', 'knip.config.ts', '--production'],
+      [],
+    ]);
+    expect(substituted(['--fix', '-c', 'oxlint.config.ts', '-c'], '-c', 'planted.json')).toStrictEqual([
+      '--fix',
+      '-c',
+      'planted.json',
+      '-c',
     ]);
   });
 });

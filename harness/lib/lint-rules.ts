@@ -12,13 +12,14 @@
 
 import { Project, bin, finished } from './tools.ts';
 import { list, object, parsed, stringOf } from './config.ts';
+import { substituted, toolRuns } from './repo-tasks.ts';
 import { textsOf, tracked } from './source-files.ts';
+import type { AnyOxlintConfig } from './oxlint-shape.ts';
 import { FixtureError } from './fixture-error.ts';
 import { fromRoot } from './paths.ts';
 import { oxlintConfig } from './config-modules.ts';
 import path from 'node:path';
 import { present } from './present.ts';
-import { repoTasks } from './repo-tasks.ts';
 
 /** A rule fixture: the rule it proves, whether it must fire, where it is planted and its source. */
 interface Fixture {
@@ -165,9 +166,9 @@ function codeOf(diagnostic: Readonly<Diagnostic>): string {
  * Write an oxlint configuration into a planted project, as the file its oxlint run reads.
  *
  * @param {Readonly<Project>} project - The planted project.
- * @param {object} config - The configuration; the repository's by default.
+ * @param {AnyOxlintConfig} config - The configuration; the repository's by default.
  */
-async function writeOxlintConfig(project: Readonly<Project>, config?: object): Promise<void> {
+async function writeOxlintConfig(project: Readonly<Project>, config?: AnyOxlintConfig): Promise<void> {
   await project.write(PLANTED_OXLINT_CONFIG, JSON.stringify(config ?? (await oxlintConfig())));
 }
 
@@ -234,22 +235,24 @@ function codesAt(found: readonly Diagnostic[], planted: string): readonly string
     .map((diagnostic) => codeOf(diagnostic));
 }
 
-/** The words of an `oxlint` command after the binary's name. */
-const AFTER_BINARY = 1;
-
 /**
  * The oxlint invocation of the `lint` task: its arguments, without the binary.
  *
  * @returns {Promise<readonly string[]>} The arguments.
  */
 async function lintRun(): Promise<readonly string[]> {
-  const tasks = await repoTasks();
-  const { commands } = present(tasks.get('lint'), 'the lint task');
-  const command = present(
-    commands.find((candidate) => candidate === 'oxlint' || candidate.startsWith('oxlint ')),
-    'the oxlint command of the lint task',
-  );
-  return command.split(' ').slice(AFTER_BINARY);
+  const [run] = await toolRuns('lint', 'oxlint');
+  return present(run, 'the oxlint command of the lint task');
+}
+
+/**
+ * The `lint` task's oxlint invocation as a planted run makes it: its `-c` file the planted one.
+ *
+ * @param {string} config - The planted configuration file; the one `writeOxlintConfig` writes by default.
+ * @returns {Promise<readonly string[]>} The planted run's arguments.
+ */
+async function plantedLintRun(config: string = PLANTED_OXLINT_CONFIG): Promise<readonly string[]> {
+  return substituted(await lintRun(), '-c', config);
 }
 
 /** What oxlint lists for a checkout: its exit status, and the files it would lint. */
@@ -287,7 +290,7 @@ export {
   OXLINT_CONFIG_FILES,
   oxlintDiagnostics,
   parseFixture,
-  PLANTED_OXLINT_CONFIG,
+  plantedLintRun,
   UNUSED_DIRECTIVE,
   writeOxlintConfig,
 };

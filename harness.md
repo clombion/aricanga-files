@@ -16,17 +16,17 @@ generated blocks of the docs. `pnpm run fix` writes this table from `package.jso
 | `pnpm run check` | `pnpm run check:fast && pnpm run test && pnpm run test:browser` |
 | `pnpm run check:fast` | `pnpm run lock:check && pnpm run lint && pnpm run format:check && pnpm run typecheck && pnpm run dupes && pnpm run docs:check && pnpm run deadcode && pnpm run build:check` |
 | `pnpm run lock:check` | `pnpm install --frozen-lockfile --lockfile-only` |
-| `pnpm run lint` | `pnpm run lock:check && oxlint && stylelint "**/*.css" --max-warnings 0` |
+| `pnpm run lint` | `pnpm run lock:check && oxlint -c oxlint.config.ts && stylelint "**/*.css" --max-warnings 0` |
 | `pnpm run format:check` | `pnpm run lock:check && oxfmt --check` |
 | `pnpm run typecheck` | `pnpm run lock:check && node harness/scripts/typecheck.ts` |
 | `pnpm run dupes` | `pnpm run lock:check && node harness/scripts/dupes.ts` |
 | `pnpm run docs:check` | `pnpm run lock:check && node harness/scripts/gen-docs.ts --check` |
-| `pnpm run deadcode` | `pnpm run lock:check && knip --production --treat-config-hints-as-errors && knip --treat-config-hints-as-errors` |
+| `pnpm run deadcode` | `pnpm run lock:check && knip --config knip.config.ts --production --treat-config-hints-as-errors && knip --config knip.config.ts --treat-config-hints-as-errors` |
 | `pnpm run build:check` | `pnpm run lock:check && node harness/scripts/build-check.ts` |
 | `pnpm run test` | `pnpm run lock:check && vitest run --config vitest.gate.config.ts --coverage && node harness/scripts/coverage-floor.ts` |
 | `pnpm run test:browser` | `pnpm run lock:check && playwright test -c packages/characterisation/playwright.characterisation.config.ts --grep-invert @performance && playwright test -c packages/characterisation/playwright.characterisation.config.ts --grep @performance --workers=1 && playwright test -c experiences/sandbox/playwright.sandbox.config.ts` |
 | `pnpm run test:stress` | `pnpm run lock:check && node harness/scripts/stress.ts` |
-| `pnpm run fix` | `oxlint --fix && oxfmt && node harness/scripts/gen-docs.ts` |
+| `pnpm run fix` | `oxlint -c oxlint.config.ts --fix && oxfmt && node harness/scripts/gen-docs.ts` |
 <!-- end: tasks -->
 
 ## Shipped checks

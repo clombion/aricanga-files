@@ -14,6 +14,7 @@
  */
 
 import { Accepted, Exemptions } from '#lib/exemptions.ts';
+import type { AnyOxlintConfig, GateOxlintConfig } from '#lib/oxlint-shape.ts';
 import { ConfigError, object, parsed } from '#lib/config.ts';
 import { ESLINT_DIRECTIVE_TEXT, UNUSED_DIRECTIVE_TEXT, WARNING_PLANT, WARNING_TEXT } from './lint-settings.plants.ts';
 import { EXIT_CLEAN, EXIT_FINDINGS } from '#lib/exit-status.ts';
@@ -107,15 +108,12 @@ function enabled(rules: Options, prefix: string): readonly string[] {
 /**
  * The rules a config turns off, at the top level and in every override.
  *
- * @param {unknown} configText - The parsed config.
+ * @param {Pick<GateOxlintConfig, 'overrides' | 'rules'>} repo - The config.
  * @returns {readonly string[]} The rules turned off, sorted.
  */
-function turnedOff(configText: unknown): readonly string[] {
-  const repo = object(configText, 'oxlint.config.ts');
-  const overrides: readonly unknown[] = Array.isArray(repo['overrides']) ? repo['overrides'] : [];
-  const ruleSets = [repo['rules'] ?? {}, ...overrides.map((entry) => object(entry, 'override')['rules'] ?? {})];
-  const off = ruleSets.flatMap((rules) => {
-    const all = object(rules, 'rules');
+function turnedOff(repo: Pick<GateOxlintConfig, 'overrides' | 'rules'>): readonly string[] {
+  const ruleSets = [repo.rules, ...repo.overrides.map((entry) => entry.rules)];
+  const off = ruleSets.flatMap((all: Options) => {
     const on = new Set(enabled(all, ''));
     return Object.keys(all).filter((rule) => !on.has(rule));
   });
@@ -125,12 +123,12 @@ function turnedOff(configText: unknown): readonly string[] {
 /**
  * The categories a config does not turn on at error.
  *
- * @param {unknown} configText - The parsed config.
+ * @param {Pick<GateOxlintConfig, 'categories'>} repo - The config.
  * @returns {readonly string[]} One problem per category.
  */
-function categoryProblems(configText: unknown): readonly string[] {
-  const categories = object(object(configText, 'oxlint.config.ts')['categories'] ?? {}, 'categories');
-  return [...CATEGORIES].filter((category) => categories[category] !== 'error').map((category) => `${category} is not at error`);
+function categoryProblems(repo: Pick<GateOxlintConfig, 'categories'>): readonly string[] {
+  const levels = new Map(Object.entries(repo.categories));
+  return [...CATEGORIES].filter((category) => levels.get(category) !== 'error').map((category) => `${category} is not at error`);
 }
 
 /**
@@ -158,7 +156,7 @@ async function v2Strict(): Promise<Options> {
  */
 async function repoRules(): Promise<Options> {
   const repo = await repoConfig();
-  return object(repo['rules'] ?? {}, 'rules');
+  return repo.rules;
 }
 
 /**
@@ -168,9 +166,7 @@ async function repoRules(): Promise<Options> {
  */
 async function jsPlugins(): Promise<readonly unknown[]> {
   const repo = await repoConfig();
-  const plugins = repo['jsPlugins'];
-  const listed: readonly unknown[] = Array.isArray(plugins) ? plugins : [];
-  return listed;
+  return repo.jsPlugins ?? [];
 }
 
 describe("oxlint's report", () => {
@@ -196,13 +192,15 @@ describe('the repository config', () => {
   test('refuses the mechanics rule without its files, loudly, set bare or with an empty or missing option', async () => {
     expect.hasAssertions();
     const plant = { 'src/a.ts': 'export const value = 1;\n' };
-    const bare = await lint(plant, await config({}, { 'aricanga/mechanics': 'error' }));
+    const bare = await lint(plant, await config({ rules: { 'aricanga/mechanics': 'error' } }));
     expect([
       bare.status,
       [...bare.codes.values()].flat().some((code) => code.includes('holds nothing without its files option')),
     ]).toStrictEqual([EXIT_FINDINGS, true]);
-    await expect(lint(plant, await config({}, { 'aricanga/mechanics': ['error', {}] }))).rejects.toThrow(/oxlint's report/u);
-    await expect(lint(plant, await config({}, { 'aricanga/mechanics': ['error', { files: [] }] }))).rejects.toThrow(/oxlint's report/u);
+    await expect(lint(plant, await config({ rules: { 'aricanga/mechanics': ['error', {}] } }))).rejects.toThrow(/oxlint's report/u);
+    await expect(lint(plant, await config({ rules: { 'aricanga/mechanics': ['error', { files: [] }] } }))).rejects.toThrow(
+      /oxlint's report/u,
+    );
   });
 
   test('fails each planted violation with exactly its rule, and passes the near misses', async () => {
@@ -243,7 +241,10 @@ describe('the strictness of the config', () => {
       'style is not at error',
       'suspicious is not at error',
     ]);
-    const planted = { overrides: [{ files: ['x'], rules: { off: ['off'], warned: 'warn' } }], rules: { erred: 'error', gone: 'off' } };
+    const planted: Pick<GateOxlintConfig, 'overrides' | 'rules'> = {
+      overrides: [{ files: ['x'], rules: { off: ['off'], warned: 'warn' } }],
+      rules: { erred: 'error', gone: 'off' },
+    };
     expect(turnedOff(planted)).toStrictEqual(['gone', 'off']);
   });
 });
@@ -251,22 +252,28 @@ describe('the strictness of the config', () => {
 describe('each option, by removal', () => {
   test('denyWarnings: a lone warning fails the run, and passes without it', async () => {
     expect.hasAssertions();
-    const warn = { 'eslint/no-debugger': 'warn' };
-    const denied = await lint({ [WARNING_PLANT]: WARNING_TEXT }, await config({}, warn));
+    const warn: AnyOxlintConfig['rules'] = { 'eslint/no-debugger': 'warn' };
+    const denied = await lint({ [WARNING_PLANT]: WARNING_TEXT }, await config({ rules: warn }));
     expect(denied.status).toBe(EXIT_FINDINGS);
-    const allowed = await lint({ [WARNING_PLANT]: WARNING_TEXT }, await config({ denyWarnings: false }, warn));
+    const allowed = await lint({ [WARNING_PLANT]: WARNING_TEXT }, await config({ options: { denyWarnings: false }, rules: warn }));
     expect(allowed.status).toBe(EXIT_CLEAN);
   });
 
   test('reportUnusedDisableDirectives: an unused directive passes without it', async () => {
     expect.hasAssertions();
-    const run = await lint({ 'src/unused-directive.ts': UNUSED_DIRECTIVE_TEXT }, await config({ reportUnusedDisableDirectives: 'off' }));
+    const run = await lint(
+      { 'src/unused-directive.ts': UNUSED_DIRECTIVE_TEXT },
+      await config({ options: { reportUnusedDisableDirectives: 'off' } }),
+    );
     expect(run.status).toBe(EXIT_CLEAN);
   });
 
   test('respectEslintDisableDirectives: false, an eslint-disable comment silences its rule once respected', async () => {
     expect.hasAssertions();
-    const run = await lint({ 'src/eslint-directive.ts': ESLINT_DIRECTIVE_TEXT }, await config({ respectEslintDisableDirectives: true }));
+    const run = await lint(
+      { 'src/eslint-directive.ts': ESLINT_DIRECTIVE_TEXT },
+      await config({ options: { respectEslintDisableDirectives: true } }),
+    );
     expect(run.status).toBe(EXIT_CLEAN);
   });
 });
