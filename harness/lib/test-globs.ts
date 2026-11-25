@@ -1,11 +1,13 @@
 /**
- * The gate's test globs: which modules a test runner runs (`isRunnerTest`, from `VITEST_TESTS` and
- * `PLAYWRIGHT_SPECS`), the harness's own test project (`HARNESS_CHECKS`), which tests the `rebuild`
- * project collects and which sources coverage reads. A member contributes a glob only where the
- * listing gives it a file to match, so no glob of a member is dead.
+ * The gate's test globs: which modules a test runner runs (`RUNNER_TESTS`: `VITEST_TESTS` and
+ * `PLAYWRIGHT_SPECS`, read by `isRunnerTest` and the coverage exclude), the harness's own test project
+ * (`HARNESS_CHECKS`), which tests the `rebuild` project collects and which sources coverage reads.
+ * Every Vitest include is built from `VITEST_TESTS`. A member contributes a glob only where the listing
+ * gives it a file to match, so no glob of a member is dead.
  */
 
 import type { Member, Population } from './scope.ts';
+import { Accepted } from './exemptions.ts';
 import { matches } from './globs.ts';
 
 /** The harness's own test project: its checks and their support, which coverage does not read. */
@@ -17,14 +19,17 @@ const VITEST_TESTS = '**/*.test.{ts,tsx}';
 /** The modules Playwright runs, as `packages/characterisation/browsers.ts` matches them under each config's `testDir`. */
 const PLAYWRIGHT_SPECS = '**/*.spec.ts';
 
+/** The modules a test runner runs: a Vitest test or a Playwright spec. */
+const RUNNER_TESTS: Accepted<string> = new Accepted<string>([VITEST_TESTS, PLAYWRIGHT_SPECS]);
+
 /**
- * Whether a module is run by a test runner: a Vitest test or a Playwright spec.
+ * Whether a module is run by a test runner (`RUNNER_TESTS`).
  *
  * @param {string} path - A repository-relative path.
  * @returns {boolean} Whether a runner runs it.
  */
 function isRunnerTest(path: string): boolean {
-  return matches(VITEST_TESTS, path) || matches(PLAYWRIGHT_SPECS, path);
+  return [...RUNNER_TESTS].some((glob) => matches(glob, path));
 }
 
 /**
@@ -66,4 +71,4 @@ function coverageIncludes(population: Population): string[] {
   return liveGlobs(population, population.shipping, 'src/**');
 }
 
-export { coverageIncludes, HARNESS_CHECKS, isRunnerTest, testIncludes, VITEST_TESTS };
+export { coverageIncludes, HARNESS_CHECKS, isRunnerTest, RUNNER_TESTS, testIncludes, VITEST_TESTS };

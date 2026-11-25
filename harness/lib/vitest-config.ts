@@ -8,7 +8,7 @@
  * population, which has no checkout: it computes none of the repository's and provides nothing.
  */
 
-import { HARNESS_CHECKS, VITEST_TESTS, coverageIncludes, testIncludes } from './test-globs.ts';
+import { HARNESS_CHECKS, RUNNER_TESTS, VITEST_TESTS, coverageIncludes, testIncludes } from './test-globs.ts';
 import { COVERAGE_DIR } from './coverage.ts';
 import type { Population } from './scope.ts';
 import type { ViteUserConfig } from 'vitest/config';
@@ -30,7 +30,7 @@ function configOf(held: Population, plugins: () => RebuildPlugins): ViteUserConf
     test: {
       allowOnly: false,
       coverage: {
-        exclude: [VITEST_TESTS],
+        exclude: [...RUNNER_TESTS],
         include: [...coverageIncludes(held), 'harness/lib/**', 'harness/scripts/**'],
         provider: 'v8',
         reporter: ['text-summary', 'json'],
@@ -54,7 +54,7 @@ function configOf(held: Population, plugins: () => RebuildPlugins): ViteUserConf
           extends: true,
           test: {
             environment: 'node',
-            include: [`${HARNESS_CHECKS}**/*.test.ts`],
+            include: [`${HARNESS_CHECKS}${VITEST_TESTS}`],
             name: 'harness',
           },
         },

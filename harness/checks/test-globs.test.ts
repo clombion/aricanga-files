@@ -1,8 +1,8 @@
 /** The gate's Vitest globs: a shipping member's tests are collected and its sources covered. */
 
-import { VITEST_TESTS, coverageIncludes, testIncludes } from '#lib/test-globs.ts';
+import { HARNESS_CHECKS, VITEST_TESTS, coverageIncludes, isRunnerTest, testIncludes } from '#lib/test-globs.ts';
+import { coverageOf, gateTest, globsOf, projectsOf } from './gate-config.ts';
 import { describe, expect, test } from 'vitest';
-import { gateTest, globsOf, projectsOf } from './gate-config.ts';
 import type { Population } from '#lib/scope.ts';
 import { matches } from '#lib/globs.ts';
 import { plantedPopulation } from '#lib/scan-hooks.ts';
@@ -78,7 +78,31 @@ function uncollected(files: readonly string[], includes: readonly string[]): rea
   return files.filter((path) => matches(VITEST_TESTS, path) && !includes.some((glob) => matches(glob, path)));
 }
 
+/**
+ * The paths no glob matches.
+ *
+ * @param {readonly string[]} paths - The paths.
+ * @param {readonly string[]} globs - The globs.
+ * @returns {readonly string[]} The paths outside every glob.
+ */
+function unmatched(paths: readonly string[], globs: readonly string[]): readonly string[] {
+  return paths.filter((path) => !globs.some((glob) => matches(glob, path)));
+}
+
+/** Runner tests no listed file holds today: a Playwright spec under a member's `src/`, a harness check in TSX. */
+const PLANTED_TESTS: readonly string[] = ['packages/foundation/src/a.spec.ts', 'harness/checks/a.test.tsx'];
+
 describe('the repository', () => {
+  test('excludes from coverage every module a runner runs, and collects every harness check, planted forms included', async () => {
+    expect.hasAssertions();
+    const [files, settings] = await Promise.all([typescriptFiles(), gateTest()]);
+    const excluded = globsOf(coverageOf(settings), 'exclude');
+    const includes = projectsOf(settings).flatMap((project) => globsOf(project, 'include'));
+    const tests = [...files, ...PLANTED_TESTS].filter((path) => isRunnerTest(path));
+    const checks = tests.filter((path) => path.startsWith(HARNESS_CHECKS));
+    expect([unmatched(tests, excluded), unmatched(checks, includes)]).toStrictEqual([[], []]);
+  });
+
   test('collects every held Vitest test in a project of the gate config', async () => {
     expect.hasAssertions();
     const [files, settings] = await Promise.all([typescriptFiles(), gateTest()]);
