@@ -32,10 +32,19 @@ const ROLES: Vocabulary<Readonly<Record<Role, Tier>>> = new Vocabulary<Readonly<
   view: 'product',
 });
 
-/** Whether each tier's packages ship: a tier is a key, so `tsc` refuses one without the fact. */
-const TIERS: Vocabulary<Readonly<Record<Tier, Readonly<{ ships: boolean }>>>> = new Vocabulary<
-  Readonly<Record<Tier, Readonly<{ ships: boolean }>>>
->({
+/**
+ * Whether each tier's packages ship, as its tier defines it: the kernel and the product ship, test
+ * infrastructure does not. This type is where the facts are declared; each is the literal its tier
+ * means, so `tsc` refuses a `TIERS` value without a tier's fact or contradicting it.
+ */
+type TierFacts = Readonly<{
+  kernel: Readonly<{ ships: true }>;
+  product: Readonly<{ ships: true }>;
+  'test-infrastructure': Readonly<{ ships: false }>;
+}>;
+
+/** Each tier with its facts. */
+const TIERS: Vocabulary<TierFacts> = new Vocabulary<TierFacts>({
   kernel: { ships: true },
   product: { ships: true },
   'test-infrastructure': { ships: false },
