@@ -67,6 +67,8 @@ the closest alternative and loses on the typed, overridable component contract.
   genuine domain validators (ink compile, tag schema, i18n parity).
 - Solid 2.0 is new; its runtime claims are tested rather than assumed, and a
   claim a test contradicts is recorded in ADR-0008 with its evidence.
+- A held module is TypeScript (`.ts`, `.tsx`): the population refuses a held module of any other
+  kind oxlint would lint (`harness/lib/scope.ts`, held by the `population` check).
 - Lint and format: oxlint owns `.ts`/`.tsx` (type-aware, with
   `eslint-plugin-solid`'s v2-strict rules), stylelint lints CSS, a harness check
   holds JSON, and oxfmt formats every held TypeScript, CSS and JSON file. TypeScript stays on 6.x until the boundary lint runs on oxlint with

@@ -13,7 +13,7 @@ import { EXIT_CLEAN } from '#lib/exit-status.ts';
 import type { Population } from '#lib/scope.ts';
 import { REPO_ROOT } from '#lib/paths.ts';
 import { fieldMatches } from '#lint-rules/globs.ts';
-import { isLintable } from '#lib/oxlint-files.ts';
+import { isLintable } from '#lib/source-files.ts';
 import { lintedFiles } from '#lib/lint-rules.ts';
 import { plantedPopulation } from '#lib/planted-population.ts';
 import { population } from '#lib/scope.ts';

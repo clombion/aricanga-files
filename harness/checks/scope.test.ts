@@ -1,4 +1,4 @@
-/** The population: pnpm's workspace packages whose manifests git lists, less the POC, each with its role. */
+/** The population: pnpm's workspace packages whose manifests git lists, less the POC, each with its role; every held module is TypeScript. */
 
 import { BOM, causedRefusal, headOf, inWorkspaceFolder, listing, manifest, reader, refusalOf, withoutFile } from './scope.plants.ts';
 import { LOCKFILE, lockOf } from '#lib/pins.ts';
@@ -178,6 +178,22 @@ describe('a population whose manifests cannot be read', () => {
         "Error: ENOENT: no such file or directory, open 'packages/b/package.json'",
         'ConfigError: packages/d/package.json aricanga is not an object: "system"',
       ],
+    ]);
+  });
+});
+
+describe("a population's modules", () => {
+  test('refuses every held module that is not TypeScript, by each kind, and holds a declaration file, data and an unheld script', async () => {
+    expect.hasAssertions();
+    const others = ['a.cjs', 'a.cts', 'a.js', 'a.jsx', 'a.mjs', 'a.mts'].map((file) => `packages/a/src/${file}`);
+    const refusal = await refusalOf(plantedPopulation([...others, 'packages/a/src/b.ts'], [['packages/a/', 'foundation']]));
+    const near = await plantedPopulation(
+      ['packages/a/src/b.d.ts', 'packages/a/src/c.tsx', 'packages/a/d.json', 'harness/lib/e.ts'],
+      [['packages/a/', 'foundation']],
+    );
+    expect([refusal, near.members.map((member) => member.dir)]).toStrictEqual([
+      `PopulationError: a held module is TypeScript (.ts, .tsx), the kind every scan, the type check and coverage read: ${others.join(', ')}`,
+      ['packages/a/'],
     ]);
   });
 });

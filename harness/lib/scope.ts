@@ -1,13 +1,16 @@
 /**
  * What the harness holds: the members (pnpm's workspace packages whose manifests git lists, less the
- * POC record), the harness, and the root files. Every scan asks this module, never a list of its own.
+ * POC record), the harness, and the root files; a held module is TypeScript (`.ts`, `.tsx`), and a
+ * population holding a module of another kind is refused. Every scan asks this module, never a list
+ * of its own.
  */
 
 import { Accepted, Prefixes } from './exemptions.ts';
+import { PopulationError, workspacePackages } from './workspace.ts';
 import type { Role, Tier } from './roles.ts';
+import { TYPESCRIPT, isLintable, isTypeScript, perRoot, textOf, tracked } from './source-files.ts';
 import { byCodeUnit, groupedBy, isEmpty, partitioned } from './lists.ts';
 import { manifestOf, nearestOf } from './package-dirs.ts';
-import { perRoot, textOf, tracked } from './source-files.ts';
 import { ships, tierOf } from './roles.ts';
 import type { Fields } from './manifests.ts';
 import type { MemberDir } from './package-dirs.ts';
@@ -16,7 +19,6 @@ import { ROOT_MODULES } from './config-modules.ts';
 import type { WorkspacePackage } from './workspace.ts';
 import { manifestsOf } from './manifests.ts';
 import { providedFor } from './provided.ts';
-import { workspacePackages } from './workspace.ts';
 
 /** The harness's own place: held, and not a workspace package. */
 const HARNESS_ROOT: MemberDir = 'harness/';
@@ -178,14 +180,21 @@ function packagesOn(inputs: Readonly<PopulationInputs>, inPoc: boolean): readonl
 }
 
 /**
- * The population of a listing.
+ * The population of a listing, refused when it holds a module no scan reads: a file oxlint lints
+ * that is not TypeScript.
  *
  * @param {PopulationInputs} inputs - The listing, pnpm's workspace packages and the reader.
  * @returns {Promise<Population>} The population.
  */
 async function populationOf(inputs: Readonly<PopulationInputs>): Promise<Population> {
   const { members, rootManifest } = await manifestsOf(packagesOn(inputs, false), inputs.read);
-  return assembled({ listing: inputs.listing, members, pocPackages: packagesOn(inputs, true), root: inputs.root, rootManifest });
+  const held = assembled({ listing: inputs.listing, members, pocPackages: packagesOn(inputs, true), root: inputs.root, rootManifest });
+  const others = held.listing.filter((file) => held.holds(file) && isLintable(file) && !isTypeScript(file));
+  if (!isEmpty(others)) {
+    const why = `a held module is TypeScript (${[...TYPESCRIPT].join(', ')}), the kind every scan, the type check and coverage read`;
+    throw new PopulationError(`${why}: ${others.join(', ')}`);
+  }
+  return held;
 }
 
 /**
@@ -268,7 +277,7 @@ async function heldFiles(...suffixes: readonly string[]): Promise<readonly strin
  * @returns {readonly string[]} Its held `.ts` and `.tsx` files.
  */
 function typescriptOf(held: Population): readonly string[] {
-  return heldOf(held, '.ts', '.tsx');
+  return heldOf(held, ...TYPESCRIPT);
 }
 
 /**

@@ -10,15 +10,11 @@ import { body, comments, parse } from '#lib/ts-source.ts';
 const CHECKS = new Accepted([
   'oxlint:.ts',
   'oxlint:.tsx',
-  'oxlint:.js',
-  'oxlint:.mjs',
   'typescript:.ts',
   'typescript:.tsx',
   'stylelint:.css',
   'coverage:.ts',
   'coverage:.tsx',
-  'coverage:.js',
-  'coverage:.mjs',
 ]);
 
 const RULES = String.raw`[@\w./-]+(?:\s*,\s*[@\w./-]+)*`;

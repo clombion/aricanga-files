@@ -59,7 +59,7 @@ list.
 - `one-claims` (`harness/checks/one-claims.test.ts`): Every claim of a single owner in current text is registered, and its probe holds it.
 - `owner-registry` (`harness/checks/owner-registry.test.ts`): Each guarded API is used only by its owner module; the scan is proven on planted modules.
 - `oxlint-config` (`harness/checks/oxlint-config.test.ts`): Oxlint's configuration names each member by its role, and oxlint lints exactly the held lintable files.
-- `population` (`harness/checks/scope.test.ts`): The population: pnpm's workspace packages whose manifests git lists, less the POC, each with its role.
+- `population` (`harness/checks/scope.test.ts`): The population: pnpm's workspace packages whose manifests git lists, less the POC, each with its role; every held module is TypeScript.
 - `project-lint-rules` (`harness/checks/project-lint-rules.test.ts`): Every project lint rule fires on its must-fire fixtures and passes its must-stay-clean ones under the repository's oxlint.
 - `pushed-subjects` (`harness/checks/pushed.test.ts`): The pre-push hook refuses a `fixup!`, `squash!` or `amend!` commit in the pushed range.
 - `repo-paths` (`harness/checks/repo-paths.test.ts`): No harness module but `harness/lib/paths.ts` computes the repository root or a path from its own location.

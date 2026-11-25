@@ -50,7 +50,7 @@ Whether this project implements each check of [harness.md](harness.md). A status
 | oxlint-config | oxlint's configuration is the population's, and oxlint lints exactly the held lintable files | implemented | `harness/checks/oxlint-config.test.ts` | | |
 | owners-flat | Solid's owners and roots stay flat over three redraws | planned | | | Phase 3 Step 3: the first mounted experience |
 | part-failure | A throwing Part is reported once and the rest of the page stays | planned | | | Phase 3 Step 3; ADR-0008's failure model is characterised, the per-Part tests come with the Parts |
-| population | Every workspace package pnpm lists whose manifest git lists, less the POC, is a member with its role | implemented | `harness/checks/scope.test.ts` | | |
+| population | Every workspace package pnpm lists whose manifest git lists, less the POC, is a member with its role, and every held module is TypeScript | implemented | `harness/checks/scope.test.ts` | | |
 | project-lint-rules | Every project lint rule fires on its must-fire fixtures and passes its clean ones | implemented | `harness/checks/project-lint-rules.test.ts` | | |
 | pushed-subjects | No fixup, squash or amend commit is pushed | implemented | `harness/checks/pushed.test.ts` | | |
 | refusals | Every refusal is defined with its remedy, in one module | planned | | | the kernel's refusals are spread over its modules; one owner comes with the census layer |

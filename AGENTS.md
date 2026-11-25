@@ -11,7 +11,8 @@ Issues as [docs/roadmap/issues.md](docs/roadmap/issues.md) describes.
 
 The harness holds the rebuild: every workspace package pnpm lists whose manifest git lists, less the
 POC reference, and `harness` itself, tests, scripts and configuration included, all under the same
-rules as production code (`harness/lib/scope.ts`). A workspace package declares its role in its
+rules as production code (`harness/lib/scope.ts`). A held module is `.ts` or `.tsx`: the population refuses
+any other module oxlint would lint (`.js`, `.mjs`, `.cjs`, `.jsx`, `.mts`, `.cts`), which no scan reads. A workspace package declares its role in its
 manifest, `"aricanga": { "role": … }`, one of the roles of `harness/lib/roles.ts`. A new member is held,
 type-checked, tested, covered, linted under its role's rules and scanned by knip with no list to edit;
 one list still names members by hand and needs the new one added: `test:browser`'s config list in

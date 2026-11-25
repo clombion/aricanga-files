@@ -1,7 +1,7 @@
 /**
  * Every suppression names its rule, a tool that checks the file, and its reason, and each is counted.
  *
- * Over every held `.ts`, `.tsx`, `.js`, `.mjs` and `.css` file's comments:
+ * Over every held `.ts`, `.tsx` and `.css` file's comments (a held module is TypeScript, `scope.ts`):
  *
  * - `oxlint-disable*` and `stylelint-disable*` name their rules and end with `-- <reason>`;
  *   a `biome-ignore` is refused, since Biome checks nothing here;
@@ -33,7 +33,7 @@ import { textsOf } from '#lib/source-files.ts';
 const HARNESS_ID = 'suppressions';
 
 /** The held suffixes whose comments the census reads. */
-const SCANNED = new Accepted(['.ts', '.tsx', '.js', '.mjs', '.css']);
+const SCANNED = new Accepted(['.ts', '.tsx', '.css']);
 
 /** The suppressions the code holds, keyed by `site(path, tool:rule)`, with their counts and reasons. */
 const SUPPRESSIONS = new CountedExemptions({

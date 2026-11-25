@@ -10,19 +10,7 @@ import { HARNESS_ROOT } from './scope.ts';
 import type { Population } from './scope.ts';
 import { ROOT_MODULES } from './config-modules.ts';
 import { dirname } from 'node:path/posix';
-
-/** The extensions oxlint lints. */
-const LINTED = /\.(?:[cm]?[jt]sx?)$/u;
-
-/**
- * Whether oxlint lints a file, by its extension.
- *
- * @param {string} file - The path.
- * @returns {boolean} Whether oxlint lints it.
- */
-function isLintable(file: string): boolean {
-  return LINTED.test(file);
-}
+import { isLintable } from './source-files.ts';
 
 /** The root configuration modules, as an override's `files` names them. */
 const ROOT_MODULE_FILES: readonly string[] = ROOT_MODULES.map((module) => `${FILES_ANCHOR}${module}`);
@@ -59,4 +47,4 @@ function unheldPatterns(held: Population): string[] {
   return [...new Set(patterns)].toSorted();
 }
 
-export { HARNESS_CODE, isLintable, ROOT_MODULE_FILES, unheldPatterns };
+export { HARNESS_CODE, ROOT_MODULE_FILES, unheldPatterns };

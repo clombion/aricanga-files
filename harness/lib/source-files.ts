@@ -1,17 +1,45 @@
 /**
- * The repository's file listing: every scan of the harness reads its files from here.
+ * The repository's file listing: every scan of the harness reads its files from here, and which of
+ * them are modules (`isLintable`) and TypeScript modules (`isTypeScript`, the one kind the harness holds).
  *
  * The listing is git's: tracked files plus the untracked files git does not ignore, so a scan sees a
  * new file before it is committed. A listing below `FLOOR` files is an error, never an empty scan.
  */
 
 import { readFile, stat, writeFile } from 'node:fs/promises';
+import { Accepted } from './exemptions.ts';
 import { REPO_ROOT } from './paths.ts';
 import { isolatedEnv } from './tools.ts';
 import path from 'node:path';
 import { providedFor } from './provided.ts';
 import { run } from './process.ts';
 import { succeeded } from './exit-status.ts';
+
+/** The extensions oxlint lints: the files that are modules. */
+const LINTED = /\.(?:[cm]?[jt]sx?)$/u;
+
+/** The suffixes of a held module: TypeScript, with or without JSX (a declaration file included), the files every scan, the type check and coverage read. */
+const TYPESCRIPT: Accepted<string> = new Accepted<string>(['.ts', '.tsx']);
+
+/**
+ * Whether oxlint lints a file, by its extension: whether the file is a module.
+ *
+ * @param {string} file - The path.
+ * @returns {boolean} Whether oxlint lints it.
+ */
+function isLintable(file: string): boolean {
+  return LINTED.test(file);
+}
+
+/**
+ * Whether a file is a TypeScript module, the one kind of module the harness holds.
+ *
+ * @param {string} file - The path.
+ * @returns {boolean} Whether it is `.ts` or `.tsx`.
+ */
+function isTypeScript(file: string): boolean {
+  return [...TYPESCRIPT].some((suffix) => file.endsWith(suffix));
+}
 
 /** The fewest files a listing of this repository can hold; fewer means the listing failed. */
 const FLOOR = 50;
@@ -202,4 +230,19 @@ async function writeText(listed: string, text: string): Promise<void> {
   await writeFile(path.join(REPO_ROOT, listed), text, 'utf8');
 }
 
-export { FLOOR, isFile, ListingError, listing, listingOutput, perRoot, textAt, textOf, textsOf, tracked, writeText };
+export {
+  FLOOR,
+  isFile,
+  isLintable,
+  isTypeScript,
+  listing,
+  ListingError,
+  listingOutput,
+  perRoot,
+  textAt,
+  textOf,
+  textsOf,
+  tracked,
+  TYPESCRIPT,
+  writeText,
+};

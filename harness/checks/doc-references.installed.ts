@@ -109,7 +109,7 @@ async function installedPaths(spans: readonly Span[], resolver: Omit<Resolver, '
  */
 async function quotedValues(): Promise<ReadonlySet<string>> {
   const found = new Set<string>();
-  const files = await heldFiles('.ts', '.tsx', '.js', '.mjs', '.json');
+  const files = await heldFiles('.ts', '.tsx', '.json');
   const texts = await textsOf(files.filter((held) => !held.startsWith(HARNESS_CHECKS)));
   for (const [, text] of texts) {
     for (const match of text.matchAll(QUOTED)) {
