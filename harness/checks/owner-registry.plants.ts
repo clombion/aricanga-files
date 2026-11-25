@@ -3,6 +3,7 @@
 import type { PlantedMember } from '#lib/planted-population.ts';
 import type { Population } from '#lib/scope.ts';
 import type { Rule } from '#lib/owner-rules.ts';
+import { present } from '#lib/present.ts';
 import { site } from '#lib/exemptions.ts';
 
 /** A member is held by exactly this many roots of each rule. */
@@ -118,4 +119,18 @@ function scopedOf(rule: Rule): readonly Readonly<{ root: string; owner: string |
   return rule.roots.flatMap((entry) => (entry.kind === 'scoped' ? [{ owner: entry.owner, root: entry.root }] : []));
 }
 
-export { CANONICAL, FORMS, IN_A_TEST, MEMBERS, NEAR_MISSES, scopedOf, unguarded };
+/**
+ * The rule of a name, which must exist.
+ *
+ * @param {readonly Rule[]} rules - The rules.
+ * @param {string} name - Its name.
+ * @returns {Rule} The rule.
+ */
+function ruleNamed(rules: readonly Rule[], name: string): Rule {
+  return present(
+    rules.find((rule) => rule.name === name),
+    `the rule ${name}`,
+  );
+}
+
+export { CANONICAL, FORMS, IN_A_TEST, MEMBERS, NEAR_MISSES, ruleNamed, scopedOf, unguarded };

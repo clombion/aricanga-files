@@ -8,7 +8,7 @@
  * pure constructor call, the owner itself, and a root a rule frees.
  */
 
-import { CANONICAL, FORMS, IN_A_TEST, MEMBERS, NEAR_MISSES, scopedOf, unguarded } from './owner-registry.plants.ts';
+import { CANONICAL, FORMS, IN_A_TEST, MEMBERS, NEAR_MISSES, ruleNamed, scopedOf, unguarded } from './owner-registry.plants.ts';
 import { SHAPES, keyOf, ownerUses, rulesOf, sites } from '#lib/owners.ts';
 import { describe, expect, test } from 'vitest';
 import { usePlanted, useScan } from '#lib/scan-hooks.ts';
@@ -17,7 +17,6 @@ import type { Scan } from '#lib/checker.ts';
 import type { Site } from '#lib/owners.ts';
 import { plantedPopulation } from '#lib/planted-population.ts';
 import { population } from '#lib/scope.ts';
-import { present } from '#lib/present.ts';
 import { sourceOf } from '#lib/checker.ts';
 import { tracked } from '#lib/source-files.ts';
 
@@ -195,10 +194,7 @@ describe('the repository', () => {
   test.each(FREED)('the %s rule frees %s, where a module uses its API', (name, root, why) => {
     expect.hasAssertions();
     const scan = repoScan();
-    const rule = present(
-      rulesOf(scan.population).find((candidate) => candidate.name === name),
-      `the rule ${name}`,
-    );
+    const rule = ruleNamed(rulesOf(scan.population), name);
     expect(
       usersUnder(scan, root, rule),
       `${root} is freed from ${name} because ${why}, but no module there uses it: give its tier NOBODY in harness/lib/owner-rules.ts`,
@@ -208,10 +204,7 @@ describe('the repository', () => {
   test.each(DECLARED)('the %s owner %s exists and uses its API', async (name, owner) => {
     expect.hasAssertions();
     const scan = repoScan();
-    const rule = present(
-      rulesOf(scan.population).find((candidate) => candidate.name === name),
-      `the rule ${name}`,
-    );
+    const rule = ruleNamed(rulesOf(scan.population), name);
     await expect(tracked()).resolves.toContain(owner);
     expect(ownerUses(scan, sourceOf(scan, owner), rule)).toBe(true);
   });

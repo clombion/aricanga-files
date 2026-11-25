@@ -6,26 +6,10 @@
 
 import { describe, expect, test } from 'vitest';
 import { listing, reader } from './scope.plants.ts';
-import type { Rule } from '#lib/owner-rules.ts';
+import { ruleNamed, scopedOf } from './owner-registry.plants.ts';
 import { plantedPopulation } from '#lib/planted-population.ts';
 import { populationOf } from '#lib/scope.ts';
-import { present } from '#lib/present.ts';
 import { rulesOf } from '#lib/owners.ts';
-import { scopedOf } from './owner-registry.plants.ts';
-
-/**
- * The rule of a name, which must exist.
- *
- * @param {readonly Rule[]} rules - The rules.
- * @param {string} name - Its name.
- * @returns {Rule} The rule.
- */
-function ruleNamed(rules: readonly Rule[], name: string): Rule {
-  return present(
-    rules.find((rule) => rule.name === name),
-    `the rule ${name}`,
-  );
-}
 
 describe('the rules', () => {
   test('give a kernel owner to the nearest kernel root holding it, when kernel roots nest', async () => {
@@ -37,8 +21,8 @@ describe('the rules', () => {
         ['packages/foundation/src/', 'system'],
       ],
     );
-    const parse = rulesOf(held).find((rule) => rule.name === 'json-parse');
-    expect(scopedOf(present(parse, 'json-parse')).filter((scope) => scope.root.startsWith('packages/foundation/'))).toStrictEqual([
+    const parse = ruleNamed(rulesOf(held), 'json-parse');
+    expect(scopedOf(parse).filter((scope) => scope.root.startsWith('packages/foundation/'))).toStrictEqual([
       { owner: undefined, root: 'packages/foundation/' },
       { owner: 'packages/foundation/src/host/codec.ts', root: 'packages/foundation/src/' },
     ]);
@@ -85,16 +69,7 @@ describe('the rules over a population the harness or the kernel shapes', () => {
       ],
     );
     const rules = rulesOf(held);
-    expect(
-      ['clock', 'json-parse'].map((name) =>
-        scopedOf(
-          present(
-            rules.find((rule) => rule.name === name),
-            name,
-          ),
-        ),
-      ),
-    ).toStrictEqual([
+    expect(['clock', 'json-parse'].map((name) => scopedOf(ruleNamed(rules, name)))).toStrictEqual([
       [
         { owner: undefined, root: 'harness/' },
         { owner: undefined, root: 'packages/foundation/' },
