@@ -2,6 +2,9 @@
 
 import { describe, expect, test, vi } from 'vitest';
 import { REPO_ROOT } from '#lib/paths.ts';
+import { configOf } from '#lib/vitest-config.ts';
+import { plantedPopulation } from '#lib/scan-hooks.ts';
+import { population } from '#lib/scope.ts';
 import { providedFor } from '#lib/provided.ts';
 import { runPlanted } from '#lib/planted-vitest.ts';
 
@@ -41,6 +44,15 @@ describe('a worker of a run whose config provides no population', () => {
     expect.hasAssertions();
     const outcomes = await runPlanted({ 'unprovided.test.ts': UNPROVIDED });
     expect(outcomes.get('reads none')).toStrictEqual({ failure: '', status: 'passed' });
+  });
+});
+
+describe("a run's config", () => {
+  test("provides a checkout's population, and nothing for a population of no checkout", async () => {
+    expect.hasAssertions();
+    const [repository, planted] = await Promise.all([population(), plantedPopulation([], [['packages/a/', 'view']])]);
+    const [fromRepository, fromPlanted] = [repository, planted].map((held) => configOf(held, () => []).test?.provide);
+    expect([fromRepository?.population?.root, fromPlanted]).toStrictEqual([REPO_ROOT, {}]);
   });
 });
 

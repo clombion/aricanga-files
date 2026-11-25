@@ -8,9 +8,9 @@
 
 import type { Member, Population } from './scope.ts';
 
-/** The population a run provides, as plain data: its checkout (none for a planted one), listing and members. */
+/** The population a run provides, as plain data: its checkout, listing and members. */
 interface ProvidedPopulation {
-  readonly root: string | undefined;
+  readonly root: string;
   readonly listing: readonly string[];
   readonly members: readonly Member[];
 }
@@ -26,13 +26,14 @@ declare module 'vitest' {
 const WORKER_STATE = '__vitest_worker__';
 
 /**
- * The plain data of a population, to provide to a run's workers.
+ * What a run's config provides its workers: a checkout's population, as plain data. A population of
+ * no checkout (a planted run's) is provided to no worker, since a worker asks for a checkout's.
  *
  * @param {Population} held - The population.
- * @returns {ProvidedPopulation} Its checkout, listing and members.
+ * @returns {{ population?: ProvidedPopulation }} The provided context.
  */
-function providedOf(held: Population): ProvidedPopulation {
-  return { listing: held.listing, members: held.members, root: held.root };
+function provision(held: Population): { population?: ProvidedPopulation } {
+  return held.root === undefined ? {} : { population: { listing: held.listing, members: held.members, root: held.root } };
 }
 
 /**
@@ -52,4 +53,4 @@ async function providedFor(root: string, host: object = globalThis): Promise<Pro
   return given?.root === root ? given : undefined;
 }
 
-export { providedFor, providedOf };
+export { providedFor, provision };
