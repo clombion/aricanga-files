@@ -1,6 +1,8 @@
 /**
  * The process's one TypeScript 7 API session, and the virtual file system it reads: a mounted path
- * need not exist on disk, and a mounted real path reads as its mounted text. The session's child
+ * need not exist on disk, nor its directories (a directory holding a mounted path exists, so an
+ * import resolves into a planted member wherever it sits), and a mounted real path reads as its
+ * mounted text. The session's child
  * process is released without this module: it ends when its standard input closes, which every ending
  * of this process does (an exit, a signal, a worker its pool kills). The TypeScript API's own `exit`
  * listener sends the child SIGTERM, which the child outlives by seconds; a release after it would ask a
@@ -66,6 +68,8 @@ class Session {
     const opened = new API({
       cwd: REPO_ROOT,
       fs: {
+        directoryExists: (directoryName: string): boolean | undefined =>
+          [...this.virtual.keys()].some((name) => name.startsWith(`${directoryName}/`)) ? true : undefined,
         fileExists: (fileName: string): boolean | undefined => (this.virtual.has(fileName) ? true : undefined),
         readFile: (fileName: string): string | undefined => this.virtual.get(fileName),
       },

@@ -67,6 +67,14 @@ const chainScan = usePlanted(CHAIN, [
   ['packages/systems/chat/', 'system'],
 ]);
 
+const absentScan = usePlanted(
+  [
+    ['packages/plant/src/plant.ts', "export * from './testing/support.ts';\n"],
+    ['packages/plant/src/testing/support.ts', 'export const support = 1;\n'],
+  ],
+  [['packages/plant/', 'foundation']],
+);
+
 describe('the whole chain', () => {
   test('no production module of the repository imports a non-production module', () => {
     expect.hasAssertions();
@@ -88,6 +96,13 @@ describe('the whole chain', () => {
       { from: 'packages/foundation/src/__chain_typeof.ts', to: 'packages/foundation/src/testing/index.ts' },
       { from: 'packages/systems/chat/src/__chain_alias.ts', to: 'packages/systems/chat/src/testing/predicates.ts' },
       { from: 'packages/systems/chat/src/__chain_type.ts', to: 'packages/foundation/src/testing/index.ts' },
+    ]);
+  });
+
+  test('refuses it in a member planted in a directory absent on disk, which the scan mounts', () => {
+    expect.hasAssertions();
+    expect(productionImports(absentScan())).toStrictEqual([
+      { from: 'packages/plant/src/plant.ts', to: 'packages/plant/src/testing/support.ts' },
     ]);
   });
 });
