@@ -8,6 +8,8 @@ import { matches } from '#lib/globs.ts';
 import { plantedPopulation } from '#lib/scan-hooks.ts';
 import { typescriptFiles } from '#lib/scope.ts';
 
+const HARNESS_ID = 'test-globs';
+
 /**
  * A population of six members: a foundation with tests, a view whose tests are TSX, a
  * test-infrastructure member with a listed `*.test.ts`, an experience with neither tests nor sources,
@@ -110,3 +112,5 @@ describe('the repository', () => {
     expect(uncollected(files, includes)).toStrictEqual([]);
   });
 });
+
+export { HARNESS_ID };

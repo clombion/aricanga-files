@@ -47,6 +47,7 @@ Whether this project implements each check of [harness.md](harness.md). A status
 | owner-registry | Each guarded API is used only by its owner | implemented | `harness/checks/owner-registry.test.ts` | | |
 | owners-flat | Solid's owners and roots stay flat over three redraws | planned | | | Phase 3 Step 3: the first mounted experience |
 | part-failure | A throwing Part is reported once and the rest of the page stays | planned | | | Phase 3 Step 3; ADR-0008's failure model is characterised, the per-Part tests come with the Parts |
+| population | Every workspace package pnpm lists whose manifest git lists, less the POC, is a member with its role | implemented | `harness/checks/scope.test.ts` | | |
 | project-lint-rules | Every project lint rule fires on its must-fire fixtures and passes its clean ones | implemented | `harness/checks/project-lint-rules.test.ts` | | |
 | pushed-subjects | No fixup, squash or amend commit is pushed | implemented | `harness/checks/pushed.test.ts` | | |
 | refusals | Every refusal is defined with its remedy, in one module | planned | | | the kernel's refusals are spread over its modules; one owner comes with the census layer |
@@ -59,6 +60,7 @@ Whether this project implements each check of [harness.md](harness.md). A status
 | stylesheets | Every stylesheet passes stylelint, reads raw values through tokens, and every class and property is used | implemented | `harness/checks/stylesheets.test.ts` | | |
 | suppressions | Every suppression names its rule, a tool that checks the file, and its reason | implemented | `harness/checks/suppressions.test.ts` | | |
 | terms | No retired term or refused pattern in current text | implemented | `harness/checks/terms.test.ts` | | |
+| test-globs | The gate collects every test and covers every shipping member's sources | implemented | `harness/checks/test-globs.test.ts` | | |
 | tests-that-cannot-fail | Tests can fail | implemented | `AGENTS.md` | | |
 | tool-exemptions | Every tool exemption matches something | implemented | `harness/checks/tool-exemptions.test.ts` | | |
 | tool-upgrades | Every pinned tool has its upstream named | implemented | `harness/checks/tool-upgrades.test.ts` | | |

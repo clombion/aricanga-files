@@ -56,6 +56,7 @@ list.
 - `node-floor` (`harness/checks/node-floor.test.ts`): The Node running the suite, and the pinned `.node-version`, meet the floor `engines.node` declares.
 - `one-claims` (`harness/checks/one-claims.test.ts`): Every claim of a single owner in current text is registered, and its probe holds it.
 - `owner-registry` (`harness/checks/owner-registry.test.ts`): Each guarded API is used only by its owner module; the scan is proven on planted modules.
+- `population` (`harness/checks/scope.test.ts`): The population: pnpm's workspace packages whose manifests git lists, less the POC, each with its role.
 - `project-lint-rules` (`harness/checks/project-lint-rules.test.ts`): Every project lint rule fires on its must-fire fixtures and passes its must-stay-clean ones under the repository's oxlint.
 - `pushed-subjects` (`harness/checks/pushed.test.ts`): The pre-push hook refuses a `fixup!`, `squash!` or `amend!` commit in the pushed range.
 - `repo-paths` (`harness/checks/repo-paths.test.ts`): No harness module but `harness/lib/paths.ts` computes the repository root or a path from its own location.
@@ -66,6 +67,7 @@ list.
 - `stylesheets` (`harness/checks/stylesheets.test.ts`): Every stylesheet passes stylelint, reads raw values only through design tokens, and every class and custom property it names is used.
 - `suppressions` (`harness/checks/suppressions.test.ts`): Every suppression names its rule, a tool that checks the file, and its reason, and each is counted.
 - `terms` (`harness/checks/terms.test.ts`): No current text uses a retired term or a refused pattern of `docs/terms.toml`.
+- `test-globs` (`harness/checks/test-globs.test.ts`): The gate's Vitest globs: a shipping member's tests are collected and its sources covered.
 - `tool-exemptions` (`harness/checks/tool-exemptions.test.ts`): Every tool exemption is live: each ignore, override, include and exclude glob matches a listed file.
 - `tool-upgrades` (`harness/checks/tool-upgrades.test.ts`): Every pinned tool has its upstream repository named, and every named repository pins a tool.
 - `type-exports` (`harness/checks/type-exports.test.ts`): An exported type is read by another production module (or a harness check) or carries `@public`.

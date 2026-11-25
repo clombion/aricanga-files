@@ -12,6 +12,8 @@ import { dirOfImporter } from '#lib/package-dirs.ts';
 import path from 'node:path';
 import { plantedPopulation } from '#lib/scan-hooks.ts';
 
+const HARNESS_ID = 'population';
+
 /**
  * The lockfile's importers, as directories, that the population neither holds nor subtracts as POC.
  *
@@ -230,3 +232,5 @@ describe('the repository', () => {
     expect([...lockOf(QUOTED_KEYS).keys()]).toStrictEqual(['.', '@s/p', 'a/#hash', "a/q'uote", 'a/sp ace', 'a/x:y']);
   });
 });
+
+export { HARNESS_ID };
