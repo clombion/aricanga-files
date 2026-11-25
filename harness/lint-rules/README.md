@@ -20,7 +20,7 @@ ones, and `closed.ts` the readers the closed-set rules share; `rules/jsx-rules.t
 | `aricanga/json` | Import JSON with { type: 'json' }. |
 | `aricanga/labels` | A label has `for` or wraps its control; `htmlFor` is the React spelling. |
 | `aricanga/legacy` | No replaceChildren or document.createElement in a component module. |
-| `aricanga/mechanics` | No solid-js or @solidjs/* import under packages/foundation or a system model. |
+| `aricanga/mechanics` | No solid-js or @solidjs/* import in a mechanics module (the `files` globs: a foundation member, a system model). |
 | `aricanga/mirrors` | No effect whose only work is calling a setter; derive the value. |
 | `aricanga/own-keys` | A record keyed by story words is read through its own entries: Object.hasOwn, never in or a defaulted read. |
 | `aricanga/statics` | No this inside a static method, static field or static block; name the class. |
@@ -49,7 +49,9 @@ the repository's own tools never lint or compile a must-fire case.
 ## Where other rules hold the rest
 
 - Module boundaries and reducer purity are `no-restricted-imports`, `no-restricted-globals` and
-  `no-restricted-properties` overrides of `harness/lib/oxlint-config.ts`, proven by `harness/checks/boundaries.test.ts`.
+  `no-restricted-properties` overrides derived from the population's roles
+  (`harness/lib/import-boundaries.ts`, `harness/lib/oxlint-config.ts`), proven by
+  `harness/checks/boundaries.test.ts`.
 - Destructured props, reactivity and the rest of Solid's own rules are `eslint-plugin-solid`'s
   v2-strict set.
 - jsx-a11y's `label-has-associated-control` knows only `htmlFor` and has no option for Solid's

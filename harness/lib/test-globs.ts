@@ -13,6 +13,18 @@ import { matches } from './globs.ts';
 /** The harness's own test project: its checks and their support, which coverage does not read. */
 const HARNESS_CHECKS = 'harness/checks/';
 
+/** The configs a test runner loads to run a member's tests: run by the runner, shipped by no one. */
+const RUNNER_CONFIGS: Accepted<string> = new Accepted<string>(['**/playwright.*.config.ts']);
+
+/** The directories whose modules are test support, at any depth (`checker.ts`' `isProduction`). */
+const TEST_DIRECTORIES: readonly string[] = ['test', 'tests', 'testing'];
+
+/** A shipping member's test support directory: its tests' helpers, which run on Node. */
+const TEST_SUPPORT = 'test/';
+
+/** A test-infrastructure member's browser tests directory: its Playwright specs and their helpers, which run on Node. */
+const BROWSER_TESTS = 'tests/';
+
 /** The modules Vitest runs: the gate's test include and its coverage exclude. */
 const VITEST_TESTS = '**/*.test.{ts,tsx}';
 
@@ -30,6 +42,16 @@ const RUNNER_TESTS: Accepted<string> = new Accepted<string>([VITEST_TESTS, PLAYW
  */
 function isRunnerTest(path: string): boolean {
   return [...RUNNER_TESTS].some((glob) => matches(glob, path));
+}
+
+/**
+ * Whether a module is a config a test runner loads (`RUNNER_CONFIGS`).
+ *
+ * @param {string} path - A repository-relative path.
+ * @returns {boolean} Whether a runner loads it as its config.
+ */
+function isRunnerConfig(path: string): boolean {
+  return [...RUNNER_CONFIGS].some((glob) => matches(glob, path));
 }
 
 /**
@@ -73,4 +95,17 @@ function coverageIncludes(population: Population): string[] {
   return liveGlobs(population, population.shipping, 'src/**');
 }
 
-export { coverageIncludes, HARNESS_CHECKS, isRunnerTest, liveGlobs, RUNNER_TESTS, testIncludes, VITEST_TESTS };
+export {
+  BROWSER_TESTS,
+  coverageIncludes,
+  HARNESS_CHECKS,
+  isRunnerConfig,
+  isRunnerTest,
+  liveGlobs,
+  RUNNER_CONFIGS,
+  RUNNER_TESTS,
+  TEST_DIRECTORIES,
+  TEST_SUPPORT,
+  testIncludes,
+  VITEST_TESTS,
+};

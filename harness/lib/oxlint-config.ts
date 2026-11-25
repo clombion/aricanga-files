@@ -5,13 +5,21 @@
  * `config-modules.ts`), and a planted run writes that value as its JSON configuration (`writeOxlintConfig`).
  */
 
-import type { OxlintConfig } from 'oxlint';
+import { BROWSER_TESTS, RUNNER_TESTS, TEST_SUPPORT, liveGlobs } from './test-globs.ts';
+import type { OxlintConfig, OxlintOverride } from 'oxlint';
+import type { Role, Tier } from './roles.ts';
+import { HARNESS_ROOT } from './scope.ts';
 import type { Population } from './scope.ts';
 import { ROOT_MODULES } from './config-modules.ts';
 import { RULES } from './oxlint-rules.ts';
+import { Vocabulary } from './exemptions.ts';
+import { boundariesOf } from './import-boundaries.ts';
+import { dirname } from 'node:path/posix';
+import { isEmpty } from './lists.ts';
+import { tierOf } from './roles.ts';
 
 /** The settings beside the rule levels. */
-const SETTINGS: OxlintConfig = {
+const SETTINGS = {
   categories: {
     correctness: 'error',
     nursery: 'error',
@@ -26,20 +34,6 @@ const SETTINGS: OxlintConfig = {
     builtin: true,
     es2024: true,
   },
-  ignorePatterns: [
-    'packages/framework/**',
-    'packages/tests/**',
-    'packages/test-utils/**',
-    'experiences/aricanga/**',
-    'utils/**',
-    'templates/**',
-    'docs/**',
-    '**/dist/**',
-    '**/vendor/**',
-    'vite.config.js',
-    'playwright.config.ts',
-    'vitest.config.ts',
-  ],
   jsPlugins: ['eslint-plugin-solid', './harness/lint-rules/plugin.ts'],
   options: {
     denyWarnings: true,
@@ -48,161 +42,6 @@ const SETTINGS: OxlintConfig = {
     typeAware: true,
   },
   overrides: [
-    {
-      files: ['packages/foundation/**'],
-      rules: {
-        'no-restricted-imports': [
-          'error',
-          {
-            patterns: [
-              {
-                group: [
-                  '@narratives/*',
-                  '!@narratives/foundation',
-                  '!@narratives/foundation/*',
-                  'sandbox',
-                  '**/systems/**',
-                  '**/experiences/**',
-                ],
-                message: 'foundation imports nothing from the rebuild (ADR-0005)',
-              },
-            ],
-          },
-        ],
-      },
-    },
-    {
-      files: ['packages/systems/chat/**'],
-      rules: {
-        'no-restricted-imports': [
-          'error',
-          {
-            patterns: [
-              {
-                group: [
-                  '@narratives/*',
-                  '!@narratives/foundation',
-                  '!@narratives/foundation/*',
-                  '!@narratives/system-chat',
-                  '!@narratives/system-chat/*',
-                  '**/experiences/**',
-                  '../../*/src/**',
-                  '!../../chat/src/**',
-                  '../../../*/src/**',
-                  '!../../../chat/src/**',
-                ],
-                message: 'a system imports only foundation: no other system, no experience, no POC (ADR-0005)',
-              },
-            ],
-          },
-        ],
-      },
-    },
-    {
-      files: ['packages/systems/cards/**'],
-      rules: {
-        'no-restricted-imports': [
-          'error',
-          {
-            patterns: [
-              {
-                group: [
-                  '@narratives/*',
-                  '!@narratives/foundation',
-                  '!@narratives/foundation/*',
-                  '!@narratives/system-cards',
-                  '!@narratives/system-cards/*',
-                  '**/experiences/**',
-                  '../../*/src/**',
-                  '!../../cards/src/**',
-                  '../../../*/src/**',
-                  '!../../../cards/src/**',
-                ],
-                message: 'a system imports only foundation: no other system, no experience, no POC (ADR-0005)',
-              },
-            ],
-          },
-        ],
-      },
-    },
-    {
-      files: ['experiences/sandbox/**'],
-      rules: {
-        'no-restricted-imports': [
-          'error',
-          {
-            patterns: [
-              {
-                group: [
-                  '@narratives/framework',
-                  '@narratives/framework/*',
-                  '@narratives/test-utils',
-                  '@narratives/test-utils/*',
-                  '**/aricanga/**',
-                  '../../experiences/**',
-                ],
-                message: 'an experience imports foundation and systems only: no other experience, no POC (ADR-0005)',
-              },
-            ],
-          },
-        ],
-      },
-    },
-    {
-      files: ['packages/characterisation/**', 'harness/**'],
-      rules: {
-        'no-restricted-imports': [
-          'error',
-          {
-            patterns: [
-              {
-                group: ['@narratives/framework', '@narratives/framework/*', '@narratives/test-utils', '@narratives/test-utils/*'],
-                message: 'the rebuild never imports the POC reference (ADR-0006, Scope)',
-              },
-            ],
-          },
-        ],
-      },
-    },
-    {
-      files: ['packages/systems/*/src/system.ts', 'packages/systems/*/src/model/**'],
-      rules: {
-        'no-restricted-globals': [
-          'error',
-          {
-            message: 'no Date in a reducer: time is simulation-derived (ADR-0007)',
-            name: 'Date',
-          },
-        ],
-        'no-restricted-properties': [
-          'error',
-          {
-            message: 'no Math.random in a reducer: ids come from ctx.nextId (ADR-0007)',
-            object: 'Math',
-            property: 'random',
-          },
-        ],
-      },
-    },
-    {
-      env: {
-        node: true,
-      },
-      files: [
-        'harness/**',
-        '**/test/**',
-        '**/*.test.ts',
-        '**/*.test.tsx',
-        'packages/characterisation/tests/**',
-        '**/vite.config.ts',
-        '**/vitest.config.ts',
-        '*.config.ts',
-        'vitest.gate.config.ts',
-      ],
-      rules: {
-        'import/no-nodejs-modules': 'off',
-      },
-    },
     {
       files: [
         'harness/lint-rules/plugin.ts',
@@ -229,16 +68,186 @@ const SETTINGS: OxlintConfig = {
     },
   ],
   plugins: ['import', 'jsdoc', 'jsx-a11y', 'node', 'oxc', 'promise', 'typescript', 'unicorn', 'vitest'],
-};
+} satisfies OxlintConfig;
+
+/** A system's model, under its directory: mechanics, and part of its reducer surface. */
+const SYSTEM_MODEL = 'src/model/**';
+
+/** The modules of each role the mechanics are, under the member's directory: total over the roles, so a new role declares its own (none outside the kernel). */
+const MECHANICS: Vocabulary<Readonly<Record<Role, readonly string[]>>> = new Vocabulary<Readonly<Record<Role, readonly string[]>>>({
+  experience: [],
+  foundation: ['**'],
+  system: [SYSTEM_MODEL],
+  'test-infrastructure': [],
+  view: [],
+});
+
+/** A system's reducer surface, under its directory (ADR-0007). */
+const REDUCER: readonly string[] = ['src/system.ts', SYSTEM_MODEL];
+
+/** The extensions oxlint lints. */
+const LINTED = /\.(?:[cm]?[jt]sx?)$/u;
+
+/** The tool configs, which run on Node: a member's Vite and Playwright configs, and the root modules. */
+const NODE_MODULES: readonly string[] = ['**/vite.config.ts', '**/playwright.*.config.ts', ...ROOT_MODULES];
+
+/**
+ * Why a harness module reads no locale: `Intl`, bare or read from `globalThis` (`window` and `self`
+ * are `unicorn/prefer-global-this`'s), and `localeCompare` answer by the process's locale and the
+ * runtime's ICU data.
+ */
+const LOCALE = "a harness module compares and formats by code unit, never by the process's locale";
+
+/** Untracked build output a checkout may hold. */
+const BUILD_OUTPUT = '**/dist/**';
+
+/**
+ * The globs of a tier's members' whole directories.
+ *
+ * @param {Population} held - The population.
+ * @param {Tier} tier - The tier.
+ * @returns {string[]} One `<dir>**` per member of the tier.
+ */
+function tierGlobs(held: Population, tier: Tier): string[] {
+  return held.members.filter((member) => tierOf(member.role) === tier).map((member) => `${member.dir}**`);
+}
+
+/**
+ * The globs of each member of a role under its directory, each only where the listing gives it a file.
+ *
+ * @param {Population} held - The population.
+ * @param {Role} role - The role.
+ * @param {readonly string[]} tails - The globs under each member's directory.
+ * @returns {string[]} The globs.
+ */
+function roleGlobs(held: Population, role: Role, tails: readonly string[]): string[] {
+  const members = held.members.filter((member) => member.role === role);
+  return members.flatMap((member) => tails.flatMap((tail) => liveGlobs(held, [member], tail)));
+}
+
+/**
+ * The directories above a path, the topmost first, each with its closing `/`.
+ *
+ * @param {string} file - The path.
+ * @returns {readonly string[]} Its ancestors.
+ */
+function ancestors(file: string): readonly string[] {
+  const parent = dirname(file);
+  return parent === '.' ? [] : [...ancestors(parent), `${parent}/`];
+}
+
+/**
+ * The listed lintable files the population does not hold, each as the topmost directory above it that
+ * holds no held file (`<dir>**`), or as itself where every directory above it does.
+ *
+ * @param {Population} held - The population.
+ * @returns {string[]} The ignore patterns, sorted.
+ */
+function unheldPatterns(held: Population): string[] {
+  const kept = held.listing.filter((file) => held.holds(file));
+  const patterns = held.listing
+    .filter((file) => LINTED.test(file) && !held.holds(file))
+    .map((file) => {
+      const top = ancestors(file).find((dir) => !kept.some((path) => path.startsWith(dir)));
+      return top === undefined ? file : `${top}**`;
+    });
+  return [...new Set(patterns)].toSorted();
+}
+
+/**
+ * The modules that run on Node: the harness, test support, the runners' tests, a test-infrastructure
+ * member's browser tests and the tool configs.
+ *
+ * @param {Population} held - The population.
+ * @returns {string[]} Their globs.
+ */
+function nodeModules(held: Population): string[] {
+  return [
+    `${HARNESS_ROOT}**`,
+    `**/${TEST_SUPPORT}**`,
+    ...RUNNER_TESTS,
+    ...roleGlobs(held, 'test-infrastructure', [`${BROWSER_TESTS}**`]),
+    ...NODE_MODULES,
+  ];
+}
+
+/**
+ * The rules whose options name members: the Solid ban, and the rules the test infrastructure is outside of.
+ *
+ * @param {Population} held - The population.
+ * @returns {NonNullable<OxlintConfig['rules']>} The rule settings.
+ */
+function memberRules(held: Population): NonNullable<OxlintConfig['rules']> {
+  const testInfrastructure = tierGlobs(held, 'test-infrastructure');
+  const ignored: ['error', { ignore: string[] }] = ['error', { ignore: testInfrastructure }];
+  return {
+    'aricanga/flags': ignored,
+    'aricanga/legacy': ignored,
+    'aricanga/mechanics': [
+      'error',
+      { files: held.members.flatMap((member) => MECHANICS.of(member.role).flatMap((tail) => liveGlobs(held, [member], tail))) },
+    ],
+    'aricanga/mirrors': ignored,
+    'aricanga/store-owner': ['error', { owners: ['**/snapshot-adapter.ts', ...testInfrastructure] }],
+    'aricanga/sync-parts': ignored,
+    'aricanga/vm-prop': ignored,
+  };
+}
+
+/**
+ * The overrides that name members: a system's reducer purity, the modules that run on Node, the
+ * harness's own restrictions, and the import boundaries (`import-boundaries.ts`).
+ *
+ * @param {Population} held - The population.
+ * @returns {OxlintOverride[]} The overrides.
+ */
+function memberOverrides(held: Population): OxlintOverride[] {
+  const reducers = roleGlobs(held, 'system', REDUCER);
+  const purity: OxlintOverride[] = isEmpty(reducers)
+    ? []
+    : [
+        {
+          files: reducers,
+          rules: {
+            'no-restricted-globals': ['error', { message: 'no Date in a reducer: time is simulation-derived (ADR-0007)', name: 'Date' }],
+            'no-restricted-properties': [
+              'error',
+              { message: 'no Math.random in a reducer: ids come from ctx.nextId (ADR-0007)', object: 'Math', property: 'random' },
+            ],
+          },
+        },
+      ];
+  return [
+    ...purity,
+    { env: { node: true }, files: nodeModules(held), rules: { 'import/no-nodejs-modules': 'off' } },
+    {
+      files: [`${HARNESS_ROOT}**`],
+      rules: {
+        'no-restricted-globals': ['error', { message: LOCALE, name: 'Intl' }],
+        'no-restricted-properties': [
+          'error',
+          { message: LOCALE, property: 'localeCompare' },
+          { message: LOCALE, object: 'globalThis', property: 'Intl' },
+        ],
+      },
+    },
+    ...boundariesOf(held),
+  ];
+}
 
 /**
  * The oxlint configuration over a population.
  *
- * @param {Population} _held - The population.
+ * @param {Population} held - The population.
  * @returns {OxlintConfig} The configuration.
  */
-function oxlintConfigOf(_held: Population): OxlintConfig {
-  return { ...SETTINGS, rules: RULES };
+function oxlintConfigOf(held: Population): OxlintConfig {
+  return {
+    ...SETTINGS,
+    ignorePatterns: [...unheldPatterns(held), BUILD_OUTPUT],
+    overrides: [...memberOverrides(held), ...SETTINGS.overrides],
+    rules: { ...RULES, ...memberRules(held) },
+  };
 }
 
 export { oxlintConfigOf };

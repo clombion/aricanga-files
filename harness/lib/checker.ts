@@ -12,12 +12,12 @@
 import type { Checker, Program, Symbol as TsSymbol } from 'typescript/unstable/sync';
 import type { Node, SourceFile } from 'typescript/unstable/ast';
 import { REPO_ROOT, relative } from './paths.ts';
+import { TEST_DIRECTORIES, isRunnerConfig, isRunnerTest } from './test-globs.ts';
 import { api, mount, nextName } from './ts-session.ts';
 import { isIdentifier, isPrivateIdentifier, isStringLiteral } from 'typescript/unstable/ast';
 import type { Population } from './scope.ts';
 import { SymbolFlags } from 'typescript/unstable/sync';
 import { isEmpty } from './lists.ts';
-import { isRunnerTest } from './test-globs.ts';
 import path from 'node:path';
 import { present } from './present.ts';
 import { ships } from './roles.ts';
@@ -39,7 +39,7 @@ const OPTIONS = {
 } as const;
 
 /** Test support's directories: a member's `test/`, `tests/` and `testing/`. */
-const TEST_DIRECTORY = /(?:^|\/)(?:test|tests|testing)\//u;
+const TEST_DIRECTORY = new RegExp(`(?:^|/)(?:${TEST_DIRECTORIES.join('|')})/`, 'u');
 /** A symbol's flags with none set. */
 const NO_FLAGS = 0;
 
@@ -77,7 +77,8 @@ function isTestInfrastructure(population: Population, file: string): boolean {
 }
 
 /**
- * A module that ships: not a module a test runner runs (`isRunnerTest`), test support under a
+ * A module that ships: not a module a test runner runs (`isRunnerTest`) or a config it loads
+ * (`RUNNER_CONFIGS`), test support under a
  * `test/`, `tests/` or `testing/` directory, or a module of a test infrastructure package. The
  * harness's check support (`harness/checks/`) is held as production is, so every check reads it. Whether coverage reads a module is the gate config's question,
  * not this one: a shipping member's `src/testing/` is test support and covered. Every rule holds both
@@ -91,7 +92,7 @@ function isTestInfrastructure(population: Population, file: string): boolean {
  * @returns {boolean} Whether the module ships.
  */
 function isProduction(population: Population, file: string): boolean {
-  return !isRunnerTest(file) && !TEST_DIRECTORY.test(file) && !isTestInfrastructure(population, file);
+  return !isRunnerTest(file) && !isRunnerConfig(file) && !TEST_DIRECTORY.test(file) && !isTestInfrastructure(population, file);
 }
 
 /**

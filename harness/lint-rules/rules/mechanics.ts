@@ -1,15 +1,22 @@
-/** Mechanics stay free of Solid: no `solid-js` or `@solidjs/*` import in the foundation or a system's model. */
+/**
+ * Mechanics stay free of Solid: no `solid-js` or `@solidjs/*` import in the modules the `files` globs
+ * name (a foundation member wholly, a system member's model: `harness/lib/oxlint-config.ts` reads them
+ * from the roles).
+ */
 
+import { matches, problemMeta } from '#lint-rules/ast.ts';
 import { onImports, refuse } from '#lint-rules/rules/imports.ts';
-import { problemMeta, relativeFile } from '#lint-rules/ast.ts';
 import type { Rule } from '#lint-rules/ast.ts';
 
-const MECHANICS = /^packages\/(?:foundation\/|systems\/[^/]+\/src\/model\/)/u;
+/** The rule's options: the globs of the mechanics' modules. */
+const FILES_SCHEMA: readonly unknown[] = [
+  { additionalProperties: false, properties: { files: { items: { type: 'string' }, type: 'array' } }, type: 'object' },
+];
 const SOLID = /^(?:solid-js(?:\/|$)|@solidjs\/)/u;
 
 export const mechanics: Rule = {
   create(context) {
-    if (!MECHANICS.test(relativeFile(context))) {
+    if (!matches(context, 'files')) {
       return {};
     }
     return onImports((imported) => {
@@ -18,5 +25,8 @@ export const mechanics: Rule = {
       }
     });
   },
-  meta: problemMeta('No solid-js or @solidjs/* import under packages/foundation or a system model.'),
+  meta: problemMeta(
+    'No solid-js or @solidjs/* import in a mechanics module (the `files` globs: a foundation member, a system model).',
+    FILES_SCHEMA,
+  ),
 };

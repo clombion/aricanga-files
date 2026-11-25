@@ -22,10 +22,7 @@ import { gateConfig } from './gate-config.ts';
 const HARNESS_ID = 'tool-exemptions';
 
 /** Globs allowed to match no listed file, keyed by `site(tool, glob)`, each with its reason. */
-const POLICIES = new Exemptions({
-  [site('oxlint overrides[6]', '**/*.test.tsx')]:
-    'policy: a component test is a .test.tsx and runs on Node like every test; the override holds the first one when it lands',
-});
+const POLICIES = new Exemptions({});
 
 /**
  * The entries whose glob matches none of `paths`.

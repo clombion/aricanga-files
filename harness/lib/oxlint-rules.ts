@@ -2,7 +2,7 @@
 
 import type { OxlintConfig } from 'oxlint';
 
-/** Each rule set beside its category: off where it contradicts another enabled rule, or with its options. */
+/** Each rule set beside its category: off where it contradicts another enabled rule, or with its options. The rules whose options name members are `oxlint-config.ts`'s. */
 const RULES: NonNullable<OxlintConfig['rules']> = {
   'aricanga/autofocus': 'error',
   'aricanga/controlled': 'error',
@@ -12,50 +12,13 @@ const RULES: NonNullable<OxlintConfig['rules']> = {
       owners: ['harness/lib/process.ts', 'harness/lib/tools.ts'],
     },
   ],
-  'aricanga/flags': [
-    'error',
-    {
-      ignore: ['packages/characterisation/**'],
-    },
-  ],
   'aricanga/json': 'error',
   'aricanga/labels': 'error',
-  'aricanga/legacy': [
-    'error',
-    {
-      ignore: ['packages/characterisation/**'],
-    },
-  ],
-  'aricanga/mechanics': 'error',
-  'aricanga/mirrors': [
-    'error',
-    {
-      ignore: ['packages/characterisation/**'],
-    },
-  ],
   'aricanga/own-keys': 'error',
   'aricanga/statics': 'error',
-  'aricanga/store-owner': [
-    'error',
-    {
-      owners: ['**/snapshot-adapter.ts', 'packages/characterisation/**'],
-    },
-  ],
   'aricanga/style-prop': 'error',
-  'aricanga/sync-parts': [
-    'error',
-    {
-      ignore: ['packages/characterisation/**'],
-    },
-  ],
   'aricanga/total-reads': 'error',
   'aricanga/view-imports': 'error',
-  'aricanga/vm-prop': [
-    'error',
-    {
-      ignore: ['packages/characterisation/**'],
-    },
-  ],
   'eslint/capitalized-comments': [
     'error',
     'always',

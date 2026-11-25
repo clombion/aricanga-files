@@ -30,6 +30,18 @@ function plantedTest(declare: string): string {
 
 /** Each plant's text and the rule codes oxlint must report for it, exactly. */
 const PLANTS: Readonly<Record<string, readonly [string, readonly string[]]>> = {
+  'harness/lib/collator-global.ts': ['export const order = new globalThis.Intl.Collator();\n', ['eslint(no-restricted-properties)']],
+  'harness/lib/collator-taken.ts': [
+    'const { Intl: locale } = globalThis;\n\nexport const order = new locale.Collator();\n',
+    ['eslint(no-restricted-properties)'],
+  ],
+  'harness/lib/collator-window.ts': ['export const order = new window.Intl.Collator();\n', ['unicorn(prefer-global-this)']],
+  'harness/lib/collator.ts': ['export const order = new Intl.Collator();\n', ['eslint(no-restricted-globals)']],
+  'harness/lib/compare.ts': [
+    'export function before(left: string, right: string): number {\n  return left.localeCompare(right);\n}\n',
+    ['eslint(no-restricted-properties)'],
+  ],
+  'harness/lib/number-format.ts': ['export const format = new Intl.NumberFormat();\n', ['eslint(no-restricted-globals)']],
   'src/clean.ts': ['export function double(value: number): number {\n  return value + value;\n}\n', []],
   'src/console.ts': ["export function say(): void {\n  console.log('x');\n}\n", ['eslint(no-console)']],
   'src/default-lookup.ts': [
