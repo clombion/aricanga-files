@@ -88,6 +88,7 @@ describe('the whole chain', () => {
       { from: 'experiences/sandbox/src/__chain_member.ts', to: 'packages/foundation/src/testing/index.ts' },
       { from: 'harness/lib/__chain_harness.ts', to: 'packages/characterisation/browsers.ts' },
       { from: 'packages/foundation/src/__chain_ambient.ts', to: 'packages/foundation/test/__chain_declarations.ts' },
+      { from: 'packages/foundation/src/__chain_declared.d.ts', to: 'packages/foundation/src/testing/index.ts' },
       { from: 'packages/foundation/src/__chain_dynamic.ts', to: 'packages/foundation/src/testing/index.ts' },
       { from: 'packages/foundation/src/__chain_import_type.ts', to: 'packages/foundation/src/testing/index.ts' },
       { from: 'packages/foundation/src/__chain_own.ts', to: 'packages/foundation/src/testing/index.ts' },

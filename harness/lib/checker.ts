@@ -116,13 +116,14 @@ function isProduction(population: Population, file: string): boolean {
 }
 
 /**
- * Every TypeScript module a population holds but declaration files: what a scan over it covers.
+ * Every TypeScript module a population holds, declaration files included (a declaration file imports as
+ * any module does: `typeof import('…')`): what a scan over it covers.
  *
  * @param {Population} held - The population.
  * @returns {readonly string[]} The scanned modules.
  */
 function scannedOf(held: Population): readonly string[] {
-  return typescriptOf(held).filter((file) => !file.endsWith('.d.ts'));
+  return typescriptOf(held);
 }
 
 /**

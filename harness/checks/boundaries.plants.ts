@@ -117,6 +117,7 @@ const CHAIN: readonly (readonly [string, string])[] = [
   ['harness/lib/__chain_harness.ts', "export * from '../../packages/characterisation/browsers.ts';\n"],
   ['packages/foundation/src/__chain_ambient.ts', "export { planted } from 'chain-ambient';\n"],
   ['packages/foundation/src/__chain_global.ts', "export const read = (value: ChainGlobal): number => value['planted'];\n"],
+  ['packages/foundation/src/__chain_declared.d.ts', "export type Module = typeof import('./testing/index.ts');\n"],
   ['packages/foundation/src/__chain_dynamic.ts', "export const later = async (): Promise<unknown> => import('./testing/index.ts');\n"],
   ['packages/foundation/src/__chain_import_type.ts', "export type Run = import('./testing/index.ts').FixtureRun;\n"],
   ['packages/foundation/src/__chain_own.ts', "export * from './testing/index.ts';\n"],
