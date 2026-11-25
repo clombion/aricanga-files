@@ -1,10 +1,11 @@
 /**
  * The owner registry's table: for each guarded API, which module of each root may use it. A rule
- * declares one policy per tier of the population (`roles.ts`) and one for the harness; its roots are
- * that tier's members' directories, read from the population, and the harness's own.
+ * declares one tagged policy per tier of the population (`roles.ts`) and one for the harness; its
+ * roots are that tier's members' directories, read from the population, and the harness's own, one
+ * list of scoped and free roots.
  */
 
-import { Accepted } from './exemptions.ts';
+import { Accepted, Vocabulary } from './exemptions.ts';
 import { HARNESS_ROOT } from './scope.ts';
 import type { MemberDir } from './package-dirs.ts';
 import type { Population } from './scope.ts';
@@ -12,32 +13,32 @@ import { PopulationError } from './workspace.ts';
 import type { Tier } from './roles.ts';
 import { nearestOf } from './package-dirs.ts';
 
-/** A root a rule covers, a directory, and its owner there (undefined: no module of the root may use the API). */
-interface Scope {
-  readonly root: MemberDir;
-  readonly owner: string | undefined;
-}
+/**
+ * A root of a rule, a directory, and what the rule allows there: a scoped root, one module of which
+ * may use the API (its `owner`; none: no module of the root may), or a free root, every module of
+ * which may, for a reason. One list holds both kinds, so every reader finds a file's root by one
+ * nearest lookup, whatever its kind.
+ */
+type Root =
+  | Readonly<{ kind: 'scoped'; root: MemberDir; owner: string | undefined }>
+  | Readonly<{ kind: 'free'; root: MemberDir; why: string }>;
 
-/** A root a rule leaves unguarded, with the reason its modules use the API freely. */
-interface Free {
-  readonly root: MemberDir;
-  readonly why: string;
-}
-
-/** A guarded API: the declarations that make it up, the roots it covers, the roots it frees, and why it has an owner. */
+/** A guarded API: the declarations that make it up, its roots, and why it has an owner. */
 interface Rule {
   readonly name: string;
   readonly names: Readonly<Accepted<string>>;
-  readonly scopes: readonly Scope[];
-  readonly free: readonly Free[];
+  readonly roots: readonly Root[];
   readonly why: string;
 }
 
 /** What holds a root: a tier's members, or the harness. */
 type Holder = Tier | 'harness';
 
-/** A holder's policy for an API: one module of its roots owns it (none: no module may), or every module may, for a reason. */
-type Policy = Readonly<{ owner: string | undefined }> | Readonly<{ free: string }>;
+/**
+ * A holder's policy for an API, tagged: one module of its roots owns it, no module may, or every
+ * module may, for a reason. `tsc` refuses a policy of two kinds.
+ */
+type Policy = Readonly<{ kind: 'owned'; owner: string }> | Readonly<{ kind: 'nobody' }> | Readonly<{ kind: 'free'; why: string }>;
 
 /** A guarded API as declared: a policy for every holder, so a holder without one does not compile. */
 interface RuleShape {
@@ -48,19 +49,24 @@ interface RuleShape {
 }
 
 /** No module of a holder's roots may use the API. */
-const NOBODY: Policy = { owner: undefined };
+const NOBODY: Policy = { kind: 'nobody' };
 
 /**
- * The scopes of roots one module of which may use an API: the root holding `owner` (the nearest, when
- * roots nest, as every reader of a scope finds it); no module of the others.
+ * A holder's roots under its policy: the root holding the owner scoped to it (the nearest of the
+ * holder's roots: a member is never nested in another, #58 1c refuses it), the others scoped to no
+ * module; every root free, with the policy's reason.
  *
- * @param {string | undefined} owner - The owning module; undefined: no module of any root may use it.
- * @param {readonly MemberDir[]} roots - The roots.
- * @returns {Scope[]} A scope per root.
+ * @param {Policy} policy - The holder's policy.
+ * @param {readonly MemberDir[]} roots - The holder's roots.
+ * @returns {Root[]} A root per directory.
  */
-function ownedBy(owner: string | undefined, roots: readonly MemberDir[]): Scope[] {
+function rootsUnder(policy: Policy, roots: readonly MemberDir[]): Root[] {
+  if (policy.kind === 'free') {
+    return roots.map((root) => ({ kind: 'free', root, why: policy.why }));
+  }
+  const owner = policy.kind === 'owned' ? policy.owner : undefined;
   const holding = owner === undefined ? undefined : nearestOf(roots, (root) => root)(owner);
-  return roots.map((root) => ({ owner: root === holding ? owner : undefined, root }));
+  return roots.map((root) => ({ kind: 'scoped', owner: root === holding ? owner : undefined, root }));
 }
 
 /** Every guarded API as declared, with each holder's policy. */
@@ -70,7 +76,12 @@ const SHAPES: readonly RuleShape[] = [
     names: new Accepted(
       ['spawn', 'spawnSync', 'exec', 'execSync', 'execFile', 'execFileSync', 'fork'].map((call) => `child_process.${call}`),
     ),
-    policies: { harness: { owner: 'harness/lib/process.ts' }, kernel: NOBODY, product: NOBODY, 'test-infrastructure': NOBODY },
+    policies: {
+      harness: { kind: 'owned', owner: 'harness/lib/process.ts' },
+      kernel: NOBODY,
+      product: NOBODY,
+      'test-infrastructure': NOBODY,
+    },
     why: 'every child process is bounded and its outcome is one of three',
   },
   {
@@ -80,7 +91,10 @@ const SHAPES: readonly RuleShape[] = [
       harness: NOBODY,
       kernel: NOBODY,
       product: NOBODY,
-      'test-infrastructure': { free: 'a test-infrastructure fixture times renders with performance.now (src/fixtures/performance.tsx)' },
+      'test-infrastructure': {
+        kind: 'free',
+        why: 'a test-infrastructure fixture times renders with performance.now (src/fixtures/performance.tsx)',
+      },
     },
     why: 'time is simulation-derived: the kernel reads it from its input, a host from its injected clock',
   },
@@ -95,17 +109,22 @@ const SHAPES: readonly RuleShape[] = [
       'crypto.randomInt',
       'crypto.getRandomValues',
     ]),
-    policies: { harness: { owner: 'harness/lib/stress.ts' }, kernel: NOBODY, product: NOBODY, 'test-infrastructure': NOBODY },
+    policies: {
+      harness: { kind: 'owned', owner: 'harness/lib/stress.ts' },
+      kernel: NOBODY,
+      product: NOBODY,
+      'test-infrastructure': NOBODY,
+    },
     why: 'ids and draws come from the seed, so a run replays; the flake hunter draws the seed it prints and replays from',
   },
   {
     name: 'standard-streams',
     names: new Accepted(['console', 'NodeJS.Process.stdout', 'NodeJS.Process.stderr']),
     policies: {
-      harness: { owner: 'harness/lib/output.ts' },
+      harness: { kind: 'owned', owner: 'harness/lib/output.ts' },
       kernel: NOBODY,
       product: NOBODY,
-      'test-infrastructure': { owner: 'packages/characterisation/src/harness.ts' },
+      'test-infrastructure': { kind: 'owned', owner: 'packages/characterisation/src/harness.ts' },
     },
     why: 'the kernel reports through effects and the event bus; one module of a tool says what it says',
   },
@@ -113,10 +132,13 @@ const SHAPES: readonly RuleShape[] = [
     name: 'json-parse',
     names: new Accepted(['JSON.parse']),
     policies: {
-      harness: { owner: 'harness/lib/config.ts' },
-      kernel: { owner: 'packages/foundation/src/host/codec.ts' },
+      harness: { kind: 'owned', owner: 'harness/lib/config.ts' },
+      kernel: { kind: 'owned', owner: 'packages/foundation/src/host/codec.ts' },
       product: NOBODY,
-      'test-infrastructure': { free: "a test-infrastructure spec reads the browser's report with JSON.parse (tests/performance.spec.ts)" },
+      'test-infrastructure': {
+        kind: 'free',
+        why: "a test-infrastructure spec reads the browser's report with JSON.parse (tests/performance.spec.ts)",
+      },
     },
     why: "one typed boundary narrows JSON's untyped values: the snapshot codec, the harness's config reader",
   },
@@ -138,8 +160,11 @@ const SHAPES: readonly RuleShape[] = [
     policies: {
       harness: NOBODY,
       kernel: NOBODY,
-      product: { owner: 'experiences/sandbox/src/main.ts' },
-      'test-infrastructure': { free: 'a test-infrastructure spec answers routed requests with route.fetch (tests/_helpers.ts)' },
+      product: { kind: 'owned', owner: 'experiences/sandbox/src/main.ts' },
+      'test-infrastructure': {
+        kind: 'free',
+        why: 'a test-infrastructure spec answers routed requests with route.fetch (tests/_helpers.ts)',
+      },
     },
     why: 'data reaches the kernel through the Fetch effect; one module of a host makes the request',
   },
@@ -151,7 +176,8 @@ const SHAPES: readonly RuleShape[] = [
       kernel: NOBODY,
       product: NOBODY,
       'test-infrastructure': {
-        free: 'test-infrastructure fixtures and support wait on setTimeout (src/support.ts, src/fixtures/adapter.tsx)',
+        kind: 'free',
+        why: 'test-infrastructure fixtures and support wait on setTimeout (src/support.ts, src/fixtures/adapter.tsx)',
       },
     },
     why: 'time passes through the injected Scheduler, so a test drives it',
@@ -165,28 +191,31 @@ const SHAPES: readonly RuleShape[] = [
   {
     name: 'settings',
     names: new Accepted(['NodeJS.Process.env', 'process.env']),
-    policies: { harness: { owner: 'harness/lib/process.ts' }, kernel: NOBODY, product: NOBODY, 'test-infrastructure': NOBODY },
+    policies: {
+      harness: { kind: 'owned', owner: 'harness/lib/process.ts' },
+      kernel: NOBODY,
+      product: NOBODY,
+      'test-infrastructure': NOBODY,
+    },
     why: 'every setting is read once, in one module',
   },
 ];
 
-/** The holders in the order their scopes are listed. */
-const HOLDERS: readonly Holder[] = ['kernel', 'product', 'test-infrastructure', 'harness'];
-
 /**
- * Each holder's roots in a population: a tier's members' directories, and the harness's own.
+ * Each holder's roots in a population: the harness's own, and a tier's members' directories. A total
+ * record, so a holder missing here does not compile; its words are the order a rule lists its roots in.
  *
  * @param {Population} population - The population.
- * @returns {Readonly<Record<Holder, readonly MemberDir[]>>} The roots, by holder.
+ * @returns {Vocabulary<Readonly<Record<Holder, readonly MemberDir[]>>>} The roots, by holder.
  */
-function rootsOf(population: Population): Readonly<Record<Holder, readonly MemberDir[]>> {
+function rootsOf(population: Population): Vocabulary<Readonly<Record<Holder, readonly MemberDir[]>>> {
   const ofTier = (tier: Tier): readonly MemberDir[] => population.tiers[tier].map((member) => member.dir);
-  return {
+  return new Vocabulary<Readonly<Record<Holder, readonly MemberDir[]>>>({
     harness: [HARNESS_ROOT],
     kernel: ofTier('kernel'),
     product: ofTier('product'),
     'test-infrastructure': ofTier('test-infrastructure'),
-  };
+  });
 }
 
 /**
@@ -195,7 +224,7 @@ function rootsOf(population: Population): Readonly<Record<Holder, readonly Membe
  * @param {Rule} rule - The rule.
  */
 function refuseTwice(rule: Rule): void {
-  const roots = [...rule.scopes.map((scope) => scope.root), ...rule.free.map((freed) => freed.root)];
+  const roots = rule.roots.map((entry) => entry.root);
   const twice = roots.find((root, index) => roots.indexOf(root) !== index);
   if (twice !== undefined) {
     throw new PopulationError(`the owner rule ${rule.name} holds the root ${twice} twice: a member sits at the harness's root`);
@@ -213,16 +242,9 @@ function rulesOf(population: Population): readonly Rule[] {
   const roots = rootsOf(population);
   return SHAPES.map((shape) => {
     const rule: Rule = {
-      free: HOLDERS.flatMap((holder) => {
-        const policy = shape.policies[holder];
-        return 'free' in policy ? roots[holder].map((root) => ({ root, why: policy.free })) : [];
-      }),
       name: shape.name,
       names: shape.names,
-      scopes: HOLDERS.flatMap((holder) => {
-        const policy = shape.policies[holder];
-        return 'free' in policy ? [] : ownedBy(policy.owner, roots[holder]);
-      }),
+      roots: roots.words.flatMap((holder) => rootsUnder(shape.policies[holder], roots.of(holder))),
       why: shape.why,
     };
     refuseTwice(rule);
@@ -231,4 +253,4 @@ function rulesOf(population: Population): readonly Rule[] {
 }
 
 export { rulesOf, SHAPES };
-export type { Rule };
+export type { Root, Rule };

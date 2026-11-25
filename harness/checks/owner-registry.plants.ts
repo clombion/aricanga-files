@@ -101,11 +101,21 @@ const NEAR_MISSES: readonly (readonly [string, string])[] = [
  */
 function unguarded(rules: readonly Rule[], held: Population): readonly string[] {
   return rules.flatMap((rule) => {
-    const roots = [...rule.scopes.map((scope) => scope.root), ...rule.free.map((freed) => freed.root)];
+    const roots = rule.roots.map((entry) => entry.root);
     return held.members
       .filter((member) => roots.filter((root) => root === member.dir).length !== ONCE)
       .map((member) => site(member.dir, rule.name));
   });
 }
 
-export { CANONICAL, FORMS, IN_A_TEST, MEMBERS, NEAR_MISSES, unguarded };
+/**
+ * A rule's scoped roots, each with its owner (none: no module of the root may use the API).
+ *
+ * @param {Rule} rule - The rule.
+ * @returns {readonly (readonly { root: string; owner: string | undefined })[]} Its scoped roots.
+ */
+function scopedOf(rule: Rule): readonly Readonly<{ root: string; owner: string | undefined }>[] {
+  return rule.roots.flatMap((entry) => (entry.kind === 'scoped' ? [{ owner: entry.owner, root: entry.root }] : []));
+}
+
+export { CANONICAL, FORMS, IN_A_TEST, MEMBERS, NEAR_MISSES, scopedOf, unguarded };

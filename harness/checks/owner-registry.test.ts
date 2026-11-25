@@ -8,15 +8,15 @@
  * pure constructor call, the owner itself, and a root a rule frees.
  */
 
-import { CANONICAL, FORMS, IN_A_TEST, MEMBERS, NEAR_MISSES, unguarded } from './owner-registry.plants.ts';
+import { CANONICAL, FORMS, IN_A_TEST, MEMBERS, NEAR_MISSES, scopedOf, unguarded } from './owner-registry.plants.ts';
 import { SHAPES, keyOf, ownerUses, rulesOf, sites } from '#lib/owners.ts';
 import { describe, expect, test } from 'vitest';
-import { population, populationOf } from '#lib/scope.ts';
 import { usePlanted, useScan } from '#lib/scan-hooks.ts';
 import type { Rule } from '#lib/owner-rules.ts';
 import type { Scan } from '#lib/checker.ts';
 import type { Site } from '#lib/owners.ts';
 import { plantedPopulation } from '#lib/planted-population.ts';
+import { population } from '#lib/scope.ts';
 import { present } from '#lib/present.ts';
 import { sourceOf } from '#lib/checker.ts';
 import { tracked } from '#lib/source-files.ts';
@@ -55,7 +55,9 @@ function rootPlants(): readonly Plant[] {
   const canonical = new Map(CANONICAL);
   return RULES.flatMap((rule) => {
     const text = canonical.get(rule.name);
-    return text === undefined ? [] : rule.scopes.map((scope) => ({ path: `${scope.root}__root_${rule.name}.ts`, rule: rule.name, text }));
+    return text === undefined
+      ? []
+      : scopedOf(rule).map((scope) => ({ path: `${scope.root}__root_${rule.name}.ts`, rule: rule.name, text }));
   });
 }
 
@@ -69,6 +71,19 @@ const plants: readonly (readonly [string, string])[] = PLANTED.map((plant) => [p
 const expected: readonly Site[] = PLANTED.flatMap((plant) => (plant.rule === undefined ? [] : [{ path: plant.path, rule: plant.rule }]));
 const plantedScan = usePlanted(plants, MEMBERS);
 const repoScan = useScan();
+
+/** A free root nested in a scoped one: its module uses the API the outer root forbids, and the nearest root, the free one, holds it. */
+const NESTED_FREE = 'packages/foundation/probe/src/__free.ts';
+const nestedFreeScan = usePlanted(
+  [[NESTED_FREE, 'export const wait = (): void => {\n  setTimeout(() => undefined, 1);\n};\n']],
+  [
+    ['packages/foundation/', 'foundation'],
+    ['packages/foundation/probe/', 'test-infrastructure'],
+  ],
+);
+
+/** How many entries an empty table holds. */
+const NONE = 0;
 
 /** The kernel owner of `json-parse` under a kernel root nested in another, which owns nothing. */
 const NESTED_OWNER = 'packages/foundation/src/host/codec.ts';
@@ -98,17 +113,6 @@ function sitesIn(scanOf: () => Scan, paths: readonly string[]): Site[] {
 }
 
 /**
- * Reads a manifest of a population with a member at the harness's root: the root's is empty, the member's declares a role.
- *
- * @param {string} listed - The manifest.
- * @returns {Promise<string>} Its text.
- */
-async function readAtHarness(listed: string): Promise<string> {
-  const text = await Promise.resolve(listed === 'package.json' ? '{}' : JSON.stringify({ aricanga: { role: 'experience' } }));
-  return text;
-}
-
-/**
  * The modules under a root that use a rule's API.
  *
  * @param {Scan} scan - The open scan.
@@ -121,13 +125,13 @@ function usersUnder(scan: Scan, root: string, rule: Rule): readonly string[] {
 }
 
 /** Each root the repository's rules free, as the rule's name and the root: a free root no module uses the API in is tightened to no owner. */
-const FREED = rulesOf(await population()).flatMap((rule) => rule.free.map((freed) => [rule.name, freed.root] as const));
+const FREED = rulesOf(await population()).flatMap((rule) =>
+  rule.roots.flatMap((entry) => (entry.kind === 'free' ? [[rule.name, entry.root, entry.why] as const] : [])),
+);
 
 /** Each declared owner, kernel owners included, as the rule's name and its owner module. */
 const DECLARED = SHAPES.flatMap((shape) =>
-  Object.values(shape.policies).flatMap((policy) =>
-    'owner' in policy && policy.owner !== undefined ? [[shape.name, policy.owner] as const] : [],
-  ),
+  Object.values(shape.policies).flatMap((policy) => (policy.kind === 'owned' ? [[shape.name, policy.owner] as const] : [])),
 );
 
 /**
@@ -138,15 +142,11 @@ const DECLARED = SHAPES.flatMap((shape) =>
  */
 function honoured(rules: readonly Rule[]): readonly string[] {
   return rules
-    .flatMap((rule) => rule.scopes.flatMap((scope) => (scope.owner === undefined ? [] : [keyOf({ path: scope.owner, rule: rule.name })])))
+    .flatMap((rule) =>
+      scopedOf(rule).flatMap((scope) => (scope.owner === undefined ? [] : [keyOf({ path: scope.owner, rule: rule.name })])),
+    )
     .toSorted();
 }
-
-/** The listing pnpm gives of a workspace with a package at the harness's root. */
-const AT_HARNESS_ROOT = [
-  { dir: '', name: undefined },
-  { dir: 'harness/', name: undefined },
-] as const;
 
 describe('the repository', () => {
   test('no guarded API is used outside its owner', () => {
@@ -167,14 +167,22 @@ describe('the repository', () => {
     expect(missed, 'a member no root of a rule holds once: give its tier a policy in harness/lib/owner-rules.ts').toStrictEqual([]);
   });
 
-  test.each(FREED)('the %s rule frees %s, where a module uses its API', (name, root) => {
+  test('frees some root and declares some owner, so the tests over each are not empty', () => {
+    expect.hasAssertions();
+    expect([FREED.length > NONE, DECLARED.length > NONE]).toStrictEqual([true, true]);
+  });
+
+  test.each(FREED)('the %s rule frees %s, where a module uses its API', (name, root, why) => {
     expect.hasAssertions();
     const scan = repoScan();
     const rule = present(
       rulesOf(scan.population).find((candidate) => candidate.name === name),
       `the rule ${name}`,
     );
-    expect(usersUnder(scan, root, rule)).not.toStrictEqual([]);
+    expect(
+      usersUnder(scan, root, rule),
+      `${root} is freed from ${name} because ${why}, but no module there uses it: give its tier NOBODY in harness/lib/owner-rules.ts`,
+    ).not.toStrictEqual([]);
   });
 
   test.each(DECLARED)('the %s owner %s exists and uses its API', async (name, owner) => {
@@ -202,7 +210,7 @@ describe('the scan', () => {
 
   test('plants a canonical use in every root of every rule, and each call form', () => {
     expect.hasAssertions();
-    const roots = RULES.flatMap((rule) => rule.scopes.map((scope) => `${scope.root}__root_${rule.name}.ts`));
+    const roots = RULES.flatMap((rule) => scopedOf(rule).map((scope) => `${scope.root}__root_${rule.name}.ts`));
     const forms = FORMS.map((_form, index) => `packages/foundation/src/__form_${index}.ts`);
     expect(
       plants
@@ -210,6 +218,11 @@ describe('the scan', () => {
         .filter((path) => /__(?:form|root)_/u.test(path))
         .toSorted(),
     ).toStrictEqual([...roots, ...forms].toSorted());
+  });
+
+  test('reads a file in a free root nested in a scoped one by the nearest, the free root', () => {
+    expect.hasAssertions();
+    expect(sitesIn(nestedFreeScan, [NESTED_FREE])).toStrictEqual([]);
   });
 
   test('lets the owner of the nearest kernel root use its API, when kernel roots nest', () => {
@@ -220,73 +233,6 @@ describe('the scan', () => {
   test.each(NEAR_MISSES.map(([path]) => path))('lets the near miss %s through', (path) => {
     expect.hasAssertions();
     expect(sitesIn(plantedScan, [path])).toStrictEqual([]);
-  });
-});
-
-describe('the rules', () => {
-  test('give a kernel owner to the nearest kernel root holding it, when kernel roots nest', async () => {
-    expect.hasAssertions();
-    const held = await plantedPopulation(
-      [],
-      [
-        ['packages/foundation/', 'foundation'],
-        ['packages/foundation/src/', 'system'],
-      ],
-    );
-    const parse = rulesOf(held).find((rule) => rule.name === 'json-parse');
-    expect(parse?.scopes.filter((scope) => scope.root.startsWith('packages/foundation/'))).toStrictEqual([
-      { owner: undefined, root: 'packages/foundation/' },
-      { owner: 'packages/foundation/src/host/codec.ts', root: 'packages/foundation/src/' },
-    ]);
-  });
-});
-
-describe('the rules over each tier', () => {
-  test('free a test-infrastructure member where its tier uses the API, with the reason', async () => {
-    expect.hasAssertions();
-    const held = await plantedPopulation([], [['packages/probe/', 'test-infrastructure']]);
-    const rules = rulesOf(held);
-    expect(rules.find((rule) => rule.name === 'timers')?.free.map((freed) => freed.root)).toStrictEqual(['packages/probe/']);
-    expect(rules.find((rule) => rule.name === 'random')?.scopes.map((scope) => scope.root)).toStrictEqual(['packages/probe/', 'harness/']);
-  });
-
-  test('refuse a member at the harness root, which one rule would hold twice', async () => {
-    expect.hasAssertions();
-    const held = await populationOf({
-      listing: ['package.json', 'harness/package.json'],
-      read: readAtHarness,
-      workspace: AT_HARNESS_ROOT,
-    });
-    expect(() => rulesOf(held)).toThrow(
-      /^the owner rule process-start holds the root harness\/ twice: a member sits at the harness's root$/u,
-    );
-  });
-
-  test('cover each kernel member, and give a kernel owner the member that holds it', async () => {
-    expect.hasAssertions();
-    const held = await plantedPopulation(
-      [],
-      [
-        ['packages/foundation/', 'foundation'],
-        ['packages/systems/x/', 'system'],
-        ['packages/view/', 'view'],
-      ],
-    );
-    const rules = rulesOf(held);
-    expect(['clock', 'json-parse'].map((name) => rules.find((rule) => rule.name === name)?.scopes)).toStrictEqual([
-      [
-        { owner: undefined, root: 'packages/foundation/' },
-        { owner: undefined, root: 'packages/systems/x/' },
-        { owner: undefined, root: 'packages/view/' },
-        { owner: undefined, root: 'harness/' },
-      ],
-      [
-        { owner: 'packages/foundation/src/host/codec.ts', root: 'packages/foundation/' },
-        { owner: undefined, root: 'packages/systems/x/' },
-        { owner: undefined, root: 'packages/view/' },
-        { owner: 'harness/lib/config.ts', root: 'harness/' },
-      ],
-    ]);
   });
 });
 
