@@ -49,11 +49,11 @@ function ancestors(file: string): readonly string[] {
  * @returns {string[]} The ignore patterns, sorted.
  */
 function unheldPatterns(held: Population): string[] {
-  const kept = held.listing.filter((file) => held.holds(file));
+  const keptDirs = new Set(held.listing.filter((file) => held.holds(file)).flatMap((file) => ancestors(file)));
   const patterns = held.listing
     .filter((file) => isLintable(file) && !held.holds(file))
     .map((file) => {
-      const top = ancestors(file).find((dir) => !kept.some((path) => path.startsWith(dir)));
+      const top = ancestors(file).find((dir) => !keptDirs.has(dir));
       return top === undefined ? `${IGNORE_ANCHOR}${file}` : `${top}**`;
     });
   return [...new Set(patterns)].toSorted();

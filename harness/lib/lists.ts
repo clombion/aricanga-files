@@ -99,5 +99,27 @@ function partitioned<Item>(items: readonly Item[], test: (item: Item) => boolean
   return [held, rest];
 }
 
-export { inSequence, isEmpty, partitioned, Slot };
+/**
+ * Items grouped by a key, each group in the items' order; an item with no key is in no group. Keys
+ * are compared as a `Map` compares them: an object by its identity.
+ *
+ * @param {readonly Item[]} items - The items.
+ * @param {(item: Item) => Key | undefined} keyOf - Each item's key, or none.
+ * @returns {ReadonlyMap<Key, readonly Item[]>} The groups, by key.
+ */
+function groupedBy<Item, Key>(items: readonly Item[], keyOf: (item: Item) => Key | undefined): ReadonlyMap<Key, readonly Item[]> {
+  const groups = new Map<Key, Item[]>();
+  for (const item of items) {
+    const key = keyOf(item);
+    const group = key === undefined ? undefined : groups.get(key);
+    if (group !== undefined) {
+      group.push(item);
+    } else if (key !== undefined) {
+      groups.set(key, [item]);
+    }
+  }
+  return groups;
+}
+
+export { groupedBy, inSequence, isEmpty, partitioned, Slot };
 export { byCodeUnit } from './exemptions/order.ts';

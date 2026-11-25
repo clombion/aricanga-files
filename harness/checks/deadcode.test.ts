@@ -10,22 +10,13 @@
 
 import { EXIT_CLEAN, EXIT_FINDINGS } from '#lib/exit-status.ts';
 import { ROOT_CONFIG_MODULES, knipConfig } from '#lib/config-modules.ts';
-import {
-  deadcodeRuns,
-  ignoreEntries,
-  issueTypes,
-  knip,
-  planted,
-  repoIgnoreEntries,
-  strictnessProblems,
-  writeKnipConfig,
-} from '#lib/deadcode.ts';
+import { deadcodeRuns, ignoreEntries, issueTypes, knip, plantedKnipRuns, repoIgnoreEntries, strictnessProblems } from '#lib/deadcode.ts';
 import { describe, expect, test } from 'vitest';
 import { runsOf, substituted } from '#lib/repo-tasks.ts';
 import { Exemptions } from '#lib/exemptions.ts';
 import type { KnipConfig } from '#lib/knip-config.ts';
-import { Project } from '#lib/tools.ts';
 import { REPO_ROOT } from '#lib/paths.ts';
+import type { Run } from '#lib/deadcode.ts';
 import { inSequence } from '#lib/lists.ts';
 
 const HARNESS_ID = 'deadcode';
@@ -60,39 +51,27 @@ const KNIP_IGNORES = Exemptions.grouped({
   'run by harness/scripts/dupes.ts through tools.bin, which knip cannot see': ['ignoreDependencies:jscpd'],
 });
 
-/** A planted package's run: its exit status and output. */
-interface Run {
-  readonly status: number;
-  readonly output: string;
-}
-
 const PLANT_CONFIG = {
   entry: ['src/index.ts!', 'src/**/*.test.ts'],
   project: ['src/**/*.ts!'],
 };
 
+/** A planted package's manifest. */
+const PLANT_MANIFEST: readonly [string, string] = [
+  'package.json',
+  JSON.stringify({ name: 'plant', private: true, type: 'module', version: '0.0.0' }),
+];
+
 /**
- * Run every knip invocation of the deadcode task on a planted package; their exit statuses and output.
+ * Run every knip invocation of the deadcode task on a planted package.
  *
  * @param {Readonly<Record<string, string>>} files - The files.
  * @param {object} config - The config.
  * @returns {Promise<readonly Run[]>} Each run's exit status and output.
  */
 async function plantedRuns(files: Readonly<Record<string, string>>, config: object = PLANT_CONFIG): Promise<readonly Run[]> {
-  const project = await Project.create();
-  try {
-    await project.write('package.json', JSON.stringify({ name: 'plant', private: true, type: 'module', version: '0.0.0' }));
-    await writeKnipConfig(project, config);
-    await project.writeAll(Object.entries(files));
-    const runs = await deadcodeRuns();
-    const done = await inSequence(runs, async (args) => {
-      const run = await knip(project.root, planted(args));
-      return { output: run.stdout + run.stderr, status: run.status };
-    });
-    return done;
-  } finally {
-    await project.remove();
-  }
+  const runs = await plantedKnipRuns([PLANT_MANIFEST, ...Object.entries(files)], config);
+  return runs;
 }
 
 /**
@@ -204,11 +183,6 @@ describe('the deadcode check, on planted configs', () => {
       ['rule types is not set at error'],
       ['ignoreWorkspaces:w', 'ignoreDependencies:d'],
     ]);
-  });
-
-  test("names the planted file in a planted run, in place of the task's configuration module", () => {
-    expect.hasAssertions();
-    expect(planted(['--config', 'knip.config.ts', '--production'])).toStrictEqual(['--config', 'knip.json', '--production']);
   });
 
   test("reads a tool's invocations by its binary, the first word exactly, and replaces only the config flag's value", () => {

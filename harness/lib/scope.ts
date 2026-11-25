@@ -5,7 +5,7 @@
 
 import { Accepted, Prefixes } from './exemptions.ts';
 import type { Role, Tier } from './roles.ts';
-import { byCodeUnit, isEmpty, partitioned } from './lists.ts';
+import { byCodeUnit, groupedBy, isEmpty, partitioned } from './lists.ts';
 import { manifestOf, nearestOf } from './package-dirs.ts';
 import { perRoot, textOf, tracked } from './source-files.ts';
 import { ships, tierOf } from './roles.ts';
@@ -103,6 +103,8 @@ interface Population {
   readonly holds: (path: string) => boolean;
   /** The nearest member holding a path. */
   readonly memberOf: (path: string) => Member | undefined;
+  /** A member's own listed files, not a nested member's, from one pass over the listing keyed by the member itself: the one answer every member-scoped glob reads; none for a member this population does not hold, whatever its directory. */
+  readonly filesOf: (member: Member) => readonly string[];
 }
 
 /** What a population is computed from. */
@@ -136,6 +138,7 @@ function assembled(parts: Readonly<Parts>): Population {
   const { listing, members, pocPackages, root, rootManifest } = parts;
   const packageDirs = new Set<string>(pocPackages.map((entry) => entry.dir));
   const memberOf = nearestOf(members, (member) => member.dir);
+  const owned = groupedBy(listing, memberOf);
   const tiered = (tier: Tier): readonly Member[] => members.filter((member) => tierOf(member.role) === tier);
   const [shipping, testInfrastructure] = partitioned(members, (member) => ships(member.role));
   const tiers: Readonly<Record<Tier, readonly Member[]>> = {
@@ -144,6 +147,7 @@ function assembled(parts: Readonly<Parts>): Population {
     'test-infrastructure': tiered('test-infrastructure'),
   };
   return {
+    filesOf: (member: Member) => owned.get(member) ?? [],
     holds: (target: string) => ROOT_FILES.has(target) || target.startsWith(HARNESS_ROOT) || memberOf(target) !== undefined,
     listing,
     memberOf,

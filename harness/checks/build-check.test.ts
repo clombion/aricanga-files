@@ -53,7 +53,7 @@ describe('the repository', () => {
       .filter((member) => held.listing.includes(`${member.dir}vite.config.ts`))
       .map((member) => importerOf(member.dir));
     expect(memberApps).not.toStrictEqual([]);
-    expect(found).toStrictEqual(expect.arrayContaining(memberApps));
+    expect(found).toStrictEqual(memberApps);
     const results = await inSequence(found, async (app) => {
       const result = await checkBuild(app);
       return result;

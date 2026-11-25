@@ -26,7 +26,7 @@ interface MemberSettings {
   readonly flags: unknown;
   readonly owners: unknown;
   readonly purity: unknown;
-  readonly node: unknown;
+  readonly node: readonly string[] | undefined;
 }
 
 /**
@@ -62,7 +62,7 @@ describe('the oxlint configuration of a planted population', () => {
   test("names each member by its role's modules, wherever the member sits", async () => {
     expect.hasAssertions();
     const held = await plantedPopulation(
-      ['lib/sys/src/model/a.ts', 'lib/sys/src/system.ts', 'probe/tests/a.spec.ts', 'tools/core/src/a.ts'],
+      ['lib/sys/src/model/a.ts', 'lib/sys/src/system.ts', 'lib/sys/tests/a.ts', 'probe/tests/a.spec.ts', 'tools/core/src/a.ts'],
       [
         ['lib/sys/', 'system'],
         ['probe/', 'test-infrastructure'],
@@ -76,7 +76,7 @@ describe('the oxlint configuration of a planted population', () => {
       ['error', { owners: ['**/snapshot-adapter.ts', 'probe/**'] }],
       ['lib/sys/src/system.ts', 'lib/sys/src/model/**'],
     ]);
-    expect(node).toContain('probe/tests/**');
+    expect([node?.includes('probe/tests/**'), node?.includes('lib/sys/tests/**')]).toStrictEqual([true, false]);
   });
 
   test('has no reducer override without a system model, and no glob the listing leaves empty', async () => {

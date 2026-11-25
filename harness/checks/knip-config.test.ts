@@ -5,14 +5,11 @@
  * in a member's test support.
  */
 
-import { EXIT_CLEAN, EXIT_FINDINGS } from '#lib/exit-status.ts';
-import { deadcodeRuns, knip, planted, writeKnipConfig } from '#lib/deadcode.ts';
 import { describe, expect, test } from 'vitest';
 import { listing, reader } from './scope.plants.ts';
 import { pocNames, populationOf } from '#lib/scope.ts';
-import { Project } from '#lib/tools.ts';
-import { inSequence } from '#lib/lists.ts';
 import { knipConfigOf } from '#lib/knip-config.ts';
+import { plantedKnipRuns } from '#lib/deadcode.ts';
 import { plantedPopulation } from '#lib/planted-population.ts';
 
 const HARNESS_ID = 'knip-config';
@@ -32,41 +29,43 @@ const FILES = [
 /** A planted member's manifest: a package whose index is its sources' entry. */
 const MANIFEST = { exports: { '.': './src/index.ts' }, name: '@planted/core', private: true, type: 'module', version: '0.0.0' };
 
+/** The orphan in the planted member's test support. */
+const ORPHAN = 'packages/core/test/orphan.ts';
+
+/** The orphan's text: an export nothing reads. */
+const ORPHAN_TEXT = 'export const b = 2;\n';
+
 /** The planted workspace's modules: the harness reads the member, whose test support holds an orphan. */
 const PLANTED: Readonly<Record<string, string>> = {
+  [ORPHAN]: ORPHAN_TEXT,
   'harness/checks/a.test.ts': "import { a } from '@planted/core';\nconsole.assert(a === 1);\n",
   'harness/scripts/run.ts': 'export {};\n',
   'packages/core/src/index.ts': 'export const a = 1;\n',
-  'packages/core/test/orphan.ts': 'export const b = 2;\n',
 };
 
 /**
- * Every knip invocation of the deadcode task over a planted workspace configured by its own
- * population: each run's status, and whether it names the orphan.
+ * Every knip invocation of the deadcode task over a planted workspace, under the configuration its own
+ * population computes, unchanged: whether each run names the orphan, with the orphan planted and
+ * without it, so the claim is the difference the orphan makes (the runs' statuses carry the hints the
+ * repository's own ignore lists raise in a workspace that does not hold the POC).
  *
- * @returns {Promise<readonly (readonly [number, boolean])[]>} Each run's status and whether it named the orphan.
+ * @returns {Promise<readonly (readonly boolean[])[]>} Whether each run names the orphan, with it and without it.
  */
-async function plantedRuns(): Promise<readonly (readonly [number, boolean])[]> {
+async function orphanNamed(): Promise<readonly (readonly boolean[])[]> {
   const held = await plantedPopulation(Object.keys(PLANTED), [['packages/core/', 'foundation', MANIFEST]]);
   const root = { devDependencies: { '@planted/core': 'workspace:*' }, name: 'plant', private: true, type: 'module', version: '0.0.0' };
-  const project = await Project.create();
-  try {
-    await project.writeAll([
-      ['package.json', JSON.stringify(root)],
-      ['pnpm-workspace.yaml', "packages:\n  - 'packages/*'\n"],
-      ['packages/core/package.json', JSON.stringify(MANIFEST)],
-      ...Object.entries(PLANTED),
-    ]);
-    await writeKnipConfig(project, { ...knipConfigOf(held), ignoreWorkspaces: [] });
-    const runs = await deadcodeRuns();
-    const done = await inSequence(runs, async (args) => {
-      const run = await knip(project.root, planted(args));
-      return [run.status, (run.stdout + run.stderr).includes('packages/core/test/orphan.ts')] as const;
-    });
-    return done;
-  } finally {
-    await project.remove();
-  }
+  const base: readonly (readonly [string, string])[] = [
+    ['package.json', JSON.stringify(root)],
+    ['pnpm-workspace.yaml', "packages:\n  - 'packages/*'\n"],
+    ['packages/core/package.json', JSON.stringify(MANIFEST)],
+    ...Object.entries(PLANTED).filter(([path]: readonly [string, string]) => path !== ORPHAN),
+  ];
+  const config = knipConfigOf(held);
+  const [withOrphan, without] = await Promise.all([
+    plantedKnipRuns([...base, [ORPHAN, ORPHAN_TEXT]], config),
+    plantedKnipRuns(base, config),
+  ]);
+  return [withOrphan.map((run) => run.output.includes(ORPHAN)), without.map((run) => run.output.includes(ORPHAN))];
 }
 
 describe('the knip configuration of a planted population', () => {
@@ -106,10 +105,24 @@ describe('the knip configuration of a planted population', () => {
 
   test("reports an orphan in a member's test support, in default mode", async () => {
     expect.hasAssertions();
-    await expect(plantedRuns()).resolves.toStrictEqual([
-      [EXIT_CLEAN, false],
-      [EXIT_FINDINGS, true],
+    await expect(orphanNamed()).resolves.toStrictEqual([
+      [false, true],
+      [false, false],
     ]);
+  });
+});
+
+describe('a nested member', () => {
+  test("leaves a nested member's files out of the member that holds it", async () => {
+    expect.hasAssertions();
+    const held = await plantedPopulation(
+      ['packages/core/src/a.ts', 'packages/core/kit/lib/b.ts'],
+      [
+        ['packages/core/', 'foundation'],
+        ['packages/core/kit/', 'test-infrastructure'],
+      ],
+    );
+    expect(knipConfigOf(held).workspaces['packages/core']).toStrictEqual({ project: ['src/**/*.{ts,tsx}!'] });
   });
 });
 
@@ -123,6 +136,18 @@ describe("a member's Playwright configs", () => {
     expect(knipConfigOf(held).workspaces['packages/probe']?.playwright).toStrictEqual({
       config: ['e2e/playwright.deep.config.ts', 'playwright.top.config.ts'],
     });
+  });
+
+  test("leaves a nested member's Playwright config to the nested member, never the outer one", async () => {
+    expect.hasAssertions();
+    const held = await plantedPopulation(
+      ['packages/a/src/x.ts', 'packages/a/b/playwright.e2e.config.ts', 'packages/a/b/src/y.ts'],
+      [
+        ['packages/a/', 'foundation'],
+        ['packages/a/b/', 'test-infrastructure'],
+      ],
+    );
+    expect(knipConfigOf(held).workspaces['packages/a']).toStrictEqual({ project: ['src/**/*.{ts,tsx}!'] });
   });
 });
 

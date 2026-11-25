@@ -7,12 +7,12 @@
  * A planted run makes the task's invocations with its own configuration file (`planted`).
  */
 
-import { bin, finished } from './tools.ts';
+import { Project, bin, finished } from './tools.ts';
 import { object, parsed } from './config.ts';
 import { substituted, toolRuns } from './repo-tasks.ts';
 import type { Finished } from './process.ts';
 import type { KnipConfig } from './knip-config.ts';
-import type { Project } from './tools.ts';
+import { inSequence } from './lists.ts';
 import { knipConfig } from './config-modules.ts';
 import { textOf } from './source-files.ts';
 
@@ -114,4 +114,35 @@ function strictnessProblems(config: KnipConfig, types: readonly string[]): reado
   return types.filter((type) => !Object.hasOwn(config.rules, type)).map((type) => `rule ${type} is not set at error`);
 }
 
-export { deadcodeRuns, ignoreEntries, issueTypes, knip, planted, repoIgnoreEntries, strictnessProblems, writeKnipConfig };
+/** A planted knip run: its exit status and output. */
+interface Run {
+  readonly status: number;
+  readonly output: string;
+}
+
+/**
+ * Every knip invocation of the deadcode task over a planted project of `files`, under `config`
+ * written as its configuration: the one planted runner every check of knip uses.
+ *
+ * @param {readonly (readonly [string, string])[]} files - Each planted file's path and text, manifests included.
+ * @param {object} config - The configuration, as JSON.
+ * @returns {Promise<readonly Run[]>} Each run's exit status and output, in the task's order.
+ */
+async function plantedKnipRuns(files: readonly (readonly [string, string])[], config: object): Promise<readonly Run[]> {
+  const project = await Project.create();
+  try {
+    await writeKnipConfig(project, config);
+    await project.writeAll(files);
+    const runs = await deadcodeRuns();
+    const done = await inSequence(runs, async (args) => {
+      const run = await knip(project.root, planted(args));
+      return { output: run.stdout + run.stderr, status: run.status };
+    });
+    return done;
+  } finally {
+    await project.remove();
+  }
+}
+
+export { deadcodeRuns, ignoreEntries, issueTypes, knip, plantedKnipRuns, repoIgnoreEntries, strictnessProblems };
+export type { Run };

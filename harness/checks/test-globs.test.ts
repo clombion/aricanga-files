@@ -113,4 +113,30 @@ describe('the repository', () => {
   });
 });
 
+describe("a population's member files", () => {
+  test("gives each member its own files, a nested member's apart, and none to a member it does not hold, at another directory or at one of its own", async () => {
+    expect.hasAssertions();
+    const held = await plantedPopulation(
+      ['packages/a/x.ts', 'packages/a/b/y.ts'],
+      [
+        ['packages/a/', 'foundation'],
+        ['packages/a/b/', 'system'],
+      ],
+    );
+    const other = await plantedPopulation(
+      ['packages/a/z.ts'],
+      [
+        ['packages/c/', 'view'],
+        ['packages/a/', 'foundation'],
+      ],
+    );
+    expect([...held.members, ...other.members].map((member) => held.filesOf(member))).toStrictEqual([
+      ['packages/a/x.ts', 'packages/a/package.json'],
+      ['packages/a/b/y.ts', 'packages/a/b/package.json'],
+      [],
+      [],
+    ]);
+  });
+});
+
 export { HARNESS_ID };

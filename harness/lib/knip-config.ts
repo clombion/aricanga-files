@@ -87,7 +87,7 @@ const FIRST_SEGMENT = /^(?<segment>[^/]+)\//u;
  * @returns {readonly string[]} Its files, member-relative.
  */
 function ownFiles(held: Population, member: Member): readonly string[] {
-  return held.listing.filter((file) => held.memberOf(file)?.dir === member.dir).map((file) => file.slice(member.dir.length));
+  return held.filesOf(member).map((file) => file.slice(member.dir.length));
 }
 
 /**
