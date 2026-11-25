@@ -10,14 +10,16 @@
  * A phrase written inside a code span is a quotation, not a claim.
  */
 
+import { HARNESS_LIB, HARNESS_SCRIPTS } from './test-globs.ts';
+
 /** A claim of a single owner, up to the end of its clause. */
 const CLAIM = /\b(?:the (?:one|only) (?:owner|module|place|reader|writer)|nowhere else|stated once)\b[^.;:]*/giu;
 
 /** How a module finds where it is on disk: the one thing only `harness/lib/paths.ts` may do. */
 const LOCATES_ITSELF = /\bimport\.meta\.(?:url|dirname|filename)\b/u;
 
-/** The harness's library and scripts: the roots of the probes that hold the harness's own claims. */
-const HARNESS_CODE: readonly string[] = ['harness/lib/', 'harness/scripts/'];
+/** The harness's library and scripts, as path prefixes: the roots of the probes that hold the harness's own claims. */
+const HARNESS_PROBE_ROOTS: readonly string[] = [HARNESS_LIB, HARNESS_SCRIPTS];
 
 /** The probe roots of a claim held over every held TypeScript file: the empty prefix every path starts with. */
 const EVERY_HELD_FILE: readonly string[] = [''];
@@ -77,12 +79,12 @@ const CLAIMS: readonly Claim[] = [
   {
     clause: 'nowhere else in the harness',
     path: 'harness/lib/paths.ts',
-    probe: probe(LOCATES_ITSELF, 'harness/lib/paths.ts', HARNESS_CODE),
+    probe: probe(LOCATES_ITSELF, 'harness/lib/paths.ts', HARNESS_PROBE_ROOTS),
   },
   {
     clause: 'The one module allowed to compute where the repository is',
     path: 'harness/checks/repo-paths.test.ts',
-    probe: probe(LOCATES_ITSELF, 'harness/lib/paths.ts', HARNESS_CODE),
+    probe: probe(LOCATES_ITSELF, 'harness/lib/paths.ts', HARNESS_PROBE_ROOTS),
   },
   {
     clause: 'the one place a',
@@ -97,7 +99,7 @@ const CLAIMS: readonly Claim[] = [
   {
     clause: "The one module of the harness's scripts that writes to the standard streams",
     path: 'harness/lib/output.ts',
-    probe: probe(/\bprocess\.(?:stdout|stderr)\b/u, 'harness/lib/output.ts', HARNESS_CODE),
+    probe: probe(/\bprocess\.(?:stdout|stderr)\b/u, 'harness/lib/output.ts', HARNESS_PROBE_ROOTS),
   },
   {
     clause: 'The one owner of building the product from the gate',

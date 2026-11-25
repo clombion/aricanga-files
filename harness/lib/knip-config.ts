@@ -4,8 +4,8 @@
  * `knip.config.ts`; every check reads the value it loads (`knipConfig`, `config-modules.ts`).
  */
 
-import { HARNESS_CHECKS, VITEST_TESTS, liveGlobs } from './test-globs.ts';
 import { HARNESS_ROOT, pocNames } from './scope.ts';
+import { HARNESS_TESTS, SCRIPT_ENTRIES, isRunnerConfig, liveGlobs } from './test-globs.ts';
 import type { Member, Population } from './scope.ts';
 import { dependencyNames } from './dependencies.ts';
 import { importerOf } from './package-dirs.ts';
@@ -76,9 +76,6 @@ const MODULES = '**/*.{ts,tsx}';
 /** A member's sources: production code where the member ships (`!`), test support where it does not. */
 const SOURCES = 'src/';
 
-/** A member's Playwright configs, by their name. */
-const PLAYWRIGHT_CONFIG = /^playwright\.[^/]+\.config\.ts$/u;
-
 /** A member-relative path's first segment, `''` for a file at the member's root. */
 const FIRST_SEGMENT = /^(?<segment>[^/]+)\//u;
 
@@ -118,7 +115,7 @@ function projectOf(held: Population, member: Member): string[] {
  * @returns {KnipWorkspace} Its settings.
  */
 function workspaceOf(held: Population, member: Member): KnipWorkspace {
-  const configs = ownFiles(held, member).filter((file) => PLAYWRIGHT_CONFIG.test(file));
+  const configs = ownFiles(held, member).filter((file) => isRunnerConfig(`${member.dir}${file}`));
   return isEmpty(configs) ? { project: projectOf(held, member) } : { playwright: { config: configs }, project: projectOf(held, member) };
 }
 
@@ -152,7 +149,7 @@ function knipConfigOf(held: Population): KnipConfig {
     ignoreWorkspaces: [...held.poc.packages.map((entry) => entry.dir), ...held.poc.directories].map((dir) => importerOf(dir)).toSorted(),
     workspaces: {
       '.': {
-        entry: [`${HARNESS_ROOT}scripts/*.ts`, `${HARNESS_CHECKS}${VITEST_TESTS}`],
+        entry: [...SCRIPT_ENTRIES, ...HARNESS_TESTS],
         playwright: false,
         project: [`${HARNESS_ROOT}${MODULES}`],
       },

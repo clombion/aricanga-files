@@ -8,30 +8,25 @@
 
 import { ROOT_CONFIG_MODULES, defaultExport, knipConfig, oxlintConfig } from '#lib/config-modules.ts';
 import { describe, expect, test } from 'vitest';
+import { namedOverrides, oxlintConfigOf } from '#lib/oxlint-config.ts';
 import { EXIT_CLEAN } from '#lib/exit-status.ts';
 import type { Population } from '#lib/scope.ts';
 import { REPO_ROOT } from '#lib/paths.ts';
 import { fieldMatches } from '#lint-rules/globs.ts';
 import { isLintable } from '#lib/oxlint-files.ts';
 import { lintedFiles } from '#lib/lint-rules.ts';
-import { oxlintConfigOf } from '#lib/oxlint-config.ts';
 import { plantedPopulation } from '#lib/planted-population.ts';
 import { population } from '#lib/scope.ts';
 
 const HARNESS_ID = 'oxlint-config';
-
-/** Where the reducer override sits among a configuration's overrides, when a system has a model. */
-const PURITY = 0;
-
-/** Where the node override sits after it. */
-const NODE = 1;
 
 /** The settings of a configuration that name members. */
 interface MemberSettings {
   readonly mechanics: unknown;
   readonly flags: unknown;
   readonly owners: unknown;
-  readonly files: readonly (readonly string[])[];
+  readonly purity: unknown;
+  readonly node: unknown;
 }
 
 /**
@@ -45,11 +40,22 @@ function memberSettings(held: Population): MemberSettings {
   const config = oxlintConfigOf(held);
   const { rules } = config;
   return {
-    files: config.overrides.map((override) => override.files),
     flags: rules['aricanga/flags'],
     mechanics: rules['aricanga/mechanics'],
+    node: namedOverrides(held).get('node')?.files,
     owners: rules['aricanga/store-owner'],
+    purity: namedOverrides(held).get('reducer-purity')?.files,
   };
+}
+
+/**
+ * The files of the node override over a population.
+ *
+ * @param {Population} held - The population.
+ * @returns {readonly string[]} Its files; none where it has no node override.
+ */
+function nodeFiles(held: Population): readonly string[] {
+  return namedOverrides(held).get('node')?.files ?? [];
 }
 
 describe('the oxlint configuration of a planted population', () => {
@@ -63,14 +69,14 @@ describe('the oxlint configuration of a planted population', () => {
         ['tools/core/', 'foundation'],
       ],
     );
-    const { files, flags, mechanics, owners } = memberSettings(held);
-    expect([mechanics, flags, owners, files.at(PURITY)]).toStrictEqual([
+    const { flags, mechanics, node, owners, purity } = memberSettings(held);
+    expect([mechanics, flags, owners, purity]).toStrictEqual([
       ['error', { files: ['lib/sys/src/model/**', 'tools/core/**'] }],
       ['error', { ignore: ['probe/**'] }],
       ['error', { owners: ['**/snapshot-adapter.ts', 'probe/**'] }],
       ['lib/sys/src/system.ts', 'lib/sys/src/model/**'],
     ]);
-    expect(files.at(NODE)).toContain('probe/tests/**');
+    expect(node).toContain('probe/tests/**');
   });
 
   test('has no reducer override without a system model, and no glob the listing leaves empty', async () => {
@@ -82,18 +88,19 @@ describe('the oxlint configuration of a planted population', () => {
         ['packages/other/', 'system'],
       ],
     );
-    const { files, mechanics } = memberSettings(held);
-    expect([mechanics, files.at(PURITY)]).toStrictEqual([
+    const { mechanics, node, purity } = memberSettings(held);
+    expect([mechanics, purity, node]).toStrictEqual([
       ['error', { files: ['packages/core/**'] }],
+      undefined,
       [
         'harness/**',
+        './knip.config.ts',
+        './oxlint.config.ts',
+        './vitest.gate.config.ts',
         '**/*.spec.ts',
         '**/*.test.{ts,tsx}',
         '**/vite.config.ts',
         '**/playwright.*.config.ts',
-        './knip.config.ts',
-        './oxlint.config.ts',
-        './vitest.gate.config.ts',
       ],
     ]);
   });
@@ -109,9 +116,7 @@ describe('the Node env of test support', () => {
         ['packages/ok/', 'system'],
       ],
     );
-    const { files } = memberSettings(held);
-    // No system has a reducer surface here, so the node override comes first.
-    const [node = []] = files;
+    const node = nodeFiles(held);
     const inNode = (file: string): boolean => node.some((glob) => fieldMatches('files', glob, file));
     expect(
       ['packages/test/kit/src/a.ts', 'packages/ok/test/b.ts', 'packages/ok/src/test/c.ts', 'packages/ok/src/d.ts'].map((file) =>

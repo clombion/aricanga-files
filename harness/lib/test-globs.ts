@@ -13,6 +13,21 @@ import { matches } from '#lint-rules/globs.ts';
 /** The harness's own test project: its checks and their support, which coverage does not read. */
 const HARNESS_CHECKS = 'harness/checks/';
 
+/** The harness's library: the modules its checks, scripts and root configuration modules run. */
+const HARNESS_LIB = 'harness/lib/';
+
+/** The harness's scripts: the entry points its tasks run (each top-level module), and their helpers below. */
+const HARNESS_SCRIPTS = 'harness/scripts/';
+
+/** The modules a task runs as a script: each top-level module of the harness's scripts (a helper below one is imported, not run). */
+const SCRIPT_ENTRIES: Accepted<string> = new Accepted<string>([`${HARNESS_SCRIPTS}*.ts`]);
+
+/** A member's Vite config, by its name: the one a Vite app is built from. */
+const VITE_CONFIG = 'vite.config.ts';
+
+/** Every Vite config, at any depth. */
+const VITE_CONFIGS: Accepted<string> = new Accepted<string>([`**/${VITE_CONFIG}`]);
+
 /** The configs a test runner loads to run a member's tests: run by the runner, shipped by no one. */
 const RUNNER_CONFIGS: Accepted<string> = new Accepted<string>(['**/playwright.*.config.ts']);
 
@@ -33,6 +48,9 @@ const PLAYWRIGHT_SPECS = '**/*.spec.ts';
 
 /** The modules a test runner runs: a Vitest test or a Playwright spec. */
 const RUNNER_TESTS: Accepted<string> = new Accepted<string>([VITEST_TESTS, PLAYWRIGHT_SPECS]);
+
+/** The harness's own tests: the Vitest tests among its checks. */
+const HARNESS_TESTS: Accepted<string> = new Accepted<string>([`${HARNESS_CHECKS}${VITEST_TESTS}`]);
 
 /**
  * Whether a module is run by a test runner (`RUNNER_TESTS`).
@@ -99,12 +117,19 @@ export {
   BROWSER_TESTS,
   coverageIncludes,
   HARNESS_CHECKS,
+  HARNESS_LIB,
+  HARNESS_SCRIPTS,
+  HARNESS_TESTS,
   isRunnerConfig,
   isRunnerTest,
   liveGlobs,
+  RUNNER_CONFIGS,
   RUNNER_TESTS,
   TEST_DIRECTORIES,
+  SCRIPT_ENTRIES,
   TEST_SUPPORT,
   testIncludes,
+  VITE_CONFIG,
+  VITE_CONFIGS,
   VITEST_TESTS,
 };

@@ -7,6 +7,7 @@ import { bin, finished } from './tools.ts';
 import { mkdtemp, readFile, rm, stat } from 'node:fs/promises';
 import type { Finished } from './process.ts';
 import { REPO_ROOT } from './paths.ts';
+import { VITE_CONFIG } from './test-globs.ts';
 import { createHash } from 'node:crypto';
 import { heldFiles } from './scope.ts';
 import { isFile } from './source-files.ts';
@@ -30,7 +31,7 @@ const STATUS_WIDTH = 3;
  * @returns {Promise<readonly string[]>} The apps' directories.
  */
 async function apps(): Promise<readonly string[]> {
-  const configs = await heldFiles('/vite.config.ts');
+  const configs = await heldFiles(`/${VITE_CONFIG}`);
   return configs.map((config) => path.dirname(config));
 }
 
@@ -49,7 +50,7 @@ async function buildApp(app: string, outDir: string, cwd: string): Promise<Finis
       'build',
       app,
       '--config',
-      path.join(app, 'vite.config.ts'),
+      path.join(app, VITE_CONFIG),
       '--mode',
       'check',
       '--outDir',

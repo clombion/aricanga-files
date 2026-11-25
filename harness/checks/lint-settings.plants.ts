@@ -41,7 +41,28 @@ const PLANTS: Readonly<Record<string, readonly [string, readonly string[]]>> = {
     'export function before(left: string, right: string): number {\n  return left.localeCompare(right);\n}\n',
     ['eslint(no-restricted-properties)'],
   ],
+  'harness/lib/locale-date-string.ts': [
+    'export const day = (): string => new Date().toLocaleDateString();\n',
+    ['eslint(no-restricted-properties)'],
+  ],
+  'harness/lib/locale-lower.ts': [
+    'export const low = (text: string): string => text.toLocaleLowerCase();\n',
+    ['eslint(no-restricted-properties)'],
+  ],
+  'harness/lib/locale-string.ts': [
+    'export const shown = (count: number): string => count.toLocaleString();\n',
+    ['eslint(no-restricted-properties)'],
+  ],
+  'harness/lib/locale-time-string.ts': [
+    'export const time = (): string => new Date().toLocaleTimeString();\n',
+    ['eslint(no-restricted-properties)'],
+  ],
+  'harness/lib/locale-upper.ts': [
+    'export const up = (text: string): string => text.toLocaleUpperCase();\n',
+    ['eslint(no-restricted-properties)'],
+  ],
   'harness/lib/number-format.ts': ['export const format = new Intl.NumberFormat();\n', ['eslint(no-restricted-globals)']],
+  'knip.config.ts': ['export const order = new Intl.Collator();\n', ['eslint(no-restricted-globals)']],
   'src/clean.ts': ['export function double(value: number): number {\n  return value + value;\n}\n', []],
   'src/console.ts': ["export function say(): void {\n  console.log('x');\n}\n", ['eslint(no-console)']],
   'src/default-lookup.ts': [
@@ -62,6 +83,7 @@ const PLANTS: Readonly<Record<string, readonly [string, readonly string[]]>> = {
   ],
   'src/focused.test.ts': [plantedTest('test.only'), ['vitest(no-focused-tests)']],
   'src/knip.config.ts': ['const settings = {};\n\nexport default settings;\n', ['import(no-default-export)']],
+  'src/locale-outside.ts': ['export const up = (text: string): string => text.toLocaleUpperCase();\n', []],
   'src/narrowed.ts': [
     "export function kind(raw: string): 'a' | 'b' {\n  return raw as 'a' | 'b';\n}\n",
     ['typescript(no-unsafe-type-assertion)'],

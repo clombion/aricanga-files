@@ -113,6 +113,19 @@ describe('the knip configuration of a planted population', () => {
   });
 });
 
+describe("a member's Playwright configs", () => {
+  test('names each Playwright config of a member to knip, a nested one included', async () => {
+    expect.hasAssertions();
+    const held = await plantedPopulation(
+      ['packages/probe/e2e/playwright.deep.config.ts', 'packages/probe/playwright.top.config.ts'],
+      [['packages/probe/', 'test-infrastructure']],
+    );
+    expect(knipConfigOf(held).workspaces['packages/probe']?.playwright).toStrictEqual({
+      config: ['e2e/playwright.deep.config.ts', 'playwright.top.config.ts'],
+    });
+  });
+});
+
 describe("a population's POC, and knip's configuration of it", () => {
   test('reads the POC by kind, ignores every POC directory as a workspace, and a POC package as a dependency where a held manifest declares it, by any spec', async () => {
     expect.hasAssertions();

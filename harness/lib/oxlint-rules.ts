@@ -2,8 +2,18 @@
 
 import type { OxlintConfig } from 'oxlint';
 
-/** Each rule set beside its category: off where it contradicts another enabled rule, or with its options. The rules whose options name members are `oxlint-config.ts`'s. */
-const RULES: NonNullable<OxlintConfig['rules']> = {
+/** The rules whose options name members: `oxlint-config.ts` sets each over the population, and `RULES` cannot set one (its type refuses the key), so the two maps compose with no key in both. */
+type MemberRule =
+  | 'aricanga/flags'
+  | 'aricanga/legacy'
+  | 'aricanga/mechanics'
+  | 'aricanga/mirrors'
+  | 'aricanga/store-owner'
+  | 'aricanga/sync-parts'
+  | 'aricanga/vm-prop';
+
+/** Each rule set beside its category: off where it contradicts another enabled rule, or with its options; never a `MemberRule`. */
+const RULES: NonNullable<OxlintConfig['rules']> & Readonly<Partial<Record<MemberRule, never>>> = {
   'aricanga/autofocus': 'error',
   'aricanga/controlled': 'error',
   'aricanga/env': [
@@ -218,3 +228,4 @@ const RULES: NonNullable<OxlintConfig['rules']> = {
 };
 
 export { RULES };
+export type { MemberRule };
