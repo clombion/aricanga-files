@@ -5,18 +5,18 @@
  * call, an aliased import, a destructured binding, a `globalThis.`/`window.` chain and an element
  * access. Each rule is also planted once in every root it covers, and once in a test: tests are held
  * as production code is. The near misses: a type-only import, a module's own `fetch` or `now`, a
- * pure constructor call, the owner itself, and a root the rule does not cover.
+ * pure constructor call, the owner itself, and a root a rule frees.
  */
 
-import { CANONICAL, FORMS, IN_A_TEST, MEMBERS, NEAR_MISSES, UNGUARDED, unguarded } from './owner-registry.plants.ts';
+import { CANONICAL, FORMS, IN_A_TEST, MEMBERS, NEAR_MISSES, unguarded } from './owner-registry.plants.ts';
 import { SHAPES, keyOf, ownerUses, rulesOf, sites } from '#lib/owners.ts';
 import { describe, expect, test } from 'vitest';
+import { population, populationOf } from '#lib/scope.ts';
 import { usePlanted, useScan } from '#lib/scan-hooks.ts';
 import type { Rule } from '#lib/owner-rules.ts';
 import type { Scan } from '#lib/checker.ts';
 import type { Site } from '#lib/owners.ts';
 import { plantedPopulation } from '#lib/planted-population.ts';
-import { population } from '#lib/scope.ts';
 import { present } from '#lib/present.ts';
 import { sourceOf } from '#lib/checker.ts';
 import { tracked } from '#lib/source-files.ts';
@@ -97,10 +97,36 @@ function sitesIn(scanOf: () => Scan, paths: readonly string[]): Site[] {
   ];
 }
 
+/**
+ * Reads a manifest of a population with a member at the harness's root: the root's is empty, the member's declares a role.
+ *
+ * @param {string} listed - The manifest.
+ * @returns {Promise<string>} Its text.
+ */
+async function readAtHarness(listed: string): Promise<string> {
+  const text = await Promise.resolve(listed === 'package.json' ? '{}' : JSON.stringify({ aricanga: { role: 'experience' } }));
+  return text;
+}
+
+/**
+ * The modules under a root that use a rule's API.
+ *
+ * @param {Scan} scan - The open scan.
+ * @param {string} root - The root.
+ * @param {Rule} rule - The rule.
+ * @returns {readonly string[]} The modules.
+ */
+function usersUnder(scan: Scan, root: string, rule: Rule): readonly string[] {
+  return scan.paths.filter((path) => path.startsWith(root) && ownerUses(scan, sourceOf(scan, path), rule));
+}
+
+/** Each root the repository's rules free, as the rule's name and the root: a free root no module uses the API in is tightened to no owner. */
+const FREED = rulesOf(await population()).flatMap((rule) => rule.free.map((freed) => [rule.name, freed.root] as const));
+
 /** Each declared owner, kernel owners included, as the rule's name and its owner module. */
 const DECLARED = SHAPES.flatMap((shape) =>
-  [shape.kernelOwner, ...shape.scopes.map((scope) => scope.owner)].flatMap((owner) =>
-    owner === undefined ? [] : [[shape.name, owner] as const],
+  Object.values(shape.policies).flatMap((policy) =>
+    'owner' in policy && policy.owner !== undefined ? [[shape.name, policy.owner] as const] : [],
   ),
 );
 
@@ -132,10 +158,17 @@ describe('the repository', () => {
     expect.hasAssertions();
     const held = await population();
     const missed = unguarded(rulesOf(held), held);
-    expect(
-      UNGUARDED.unexempted(missed),
-      "a member no scope of a rule holds: add its root to the rule's scopes in harness/lib/owner-rules.ts, or list the pair with its reason in UNGUARDED (harness/checks/owner-registry.plants.ts)",
-    ).toStrictEqual([]);
+    expect(missed, 'a member no root of a rule holds once: give its tier a policy in harness/lib/owner-rules.ts').toStrictEqual([]);
+  });
+
+  test.each(FREED)('the %s rule frees %s, where a module uses its API', (name, root) => {
+    expect.hasAssertions();
+    const scan = repoScan();
+    const rule = present(
+      rulesOf(scan.population).find((candidate) => candidate.name === name),
+      `the rule ${name}`,
+    );
+    expect(usersUnder(scan, root, rule)).not.toStrictEqual([]);
   });
 
   test.each(DECLARED)('the %s owner %s exists and uses its API', async (name, owner) => {
@@ -200,6 +233,28 @@ describe('the rules', () => {
       { owner: 'packages/foundation/src/host/codec.ts', root: 'packages/foundation/src/' },
     ]);
   });
+});
+
+describe('the rules over each tier', () => {
+  test('free a test-infrastructure member where its tier uses the API, with the reason', async () => {
+    expect.hasAssertions();
+    const held = await plantedPopulation([], [['packages/probe/', 'test-infrastructure']]);
+    const rules = rulesOf(held);
+    expect(rules.find((rule) => rule.name === 'timers')?.free.map((freed) => freed.root)).toStrictEqual(['packages/probe/']);
+    expect(rules.find((rule) => rule.name === 'random')?.scopes.map((scope) => scope.root)).toStrictEqual(['packages/probe/', 'harness/']);
+  });
+
+  test('refuse a member at the harness root, which one rule would hold twice', async () => {
+    expect.hasAssertions();
+    const held = await populationOf({
+      listing: ['package.json', 'harness/package.json'],
+      read: readAtHarness,
+      workspace: ['', 'harness/'],
+    });
+    expect(() => rulesOf(held)).toThrow(
+      /^the owner rule process-start holds the root harness\/ twice: a member sits at the harness's root$/u,
+    );
+  });
 
   test('cover each kernel member, and give a kernel owner the member that holds it', async () => {
     expect.hasAssertions();
@@ -216,13 +271,13 @@ describe('the rules', () => {
       [
         { owner: undefined, root: 'packages/foundation/' },
         { owner: undefined, root: 'packages/systems/x/' },
-        { owner: undefined, root: 'experiences/sandbox/' },
+        { owner: undefined, root: 'packages/view/' },
         { owner: undefined, root: 'harness/' },
       ],
       [
         { owner: 'packages/foundation/src/host/codec.ts', root: 'packages/foundation/' },
         { owner: undefined, root: 'packages/systems/x/' },
-        { owner: undefined, root: 'experiences/sandbox/' },
+        { owner: undefined, root: 'packages/view/' },
         { owner: 'harness/lib/config.ts', root: 'harness/' },
       ],
     ]);

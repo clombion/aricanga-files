@@ -13,10 +13,10 @@ The harness holds the rebuild: every workspace package pnpm lists whose manifest
 POC reference, and `harness` itself, tests, scripts and configuration included, all under the same
 rules as production code (`harness/lib/scope.ts`). A workspace package declares its role in its
 manifest, `"aricanga": { "role": … }`, one of the roles of `harness/lib/roles.ts`. A new member is held,
-type-checked, tested, covered and scanned by knip with no list to edit; four lists still name members
-by hand and need the new one added: the owner rules' non-kernel roots (`harness/lib/owner-rules.ts`,
-which the owner registry's member test holds), the overrides of `harness/lib/oxlint-config.ts`,
-`test:browser`'s config list in `package.json`, and the paths of the mechanics' Solid ban
+type-checked, tested, covered, scanned by knip and held by the owner rules by its tier with no list
+to edit; three lists still name members by hand and need the new one added: the overrides of
+`harness/lib/oxlint-config.ts`, `test:browser`'s config list in `package.json`, and the paths of
+the mechanics' Solid ban
 (`harness/lint-rules/rules/mechanics.ts`, a kernel member outside `packages/foundation/` and
 `packages/systems/`). The POC reference
 (`packages/framework`, `packages/tests`, `packages/test-utils`, `experiences/aricanga`, `utils`)

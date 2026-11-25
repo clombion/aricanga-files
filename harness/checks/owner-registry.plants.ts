@@ -1,25 +1,12 @@
 /** The owner registry's plants: one per rule and call form, a canonical use per rule, a use in a test, and the near misses. */
 
-import { Exemptions, site } from '#lib/exemptions.ts';
 import type { PlantedMember } from '#lib/planted-population.ts';
 import type { Population } from '#lib/scope.ts';
 import type { Rule } from '#lib/owner-rules.ts';
-import { nearestOf } from '#lib/package-dirs.ts';
+import { site } from '#lib/exemptions.ts';
 
-/**
- * The members a rule does not reach, each pair with what keeps it out: the use a rule's non-kernel
- * roots leave out until they derive from the roles (#58 step 1b), or a scope the rule does not claim.
- */
-const UNGUARDED: Exemptions = new Exemptions({
-  [site('packages/characterisation/', 'clock')]:
-    'its performance fixture times renders with performance.now (src/fixtures/performance.tsx)',
-  [site('packages/characterisation/', 'json-parse')]:
-    'its performance spec reads the browser report with JSON.parse (tests/performance.spec.ts)',
-  [site('packages/characterisation/', 'network')]: 'its specs answer routed requests with route.fetch (tests/_helpers.ts)',
-  [site('packages/characterisation/', 'process-start')]: "no use; its root is #58 step 1b's to add, with the roots derived from the roles",
-  [site('packages/characterisation/', 'random')]: "no use; its root is #58 step 1b's to add, with the roots derived from the roles",
-  [site('packages/characterisation/', 'timers')]: 'its fixtures and support wait on setTimeout (src/support.ts, src/fixtures/adapter.tsx)',
-});
+/** A member is held by exactly this many roots of each rule. */
+const ONCE = 1;
 
 /** The planted members the plants sit in: a kernel member of each kernel role, and the literal roots' members. */
 const MEMBERS: readonly PlantedMember[] = [
@@ -101,21 +88,24 @@ const NEAR_MISSES: readonly (readonly [string, string])[] = [
     'harness/lib/process.ts',
     "import { spawnSync } from 'node:child_process';\nexport const out = spawnSync('x');\nexport const env = process.env;\n",
   ],
-  ['packages/characterisation/__miss_uncovered.ts', 'Math.random();\n'],
+  ['packages/characterisation/__miss_free.ts', 'setTimeout(() => undefined, 1);\n'],
 ];
 
 /**
- * The members no scope of a rule holds, each keyed `site(member, rule)`.
+ * The members a rule does not hold at exactly one root of theirs, scoped or freed, each keyed
+ * `site(member, rule)`.
  *
  * @param {readonly Rule[]} rules - The rules.
  * @param {Population} held - The population.
- * @returns {readonly string[]} Each rule and member it misses.
+ * @returns {readonly string[]} Each rule and member it does not hold once.
  */
 function unguarded(rules: readonly Rule[], held: Population): readonly string[] {
   return rules.flatMap((rule) => {
-    const scopeOf = nearestOf(rule.scopes, (scope) => scope.root);
-    return held.members.filter((member) => scopeOf(member.dir) === undefined).map((member) => site(member.dir, rule.name));
+    const roots = [...rule.scopes.map((scope) => scope.root), ...rule.free.map((freed) => freed.root)];
+    return held.members
+      .filter((member) => roots.filter((root) => root === member.dir).length !== ONCE)
+      .map((member) => site(member.dir, rule.name));
   });
 }
 
-export { CANONICAL, FORMS, IN_A_TEST, MEMBERS, NEAR_MISSES, UNGUARDED, unguarded };
+export { CANONICAL, FORMS, IN_A_TEST, MEMBERS, NEAR_MISSES, unguarded };

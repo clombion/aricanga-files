@@ -84,4 +84,4 @@ function ships(role: Role): boolean {
 }
 
 export { isRole, ROLE_WORDS, ships, tierOf };
-export type { Role };
+export type { Role, Tier };
