@@ -51,6 +51,7 @@ list.
 - `history-narration` (`harness/checks/history-narration.test.ts`): Current text describes the project as it is: no comment or doc narrates how it got there.
 - `isolation` (`harness/checks/isolation.test.ts`): A test that leaves a timer pending when it ends fails, and the next test starts clean.
 - `json-files` (`harness/checks/json-files.test.ts`): Every held JSON file is strict JSON a reader cannot misread, and no manifest lists a dependency twice.
+- `knip-config` (`harness/checks/knip-config.test.ts`): Knip's configuration over a population: each member a workspace whose project is every top-level
 - `lint-settings` (`harness/checks/lint-settings.test.ts`): oxlint, under this project's settings, fails each planted violation of a rule the harness rests on.
 - `manifest-reads` (`harness/checks/manifest-reads.test.ts`): No harness module reads a `package.json` itself but the population's reading of the manifests.
 - `network-guard` (`harness/checks/network-guard.test.ts`): A test that connects to, looks up or fetches a host other than this machine trips the network guard.

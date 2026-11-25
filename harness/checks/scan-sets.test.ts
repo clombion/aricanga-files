@@ -7,15 +7,16 @@
  * every file is held (listed under the project's own directory) by a project, by no more than one
  * production project (a shipping member's `tsconfig.json`), and no test file by a production project;
  * Vitest's coverage `include` for every file that is not a test; jscpd's roots,
- * held by the clones check's own coverage of the listing; and knip's, once `knip.config.ts` declares it.
+ * held by the clones check's own coverage of the listing; and knip's, each file matched by a `project`
+ * or `entry` glob of the workspace holding it in the configuration knip loads.
  */
 
 import { Accepted, Exemptions } from '#lib/exemptions.ts';
 import { FLOOR, ListingError, listing, tracked } from '#lib/source-files.ts';
 import { coverageReached, testsOutsideCoverage } from './gate-config.ts';
 import { describe, expect, test } from 'vitest';
+import { knipFiles, knipWorkspace, oxfmtFiles, oxlintFiles, projectDirectory, projectMembers } from './scan-sets.sets.ts';
 import { mkdtemp, rm } from 'node:fs/promises';
-import { oxfmtFiles, oxlintFiles, projectDirectory, projectMembers } from './scan-sets.sets.ts';
 import { population, typescriptFiles } from '#lib/scope.ts';
 import type { Population } from '#lib/scope.ts';
 import { Project } from '#lib/tools.ts';
@@ -61,6 +62,11 @@ const UNREACHED = Exemptions.grouped({
       'harness/lint-rules/rules/view-imports.ts: coverage',
       'harness/lint-rules/rules/vm-prop.ts: coverage',
     ],
+  "knip enters them itself: its own config, and the vitest and oxlint plugins' configs, outside every project glob": [
+    'knip.config.ts: knip',
+    'oxlint.config.ts: knip',
+    'vitest.gate.config.ts: knip',
+  ],
 });
 
 /** Project problems carried while the gap is being closed, keyed by the problem. */
@@ -179,11 +185,11 @@ describe('the listing', () => {
 });
 
 describe('the repository', () => {
-  test('every held TypeScript file is reached by oxlint, oxfmt and coverage', async () => {
+  test('every held TypeScript file is reached by oxlint, oxfmt, knip and coverage', async () => {
     expect.hasAssertions();
     const files = await typescriptFiles();
-    const [coverage, oxfmt, oxlint] = await Promise.all([coverageReached(files), oxfmtFiles(files), oxlintFiles()]);
-    const found = unreached(files, { coverage, oxfmt, oxlint });
+    const [coverage, oxfmt, oxlint, knip] = await Promise.all([coverageReached(files), oxfmtFiles(files), oxlintFiles(), knipFiles(files)]);
+    const found = unreached(files, { coverage, knip, oxfmt, oxlint });
     expect(UNREACHED.unexempted(found)).toStrictEqual([]);
   });
 
@@ -193,10 +199,22 @@ describe('the repository', () => {
     const problems = projectProblems(files, members, { isTest, projects: productionProjects(held) });
     expect(UNPROJECTED.unexempted(problems)).toStrictEqual([]);
   });
+});
 
-  test('knip declares its scan set', async () => {
+describe("the reach check's reading of knip's configuration", () => {
+  test("reads a knip workspace's globs under its directory, its production marks dropped", () => {
     expect.hasAssertions();
-    await expect(tracked()).resolves.toContain('knip.config.ts');
+    expect(knipWorkspace('packages/core', { entry: ['src/main.ts!'], project: ['src/**/*.ts!', 'test/**/*.ts'] })).toStrictEqual({
+      dir: 'packages/core/',
+      globs: ['packages/core/src/**/*.ts', 'packages/core/test/**/*.ts', 'packages/core/src/main.ts'],
+    });
+  });
+
+  test('refuses a negated knip glob, which knip and the reach check would read differently', () => {
+    expect.hasAssertions();
+    expect(() => knipWorkspace('packages/core', { project: ['src/**/*.ts!', '!src/generated/**'] })).toThrow(
+      'packages/core: the reach check reads no negated knip glob, and the configuration holds !src/generated/**',
+    );
   });
 });
 

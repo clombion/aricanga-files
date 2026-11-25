@@ -30,6 +30,7 @@ const KNIP_IGNORES = Exemptions.grouped({
     'ignoreWorkspaces:packages/tests',
     'ignoreWorkspaces:packages/test-utils',
     'ignoreWorkspaces:experiences/aricanga',
+    'ignoreWorkspaces:utils',
   ],
   'poc: the POC reference uses it until it is deleted (#50)': [
     'ignoreDependencies:@ai-sdk/anthropic',

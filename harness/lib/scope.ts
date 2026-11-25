@@ -21,9 +21,16 @@ import { workspacePackages } from './workspace.ts';
 const HARNESS_ROOT: MemberDir = 'harness/';
 
 /** The POC reference (ADR-0006, "Scope"): read-only, outside the harness until it is deleted. Each entry is a directory. */
-const POC: Prefixes = new Prefixes(
-  ['packages/framework', 'packages/tests', 'packages/test-utils', 'experiences/aricanga', 'utils'].map((dir) => `${dir}/`),
-);
+const POC_DIRS: readonly MemberDir[] = [
+  'packages/framework/',
+  'packages/tests/',
+  'packages/test-utils/',
+  'experiences/aricanga/',
+  'utils/',
+];
+
+/** The POC's directories as the prefixes a path is tested against. */
+const POC: Prefixes = new Prefixes(POC_DIRS);
 
 /** Root files the harness holds besides the members and the harness: the configuration the gate reads. */
 const ROOT_FILES = new Accepted<string>([
@@ -186,6 +193,42 @@ async function population(root: string = REPO_ROOT): Promise<Population> {
 }
 
 /**
+ * A member's package name, as its manifest declares it.
+ *
+ * @param {Member} member - The member.
+ * @returns {string | undefined} Its name.
+ */
+function packageName(member: Member): string | undefined {
+  const name: unknown = member.manifest['name'];
+  return typeof name === 'string' ? name : undefined;
+}
+
+/** The manifest groups a package's dependencies are declared in. */
+const DEPENDENCY_GROUPS: readonly string[] = ['dependencies', 'devDependencies', 'peerDependencies'];
+
+/**
+ * The POC's packages a held manifest names: the root's and the members' `workspace:` dependencies
+ * naming no member.
+ *
+ * @param {Population} held - The population.
+ * @returns {string[]} The names, sorted.
+ */
+function pocPackages(held: Population): string[] {
+  const members = new Set(held.members.map((member) => packageName(member)));
+  const declared = [held.rootManifest, ...held.members.map((member) => member.manifest)].flatMap((manifest) =>
+    DEPENDENCY_GROUPS.flatMap((group) => {
+      const deps: unknown = manifest[group];
+      return typeof deps === 'object' && deps !== null
+        ? Object.entries(deps).flatMap(([name, spec]: readonly [string, unknown]) =>
+            typeof spec === 'string' && spec.startsWith('workspace:') ? [name] : [],
+          )
+        : [];
+    }),
+  );
+  return [...new Set(declared.filter((name) => !members.has(name)))].toSorted();
+}
+
+/**
  * The listed files a population holds, optionally filtered by suffix.
  *
  * @param {Population} held - The population.
@@ -227,5 +270,5 @@ async function typescriptFiles(): Promise<readonly string[]> {
   return typescriptOf(held);
 }
 
-export { DOC_ROOTS, POC, heldFiles, population, populationOf, typescriptFiles, typescriptOf };
+export { DOC_ROOTS, HARNESS_ROOT, POC, POC_DIRS, heldFiles, pocPackages, population, populationOf, typescriptFiles, typescriptOf };
 export type { Member, Population };

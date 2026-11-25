@@ -73,4 +73,4 @@ function coverageIncludes(population: Population): string[] {
   return liveGlobs(population, population.shipping, 'src/**');
 }
 
-export { coverageIncludes, HARNESS_CHECKS, isRunnerTest, RUNNER_TESTS, testIncludes, VITEST_TESTS };
+export { coverageIncludes, HARNESS_CHECKS, isRunnerTest, liveGlobs, RUNNER_TESTS, testIncludes, VITEST_TESTS };
