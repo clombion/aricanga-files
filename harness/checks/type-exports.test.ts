@@ -40,7 +40,10 @@ const PLANTS: Readonly<Record<string, string>> = {
     "import type { Read, Renamed } from '../foundation/src/__types_owner';\nexport const x: Read = 1;\nexport const w: Renamed = 4;\n",
 };
 
-const plantedScan = usePlanted(new Map(Object.entries(PLANTS)), [['packages/foundation/', 'foundation']]);
+const plantedScan = usePlanted(new Map(Object.entries(PLANTS)), [
+  ['packages/foundation/', 'foundation'],
+  ['packages/systems/', 'system'],
+]);
 const repoScan = useScan();
 
 describe('the repository', () => {

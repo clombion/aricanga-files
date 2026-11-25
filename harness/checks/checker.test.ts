@@ -39,7 +39,7 @@ function noProject(events: Readonly<Pick<string[], 'push'>>, held: Population): 
   };
 }
 
-const scan = usePlanted(new Map([['planted/one.ts', 'export const one = 1;\n']]), []);
+const scan = usePlanted(new Map([['planted/one.ts', 'export const one = 1;\n']]), [['planted/', 'foundation']]);
 
 describe('a scan', () => {
   test('refuses a path it does not cover, naming it', () => {

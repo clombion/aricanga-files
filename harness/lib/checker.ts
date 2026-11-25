@@ -20,7 +20,7 @@ import { isEmpty } from './lists.ts';
 import { isRunnerTest } from './test-globs.ts';
 import path from 'node:path';
 import { present } from './present.ts';
-import { typescriptFiles } from './scope.ts';
+import { typescriptOf } from './scope.ts';
 
 /** The compiler options of a scan: the shared base's strictness, every lib a held module reads. */
 const OPTIONS = {
@@ -93,13 +93,13 @@ function isProduction(population: Population, file: string): boolean {
 }
 
 /**
- * Every held TypeScript module but declaration files: what a repository scan covers.
+ * Every TypeScript module a population holds but declaration files: what a scan over it covers.
  *
- * @returns {Promise<readonly string[]>} The scanned modules.
+ * @param {Population} held - The population.
+ * @returns {readonly string[]} The scanned modules.
  */
-async function scannedFiles(): Promise<readonly string[]> {
-  const files = await typescriptFiles();
-  return files.filter((file) => !file.endsWith('.d.ts'));
+function scannedOf(held: Population): readonly string[] {
+  return typescriptOf(held).filter((file) => !file.endsWith('.d.ts'));
 }
 
 /**
@@ -142,15 +142,16 @@ function scanOver(opening: Readonly<ScanOpening>): Scan {
 }
 
 /**
- * A scan over `paths`. `sources` overlay the real files: a planted path need not exist on disk, and
- * a real path in `sources` reads as the overlay's text.
+ * A scan over a population: it covers the modules the population holds (`scannedOf`) and reads roles
+ * from it, so its files and its population come from one listing. `sources` overlay the real files:
+ * a planted path need not exist on disk, and a real path in `sources` reads as the overlay's text.
  *
- * @param {readonly string[]} paths - The repository-relative paths to cover.
+ * @param {Population} population - The population the scan covers and reads roles from.
  * @param {Readonly<Record<string, string>>} sources - Overlaid texts, by repository-relative path.
- * @param {Population} population - The population the scan reads roles from.
  * @returns {Scan} The open scan.
  */
-function openScan(paths: readonly string[], sources: Readonly<Record<string, string>>, population: Population): Scan {
+function openScan(population: Population, sources: Readonly<Record<string, string>>): Scan {
+  const paths = scannedOf(population);
   const config = path.join(REPO_ROOT, '.harness-scan', nextName(), 'tsconfig.json');
   return scanOver({
     mount: () => mount(mounted(config, paths, sources)),
@@ -269,7 +270,6 @@ export {
   qualifiedName,
   resolved,
   scanOver,
-  scannedFiles,
   sourceOf,
   textOfNode,
 };

@@ -99,7 +99,7 @@ const NEAR_MISSES: readonly (readonly [string, string])[] = [
     'harness/lib/process.ts',
     "import { spawnSync } from 'node:child_process';\nexport const out = spawnSync('x');\nexport const env = process.env;\n",
   ],
-  ['utils/__miss_uncovered.ts', 'Math.random();\n'],
+  ['packages/characterisation/__miss_uncovered.ts', 'Math.random();\n'],
 ];
 
 /**

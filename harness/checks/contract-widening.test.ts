@@ -12,10 +12,10 @@
 import type { Contract, ContractSite } from '#lib/contracts.ts';
 import { contracts, respellings, widenings } from '#lib/contracts.ts';
 import { describe, expect, test } from 'vitest';
-import { scannedFiles, sourceOf } from '#lib/checker.ts';
 import { usePlanted, useScan } from '#lib/scan-hooks.ts';
 import { Accepted } from '#lib/exemptions.ts';
 import type { Scan } from '#lib/checker.ts';
+import { sourceOf } from '#lib/checker.ts';
 
 const HARNESS_ID = 'contract-widening';
 
@@ -113,6 +113,7 @@ const plants = new Map<string, string>([
 
 const plantedScan = usePlanted(plants, [
   ['packages/foundation/', 'foundation'],
+  ['packages/systems/', 'system'],
   ['packages/systems/chat/', 'system'],
 ]);
 const repoScan = useScan();
@@ -133,18 +134,16 @@ function lost(scanOf: () => Scan, known: readonly Contract[], path: string): Con
 }
 
 describe('the repository', () => {
-  test('the derivation sees the algebra', async () => {
+  test('the derivation sees the algebra', () => {
     expect.hasAssertions();
-    const files = await scannedFiles();
-    const names = new Set(contracts(repoScan(), files).map((contract) => contract.name));
+    const names = new Set(contracts(repoScan(), repoScan().paths).map((contract) => contract.name));
     expect([...ALGEBRA].filter((name) => !names.has(name))).toStrictEqual([]);
   });
 
-  test('no contract is widened or respelled', async () => {
+  test('no contract is widened or respelled', () => {
     expect.hasAssertions();
-    const files = await scannedFiles();
-    const known = contracts(repoScan(), files);
-    const found = files.flatMap((path) => lost(repoScan, known, path));
+    const known = contracts(repoScan(), repoScan().paths);
+    const found = repoScan().paths.flatMap((path) => lost(repoScan, known, path));
     expect(found).toStrictEqual([]);
   });
 });

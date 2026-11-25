@@ -212,6 +212,17 @@ async function population(root: string = REPO_ROOT): Promise<Population> {
 }
 
 /**
+ * The listed files a population holds, optionally filtered by suffix.
+ *
+ * @param {Population} held - The population.
+ * @param {readonly string[]} suffixes - The suffixes to keep; none keeps every file.
+ * @returns {readonly string[]} The held files.
+ */
+function heldOf(held: Population, ...suffixes: readonly string[]): readonly string[] {
+  return held.listing.filter((file) => held.holds(file) && (isEmpty(suffixes) || suffixes.some((suffix) => file.endsWith(suffix))));
+}
+
+/**
  * The listed files the harness holds, optionally filtered by suffix.
  *
  * @param {readonly string[]} suffixes - The suffixes to keep; none keeps every file.
@@ -219,7 +230,17 @@ async function population(root: string = REPO_ROOT): Promise<Population> {
  */
 async function heldFiles(...suffixes: readonly string[]): Promise<readonly string[]> {
   const held = await population();
-  return held.listing.filter((file) => held.holds(file) && (isEmpty(suffixes) || suffixes.some((suffix) => file.endsWith(suffix))));
+  return heldOf(held, ...suffixes);
+}
+
+/**
+ * The TypeScript sources a population holds.
+ *
+ * @param {Population} held - The population.
+ * @returns {readonly string[]} Its held `.ts` and `.tsx` files.
+ */
+function typescriptOf(held: Population): readonly string[] {
+  return heldOf(held, '.ts', '.tsx');
 }
 
 /**
@@ -228,9 +249,9 @@ async function heldFiles(...suffixes: readonly string[]): Promise<readonly strin
  * @returns {Promise<readonly string[]>} The held `.ts` and `.tsx` files.
  */
 async function typescriptFiles(): Promise<readonly string[]> {
-  const files = await heldFiles('.ts', '.tsx');
-  return files;
+  const held = await population();
+  return typescriptOf(held);
 }
 
-export { DOC_ROOTS, POC, heldFiles, population, populationOf, typescriptFiles };
+export { DOC_ROOTS, POC, heldFiles, population, populationOf, typescriptFiles, typescriptOf };
 export type { Member, Population };

@@ -14,11 +14,11 @@ import { describe, expect, test } from 'vitest';
 import { manifest, reader } from './scope.plants.ts';
 import { plantedPopulation, usePlanted, useScan } from '#lib/scan-hooks.ts';
 import { population, populationOf } from '#lib/scope.ts';
-import { scannedFiles, sourceOf } from '#lib/checker.ts';
 import type { Rule } from '#lib/owner-rules.ts';
 import type { Scan } from '#lib/checker.ts';
 import type { Site } from '#lib/owners.ts';
 import { present } from '#lib/present.ts';
+import { sourceOf } from '#lib/checker.ts';
 import { tracked } from '#lib/source-files.ts';
 
 const HARNESS_ID = 'owner-registry';
@@ -107,9 +107,9 @@ function honoured(rules: readonly Rule[]): readonly string[] {
 }
 
 describe('the repository', () => {
-  test('no guarded API is used outside its owner', async () => {
+  test('no guarded API is used outside its owner', () => {
     expect.hasAssertions();
-    expect(sitesIn(repoScan, await scannedFiles())).toStrictEqual([]);
+    expect(sitesIn(repoScan, repoScan().paths)).toStrictEqual([]);
   });
 
   test('honours every declared owner, so a member demoted from the kernel fails here', async () => {
