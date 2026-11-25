@@ -9,10 +9,9 @@
 
 import { Accepted, site } from '#lib/exemptions.ts';
 import { describe, expect, test } from 'vitest';
-import { importsFrom, nodes, parse } from '#lib/ts-source.ts';
-import { isIdentifier, isMetaProperty, isPropertyAccessExpression, isPropertyAssignment } from 'typescript/unstable/ast/is';
+import { importsFrom, isPropertyName, nodes, parse } from '#lib/ts-source.ts';
+import { isIdentifier, isMetaProperty, isPropertyAccessExpression } from 'typescript/unstable/ast/is';
 import { textOf, textsOf } from '#lib/source-files.ts';
-import type { Identifier } from 'typescript/unstable/ast';
 import type { SourceFile } from '#lib/ts-source.ts';
 import { SyntaxKind } from 'typescript/unstable/ast';
 import { heldFiles } from '#lib/scope.ts';
@@ -24,17 +23,6 @@ const OWNER = 'harness/lib/paths.ts';
 const META = new Accepted(['url', 'dirname', 'filename']);
 const GLOBALS = new Accepted(['__dirname', '__filename']);
 const URL_MODULES = new Accepted(['node:url', 'url']);
-
-/**
- * Whether an identifier names a property (`a.__dirname`, `{ __dirname: 1 }`) rather than a variable.
- *
- * @param {Identifier} node - The node.
- * @returns {boolean} Whether an identifier names a property (`a.__dirname`, `{ __dirname: 1 }`) rather than a variable.
- */
-function isPropertyName(node: Identifier): boolean {
-  const { parent } = node;
-  return (isPropertyAccessExpression(parent) && parent.name === node) || (isPropertyAssignment(parent) && parent.name === node);
-}
 
 /**
  * The names a module imports from the URL modules.

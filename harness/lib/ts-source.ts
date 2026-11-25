@@ -8,7 +8,7 @@
  * parsed exactly as a listed one, by extension: a `.tsx` path parses as JSX.
  */
 
-import type { CommentRange, Expression, ImportDeclaration, Node, SourceFile } from 'typescript/unstable/ast';
+import type { CommentRange, Expression, Identifier, ImportDeclaration, Node, SourceFile } from 'typescript/unstable/ast';
 import { api, mount, nextName } from './ts-session.ts';
 import { getLeadingCommentRanges, getTrailingCommentRanges } from 'typescript/unstable/ast/scanner';
 import {
@@ -20,6 +20,7 @@ import {
   isJsxExpression,
   isNamedImports,
   isPropertyAccessExpression,
+  isPropertyAssignment,
   isSourceFile,
   isStringLiteral,
   isTypeAliasDeclaration,
@@ -206,6 +207,17 @@ function chain(node: Expression): string[] | undefined {
 }
 
 /**
+ * Whether an identifier names a property (`a.path`, `{ path: 1 }`) rather than a binding.
+ *
+ * @param {Identifier} node - The identifier.
+ * @returns {boolean} Whether it names a property.
+ */
+function isPropertyName(node: Identifier): boolean {
+  const { parent } = node;
+  return (isPropertyAccessExpression(parent) && parent.name === node) || (isPropertyAssignment(parent) && parent.name === node);
+}
+
+/**
  * Whether a node, or an ancestor of it below its source file, meets `boundary`.
  *
  * @param {Node} node - The node.
@@ -244,6 +256,6 @@ function holdsNoRuntimeValue(node: Node): boolean {
   );
 }
 
-export { body, chain, comments, holdsNoRuntimeValue, importsFrom, nodes, parse, within };
+export { body, chain, comments, holdsNoRuntimeValue, importsFrom, isPropertyName, nodes, parse, within };
 export { closeSession } from './ts-session.ts';
 export type { Expression, Node, SourceFile } from 'typescript/unstable/ast';
