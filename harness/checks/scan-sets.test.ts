@@ -192,18 +192,6 @@ describe('the repository', () => {
     expect(UNPROJECTED.unexempted(problems)).toStrictEqual([]);
   });
 
-  test("a shipping member's project is a production project, a test-infrastructure member's is not", async () => {
-    expect.hasAssertions();
-    const held = await plantedPopulation(
-      [],
-      [
-        ['packages/core/', 'foundation'],
-        ['packages/probe/', 'test-infrastructure'],
-      ],
-    );
-    expect([...productionProjects(held)]).toStrictEqual(['packages/core/tsconfig.json']);
-  });
-
   test('knip declares its scan set', async () => {
     expect.hasAssertions();
     await expect(tracked()).resolves.toContain('knip.json');
@@ -251,6 +239,20 @@ describe('the scan-set checks', () => {
       'shared.ts: in 2 production projects',
       'loose.ts: in no TypeScript project',
     ]);
+  });
+});
+
+describe('the production projects of a planted population', () => {
+  test("a shipping member's project is a production project, a test-infrastructure member's is not", async () => {
+    expect.hasAssertions();
+    const held = await plantedPopulation(
+      [],
+      [
+        ['packages/core/', 'foundation'],
+        ['packages/probe/', 'test-infrastructure'],
+      ],
+    );
+    expect([...productionProjects(held)]).toStrictEqual(['packages/core/tsconfig.json']);
   });
 });
 

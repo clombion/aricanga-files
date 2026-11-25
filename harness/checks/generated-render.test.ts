@@ -3,7 +3,9 @@
 import { checkList, pinTable, taskTable } from '#lib/generated-render.ts';
 import { describe, expect, test } from 'vitest';
 import { ConfigError } from '#lib/config.ts';
+import { LOCK } from './scope.plants.ts';
 import { checkModules } from '#lib/checks.ts';
+import { pinned } from '#lib/pins.ts';
 import { run } from '#lib/generated.ts';
 
 const DOC = "/**\n * Holds the planted rule.\n */\n\nconst HARNESS_ID = 'planted';\n";
@@ -40,22 +42,22 @@ describe('the renderers', () => {
 
   test('tabulate each pin with its upstream, and refuse a pin no upstream names', () => {
     expect.hasAssertions();
-    const pin = { tool: 'planted', version: '1.0.0', where: ['package.json'] };
-    expect(pinTable([pin], new Map([['planted', 'owner/planted']]))).toBe(
+    const pins = pinned([{ dir: 'packages/app/', manifest: { devDependencies: { vite: '^8.0.0' } } }], LOCK);
+    expect(pinTable(pins, new Map([['vite', 'vitejs/vite']]))).toBe(
       [
         '| Tool | Upstream | Pinned in | Pin |',
         '| --- | --- | --- | --- |',
-        '| `planted` | [owner/planted](https://github.com/owner/planted) | `package.json` | 1.0.0 |',
+        '| `vite` | [vitejs/vite](https://github.com/vitejs/vite) | `pnpm-lock.yaml (packages/app)` | 8.3.8 |',
       ].join('\n'),
     );
-    expect(() => pinTable([pin], new Map())).toThrow(new ConfigError('no upstream repository is named for the pinned tool "planted"'));
+    expect(() => pinTable(pins, new Map())).toThrow(new ConfigError('no upstream repository is named for the pinned tool "vite"'));
   });
 
   test('refuse to tabulate a pin with no version', () => {
     expect.hasAssertions();
-    const pin = { tool: 'planted', version: undefined, where: ['pnpm-lock.yaml'] };
-    expect(() => pinTable([pin], new Map([['planted', 'owner/planted']]))).toThrow(
-      new ConfigError('no version is pinned for "planted" in pnpm-lock.yaml'),
+    const pins = pinned([{ dir: 'gone/', manifest: { devDependencies: { planted: '^1' } } }], LOCK);
+    expect(() => pinTable(pins, new Map([['planted', 'owner/planted']]))).toThrow(
+      new ConfigError('no version is pinned for "planted" in pnpm-lock.yaml (gone)'),
     );
   });
 

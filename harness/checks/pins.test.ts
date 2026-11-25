@@ -1,37 +1,46 @@
 /** The pins of a population: which manifests are read, how pins of one tool merge, and how an importer key is read. */
 
+import { LOCK, reader } from './scope.plants.ts';
 import { describe, expect, test } from 'vitest';
 import { lockOf, pinned, pinsOf } from '#lib/pins.ts';
+import { ConfigError } from '#lib/config.ts';
 import { plantedPopulation } from '#lib/planted-population.ts';
-import { reader } from './scope.plants.ts';
 
-const LOCK = `lockfileVersion: '9.0'
+/** A lockfile locking `vite` at an empty version. */
+const EMPTY_VERSION = ['importers:', '  .:', '    devDependencies:', "      vite: {specifier: '8', version: ''}", ''].join('\n');
 
-importers:
+/**
+ * The pins of a root whose lockfile locks a tool at an empty version.
+ *
+ * @returns {readonly unknown[]} The pins, if not refused.
+ */
+function emptyInLock(): readonly unknown[] {
+  return pinned([{ dir: '', manifest: { devDependencies: { vite: '8' } } }], EMPTY_VERSION);
+}
 
-  .:
-    devDependencies:
-      oxlint:
-        specifier: 1.94.0
-        version: 1.94.0
-      planted:
-        specifier: ^1.0.0
-        version: 1.0.3(peer@2.0.0)
-      '@scope/tool':
-        specifier: ^2.0.0
-        version: 2.1.0
+/**
+ * The pins of a root whose `packageManager` names no version.
+ *
+ * @returns {readonly unknown[]} The pins, if not refused.
+ */
+function emptyInField(): readonly unknown[] {
+  return pinned([{ dir: '', manifest: { packageManager: 'pnpm@' } }], LOCK);
+}
 
-  packages/app:
-    devDependencies:
-      vite:
-        specifier: ^8.0.0
-        version: 8.3.8
-
-packages:
-
-  oxlint@1.94.0:
-    resolution: {integrity: sha512-x}
-`;
+/**
+ * The refusal a pinning throws, as text.
+ *
+ * @param {() => unknown} pinning - The pinning.
+ * @returns {string} Its refusal.
+ */
+function refusal(pinning: () => unknown): string {
+  try {
+    pinning();
+  } catch (error: unknown) {
+    return String(error);
+  }
+  return 'not refused';
+}
 
 describe('the pins of a population', () => {
   test('read the root and the members, and no other listed manifest', async () => {
@@ -103,6 +112,76 @@ describe('the pins of one tool across inputs', () => {
   test('read an importer key as the text pnpm wrote, a number-like one included', () => {
     expect.hasAssertions();
     expect([...lockOf(['importers:', '  .: {}', '  1.0: {}', '  0x10: {}', ''].join('\n')).keys()]).toStrictEqual(['.', '1.0', '0x10']);
+  });
+});
+
+describe('the empty versions a pin reads', () => {
+  test('refuse an empty version, from the lockfile and from packageManager, naming where it is written', () => {
+    expect.hasAssertions();
+    expect([refusal(emptyInLock), refusal(emptyInField)]).toStrictEqual([
+      'ConfigError: pnpm-lock.yaml . devDependencies vite is an empty version',
+      'ConfigError: package.json packageManager is an empty version',
+    ]);
+  });
+
+  test('refuse a version that is no string, and an empty Node floor, naming where each is written', () => {
+    expect.hasAssertions();
+    const mapped = ['importers:', '  .:', '    devDependencies:', "      vite: {specifier: '8', version: {a: b}}", ''].join('\n');
+    expect([
+      refusal(() => pinned([{ dir: '', manifest: { devDependencies: { vite: '8' } } }], mapped)),
+      refusal(() => pinned([{ dir: '', manifest: { packageManager: 10 } }], LOCK)),
+      refusal(() => pinned([{ dir: '', manifest: { engines: { node: '' } } }], LOCK)),
+    ]).toStrictEqual([
+      'ConfigError: pnpm-lock.yaml . devDependencies vite is not a string: {"a":"b"}',
+      'ConfigError: package.json packageManager is not a string: 10',
+      'ConfigError: package.json engines.node is an empty version',
+    ]);
+  });
+
+  test('refuse a lockfile with no importers', () => {
+    expect.hasAssertions();
+    expect(() => pinned([{ dir: '', manifest: {} }], "lockfileVersion: '9.0'\n")).toThrow(
+      new ConfigError('pnpm-lock.yaml importers is not an object: undefined'),
+    );
+  });
+});
+
+describe('the grouping of pins', () => {
+  test('give the same pins whatever order the manifests come in, a version and none kept apart', () => {
+    expect.hasAssertions();
+    const manifests = [
+      { dir: 'packages/app/', manifest: { devDependencies: { vite: '^8.0.0' } } },
+      { dir: 'gone/', manifest: { devDependencies: { vite: '^8.0.0' } } },
+    ] as const;
+    const expected = [
+      { tool: 'vite', version: undefined, where: ['pnpm-lock.yaml (gone)'] },
+      { tool: 'vite', version: '8.3.8', where: ['pnpm-lock.yaml (packages/app)'] },
+    ];
+    expect([pinned(manifests, LOCK), pinned(manifests.toReversed(), LOCK)]).toStrictEqual([expected, expected]);
+  });
+
+  test("name a version's importers by code unit, whatever order the members come in", () => {
+    expect.hasAssertions();
+    const lockText = [
+      'importers:',
+      '  a:',
+      '    devDependencies:',
+      '      vite: {specifier: 8, version: 8.3.8}',
+      '  a-b:',
+      '    devDependencies:',
+      '      vite: {specifier: 8, version: 8.3.8}',
+      '',
+    ].join('\n');
+    const manifest = { devDependencies: { vite: '8' } };
+    expect(
+      pinned(
+        [
+          { dir: 'a-b/', manifest },
+          { dir: 'a/', manifest },
+        ],
+        lockText,
+      ),
+    ).toStrictEqual([{ tool: 'vite', version: '8.3.8', where: ['pnpm-lock.yaml (a, a-b)'] }]);
   });
 });
 

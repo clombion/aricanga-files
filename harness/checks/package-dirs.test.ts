@@ -32,7 +32,10 @@ describe('a package', () => {
       ['1.0/package.json', '1.0', '1.0/'],
     ]);
     const keys = [...lockOf(QUOTED_KEYS).keys()];
-    expect(keys.map((importer) => importerOf(dirOfImporter(importer)))).toStrictEqual(keys);
+    expect([keys, keys.map((importer) => importerOf(dirOfImporter(importer)))]).toStrictEqual([
+      ['.', '@s/p', 'a/#hash', "a/q'uote", 'a/sp ace', 'a/x:y'],
+      ['.', '@s/p', 'a/#hash', "a/q'uote", 'a/sp ace', 'a/x:y'],
+    ]);
   });
 
   test('is held by the nearest root whatever order the roots come in', () => {

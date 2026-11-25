@@ -10,6 +10,7 @@ import { describe, expect, test } from 'vitest';
 import { pinned, pins } from '#lib/pins.ts';
 import { ConfigError } from '#lib/config.ts';
 import { Exemptions } from '#lib/exemptions.ts';
+import { LOCK } from './scope.plants.ts';
 import type { Pin } from '#lib/pins.ts';
 import { UPSTREAM } from '#lib/upstream.ts';
 
@@ -41,34 +42,6 @@ function pinProblems(found: readonly Pin[], upstream: ReadonlyMap<string, string
   );
   return problems;
 }
-
-const LOCK = `lockfileVersion: '9.0'
-
-importers:
-
-  .:
-    devDependencies:
-      oxlint:
-        specifier: 1.94.0
-        version: 1.94.0
-      planted:
-        specifier: ^1.0.0
-        version: 1.0.3(peer@2.0.0)
-      '@scope/tool':
-        specifier: ^2.0.0
-        version: 2.1.0
-
-  packages/app:
-    devDependencies:
-      vite:
-        specifier: ^8.0.0
-        version: 8.3.8
-
-packages:
-
-  oxlint@1.94.0:
-    resolution: {integrity: sha512-x}
-`;
 
 describe('the repository', () => {
   test('every pin has its upstream and every upstream a pin', async () => {

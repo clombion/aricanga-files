@@ -1,6 +1,6 @@
 /** The population: pnpm's workspace packages whose manifests git lists, less the POC, each with its role. */
 
-import { BOM, QUOTED_KEYS, causedRefusal, inWorkspaceFolder, manifest, reader, refusalOf } from './scope.plants.ts';
+import { BOM, causedRefusal, inWorkspaceFolder, manifest, reader, refusalOf } from './scope.plants.ts';
 import { LOCKFILE, lockOf } from '#lib/pins.ts';
 import { POC, population, populationOf } from '#lib/scope.ts';
 import { describe, expect, test } from 'vitest';
@@ -282,11 +282,6 @@ describe('the repository', () => {
     expect.hasAssertions();
     const [held, lockText] = await Promise.all([population(), textOf(LOCKFILE)]);
     expect([lockOf(lockText).has('.'), missedImporters(held, lockText)]).toStrictEqual([true, []]);
-  });
-
-  test('reads every importer of a lockfile as pnpm writes it: quoted, holding a colon, or with no dependencies', () => {
-    expect.hasAssertions();
-    expect([...lockOf(QUOTED_KEYS).keys()]).toStrictEqual(['.', '@s/p', 'a/#hash', "a/q'uote", 'a/sp ace', 'a/x:y']);
   });
 });
 

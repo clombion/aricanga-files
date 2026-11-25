@@ -12,7 +12,7 @@
  * renders the table of `harness.md`.
  */
 
-import { ConfigError, object } from './config.ts';
+import { ConfigError, object, stringOf } from './config.ts';
 import { byCodeUnit, isEmpty } from './lists.ts';
 import { importerOf, manifestOf } from './package-dirs.ts';
 import type { Dir } from './package-dirs.ts';
@@ -21,7 +21,6 @@ import type { Population } from './scope.ts';
 import { engineRange } from './node-floor.ts';
 import { parse } from 'yaml';
 import { population } from './scope.ts';
-import { present } from './present.ts';
 import { textOf } from './source-files.ts';
 
 /** A pinned tool: its name, its version (none when nothing holds one), and every input that pins it at that version. */
@@ -52,12 +51,6 @@ const LOCKFILE = 'pnpm-lock.yaml';
 const WORKSPACE = 'workspace:';
 
 const PNPM_PREFIX = /^pnpm@/u;
-
-/** What joins a pin's tool and version in its key: below every character a name or version holds. */
-const KEY_SEPARATOR = '\u0000';
-
-/** A group's first input. */
-const FIRST = 0;
 
 /**
  * The dependency groups pnpm writes in a lockfile importer (pnpm's `DEPENDENCIES_FIELDS`). A package a
@@ -103,6 +96,21 @@ function yamlOf(lockText: string): unknown {
 }
 
 /**
+ * A version as a lockfile, `packageManager` or `engines.node` writes it, refusing an empty one: no writer means "no
+ * version" by `''`, so a pin with no version is one no input holds a version for.
+ *
+ * @param {string} version - The written version.
+ * @param {string} what - Where it is written, for the refusal.
+ * @returns {string} The version.
+ */
+function versionOf(version: string, what: string): string {
+  if (version === '') {
+    throw new ConfigError(`${what} is an empty version`);
+  }
+  return version;
+}
+
+/**
  * The resolved versions of one importer, by package name, without their peers, from every dependency
  * group pnpm writes (`LOCK_GROUPS`). The importer's other fields (`publishDirectory`,
  * `dependenciesMeta`) are not read. An entry with no `version` is left out, so its pin reads as one
@@ -118,8 +126,9 @@ function lockedVersions(importer: string, value: unknown): ReadonlyMap<string, s
     LOCK_GROUPS.flatMap((group) =>
       Object.entries(object(Object.hasOwn(fields, group) ? fields[group] : {}, `${LOCKFILE} ${importer} ${group}`)).flatMap(
         ([name, entry]: readonly [string, unknown]) => {
-          const { version } = object(entry, `${LOCKFILE} ${importer} ${group} ${name}`);
-          return typeof version === 'string' ? [[name, version.replace(PEERS, '')] as const] : [];
+          const where = `${LOCKFILE} ${importer} ${group} ${name}`;
+          const { version } = object(entry, where);
+          return version === undefined ? [] : [[name, versionOf(stringOf(version, where).replace(PEERS, ''), where)] as const];
         },
       ),
     ),
@@ -150,13 +159,20 @@ function lockOf(lockText: string): Lock {
  */
 function rootPins(manifest: Fields): readonly Found[] {
   const { packageManager } = manifest;
+  const floor = engineRange(manifest);
+  const pnpm = 'package.json packageManager';
   return [
-    { file: 'package.json engines', importers: [], tool: 'node', version: engineRange(manifest) },
     {
-      file: 'package.json packageManager',
+      file: 'package.json engines',
+      importers: [],
+      tool: 'node',
+      version: floor === undefined ? undefined : versionOf(floor, 'package.json engines.node'),
+    },
+    {
+      file: pnpm,
       importers: [],
       tool: 'pnpm',
-      version: typeof packageManager === 'string' ? packageManager.replace(PNPM_PREFIX, '') : undefined,
+      version: packageManager === undefined ? undefined : versionOf(stringOf(packageManager, pnpm).replace(PNPM_PREFIX, ''), pnpm),
     },
   ];
 }
@@ -186,16 +202,6 @@ function manifestPins(entry: DirManifest, lock: Lock): readonly Found[] {
 }
 
 /**
- * A found pin's key: its tool, then its version.
- *
- * @param {Found} input - The found pin.
- * @returns {string} Its key.
- */
-function keyOf(input: Found): string {
-  return `${input.tool}${KEY_SEPARATOR}${input.version ?? ''}`;
-}
-
-/**
  * The inputs of one (tool, version), as a pin's `where`: each file once, a lockfile with the importers
  * that pin the tool under it (`pnpm-lock.yaml (., packages/app)`), ordered by code unit.
  *
@@ -211,9 +217,21 @@ function inputsOf(found: readonly Found[]): readonly string[] {
 }
 
 /**
+ * Order two keyed entries by their keys, by code unit.
+ *
+ * @param {readonly [string, unknown]} left - An entry.
+ * @param {readonly [string, unknown]} right - Another entry.
+ * @returns {number} Their order.
+ */
+function byKey([left]: readonly [string, unknown], [right]: readonly [string, unknown]): number {
+  return byCodeUnit(left, right);
+}
+
+/**
  * Every pin of the given manifests at the versions the lockfile holds: one per tool and version, so
- * a tool locked at two versions is two pins, each naming every input that pins it at its version;
- * ordered by tool, then version, by code unit (`KEY_SEPARATOR` sorts below every character a name holds).
+ * a tool locked at two versions is two pins, each naming every input that pins it at its version.
+ * The inputs are grouped by tool, then by version, where no version is a key of its own; the pins
+ * are ordered by tool, then version, by code unit, no version first.
  *
  * @param {readonly DirManifest[]} manifests - The manifests.
  * @param {string} lockText - The lockfile's text, read once here.
@@ -221,13 +239,27 @@ function inputsOf(found: readonly Found[]): readonly string[] {
  */
 function pinned(manifests: readonly DirManifest[], lockText: string): readonly Pin[] {
   const lock = lockOf(lockText);
-  const found = manifests.flatMap((entry) => manifestPins(entry, lock));
-  const byKey = new Map(found.map((input) => [keyOf(input), found.filter((other) => keyOf(other) === keyOf(input))] as const));
-  return [...byKey.entries()]
-    .toSorted(([first]: readonly [string, readonly Found[]], [second]: readonly [string, readonly Found[]]) => byCodeUnit(first, second))
-    .map(([, inputs]: readonly [string, readonly Found[]]): Pin => {
-      const { tool, version } = present(inputs.at(FIRST), 'a pin of its own key');
-      return { tool, version, where: inputsOf(inputs) };
+  const byTool = new Map<string, Map<string | undefined, readonly Found[]>>();
+  for (const input of manifests.flatMap((entry) => manifestPins(entry, lock))) {
+    const byVersionOf = byTool.get(input.tool) ?? new Map<string | undefined, readonly Found[]>();
+    byVersionOf.set(input.version, [...(byVersionOf.get(input.version) ?? []), input]);
+    byTool.set(input.tool, byVersionOf);
+  }
+  return [...byTool.entries()]
+    .toSorted(byKey)
+    .flatMap(([tool, versions]: readonly [string, ReadonlyMap<string | undefined, readonly Found[]>]) => {
+      const entries = [...versions.entries()];
+      const unversioned = entries.filter(([version]: readonly [string | undefined, readonly Found[]]) => version === undefined);
+      const locked = entries
+        .flatMap(([version, inputs]: readonly [string | undefined, readonly Found[]]) =>
+          version === undefined ? [] : [[version, inputs] as const],
+        )
+        .toSorted(byKey);
+      return [...unversioned, ...locked].map(([version, inputs]: readonly [string | undefined, readonly Found[]]): Pin => ({
+        tool,
+        version,
+        where: inputsOf(inputs),
+      }));
     });
 }
 

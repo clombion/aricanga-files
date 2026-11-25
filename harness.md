@@ -144,7 +144,9 @@ list.
 ## tool-upgrades: Choosing, reading and taking a tool upgrade
 
 Every pinned tool has its upstream repository in `UPSTREAM` (`harness/lib/upstream.ts`); `pnpm run fix`
-writes this table from `package.json` and `pnpm-lock.yaml`.
+writes this table from `package.json` and `pnpm-lock.yaml`. **Pinned in** names every input that pins
+the tool at that version: a `package.json` field, or `pnpm-lock.yaml` with the importers that lock it,
+`.` being the root's (`pnpm-lock.yaml (., experiences/sandbox)`).
 
 <!-- generated: pins -->
 | Tool | Upstream | Pinned in | Pin |

@@ -130,4 +130,33 @@ const QUOTED_KEYS: string = [
   '',
 ].join('\n');
 
-export { BOM, causedRefusal, inWorkspaceFolder, manifest, QUOTED_KEYS, reader, refusalOf };
+/** A lockfile pnpm 10.28.0 writes: the root locks three tools, one with a peer, and a member, packages/app, locks one. */
+const LOCK = `lockfileVersion: '9.0'
+
+importers:
+
+  .:
+    devDependencies:
+      oxlint:
+        specifier: 1.94.0
+        version: 1.94.0
+      planted:
+        specifier: ^1.0.0
+        version: 1.0.3(peer@2.0.0)
+      '@scope/tool':
+        specifier: ^2.0.0
+        version: 2.1.0
+
+  packages/app:
+    devDependencies:
+      vite:
+        specifier: ^8.0.0
+        version: 8.3.8
+
+packages:
+
+  oxlint@1.94.0:
+    resolution: {integrity: sha512-x}
+`;
+
+export { BOM, causedRefusal, inWorkspaceFolder, LOCK, manifest, QUOTED_KEYS, reader, refusalOf };
