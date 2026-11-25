@@ -5,14 +5,14 @@
 
 import { Accepted, Prefixes } from './exemptions.ts';
 import type { Dir, MemberDir } from './package-dirs.ts';
+import type { Role, Tier } from './roles.ts';
+import { isEmpty, partitioned } from './lists.ts';
 import { manifestOf, nearestOf } from './package-dirs.ts';
 import { perRoot, textOf, tracked } from './source-files.ts';
 import { ships, tierOf } from './roles.ts';
 import type { Fields } from './manifests.ts';
 import { REPO_ROOT } from './paths.ts';
 import { ROOT_MODULES } from './config-modules.ts';
-import type { Role } from './roles.ts';
-import { isEmpty } from './lists.ts';
 import { manifestsOf } from './manifests.ts';
 import { providedFor } from './provided.ts';
 import { workspacePackages } from './workspace.ts';
@@ -73,8 +73,10 @@ interface Population {
   readonly members: readonly Member[];
   /** The members whose role ships: their modules are production code. */
   readonly shipping: readonly Member[];
-  /** The members of the Sans-IO kernel. */
-  readonly kernel: readonly Member[];
+  /** The members whose role does not ship, the test infrastructure: all their modules are test support. With `shipping`, one partition of the members. */
+  readonly testInfrastructure: readonly Member[];
+  /** The members of each tier (`roles.ts`), selected once, for a reader whose answer is total over the tiers. */
+  readonly tiers: Readonly<Record<Tier, readonly Member[]>>;
   /** The held directories: every member's and the harness's. */
   readonly roots: readonly MemberDir[];
   /** Whether a listed path is held: a root file, a harness file or a member's file. */
@@ -112,16 +114,25 @@ interface Parts {
 function assembled(parts: Readonly<Parts>): Population {
   const { listing, members, root, rootManifest } = parts;
   const memberOf = nearestOf(members, (member) => member.dir);
+  const tiered = (tier: Tier): readonly Member[] => members.filter((member) => tierOf(member.role) === tier);
+  const [shipping, testInfrastructure] = partitioned(members, (member) => ships(member.role));
+  const tiers: Readonly<Record<Tier, readonly Member[]>> = {
+    kernel: tiered('kernel'),
+    product: tiered('product'),
+    'test-infrastructure': tiered('test-infrastructure'),
+  };
   return {
     holds: (target: string) => ROOT_FILES.has(target) || target.startsWith(HARNESS_ROOT) || memberOf(target) !== undefined,
-    kernel: members.filter((member) => tierOf(member.role) === 'kernel'),
     listing,
     memberOf,
     members,
+
     root,
     rootManifest,
     roots: [...members.map((member) => member.dir), HARNESS_ROOT],
-    shipping: members.filter((member) => ships(member.role)),
+    shipping,
+    testInfrastructure,
+    tiers,
   };
 }
 

@@ -11,7 +11,6 @@ import type { Population } from './scope.ts';
 import { PopulationError } from './workspace.ts';
 import type { Tier } from './roles.ts';
 import { nearestOf } from './package-dirs.ts';
-import { tierOf } from './roles.ts';
 
 /** A root a rule covers, a directory, and its owner there (undefined: no module of the root may use the API). */
 interface Scope {
@@ -181,8 +180,7 @@ const HOLDERS: readonly Holder[] = ['kernel', 'product', 'test-infrastructure', 
  * @returns {Readonly<Record<Holder, readonly MemberDir[]>>} The roots, by holder.
  */
 function rootsOf(population: Population): Readonly<Record<Holder, readonly MemberDir[]>> {
-  const ofTier = (tier: Tier): readonly MemberDir[] =>
-    population.members.filter((member) => tierOf(member.role) === tier).map((member) => member.dir);
+  const ofTier = (tier: Tier): readonly MemberDir[] => population.tiers[tier].map((member) => member.dir);
   return {
     harness: [HARNESS_ROOT],
     kernel: ofTier('kernel'),

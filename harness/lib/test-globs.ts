@@ -16,10 +16,10 @@ const HARNESS_CHECKS = 'harness/checks/';
 /** The configs a test runner loads to run a member's tests: run by the runner, shipped by no one. */
 const RUNNER_CONFIGS: Accepted<string> = new Accepted<string>(['**/playwright.*.config.ts']);
 
-/** The directories whose modules are test support, at any depth (`checker.ts`' `isProduction`). */
+/** The directories whose modules are test support, at any depth below their member's directory (`checker.ts`' `isProduction`; the boundaries' non-production overrides). */
 const TEST_DIRECTORIES: readonly string[] = ['test', 'tests', 'testing'];
 
-/** A shipping member's test support directory: its tests' helpers, which run on Node. */
+/** A member's test support directory, at any depth below its directory: its tests' helpers, which run on Node. */
 const TEST_SUPPORT = 'test/';
 
 /** A test-infrastructure member's browser tests directory: its Playwright specs and their helpers, which run on Node. */

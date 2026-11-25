@@ -83,5 +83,17 @@ function ships(role: Role): boolean {
   return TIERS.of(ROLES.of(role)).ships;
 }
 
-export { isRole, ROLE_WORDS, ships, tierOf };
+/**
+ * Whether a role's packages are test infrastructure: they exist only to test, so their modules are
+ * test support and only a non-production module may import them. It is the one answer to "which
+ * members are test infrastructure"; no role or tier word decides it elsewhere.
+ *
+ * @param {Role} role - The role.
+ * @returns {boolean} Whether its packages are test infrastructure: its tier does not ship.
+ */
+function isTestInfrastructure(role: Role): boolean {
+  return !ships(role);
+}
+
+export { isRole, isTestInfrastructure, ROLE_WORDS, ships, tierOf };
 export type { Role, Tier };

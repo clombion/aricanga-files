@@ -15,6 +15,7 @@ import type { OxlintOverride } from 'oxlint';
 import type { Role } from './roles.ts';
 import { Vocabulary } from './exemptions.ts';
 import { isEmpty } from './lists.ts';
+import { isTestInfrastructure } from './roles.ts';
 
 /**
  * The roles each role's modules may import, a member's own package aside: foundation nothing; a
@@ -34,9 +35,6 @@ const MAY: Vocabulary<Readonly<Record<Role | 'harness', readonly Role[]>>> = new
 
 /** Every relative climb, at any depth and in any place of the specifier. */
 const CLIMB = '**/../**';
-
-/** The role whose members only non-production modules may import. */
-const TEST_INFRASTRUCTURE: Role = 'test-infrastructure';
 
 /**
  * A package's specifiers: its name and every subpath.
@@ -74,7 +72,7 @@ function memberBoundaries(held: Population, member: Member): OxlintOverride[] {
   const forbidden = held.members.filter((other) => other.dir !== member.dir && !MAY.of(member.role).includes(other.role));
   const shared = [...pocPackages(held), CLIMB];
   const production = [...forbidden.flatMap((other) => specifiers(other)), ...shared];
-  const tests = [...forbidden.filter((other) => other.role !== TEST_INFRASTRUCTURE).flatMap((other) => specifiers(other)), ...shared];
+  const tests = [...forbidden.filter((other) => !isTestInfrastructure(other.role)).flatMap((other) => specifiers(other)), ...shared];
   const tails = [...RUNNER_TESTS, ...RUNNER_CONFIGS, ...TEST_DIRECTORIES.map((dir) => `**/${dir}/**`)];
   const nonProduction = tails.flatMap((tail) => liveGlobs(held, [member], tail));
   return [

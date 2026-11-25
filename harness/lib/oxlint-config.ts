@@ -6,16 +6,15 @@
  */
 
 import { BROWSER_TESTS, RUNNER_TESTS, TEST_SUPPORT, liveGlobs } from './test-globs.ts';
+import type { Member, Population } from './scope.ts';
 import type { OxlintConfig, OxlintOverride } from 'oxlint';
 import { ROOT_MODULE_FILES, unheldPatterns } from './oxlint-files.ts';
-import type { Role, Tier } from './roles.ts';
 import { HARNESS_ROOT } from './scope.ts';
-import type { Population } from './scope.ts';
 import { RULES } from './oxlint-rules.ts';
+import type { Role } from './roles.ts';
 import { Vocabulary } from './exemptions.ts';
 import { boundariesOf } from './import-boundaries.ts';
 import { isEmpty } from './lists.ts';
-import { tierOf } from './roles.ts';
 
 /** The settings beside the rule levels. */
 const SETTINGS = {
@@ -81,8 +80,14 @@ const MECHANICS: Vocabulary<Readonly<Record<Role, readonly string[]>>> = new Voc
   view: [],
 });
 
-/** A system's reducer surface, under its directory (ADR-0007). */
-const REDUCER: readonly string[] = ['src/system.ts', SYSTEM_MODEL];
+/** The modules of each role a reducer's surface is, under the member's directory (ADR-0007): total over the roles, so a new role declares its own (a system's alone). */
+const REDUCER: Vocabulary<Readonly<Record<Role, readonly string[]>>> = new Vocabulary<Readonly<Record<Role, readonly string[]>>>({
+  experience: [],
+  foundation: [],
+  system: ['src/system.ts', SYSTEM_MODEL],
+  'test-infrastructure': [],
+  view: [],
+});
 
 /** The tool configs, which run on Node: a member's Vite and Playwright configs, and the root modules. */
 const NODE_MODULES: readonly string[] = ['**/vite.config.ts', '**/playwright.*.config.ts', ...ROOT_MODULE_FILES];
@@ -98,27 +103,37 @@ const LOCALE = "a harness module compares and formats by code unit, never by the
 const BUILD_OUTPUT = '**/dist/**';
 
 /**
- * The globs of a tier's members' whole directories.
+ * The globs of the test infrastructure members' whole directories.
  *
  * @param {Population} held - The population.
- * @param {Tier} tier - The tier.
- * @returns {string[]} One `<dir>**` per member of the tier.
+ * @returns {string[]} One `<dir>**` per test infrastructure member.
  */
-function tierGlobs(held: Population, tier: Tier): string[] {
-  return held.members.filter((member) => tierOf(member.role) === tier).map((member) => `${member.dir}**`);
+function testInfrastructureGlobs(held: Population): string[] {
+  return held.testInfrastructure.map((member) => `${member.dir}**`);
 }
 
 /**
- * The globs of each member of a role under its directory, each only where the listing gives it a file.
+ * The globs of each selected member under its directory, each only where the listing gives it a file.
  *
  * @param {Population} held - The population.
- * @param {Role} role - The role.
+ * @param {readonly Member[]} members - The members.
  * @param {readonly string[]} tails - The globs under each member's directory.
  * @returns {string[]} The globs.
  */
-function roleGlobs(held: Population, role: Role, tails: readonly string[]): string[] {
-  const members = held.members.filter((member) => member.role === role);
+function memberGlobs(held: Population, members: readonly Member[], tails: readonly string[]): string[] {
   return members.flatMap((member) => tails.flatMap((tail) => liveGlobs(held, [member], tail)));
+}
+
+/**
+ * The globs a table total over the roles gives each member, under its directory, each only where the
+ * listing gives the member a file.
+ *
+ * @param {Population} held - The population.
+ * @param {Vocabulary<Readonly<Record<Role, readonly string[]>>>} table - Each role's globs under a member's directory.
+ * @returns {string[]} The globs.
+ */
+function roleGlobs(held: Population, table: Vocabulary<Readonly<Record<Role, readonly string[]>>>): string[] {
+  return held.members.flatMap((member) => memberGlobs(held, [member], table.of(member.role)));
 }
 
 /**
@@ -131,9 +146,9 @@ function roleGlobs(held: Population, role: Role, tails: readonly string[]): stri
 function nodeModules(held: Population): string[] {
   return [
     `${HARNESS_ROOT}**`,
-    `**/${TEST_SUPPORT}**`,
+    ...memberGlobs(held, held.members, [`**/${TEST_SUPPORT}**`]),
     ...RUNNER_TESTS,
-    ...roleGlobs(held, 'test-infrastructure', [`${BROWSER_TESTS}**`]),
+    ...memberGlobs(held, held.testInfrastructure, [`${BROWSER_TESTS}**`]),
     ...NODE_MODULES,
   ];
 }
@@ -145,9 +160,9 @@ function nodeModules(held: Population): string[] {
  * @returns {NonNullable<OxlintConfig['rules']>} The rule settings.
  */
 function memberRules(held: Population): NonNullable<OxlintConfig['rules']> {
-  const testInfrastructure = tierGlobs(held, 'test-infrastructure');
+  const testInfrastructure = testInfrastructureGlobs(held);
   const ignored: ['error', { ignore: string[] }] = ['error', { ignore: testInfrastructure }];
-  const mechanics = held.members.flatMap((member) => MECHANICS.of(member.role).flatMap((tail) => liveGlobs(held, [member], tail)));
+  const mechanics = roleGlobs(held, MECHANICS);
   return {
     'aricanga/flags': ignored,
     'aricanga/legacy': ignored,
@@ -167,7 +182,7 @@ function memberRules(held: Population): NonNullable<OxlintConfig['rules']> {
  * @returns {OxlintOverride[]} The overrides.
  */
 function memberOverrides(held: Population): OxlintOverride[] {
-  const reducers = roleGlobs(held, 'system', REDUCER);
+  const reducers = roleGlobs(held, REDUCER);
   const purity: OxlintOverride[] = isEmpty(reducers)
     ? []
     : [

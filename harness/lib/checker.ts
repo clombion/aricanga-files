@@ -18,9 +18,9 @@ import { isIdentifier, isPrivateIdentifier, isStringLiteral } from 'typescript/u
 import type { Population } from './scope.ts';
 import { SymbolFlags } from 'typescript/unstable/sync';
 import { isEmpty } from './lists.ts';
+import { isTestInfrastructure } from './roles.ts';
 import path from 'node:path';
 import { present } from './present.ts';
-import { ships } from './roles.ts';
 import { typescriptOf } from './scope.ts';
 
 /** The compiler options of a scan: the shared base's strictness, every lib a held module reads. */
@@ -38,7 +38,7 @@ const OPTIONS = {
   types: ['node', 'vite/client'],
 } as const;
 
-/** Test support's directories: a member's `test/`, `tests/` and `testing/`. */
+/** Test support's directories: a member's own `test/`, `tests/` and `testing/`, below its directory. */
 const TEST_DIRECTORY = new RegExp(`(?:^|/)(?:${TEST_DIRECTORIES.join('|')})/`, 'u');
 /** A symbol's flags with none set. */
 const NO_FLAGS = 0;
@@ -65,21 +65,36 @@ interface ScanOpening {
 }
 
 /**
- * Whether a module belongs to a test infrastructure package: a member whose role does not ship.
+ * Whether a module belongs to a test infrastructure package (`isTestInfrastructure` of its member's role).
  *
  * @param {Population} population - The population.
  * @param {string} file - A repository-relative path.
  * @returns {boolean} Whether its package exists only to test.
  */
-function isTestInfrastructure(population: Population, file: string): boolean {
+function inTestInfrastructure(population: Population, file: string): boolean {
   const member = population.memberOf(file);
-  return member !== undefined && !ships(member.role);
+  return member !== undefined && isTestInfrastructure(member.role);
+}
+
+/**
+ * A module's path below the member holding it; the whole path for a file of no member (the harness,
+ * a root file), so a directory above a member never decides what the member's modules are.
+ *
+ * @param {Population} population - The population.
+ * @param {string} file - A repository-relative path.
+ * @returns {string} The path below its member.
+ */
+function belowMember(population: Population, file: string): string {
+  const member = population.memberOf(file);
+  return member === undefined ? file : file.slice(member.dir.length);
 }
 
 /**
  * A module that ships: not a module a test runner runs (`isRunnerTest`) or a config it loads
  * (`RUNNER_CONFIGS`), test support under a
- * `test/`, `tests/` or `testing/` directory, or a module of a test infrastructure package. The
+ * `test/`, `tests/` or `testing/` directory of its member (below the member's directory, so a member
+ * that sits under a directory of that name is not test support for it), or a module of a test
+ * infrastructure package. The
  * harness's check support (`harness/checks/`) is held as production is, so every check reads it. Whether coverage reads a module is the gate config's question,
  * not this one: a shipping member's `src/testing/` is test support and covered. Every rule holds both
  * kinds. The distinction decides who counts as a reader of a production module's exports
@@ -92,7 +107,12 @@ function isTestInfrastructure(population: Population, file: string): boolean {
  * @returns {boolean} Whether the module ships.
  */
 function isProduction(population: Population, file: string): boolean {
-  return !isRunnerTest(file) && !isRunnerConfig(file) && !TEST_DIRECTORY.test(file) && !isTestInfrastructure(population, file);
+  return (
+    !isRunnerTest(file) &&
+    !isRunnerConfig(file) &&
+    !TEST_DIRECTORY.test(belowMember(population, file)) &&
+    !inTestInfrastructure(population, file)
+  );
 }
 
 /**
@@ -266,7 +286,7 @@ export { nodes } from './ts-source.ts';
 export {
   isPlatform,
   isProduction,
-  isTestInfrastructure,
+  inTestInfrastructure,
   nameText,
   openScan,
   pathOf,

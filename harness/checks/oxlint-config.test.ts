@@ -7,10 +7,11 @@
  */
 
 import { describe, expect, test } from 'vitest';
-import { list, object } from '#lib/config.ts';
+import { list, object, strings } from '#lib/config.ts';
 import { EXIT_CLEAN } from '#lib/exit-status.ts';
 import type { Population } from '#lib/scope.ts';
 import { REPO_ROOT } from '#lib/paths.ts';
+import { fieldMatches } from '#lint-rules/globs.ts';
 import { isLintable } from '#lib/oxlint-files.ts';
 import { lintedFiles } from '#lib/lint-rules.ts';
 import { oxlintConfigOf } from '#lib/oxlint-config.ts';
@@ -86,7 +87,6 @@ describe('the oxlint configuration of a planted population', () => {
       ['error', { files: ['packages/core/**'] }],
       [
         'harness/**',
-        '**/test/**',
         '**/*.spec.ts',
         '**/*.test.{ts,tsx}',
         '**/vite.config.ts',
@@ -96,6 +96,28 @@ describe('the oxlint configuration of a planted population', () => {
         './vitest.gate.config.ts',
       ],
     ]);
+  });
+});
+
+describe('the Node env of test support', () => {
+  test("reaches a member's test directory at any depth below it, and not a member that sits under a test directory", async () => {
+    expect.hasAssertions();
+    const held = await plantedPopulation(
+      ['packages/test/kit/src/a.ts', 'packages/ok/test/b.ts', 'packages/ok/src/test/c.ts', 'packages/ok/src/d.ts'],
+      [
+        ['packages/test/kit/', 'system'],
+        ['packages/ok/', 'system'],
+      ],
+    );
+    const { files } = memberSettings(held);
+    // No system has a reducer surface here, so the node override comes first.
+    const node = strings(files.at(PURITY), 'the node override files');
+    const inNode = (file: string): boolean => node.some((glob) => fieldMatches('files', glob, file));
+    expect(
+      ['packages/test/kit/src/a.ts', 'packages/ok/test/b.ts', 'packages/ok/src/test/c.ts', 'packages/ok/src/d.ts'].map((file) =>
+        inNode(file),
+      ),
+    ).toStrictEqual([false, true, true, false]);
   });
 });
 

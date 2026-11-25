@@ -1,7 +1,8 @@
 /** The scan's readers (a path it does not cover is refused, and a missing symbol has no name) and the module classifiers. */
 
+import { ROLE_WORDS, isRole, isTestInfrastructure } from '#lib/roles.ts';
 import { describe, expect, test } from 'vitest';
-import { isProduction, isTestInfrastructure, qualifiedName, scanOver, sourceOf } from '#lib/checker.ts';
+import { inTestInfrastructure, isProduction, qualifiedName, scanOver, sourceOf } from '#lib/checker.ts';
 import type { Population } from '#lib/scope.ts';
 import type { ScanOpening } from '#lib/checker.ts';
 import { plantedPopulation } from '#lib/planted-population.ts';
@@ -85,7 +86,7 @@ describe('the module classifiers', () => {
     expect.hasAssertions();
     const held = await probeAndView();
     const copied: Population = { ...held, memberOf: (file: string) => structuredClone(held.memberOf(file)) };
-    expect(['packages/probe/src/b.ts', 'packages/view/src/v.ts'].map((file) => isTestInfrastructure(copied, file))).toStrictEqual([
+    expect(['packages/probe/src/b.ts', 'packages/view/src/v.ts'].map((file) => inTestInfrastructure(copied, file))).toStrictEqual([
       true,
       false,
     ]);
@@ -104,7 +105,7 @@ describe('the module classifiers', () => {
       'harness/lib/a.ts',
       'harness/checks/a.ts',
     ];
-    expect(modules.map((file) => [isTestInfrastructure(held, file), isProduction(held, file)])).toStrictEqual([
+    expect(modules.map((file) => [inTestInfrastructure(held, file), isProduction(held, file)])).toStrictEqual([
       [true, false],
       [false, true],
       [false, false],
@@ -114,5 +115,39 @@ describe('the module classifiers', () => {
       [false, true],
       [false, true],
     ]);
+  });
+});
+
+describe('the roles', () => {
+  test('read test infrastructure as the roles whose tier does not ship, every role read', () => {
+    expect.hasAssertions();
+    expect(ROLE_WORDS.filter((word) => isRole(word)).map((role) => [role, isTestInfrastructure(role)])).toStrictEqual([
+      ['experience', false],
+      ['foundation', false],
+      ['system', false],
+      ['test-infrastructure', true],
+      ['view', false],
+    ]);
+  });
+});
+
+describe('a module below its member', () => {
+  test('reads a test directory below the member holding a module, never above it; a file of no member by its whole path', async () => {
+    expect.hasAssertions();
+    const held = await plantedPopulation(
+      [],
+      [
+        ['packages/testing/kit/', 'foundation'],
+        ['tools/test/probe/', 'test-infrastructure'],
+      ],
+    );
+    const modules = [
+      'packages/testing/kit/src/a.ts',
+      'packages/testing/kit/src/testing/b.ts',
+      'packages/testing/kit/test/c.ts',
+      'tools/test/probe/src/d.ts',
+      'harness/testing/e.ts',
+    ];
+    expect(modules.map((file) => isProduction(held, file))).toStrictEqual([true, false, false, false, false]);
   });
 });

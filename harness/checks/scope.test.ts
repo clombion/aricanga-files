@@ -197,7 +197,7 @@ describe('a population whose manifests cannot be read', () => {
 });
 
 describe('a population by tier', () => {
-  test("selects each tier's members once: the kernel, and every member that ships", async () => {
+  test("selects each tier's members, and parts the members into those that ship and the test infrastructure", async () => {
     expect.hasAssertions();
     const held = await plantedPopulation(
       [],
@@ -209,9 +209,15 @@ describe('a population by tier', () => {
         ['packages/v/', 'view'],
       ],
     );
-    expect([held.kernel.map((member) => member.dir), held.shipping.map((member) => member.dir)]).toStrictEqual([
+    const { kernel, product, 'test-infrastructure': testTier } = held.tiers;
+    expect(
+      [kernel, product, testTier, held.shipping, held.testInfrastructure].map((members) => members.map((member) => member.dir)),
+    ).toStrictEqual([
       ['packages/f/', 'packages/s/'],
+      ['packages/e/', 'packages/v/'],
+      ['packages/t/'],
       ['packages/e/', 'packages/f/', 'packages/s/', 'packages/v/'],
+      ['packages/t/'],
     ]);
   });
 });

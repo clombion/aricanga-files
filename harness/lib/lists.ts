@@ -83,5 +83,21 @@ async function inSequence<Item, Result>(items: readonly Item[], step: (item: Ite
   return results;
 }
 
-export { inSequence, isEmpty, Slot };
+/**
+ * The items a test holds, and the rest, in one pass: two lists disjoint and exhaustive by construction.
+ *
+ * @param {readonly Item[]} items - The items.
+ * @param {(item: Item) => boolean} test - The test.
+ * @returns {readonly [readonly Item[], readonly Item[]]} The items it holds, then the others, each in the items' order.
+ */
+function partitioned<Item>(items: readonly Item[], test: (item: Item) => boolean): readonly [readonly Item[], readonly Item[]] {
+  const held: Item[] = [];
+  const rest: Item[] = [];
+  for (const item of items) {
+    (test(item) ? held : rest).push(item);
+  }
+  return [held, rest];
+}
+
+export { inSequence, isEmpty, partitioned, Slot };
 export { byCodeUnit } from './exemptions/order.ts';
