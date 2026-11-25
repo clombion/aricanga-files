@@ -32,7 +32,9 @@ function packagesOf(stdout: string, base: string): readonly Dir[] {
 
 /**
  * The workspace packages pnpm lists at a root, as directories relative to it. pnpm answers realpaths,
- * so they are related to the root's realpath.
+ * so they are related to the root's realpath. The listing reads only this machine: pnpm's managed
+ * package-manager versions are off for it, so a pnpm that differs from `packageManager` lists the
+ * workspace itself instead of fetching the pinned pnpm first.
  *
  * @param {string} root - The workspace root.
  * @returns {Promise<readonly Dir[]>} Each package's directory.
@@ -40,7 +42,7 @@ function packagesOf(stdout: string, base: string): readonly Dir[] {
 async function workspacePackages(root: string): Promise<readonly Dir[]> {
   const [stdout, base] = await Promise.all([
     listingOutput(
-      ['pnpm', 'ls', '-r', '--depth', '-1', '--json'],
+      ['pnpm', 'ls', '-r', '--depth', '-1', '--json', '--config.manage-package-manager-versions=false'],
       root,
       (outcome) => new PopulationError(`pnpm could not list the workspace at ${root}: ${outcome}`),
     ),

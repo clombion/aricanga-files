@@ -1,11 +1,17 @@
 /** The workspace packages pnpm lists: listed relative to the root's realpath, and refused with pnpm's own reason. */
 
-import { describe, expect, test } from 'vitest';
+import { describe, expect, test, vi } from 'vitest';
 import { mkdir, rm, symlink, writeFile } from 'node:fs/promises';
 import { packagesOf, workspacePackages } from '#lib/workspace.ts';
 import { ConfigError } from '#lib/config.ts';
+import { finished } from '#lib/tools.ts';
 import { inWorkspaceFolder } from './scope.plants.ts';
 import path from 'node:path';
+import { tmpdir } from 'node:os';
+
+/** A pnpm version to pin that the machine's pnpm is not, and the one to pin when it is. */
+const OTHER_PNPM = '10.22.0';
+const FALLBACK_PNPM = '10.21.0';
 
 /**
  * The JSON answer pnpm gives, listing packages at the given paths.
@@ -15,6 +21,20 @@ import path from 'node:path';
  */
 function answer(paths: readonly unknown[]): string {
   return JSON.stringify(paths.map((where) => ({ name: 'x', path: where })));
+}
+
+/**
+ * A pnpm version the running pnpm is not, so a workspace pinning it differs from the pnpm that lists
+ * it. A pnpm that fetched it would ask a registry that refuses at once, and retry nothing, so the
+ * listing fails within a second instead of fetching. pnpm installs a fetched pnpm under its data
+ * directory, run from there, so the test keeps that directory outside the planted workspace: inside
+ * it, the install meets the workspace's own pin and does not end.
+ *
+ * @returns {Promise<string>} The version.
+ */
+async function anotherPnpm(): Promise<string> {
+  const running = await finished(['pnpm', '--version'], { cwd: tmpdir() });
+  return running.stdout.trim() === OTHER_PNPM ? FALLBACK_PNPM : OTHER_PNPM;
 }
 
 describe('pnpm', () => {
@@ -57,6 +77,24 @@ describe('pnpm', () => {
         await expect(workspacePackages(link)).resolves.toStrictEqual(['', 'a/x/']);
       } finally {
         await rm(link, { force: true });
+      }
+    });
+  });
+});
+
+describe("pnpm's listing", () => {
+  test('lists a workspace whose packageManager names another pnpm, fetching nothing', async () => {
+    expect.hasAssertions();
+    const manifest = JSON.stringify({ packageManager: `pnpm@${await anotherPnpm()}` });
+    await inWorkspaceFolder('managed-', manifest, async (folder) => {
+      const data = `${folder}-data`;
+      try {
+        vi.stubEnv('XDG_DATA_HOME', data);
+        vi.stubEnv('npm_config_registry', 'http://127.0.0.1:9/');
+        vi.stubEnv('npm_config_fetch_retries', '0');
+        await expect(workspacePackages(folder)).resolves.toStrictEqual(['']);
+      } finally {
+        await rm(data, { force: true, recursive: true });
       }
     });
   });
