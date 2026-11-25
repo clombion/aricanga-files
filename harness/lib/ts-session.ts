@@ -1,6 +1,12 @@
 /**
  * The process's one TypeScript 7 API session, and the virtual file system it reads: a mounted path
- * need not exist on disk, and a mounted real path reads as its mounted text.
+ * need not exist on disk, and a mounted real path reads as its mounted text. The session's child
+ * process is released without this module: it ends when its standard input closes, which every ending
+ * of this process does (an exit, a signal, a worker its pool kills). The TypeScript API's own `exit`
+ * listener sends the child SIGTERM, which the child outlives by seconds; a release after it would ask a
+ * child that is going away to release its snapshots, so this module adds no exit hook. The
+ * `suppressions` check characterises the release against the pinned TypeScript: once a process
+ * that opened a session exits, its child is gone.
  */
 
 import { API } from 'typescript/unstable/sync';
@@ -65,14 +71,13 @@ class Session {
       },
     });
     this.open = [opened];
-    process.once('exit', this.close.bind(this));
     return opened;
   }
 
   /**
    * Close the open session, if there is one. Idempotent: the session is forgotten before it is closed,
-   * so a second call (or the exit hook after an explicit close) finds nothing to close, and a later
-   * `api()` starts a fresh session instead of handing out a closed one.
+   * so a second call finds nothing to close, and a later `api()` starts a fresh session instead of
+   * handing out a closed one.
    */
   public close(): void {
     const closing = this.open;

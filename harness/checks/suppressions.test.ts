@@ -14,8 +14,8 @@
  * Every suppression that passes is a site `(path, tool:rule)`, and `SUPPRESSIONS` holds each site's
  * count and reason: a new suppression, or one that went away, fails until its count is updated.
  * oxlint's `reportUnusedDisableDirectives` fails a disable that suppresses nothing. The reader the
- * census parses through closes its TypeScript session idempotently, so the exit hook after an explicit
- * close is a no-op and a later parse opens a fresh session.
+ * census parses through closes its TypeScript session idempotently, so a later parse opens a fresh
+ * session, and a process that exits with its session open exits cleanly.
  */
 
 import { Accepted, CountedExemptions, Exemptions, StaleExemptionError, site } from '#lib/exemptions.ts';
@@ -23,7 +23,11 @@ import { census, suffix } from './suppressions.census.ts';
 import { closeSession, parse } from '#lib/ts-source.ts';
 import { describe, expect, test } from 'vitest';
 import type { Census } from './suppressions.census.ts';
+import { EXIT_SUCCESS } from '#lib/output.ts';
+import { finished } from '#lib/tools.ts';
+import { fromRoot } from '#lib/paths.ts';
 import { heldFiles } from '#lib/scope.ts';
+import { pathToFileURL } from 'node:url';
 import { textsOf } from '#lib/source-files.ts';
 
 const HARNESS_ID = 'suppressions';
@@ -208,6 +212,57 @@ describe('the census of near misses', () => {
   });
 });
 
+/**
+ * A shell run that starts a Node process (`$1`, running `$2`), which opens a session, prints its tsgo
+ * child's pid and exits; then waits, bounded, until every one of them is gone. It prints
+ * `gone <count>` and exits 0 once none is left, or `alive <pids>` and exits 1 at its bound (20 s, below
+ * the test's). The pids go through a file and the process's errors are dropped, so a child that
+ * outlives the process holds none of the shell's output open. Only the end state is asserted: the
+ * bound is a ceiling on the wait, not a window. A child that has exited is gone, whether or not it
+ * has been reaped: once its parent exits, an orphan is reaped by an ancestor (PID 1 or a
+ * subreaper), which this run does not control and which may never do it, so a zombie (`ps` state
+ * `Z`, which `kill -0` still finds) counts as gone, and only a child that still runs is alive.
+ */
+const TSGO_GONE = [
+  'out=$(mktemp)',
+  '"$1" --input-type=module -e "$2" > "$out" 2> /dev/null',
+  'pids=$(cat "$out")',
+  'rm -f "$out"',
+  'set -- $pids',
+  'for i in $(seq 1 200); do',
+  '  alive=""',
+  '  for pid in $pids; do',
+  '    state=$(echo $(ps -o stat= -p "$pid" 2>/dev/null))',
+  '    case "$state" in "" | Z*) ;; *) alive="$alive $pid" ;; esac',
+  '  done',
+  '  [ -z "$alive" ] && { echo "gone $#"; exit 0; }',
+  '  sleep 0.1',
+  'done',
+  'echo "alive$alive"',
+  'exit 1',
+].join('\n');
+
+/**
+ * The Node script of the characterisation: it parses a module (one session, one live snapshot),
+ * prints the pid of its tsgo child (a `tsc` process whose parent it is, read from `ps -A`, whose
+ * columns Linux's and the BSDs' `ps` share), and exits.
+ *
+ * @returns {string} The script.
+ */
+function childScript(): string {
+  const reader = JSON.stringify(pathToFileURL(fromRoot('harness/lib/ts-source.ts')).href);
+  return [
+    "import { execFileSync } from 'node:child_process';",
+    "import { basename } from 'node:path';",
+    `const { parse } = await import(${reader});`,
+    String.raw`parse('packages/plant/src/a.ts', 'export const a = 1;\n');`,
+    String.raw`const rows = execFileSync('ps', ['-A', '-o', 'pid=,ppid=,comm=']).toString().trim().split('\n');`,
+    String.raw`const fields = rows.map((row) => row.trim().split(/\s+/u));`,
+    "const ours = fields.filter(([, ppid, comm]) => Number(ppid) === process.pid && basename(comm) === 'tsc');",
+    "process.stdout.write(ours.map(([pid]) => pid).join(' '));",
+  ].join('\n');
+}
+
 describe('the source reader', () => {
   test('closes its session once, and parses on a fresh session after', () => {
     expect.hasAssertions();
@@ -217,6 +272,20 @@ describe('the source reader', () => {
       closeSession();
     }).not.toThrow();
     expect(parse('packages/plant/src/b.ts', 'export const b = 2;\n').statements).toHaveLength(ONE_STATEMENT);
+  });
+
+  test('lets a process that exits with its session open exit cleanly', async () => {
+    expect.hasAssertions();
+    const reader = JSON.stringify(pathToFileURL(fromRoot('harness/lib/ts-source.ts')).href);
+    const script = `const { parse } = await import(${reader}); parse('packages/plant/src/a.ts', 'export const a = 1;\\n');`;
+    const done = await finished([process.execPath, '--input-type=module', '-e', script], { cwd: fromRoot() });
+    expect(done.status).toBe(EXIT_SUCCESS);
+  });
+
+  test("ends a process's tsgo child once the process exits, on its closed standard input", async () => {
+    expect.hasAssertions();
+    const done = await finished(['sh', '-c', TSGO_GONE, 'tsgo-gone', process.execPath, childScript()], { cwd: fromRoot() });
+    expect([done.status, done.stdout.trim()]).toStrictEqual([EXIT_SUCCESS, 'gone 1']);
   });
 });
 
