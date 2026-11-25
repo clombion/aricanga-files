@@ -1,5 +1,6 @@
 /** The readers of each tool's configuration: every glob it holds, as an entry the `tool-exemptions` check matches. */
 
+import { coverageOf, globsOf, projectsOf, testOf } from './gate-config.ts';
 import { object } from '#lib/config.ts';
 
 /**
@@ -49,26 +50,20 @@ function oxlintEntries(config: unknown): Entry[] {
 }
 
 /**
- * The gate's Vitest config: coverage include and exclude, and each project's include.
+ * The gate's Vitest config, read through the gate config's own readers (`gate-config.ts`): coverage
+ * include and exclude, and each project's include.
  *
  * @param {unknown} config - The config.
  * @returns {Entry[]} The gate's Vitest config: coverage include and exclude, and each project's include.
  */
 function vitestEntries(config: unknown): Entry[] {
-  const testOptions = object(object(config, 'vitest config')['test'] ?? {}, 'test');
-  const coverage = object(testOptions['coverage'] ?? {}, 'coverage');
-  const projects = testOptions['projects'] === undefined ? [] : testOptions['projects'];
-  if (!Array.isArray(projects)) {
-    throw new TypeError('vitest projects is not a list');
-  }
+  const test = testOf(object(config, 'vitest config'));
+  const coverage = coverageOf(test);
   return [
-    ...strings(coverage['include'], 'coverage.include').map((glob) => ({ glob, tool: 'vitest coverage.include' })),
-    ...strings(coverage['exclude'], 'coverage.exclude').map((glob) => ({ glob, tool: 'vitest coverage.exclude' })),
-    ...projects.flatMap((project: unknown, index) =>
-      strings(object(object(project, `project ${index}`)['test'] ?? {}, 'test')['include'], 'include').map((glob) => ({
-        glob,
-        tool: `vitest projects[${index}].include`,
-      })),
+    ...globsOf(coverage, 'include').map((glob) => ({ glob, tool: 'vitest coverage.include' })),
+    ...globsOf(coverage, 'exclude').map((glob) => ({ glob, tool: 'vitest coverage.exclude' })),
+    ...projectsOf(test).flatMap((project, index) =>
+      globsOf(project, 'include').map((glob) => ({ glob, tool: `vitest projects[${index}].include` })),
     ),
   ];
 }

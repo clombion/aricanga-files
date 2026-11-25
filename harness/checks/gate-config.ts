@@ -1,7 +1,8 @@
 /**
- * The gate's Vitest config as the checks read it: `vitest.gate.config.ts` loaded from the root and
- * read as plain values, its `test` and `test.coverage` sections each an object, and what its coverage
- * reaches.
+ * The gate's Vitest config as the checks read it: `vitest.gate.config.ts` loaded from the root by
+ * `gateConfig` and read as plain values by `testOf`, `coverageOf`, `projectsOf` and `globsOf`, which
+ * refuse a section or list the config does not hold; and what its coverage reaches. Every check reads
+ * the config through these.
  */
 
 import { list, object, stringOf } from '#lib/config.ts';
@@ -25,13 +26,43 @@ async function gateConfig(): Promise<Section> {
 }
 
 /**
+ * A Vitest config's `test` section.
+ *
+ * @param {Section} config - The config.
+ * @returns {Section} The section's fields.
+ */
+function testOf(config: Section): Section {
+  return object(config['test'], 'test');
+}
+
+/**
+ * A `test` section's `coverage` section.
+ *
+ * @param {Section} test - The `test` section.
+ * @returns {Section} The section's fields.
+ */
+function coverageOf(test: Section): Section {
+  return object(test['coverage'], 'coverage');
+}
+
+/**
+ * A `test` section's projects, each project's own `test` section.
+ *
+ * @param {Section} test - The `test` section.
+ * @returns {readonly Section[]} Each project's `test` section, in order.
+ */
+function projectsOf(test: Section): readonly Section[] {
+  return list(test['projects'], 'projects').map((project) => object(object(project, 'a project')['test'], 'a project test'));
+}
+
+/**
  * The gate config's `test` section.
  *
  * @returns {Promise<Section>} The section's fields.
  */
 async function gateTest(): Promise<Section> {
   const config = await gateConfig();
-  return object(config['test'] ?? {}, 'test');
+  return testOf(config);
 }
 
 /**
@@ -41,7 +72,7 @@ async function gateTest(): Promise<Section> {
  */
 async function gateCoverage(): Promise<Section> {
   const test = await gateTest();
-  return object(test['coverage'] ?? {}, 'coverage');
+  return coverageOf(test);
 }
 
 /**
@@ -91,4 +122,4 @@ async function coverageReached(files: readonly string[]): Promise<ReadonlySet<st
   return new Set(files.filter((path) => !isProduction(held, path) || path.startsWith(HARNESS_CHECKS) || covered(path)));
 }
 
-export { coverageReached, gateCoverage, gateTest, globsOf, testsOutsideCoverage };
+export { coverageOf, coverageReached, gateConfig, gateCoverage, gateTest, globsOf, projectsOf, testOf, testsOutsideCoverage };

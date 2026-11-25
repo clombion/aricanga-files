@@ -9,14 +9,14 @@
  * its reason, and a declared policy that starts matching listed files fails as stale.
  */
 
+import { ConfigError, parsed } from '#lib/config.ts';
 import { Exemptions, site } from '#lib/exemptions.ts';
 import { dead, matches } from '#lib/globs.ts';
 import { describe, expect, test } from 'vitest';
 import { knipEntries, oxfmtEntries, oxlintEntries, stylelintEntries, vitestEntries } from './tool-exemptions.readers.ts';
-import { object, parsed } from '#lib/config.ts';
 import { textOf, tracked } from '#lib/source-files.ts';
 import type { Entry } from './tool-exemptions.readers.ts';
-import { fromRoot } from '#lib/paths.ts';
+import { gateConfig } from './gate-config.ts';
 
 const HARNESS_ID = 'tool-exemptions';
 
@@ -53,9 +53,8 @@ async function listedJson(path: string): Promise<unknown> {
 }
 
 async function repoEntries(): Promise<Entry[]> {
-  const vitestModule: unknown = await import(fromRoot('vitest.gate.config.ts'));
-  const vitest = object(vitestModule, 'vitest.gate.config.ts')['default'];
-  const [oxfmt, knip, stylelint, oxlint, listed] = await Promise.all([
+  const [vitest, oxfmt, knip, stylelint, oxlint, listed] = await Promise.all([
+    gateConfig(),
     listedJson('.oxfmtrc.json'),
     listedJson('knip.json'),
     listedJson('.stylelintrc.json'),
@@ -120,6 +119,13 @@ describe('the readers', () => {
       '**/*.spec.ts',
       'harness/checks/**/*.test.ts',
     ]);
+  });
+
+  test("refuses a gate config with no projects, as every reader of the gate's config does", () => {
+    expect.hasAssertions();
+    expect(() => vitestEntries({ test: { coverage: { exclude: [], include: [] } } })).toThrow(
+      new ConfigError('projects is not a list: undefined'),
+    );
   });
 });
 

@@ -2,8 +2,7 @@
 
 import { VITEST_TESTS, coverageIncludes, testIncludes } from '#lib/test-globs.ts';
 import { describe, expect, test } from 'vitest';
-import { gateTest, globsOf } from './gate-config.ts';
-import { list, object } from '#lib/config.ts';
+import { gateTest, globsOf, projectsOf } from './gate-config.ts';
 import type { Population } from '#lib/scope.ts';
 import { matches } from '#lib/globs.ts';
 import { plantedPopulation } from '#lib/scan-hooks.ts';
@@ -83,9 +82,7 @@ describe('the repository', () => {
   test('collects every held Vitest test in a project of the gate config', async () => {
     expect.hasAssertions();
     const [files, settings] = await Promise.all([typescriptFiles(), gateTest()]);
-    const includes = list(settings['projects'], 'projects').flatMap((project) =>
-      globsOf(object(object(project, 'a project')['test'], 'a project test'), 'include'),
-    );
+    const includes = projectsOf(settings).flatMap((project) => globsOf(project, 'include'));
     expect(uncollected(files, includes)).toStrictEqual([]);
   });
 });
