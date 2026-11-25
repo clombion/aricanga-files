@@ -28,7 +28,7 @@ async function namedPackages(): Promise<readonly (readonly [string, string])[]> 
   const texts = await textsOf(listed.filter((path) => path.endsWith('package.json') && !path.includes('node_modules/')));
   return texts.flatMap(([path, text]: readonly [string, string]) => {
     const { name } = object(parsed(text, path), path);
-    return typeof name === 'string' ? [[name, dirname(path)] as const] : [];
+    return name === undefined ? [] : [[stringOf(name, `${path} name`), dirname(path)] as const];
   });
 }
 

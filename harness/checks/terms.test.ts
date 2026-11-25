@@ -11,7 +11,7 @@ import { Exemptions, Prefixes, site } from '#lib/exemptions.ts';
 import type { Prose, Span } from '#lib/docs.ts';
 import { currentSpans, currentText } from '#lib/docs.ts';
 import { describe, expect, test } from 'vitest';
-import { object } from '#lib/config.ts';
+import { object, stringRecord } from '#lib/config.ts';
 import { parse as parseToml } from '@iarna/toml';
 import { textOf } from '#lib/source-files.ts';
 
@@ -30,17 +30,6 @@ interface Terms {
   readonly refusedInCode: ReadonlyMap<string, string>;
 }
 
-function strings(table: unknown, what: string): ReadonlyMap<string, string> {
-  return new Map(
-    Object.entries(object(table ?? {}, what)).map(([name, value]: readonly [string, unknown]) => {
-      if (typeof value !== 'string') {
-        throw new TypeError(`${what}.${name} is not a string`);
-      }
-      return [name, value] as const;
-    }),
-  );
-}
-
 /**
  * Read a parsed terms file, refusing a retired term without its replacement.
  *
@@ -49,7 +38,7 @@ function strings(table: unknown, what: string): ReadonlyMap<string, string> {
  */
 function termsOf(text: string): Terms {
   const data = object(parseToml(text), 'terms');
-  const retired = strings(data['retired'], 'retired');
+  const retired = new Map(Object.entries(stringRecord(data['retired'] ?? {}, 'retired')));
   const blank = [...retired]
     .filter(([, replacement]: readonly [string, string]) => replacement.trim() === '')
     .map(([term]: readonly [string, string]) => term);
@@ -57,8 +46,8 @@ function termsOf(text: string): Terms {
     throw new TypeError(`retired terms without a replacement: ${JSON.stringify(blank)}`);
   }
   return {
-    refused: strings(data['refused'], 'refused'),
-    refusedInCode: strings(data['refused-in-code'], 'refused-in-code'),
+    refused: new Map(Object.entries(stringRecord(data['refused'] ?? {}, 'refused'))),
+    refusedInCode: new Map(Object.entries(stringRecord(data['refused-in-code'] ?? {}, 'refused-in-code'))),
     retired,
   };
 }

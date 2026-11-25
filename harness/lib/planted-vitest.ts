@@ -4,7 +4,7 @@
  * A guard is proven by what this run reports for each planted test.
  */
 
-import { list, object, parsed, stringOf } from './config.ts';
+import { list, object, parsed, stringOf, strings } from './config.ts';
 import { Project } from './tools.ts';
 
 /** The setup module the gate's Vitest config loads for every test. */
@@ -42,9 +42,7 @@ function outcomesOf(reportText: string): ReadonlyMap<string, Outcome> {
     assertions.map((assertion) => {
       const fields = object(assertion, 'a test result');
       const outcome: Outcome = {
-        failure: list(fields['failureMessages'], "a test's failure messages")
-          .map((message) => stringOf(message, "a test's failure message"))
-          .join('\n'),
+        failure: strings(fields['failureMessages'], "a test's failure messages").join('\n'),
         status: stringOf(fields['status'], "a test's status"),
       };
       return [stringOf(fields['fullName'], "a test's full name"), outcome] as const;

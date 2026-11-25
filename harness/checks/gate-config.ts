@@ -5,7 +5,7 @@
  * the config through these.
  */
 
-import { list, object, stringOf } from '#lib/config.ts';
+import { list, object, strings } from '#lib/config.ts';
 import { HARNESS_CHECKS } from '#lib/test-globs.ts';
 import { fromRoot } from '#lib/paths.ts';
 import { isProduction } from '#lib/checker.ts';
@@ -83,7 +83,7 @@ async function gateCoverage(): Promise<Section> {
  * @returns {readonly string[]} Its globs.
  */
 function globsOf(section: Section, field: string): readonly string[] {
-  return list(section[field], field).map((glob) => stringOf(glob, `a glob of ${field}`));
+  return strings(section[field], field);
 }
 
 /**

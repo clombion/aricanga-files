@@ -1,24 +1,7 @@
 /** The readers of each tool's configuration: every glob it holds, as an entry the `tool-exemptions` check matches. */
 
+import { absentAs, list, object, strings } from '#lib/config.ts';
 import { coverageOf, globsOf, projectsOf, testOf } from './gate-config.ts';
-import { object } from '#lib/config.ts';
-
-/**
- * A config field read as a list of strings; an absent field is an empty list.
- *
- * @param {unknown} value - The field's value.
- * @param {string} what - The field, for the error.
- * @returns {string[]} The field's strings.
- */
-function strings(value: unknown, what: string): string[] {
-  if (value === undefined) {
-    return [];
-  }
-  if (!Array.isArray(value) || !value.every((item): item is string => typeof item === 'string')) {
-    throw new TypeError(`${what} is not a list of strings`);
-  }
-  return value;
-}
 
 /** A glob of a tool's configuration, with where it was read. */
 interface Entry {
@@ -34,14 +17,11 @@ interface Entry {
  */
 function oxlintEntries(config: unknown): Entry[] {
   const fields = object(config, '.oxlintrc.json');
-  const overrides = fields['overrides'] === undefined ? [] : fields['overrides'];
-  if (!Array.isArray(overrides)) {
-    throw new TypeError('.oxlintrc.json overrides is not a list');
-  }
+  const overrides = list(absentAs(fields['overrides'], []), '.oxlintrc.json overrides');
   return [
-    ...strings(fields['ignorePatterns'], 'ignorePatterns').map((glob) => ({ glob, tool: 'oxlint ignorePatterns' })),
+    ...strings(absentAs(fields['ignorePatterns'], []), 'ignorePatterns').map((glob) => ({ glob, tool: 'oxlint ignorePatterns' })),
     ...overrides.flatMap((override: unknown, index) =>
-      strings(object(override, `override ${index}`)['files'], `override ${index} files`).map((glob) => ({
+      strings(absentAs(object(override, `override ${index}`)['files'], []), `override ${index} files`).map((glob) => ({
         glob,
         tool: `oxlint overrides[${index}]`,
       })),
@@ -75,7 +55,7 @@ function vitestEntries(config: unknown): Entry[] {
  * @returns {Entry[]} The ignore patterns of `oxfmt`.
  */
 function oxfmtEntries(config: unknown): Entry[] {
-  return strings(object(config, '.oxfmtrc.json')['ignorePatterns'], 'ignorePatterns').map((glob) => ({
+  return strings(absentAs(object(config, '.oxfmtrc.json')['ignorePatterns'], []), 'ignorePatterns').map((glob) => ({
     glob,
     tool: 'oxfmt ignorePatterns',
   }));
@@ -91,9 +71,9 @@ function knipEntries(config: unknown): Entry[] {
   const fields = object(config, 'knip.json');
   const workspaces = object(fields['workspaces'] ?? {}, 'workspaces');
   return [
-    ...strings(fields['ignore'], 'ignore').map((glob) => ({ glob, tool: 'knip ignore' })),
+    ...strings(absentAs(fields['ignore'], []), 'ignore').map((glob) => ({ glob, tool: 'knip ignore' })),
     ...Object.entries(workspaces).flatMap(([workspace, settings]: readonly [string, unknown]) =>
-      strings(object(settings, workspace)['ignore'], `${workspace}.ignore`).map((glob) => ({
+      strings(absentAs(object(settings, workspace)['ignore'], []), `${workspace}.ignore`).map((glob) => ({
         glob: workspace === '.' ? glob : `${workspace}/${glob}`,
         tool: `knip workspaces[${workspace}].ignore`,
       })),
@@ -110,7 +90,7 @@ function knipEntries(config: unknown): Entry[] {
  */
 function stylelintEntries(config: unknown, ignoreFile: string): Entry[] {
   return [
-    ...strings(object(config, '.stylelintrc.json')['ignoreFiles'], 'ignoreFiles').map((glob) => ({
+    ...strings(absentAs(object(config, '.stylelintrc.json')['ignoreFiles'], []), 'ignoreFiles').map((glob) => ({
       glob,
       tool: 'stylelint ignoreFiles',
     })),

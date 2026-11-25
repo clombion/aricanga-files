@@ -91,6 +91,13 @@ describe('the reader, on planted texts', () => {
 });
 
 describe('the manifest reading, on planted manifests', () => {
+  test('reads a bundled group of true as every dependency and of false as none, none of them twice', () => {
+    expect.hasAssertions();
+    expect(
+      [true, false].map((bundled) => duplicateDependencies({ bundleDependencies: bundled, dependencies: { alpha: '1' } })),
+    ).toStrictEqual([[], []]);
+  });
+
   test('finds a package in two conflicting groups, and one bundled twice', () => {
     expect.hasAssertions();
     const manifest = {

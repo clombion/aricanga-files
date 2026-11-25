@@ -121,6 +121,11 @@ describe('the readers', () => {
     ]);
   });
 
+  test('refuses a glob that is not a string, naming its place', () => {
+    expect.hasAssertions();
+    expect(() => oxlintEntries({ ignorePatterns: ['docs/**', true] })).toThrow(new ConfigError('ignorePatterns[1] is not a string: true'));
+  });
+
   test("refuses a gate config with no projects, as every reader of the gate's config does", () => {
     expect.hasAssertions();
     expect(() => vitestEntries({ test: { coverage: { exclude: [], include: [] } } })).toThrow(
@@ -152,6 +157,19 @@ describe('the readers of the other tools', () => {
     expect(policies.unexemptedBy(unmatched, (entry) => site(entry.tool, entry.glob))).toStrictEqual([]);
     const nowMatching = deadEntries([{ glob: '**/dist/**', tool: 'oxlint ignorePatterns' }], ['a/dist/x.js']);
     expect(() => policies.unexemptedBy(nowMatching, (entry) => site(entry.tool, entry.glob))).toThrow('stale');
+  });
+});
+
+describe('a tool config', () => {
+  test('refuses a field written as JSON null where a list is read: null is not an absent field', () => {
+    expect.hasAssertions();
+    expect(() => oxlintEntries(parsed('{"overrides":null}', 'a planted config'))).toThrow(
+      new ConfigError('.oxlintrc.json overrides is not a list: null'),
+    );
+    expect(() => oxfmtEntries(parsed('{"ignorePatterns":null}', 'a planted config'))).toThrow(
+      new ConfigError('ignorePatterns is not a list: null'),
+    );
+    expect(() => knipEntries(parsed('{"ignore":null}', 'a planted config'))).toThrow(new ConfigError('ignore is not a list: null'));
   });
 });
 

@@ -12,7 +12,7 @@
  * renders the table of `harness.md`.
  */
 
-import { ConfigError, object, stringOf } from './config.ts';
+import { ConfigError, absentAs, object, stringOf, stringRecord } from './config.ts';
 import { byCodeUnit, isEmpty } from './lists.ts';
 import { importerOf, manifestOf } from './package-dirs.ts';
 import type { Dir } from './package-dirs.ts';
@@ -63,24 +63,6 @@ const LOCK_GROUPS: readonly string[] = ['optionalDependencies', 'dependencies', 
 const PEERS = /\(.*$/u;
 
 /**
- * A manifest field's string entries, or a refusal naming the first that is not a string.
- *
- * @param {unknown} value - The field's value.
- * @param {string} what - What it is, for the refusal.
- * @returns {Readonly<Record<string, string>>} The entries.
- */
-function strings(value: unknown, what: string): Readonly<Record<string, string>> {
-  return Object.fromEntries(
-    Object.entries(object(value ?? {}, what)).map(([key, entry]: readonly [string, unknown]) => {
-      if (typeof entry !== 'string') {
-        throw new ConfigError(`${what}.${key} is not a string: ${JSON.stringify(entry)}`);
-      }
-      return [key, entry] as const;
-    }),
-  );
-}
-
-/**
  * A lockfile's text read as YAML's failsafe schema, so every key and version is the string pnpm
  * wrote (`1.0` stays `1.0`), refusing text that is not YAML by naming the lockfile.
  *
@@ -124,7 +106,7 @@ function lockedVersions(importer: string, value: unknown): ReadonlyMap<string, s
   const fields = object(value, `${LOCKFILE} ${importer}`);
   return new Map(
     LOCK_GROUPS.flatMap((group) =>
-      Object.entries(object(Object.hasOwn(fields, group) ? fields[group] : {}, `${LOCKFILE} ${importer} ${group}`)).flatMap(
+      Object.entries(object(absentAs(fields[group], {}), `${LOCKFILE} ${importer} ${group}`)).flatMap(
         ([name, entry]: readonly [string, unknown]) => {
           const where = `${LOCKFILE} ${importer} ${group} ${name}`;
           const { version } = object(entry, where);
@@ -189,7 +171,7 @@ function manifestPins(entry: DirManifest, lock: Lock): readonly Found[] {
   const groups = dir === '' ? ['dependencies', 'devDependencies'] : ['devDependencies'];
   const versions = lock.get(importerOf(dir));
   const dependencies = groups.flatMap((group) =>
-    Object.entries(strings(fields[group], `${manifestOf(dir)} ${group}`))
+    Object.entries(stringRecord(absentAs(fields[group], {}), `${manifestOf(dir)} ${group}`))
       .filter(([, specifier]: readonly [string, string]) => !specifier.startsWith(WORKSPACE))
       .map(([tool]: readonly [string, string]): Found => ({
         file: LOCKFILE,

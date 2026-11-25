@@ -2,11 +2,12 @@
 
 import { describe, expect, test } from 'vitest';
 import { ignoreEntries, strictnessProblems } from '#lib/deadcode.ts';
+import { ConfigError } from '#lib/config.ts';
 
 describe("knip's configuration", () => {
   test('refuses an ignore entry that is not a list of strings, naming it', () => {
     expect.hasAssertions();
-    expect(() => ignoreEntries({ ignoreFiles: 'planted/**' })).toThrow('ignoreFiles is not a list of strings');
+    expect(() => ignoreEntries({ ignoreFiles: 'planted/**' })).toThrow(new ConfigError('ignoreFiles is not a list: "planted/**"'));
   });
 
   test('with no rules sets no issue type at error', () => {

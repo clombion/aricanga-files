@@ -1,6 +1,6 @@
 /** The `json-files` check's reading of a package manifest: a dependency listed twice across the groups that conflict. */
 
-import { list, object, stringOf } from '#lib/config.ts';
+import { object, strings } from '#lib/config.ts';
 
 /** The pairs of dependency groups a package may not appear in both of, as npm and pnpm resolve them. */
 const CONFLICTS: readonly (readonly [string, string])[] = [
@@ -10,7 +10,7 @@ const CONFLICTS: readonly (readonly [string, string])[] = [
   ['optionalDependencies', 'peerDependencies'],
 ];
 
-/** The groups a manifest lists as arrays of names; each must name a package once. */
+/** The groups a manifest lists as arrays of names, each naming a package once, or as a boolean: `true` bundles every dependency, `false` none, each once. */
 const BUNDLED: readonly string[] = ['bundleDependencies', 'bundledDependencies'];
 
 /**
@@ -40,7 +40,7 @@ function duplicateDependencies(parsed: unknown): readonly string[] {
   });
   const bundled = BUNDLED.flatMap((group) => {
     const listed: unknown = Object.hasOwn(manifest, group) ? manifest[group] : [];
-    const names = list(listed, `package.json ${group}`).map((name) => stringOf(name, `a name of package.json ${group}`));
+    const names = typeof listed === 'boolean' ? [] : strings(listed, `package.json ${group}`);
     return names.filter((name, index) => names.indexOf(name) !== index).map((name) => `${name} is listed twice in ${group}`);
   });
   return [...across, ...bundled];

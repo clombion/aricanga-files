@@ -12,7 +12,7 @@
  * `aricanga` is not read.
  */
 
-import { ConfigError, object, parsed } from './config.ts';
+import { ConfigError, absentAs, object, parsed } from './config.ts';
 import { ROLE_WORDS, isRole } from './roles.ts';
 import type { Member } from './scope.ts';
 import type { MemberDir } from './package-dirs.ts';
@@ -90,7 +90,7 @@ async function fieldsOf(path: string, reading: Promise<string>): Promise<Fields>
  */
 async function declarationOf(path: string, fields: Fields): Promise<Fields> {
   const declared = await Promise.resolve(fields['aricanga']);
-  return declared === undefined ? {} : object(declared, `${path} aricanga`);
+  return object(absentAs(declared, {}), `${path} aricanga`);
 }
 
 /**

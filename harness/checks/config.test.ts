@@ -11,7 +11,7 @@ describe('the task reader', () => {
 
   test('refuses a script that is not a string, naming it', () => {
     expect.hasAssertions();
-    expect(() => tasks({ scripts: { lint: ['oxlint'] } })).toThrow(new ConfigError('script lint is not a string'));
+    expect(() => tasks({ scripts: { lint: ['oxlint'] } })).toThrow(new ConfigError('scripts.lint is not a string: ["oxlint"]'));
   });
 
   test('refuses a closure through a task that does not exist, naming it', () => {
@@ -29,7 +29,7 @@ describe('the hook reader', () => {
   test('refuses a command whose run is not a string, naming it', () => {
     expect.hasAssertions();
     expect(() => hooks({ 'pre-commit': { commands: { gate: { run: true } } } })).toThrow(
-      new ConfigError('pre-commit.gate.run is not a string'),
+      new ConfigError('pre-commit.gate.run is not a string: true'),
     );
   });
 });

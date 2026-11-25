@@ -4,6 +4,7 @@
  */
 
 import type { Expression, SourceFile } from '#lib/ts-source.ts';
+import { absentAs, object } from '#lib/config.ts';
 import {
   consultedNames,
   consultingParameters,
@@ -16,7 +17,6 @@ import {
 import { dirname, join, normalize } from 'node:path/posix';
 import { importsFrom, parse } from '#lib/ts-source.ts';
 import { KINDS } from '#lib/exemptions.ts';
-import { object } from '#lib/config.ts';
 import { population } from '#lib/scope.ts';
 
 const UNDECLARED = 'a literal collection consulted as a list: declare it';
@@ -36,7 +36,7 @@ interface Finding {
  */
 async function subpathPatterns(): Promise<readonly (readonly [string, string])[]> {
   const held = await population();
-  const imports = object(held.rootManifest['imports'] ?? {}, 'imports');
+  const imports = object(absentAs(held.rootManifest['imports'], {}), 'imports');
   return Object.entries(imports).flatMap(([pattern, target]: readonly [string, unknown]) =>
     typeof target === 'string' ? [[pattern, target] as const] : [],
   );

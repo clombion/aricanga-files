@@ -7,7 +7,7 @@
  */
 
 import { bin, finished } from './tools.ts';
-import { object, parsed } from './config.ts';
+import { object, parsed, strings } from './config.ts';
 import type { Finished } from './process.ts';
 import { present } from './present.ts';
 import { repoTasks } from './repo-tasks.ts';
@@ -40,20 +40,6 @@ async function deadcodeRuns(): Promise<readonly (readonly string[])[]> {
 async function knip(cwd: string, args: readonly string[]): Promise<Finished> {
   const done = await finished([bin('knip'), ...args, '--no-progress'], { cwd });
   return done;
-}
-
-/**
- * A list of strings, or a refusal naming what it was.
- *
- * @param {unknown} value - The value to read.
- * @param {string} what - What it is, for the refusal.
- * @returns {readonly string[]} The strings.
- */
-function strings(value: unknown, what: string): readonly string[] {
-  if (!Array.isArray(value) || !value.every((item) => typeof item === 'string')) {
-    throw new Error(`${what} is not a list of strings`);
-  }
-  return value.filter((item) => typeof item === 'string');
 }
 
 /**
