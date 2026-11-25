@@ -66,7 +66,7 @@ const TURNED_OFF = Exemptions.grouped({
     'solid/no-proxy-apis',
     'solid/prefer-classlist',
   ],
-  'oxlint, stylelint, Vite, Playwright and Vitest load the plugin and config modules through their default export; the override holds only those':
+  'oxlint, knip, stylelint, Vite, Playwright and Vitest load the plugin and config modules through their default export; the override holds only those (the root modules anchored at the root)':
     ['import/no-default-export'],
   "restates the gate config's one testTimeout, which the vitest-settings check holds": ['vitest/require-test-timeout'],
   "the TypeScript API exposes a symbol's kind only as bit flags; the override holds only harness/lib/checker.ts": ['eslint/no-bitwise'],

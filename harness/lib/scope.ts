@@ -218,7 +218,8 @@ const populations = perRoot(computed);
 
 /**
  * The population of a checkout: one per root as spelled within this module's evaluation; a failure
- * leaves the cache, so the next call computes again.
+ * leaves the cache, so the next call computes again (a root config module awaiting it at its top
+ * level is another matter: the module cache keeps its failure).
  *
  * @param {string} root - The checkout; the repository by default.
  * @returns {Promise<Population>} The population.

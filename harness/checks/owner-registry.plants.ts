@@ -8,7 +8,7 @@ import { site } from '#lib/exemptions.ts';
 /** A member is held by exactly this many roots of each rule. */
 const ONCE = 1;
 
-/** The planted members the plants sit in: a kernel member of each kernel role, and the literal roots' members. */
+/** The planted members the plants sit in: a member of each kernel role, a product member and a test-infrastructure member, so every tier's roots are planted. */
 const MEMBERS: readonly PlantedMember[] = [
   ['experiences/sandbox/', 'experience'],
   ['packages/characterisation/', 'test-infrastructure'],

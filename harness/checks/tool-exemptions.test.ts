@@ -1,10 +1,11 @@
 /**
  * Every tool exemption is live: each ignore, override, include and exclude glob matches a listed file.
  *
- * The globs read: oxlint's `ignorePatterns` and each override's `files`; the gate's Vitest config,
- * its coverage `include` and `exclude` and each project's `include`; and, once their configuration exists, oxfmt's
- * `ignorePatterns` and stylelint's `ignoreFiles`
- * and `.stylelintignore`. A glob that matches nothing either names a path that is gone or a policy
+ * The globs read: oxlint's `ignorePatterns` and each override's `files`, each as its field reads it
+ * (`fieldMatches`, held against oxlint itself); the gate's Vitest config,
+ * its coverage `include` and `exclude` and each project's `include`; and, where their configuration is
+ * listed, oxfmt's `ignorePatterns`, stylelint's `ignoreFiles` and `.stylelintignore`. knip's
+ * configuration writes no `ignore` (`KnipConfig`). A glob that matches nothing either names a path that is gone or a policy
  * for files that do not exist yet: the first is deleted, the second is declared in `POLICIES` with
  * its reason, and a declared policy that starts matching listed files fails as stale.
  */

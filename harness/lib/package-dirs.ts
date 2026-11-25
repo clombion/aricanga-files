@@ -61,8 +61,9 @@ function dirOfImporter(importer: string): Dir {
 }
 
 /**
- * The lookup of the item whose root holds a path, the nearest when roots nest; every reader of "the
- * root holding a path" asks it. The items are ordered once, longest root first, so every lookup
+ * The lookup of the item whose root holds a path, the nearest when roots nest; every in-process reader
+ * of "the root holding a path" asks it. A tool config's member globs (`<dir>**`) cannot: they assume
+ * no member is nested in another, which #58 1c refuses. The items are ordered once, longest root first, so every lookup
  * reads them in that order.
  *
  * @param {readonly Item[]} items - The items.

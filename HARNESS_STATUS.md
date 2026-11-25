@@ -38,6 +38,7 @@ Whether this project implements each check of [harness.md](harness.md). A status
 | isolation | A test that leaves a timer pending fails, and the next test starts clean | implemented | `harness/checks/isolation.test.ts` | | |
 | json-files | Every held JSON file is strict JSON a reader cannot misread, and no manifest lists a dependency twice | implemented | `harness/checks/json-files.test.ts` | | |
 | layout | Layout holds at phone and desktop widths, with no shift when a control toggles and reflow at 320 px | planned | | | Phase 3 Step 3: the phone chrome is the first layout |
+| knip-config | knip's configuration is the population's, and knip reports under it what a member's files hold | implemented | `harness/checks/knip-config.test.ts` | | |
 | lint-settings | oxlint fails each planted violation of a rule the harness rests on | implemented | `harness/checks/lint-settings.test.ts` | | |
 | manifest-reads | Only the population reads a `package.json` for its fields | implemented | `harness/checks/manifest-reads.test.ts` | | |
 | meta-readers | Every contract field is read, through a named function | planned | | | the census layer of closedworld |
@@ -46,6 +47,7 @@ Whether this project implements each check of [harness.md](harness.md). A status
 | node-floor | The Node running the suite meets the declared floor | implemented | `harness/checks/node-floor.test.ts` | | |
 | one-claims | Every claim of a single owner is registered and holds | implemented | `harness/checks/one-claims.test.ts` | | |
 | owner-registry | Each guarded API is used only by its owner | implemented | `harness/checks/owner-registry.test.ts` | | |
+| oxlint-config | oxlint's configuration is the population's, and oxlint lints exactly the held lintable files | implemented | `harness/checks/oxlint-config.test.ts` | | |
 | owners-flat | Solid's owners and roots stay flat over three redraws | planned | | | Phase 3 Step 3: the first mounted experience |
 | part-failure | A throwing Part is reported once and the rest of the page stays | planned | | | Phase 3 Step 3; ADR-0008's failure model is characterised, the per-Part tests come with the Parts |
 | population | Every workspace package pnpm lists whose manifest git lists, less the POC, is a member with its role | implemented | `harness/checks/scope.test.ts` | | |

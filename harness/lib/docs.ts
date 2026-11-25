@@ -2,7 +2,7 @@
  * The one reader of the repository's prose: Markdown structure, and the comments of code.
  *
  * "Current text" is what describes the project as it is: the held Markdown files and those under
- * the doc roots of `scope.ts`, except the history files; the comments of every held TypeScript or
+ * the roadmap (`ROADMAP`), except the history files; the comments of every held TypeScript or
  * JavaScript file (read through `ts-source.ts`, so a string holding `//` is never a comment); the
  * comments of held stylesheets; and the full-line comments of held TOML and YAML. History files
  * record what happened and are left out.

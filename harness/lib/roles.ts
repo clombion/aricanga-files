@@ -1,7 +1,8 @@
 /**
  * The roles a workspace package declares in its manifest (`"aricanga": { "role": … }`): a closed
  * vocabulary, each word with its tier. A list that varies by kind of package reads the population's
- * selection of a tier (`harness/lib/scope.ts`), never a path.
+ * selection (`harness/lib/scope.ts`: the members that ship and the test infrastructure, parted by
+ * their tier's `ships`; each tier's members, for a reader total over the tiers), never a path.
  */
 
 import { Vocabulary } from './exemptions.ts';

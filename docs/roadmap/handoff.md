@@ -39,8 +39,10 @@ them is missing from the phase branch.
   strictest, each setting proven by a plant. The harness holds its members by rule, not by list
   (#58 step 1a): every workspace package pnpm lists whose manifest git lists, less the POC, each
   declaring its role in its manifest (`harness/lib/scope.ts`, `harness/lib/roles.ts`); the owner
-  rules' kernel, the contracts, the production projects and the gate's Vitest include and coverage
-  derive from it. Steps 1b, 1c, 2 and 3 of #58 remain; AGENTS.md names the lists still kept by hand.
+  rules' roots, the contracts, the production projects, the gate's Vitest include and coverage,
+  oxlint's and knip's configurations (`oxlint.config.ts`, `knip.config.ts`), the current Markdown and
+  the build check's apps derive from it (steps 1a and 1b). Steps 1c, 2 and 3 of #58 remain;
+  AGENTS.md names the list still kept by hand.
 
 ## The lint configuration and what it forces
 

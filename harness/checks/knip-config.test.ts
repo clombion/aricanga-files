@@ -1,5 +1,7 @@
 /**
- * Knip's configuration over a population: each member a workspace whose project is every top-level
+ * Knip's configuration gives each member a workspace of its own files, and knip reports an orphan under it.
+ *
+ * Each member a workspace whose project is every top-level
  * directory and root module the listing gives it, its sources marked production where its role ships,
  * the POC ignored; and knip, run under the configuration of a planted population, reports an orphan
  * in a member's test support.

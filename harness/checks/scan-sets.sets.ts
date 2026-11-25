@@ -1,4 +1,4 @@
-/** The scan sets of the `scan-sets` check: the files each tool reaches, read from the tool itself. */
+/** The scan sets of the `scan-sets` check: the files each tool reaches, read from the tool where it reports them, and knip's from its loaded configuration's globs (knip reports no project list; 1b plan D15). */
 
 import type { Dir, MemberDir } from '#lib/package-dirs.ts';
 import { Project, finished } from '#lib/tools.ts';

@@ -1,9 +1,14 @@
 /**
- * The gate's test globs: which modules a test runner runs (`RUNNER_TESTS`: `VITEST_TESTS` and
- * `PLAYWRIGHT_SPECS`, read by `isRunnerTest` and the coverage exclude), the harness's own test project
- * (`HARNESS_CHECKS`), which tests the `rebuild` project collects and which sources coverage reads.
- * Every Vitest include is built from `VITEST_TESTS`. A member contributes a glob only where the listing
- * gives it a file to match, so no glob of a member is dead.
+ * The gate's test and tool-config globs: which modules a test runner runs (`RUNNER_TESTS`:
+ * `VITEST_TESTS` and `PLAYWRIGHT_SPECS`), which configs it loads (`RUNNER_CONFIGS`), the test
+ * directories (`TEST_DIRECTORIES`), the Vite configs (`VITE_CONFIG`), the harness's own library,
+ * tests and scripts (`HARNESS_LIB`, `HARNESS_CHECKS`, `HARNESS_TESTS`, `HARNESS_SCRIPTS`), which
+ * tests the `rebuild` project collects and which sources coverage reads. Their readers:
+ * `isProduction` (`checker.ts`), the coverage include and exclude, oxlint's Node env and
+ * default-export override, knip's entries and Playwright configs, the build check and the claims'
+ * probe roots. A member contributes a glob
+ * only where one of its own files matches it (`Population.filesOf`), so no glob of a member is dead.
+ * The member-scoped globs (`<dir>**`) assume no member is nested in another, which #58 1c refuses.
  */
 
 import type { Member, Population } from './scope.ts';
@@ -73,8 +78,9 @@ function isRunnerConfig(path: string): boolean {
 }
 
 /**
- * A member's glob, kept when one of the member's own listed files matches it: a file of a member
- * nested in it is the nested member's (`memberOf`), not this one's.
+ * A member's glob, kept when one of the member's own listed files matches it (`Population.filesOf`:
+ * a nested member's file is not this one's). The glob itself still matches a nested member's files;
+ * #58 1c refuses a nested member.
  *
  * @param {Population} population - The population.
  * @param {readonly Member[]} members - The members.
