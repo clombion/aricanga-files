@@ -7,7 +7,8 @@
  * be read (a file gone since pnpm listed it, text `JSON.parse` refuses though pnpm reads it, as with a
  * byte-order mark), each member's manifest that was read and holds an `aricanga` that is no object,
  * and each role word that names no role. It is a `ConfigError` (the boundary's class) when a manifest
- * cannot be read or holds such an `aricanga`, its `cause` an `AggregateError` of each one's error; a
+ * cannot be read or holds such an `aricanga`, its message naming each one's reason (oxlint's and knip's
+ * config loaders print a message and drop its cause) and its `cause` an `AggregateError` of each one's error; a
  * `PopulationError` when every manifest reads and a role is refused. The root declares no role: its
  * `aricanga` is not read.
  */
@@ -159,7 +160,7 @@ function declaredBy(listed: ListedPackage, manifest: Readonly<ReadManifest>): De
  * @returns {readonly string[]} Its line, or none.
  */
 function caseLine(refused: readonly Refused[], what: string): readonly string[] {
-  return isEmpty(refused) ? [] : [`the manifests ${refused.map((entry) => entry.path).join(', ')} ${what}`];
+  return isEmpty(refused) ? [] : [`the manifests ${refused.map((entry) => `${entry.path} (${String(entry.reason)})`).join(', ')} ${what}`];
 }
 
 /**
@@ -176,7 +177,7 @@ function refuseAll(refused: RefusedManifests, lines: readonly string[]): void {
     : [...lines, `a workspace package declares one of the roles of harness/lib/roles.ts (${ROLE_WORDS.join(', ')})`];
   const named = [...caseLine(refused.unread, 'cannot be read'), ...caseLine(refused.undeclared, 'hold an aricanga that is no object')];
   if (!isEmpty(named)) {
-    throw new ConfigError([...named, "each refusal is this one's cause", ...roles].join('; '), {
+    throw new ConfigError([...named, "each refusal is also this one's cause", ...roles].join('; '), {
       cause: new AggregateError(
         [...refused.unread, ...refused.undeclared].map((entry) => entry.reason),
         'each manifest refused',

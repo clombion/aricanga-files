@@ -1,6 +1,6 @@
 /** The population: pnpm's workspace packages whose manifests git lists, less the POC, each with its role. */
 
-import { BOM, causedRefusal, inWorkspaceFolder, listing, manifest, reader, refusalOf, withoutFile } from './scope.plants.ts';
+import { BOM, causedRefusal, headOf, inWorkspaceFolder, listing, manifest, reader, refusalOf, withoutFile } from './scope.plants.ts';
 import { LOCKFILE, lockOf } from '#lib/pins.ts';
 import { POC, population, populationOf } from '#lib/scope.ts';
 import { describe, expect, test } from 'vitest';
@@ -28,9 +28,6 @@ function missedImporters(held: Population, lockText: string): readonly string[] 
     .filter((dir) => dir !== '' && !POC.starts(dir) && !members.has(dir));
 }
 
-/** The fields a refusal's text leads with: its class, its source and its first words. */
-const REFUSAL_HEAD = 3;
-
 /**
  * The refusal of a one-member population whose manifest is `text`, with its first cause's head.
  *
@@ -44,7 +41,7 @@ async function refusalHead(text: string): Promise<readonly string[]> {
     workspace: listing(['packages/c/']),
   });
   const [refusal, causes] = await causedRefusal(computing);
-  return [refusal, ...causes.map((cause) => cause.split(':', REFUSAL_HEAD).join(':'))];
+  return [refusal, ...causes.map((cause) => headOf(cause))];
 }
 
 describe('a population', () => {
@@ -143,15 +140,15 @@ describe('a population refused', () => {
       'PopulationError: packages/a/package.json: aricanga.role is "sytem"; packages/b/package.json: aricanga.role is undefined; a workspace package declares one of the roles of harness/lib/roles.ts (experience, foundation, system, test-infrastructure, view)',
       [
         [
-          "ConfigError: the manifests packages/c/package.json cannot be read; each refusal is this one's cause",
+          "ConfigError: the manifests packages/c/package.json (ConfigError: packages/c/package.json is not JSON: SyntaxError) cannot be read; each refusal is also this one's cause",
           'ConfigError: packages/c/package.json is not JSON: SyntaxError',
         ],
         [
-          "ConfigError: the manifests packages/c/package.json hold an aricanga that is no object; each refusal is this one's cause",
+          'ConfigError: the manifests packages/c/package.json (ConfigError: packages/c/package.json aricanga is not an object: "system") hold an aricanga that is no object; each refusal is also this one\'s cause',
           'ConfigError: packages/c/package.json aricanga is not an object: "system"',
         ],
         [
-          "ConfigError: the manifests packages/c/package.json hold an aricanga that is no object; each refusal is this one's cause",
+          "ConfigError: the manifests packages/c/package.json (ConfigError: packages/c/package.json aricanga is not an object: null) hold an aricanga that is no object; each refusal is also this one's cause",
           'ConfigError: packages/c/package.json aricanga is not an object: null',
         ],
       ],
@@ -173,8 +170,8 @@ describe('a population whose manifests cannot be read', () => {
       workspace: listing(['packages/a/', 'x'], ['packages/b/'], ['packages/c/', 'x'], ['packages/d/']),
     });
     const [refusal, causes] = await causedRefusal(computing);
-    expect([refusal, causes.map((cause) => cause.split(':', REFUSAL_HEAD).join(':'))]).toStrictEqual([
-      'ConfigError: the manifests package.json, packages/a/package.json, packages/b/package.json cannot be read; the manifests packages/d/package.json hold an aricanga that is no object; each refusal is this one\'s cause; packages/c/package.json: aricanga.role is "sytem"; a workspace package declares one of the roles of harness/lib/roles.ts (experience, foundation, system, test-infrastructure, view)',
+    expect([refusal, causes.map((cause) => headOf(cause))]).toStrictEqual([
+      'ConfigError: the manifests package.json (ConfigError: package.json is not JSON: SyntaxError), packages/a/package.json (ConfigError: packages/a/package.json is not JSON: SyntaxError), packages/b/package.json (Error: ENOENT: no such file or directory, open \'packages/b/package.json\') cannot be read; the manifests packages/d/package.json (ConfigError: packages/d/package.json aricanga is not an object: "system") hold an aricanga that is no object; each refusal is also this one\'s cause; packages/c/package.json: aricanga.role is "sytem"; a workspace package declares one of the roles of harness/lib/roles.ts (experience, foundation, system, test-infrastructure, view)',
       [
         'ConfigError: package.json is not JSON: SyntaxError',
         'ConfigError: packages/a/package.json is not JSON: SyntaxError',

@@ -69,18 +69,35 @@ async function refusalOf(computing: Promise<Population>): Promise<string> {
   throw new Error('the population was not refused');
 }
 
+/** The colon-separated parts of a refusal's head: its class, its subject, and its own word on the error (a parser's detail, which varies with the engine, after it). */
+const REFUSAL_HEAD = 3;
+
+/**
+ * A refusal's head, its engine detail dropped.
+ *
+ * @param {string} text - The refusal, as `String` renders it.
+ * @returns {string} Its first parts.
+ */
+function headOf(text: string): string {
+  return text.split(':', REFUSAL_HEAD).join(':');
+}
+
 /**
  * The refusal of a computation and the refusals its cause gathers, as text.
  *
  * @param {Promise<Population>} computing - The computation.
- * @returns {Promise<readonly [string, readonly string[]]>} The refusal, and each of its cause's.
+ * @returns {Promise<readonly [string, readonly string[]]>} The refusal, each cause it names in its message cut to its head, and each of its cause's.
  */
 async function causedRefusal(computing: Promise<Population>): Promise<readonly [string, readonly string[]]> {
   try {
     await computing;
   } catch (error: unknown) {
     const causes = error instanceof Error && error.cause instanceof AggregateError ? error.cause.errors.map(String) : [];
-    return [String(error), causes];
+    let refusal = String(error);
+    for (const cause of causes) {
+      refusal = refusal.replace(cause, headOf(cause));
+    }
+    return [refusal, causes];
   }
   return ['not refused', []];
 }
@@ -191,4 +208,4 @@ packages:
     resolution: {integrity: sha512-x}
 `;
 
-export { BOM, causedRefusal, inWorkspaceFolder, listing, LOCK, manifest, QUOTED_KEYS, reader, refusalOf, withoutFile };
+export { BOM, causedRefusal, headOf, inWorkspaceFolder, listing, LOCK, manifest, QUOTED_KEYS, reader, refusalOf, withoutFile };

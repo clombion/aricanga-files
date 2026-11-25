@@ -112,7 +112,7 @@ describe("a checkout's manifests", () => {
       await writeFile(path.join(folder, 'a', 'x', 'package.json'), `${BOM}${manifest('view')}`);
       const [refusal, causes] = await causedRefusal(population(folder));
       expect([refusal, causes.map((cause) => cause.startsWith('ConfigError: a/x/package.json is not JSON: SyntaxError'))]).toStrictEqual([
-        "ConfigError: the manifests a/x/package.json cannot be read; each refusal is this one's cause",
+        "ConfigError: the manifests a/x/package.json (ConfigError: a/x/package.json is not JSON: SyntaxError) cannot be read; each refusal is also this one's cause",
         [true],
       ]);
     });
