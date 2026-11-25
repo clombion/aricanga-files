@@ -44,7 +44,9 @@ function isRunnerTest(path: string): boolean {
 function liveGlobs(population: Population, members: readonly Member[], tail: string): string[] {
   return members.flatMap((member) => {
     const glob = `${member.dir}${tail}`;
-    return population.listing.some((file) => file.startsWith(member.dir) && population.memberOf(file) === member && matches(glob, file))
+    return population.listing.some(
+      (file) => file.startsWith(member.dir) && population.memberOf(file)?.dir === member.dir && matches(glob, file),
+    )
       ? [glob]
       : [];
   });

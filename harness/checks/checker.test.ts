@@ -38,6 +38,22 @@ function noProject(events: Readonly<Pick<string[], 'push'>>, held: Population): 
   };
 }
 
+/**
+ * The classifiers' population: a member whose role does not ship, and one whose role ships.
+ *
+ * @returns {Promise<Population>} The planted population.
+ */
+async function probeAndView(): Promise<Population> {
+  const held = await plantedPopulation(
+    [],
+    [
+      ['packages/probe/', 'test-infrastructure'],
+      ['packages/view/', 'view'],
+    ],
+  );
+  return held;
+}
+
 const scan = usePlanted([['planted/one.ts', 'export const one = 1;\n']], [['planted/', 'foundation']]);
 
 describe('a scan', () => {
@@ -64,15 +80,19 @@ describe('a scan', () => {
 });
 
 describe('the module classifiers', () => {
+  test("read a member's role, not which object the population holds for it", async () => {
+    expect.hasAssertions();
+    const held = await probeAndView();
+    const copied: Population = { ...held, memberOf: (file: string) => structuredClone(held.memberOf(file)) };
+    expect(['packages/probe/src/b.ts', 'packages/view/src/v.ts'].map((file) => isTestInfrastructure(copied, file))).toStrictEqual([
+      true,
+      false,
+    ]);
+  });
+
   test("reads a member whose role does not ship as test infrastructure, and its modules, tests, Playwright specs and test support as not production, and a module Playwright does not match and the harness's check support as production", async () => {
     expect.hasAssertions();
-    const held = await plantedPopulation(
-      [],
-      [
-        ['packages/probe/', 'test-infrastructure'],
-        ['packages/view/', 'view'],
-      ],
-    );
+    const held = await probeAndView();
     const modules = [
       'packages/probe/src/b.ts',
       'packages/view/src/v.tsx',

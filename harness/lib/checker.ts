@@ -20,6 +20,7 @@ import { isEmpty } from './lists.ts';
 import { isRunnerTest } from './test-globs.ts';
 import path from 'node:path';
 import { present } from './present.ts';
+import { ships } from './roles.ts';
 import { typescriptOf } from './scope.ts';
 
 /** The compiler options of a scan: the shared base's strictness, every lib a held module reads. */
@@ -72,7 +73,7 @@ interface ScanOpening {
  */
 function isTestInfrastructure(population: Population, file: string): boolean {
   const member = population.memberOf(file);
-  return member !== undefined && !population.shipping.includes(member);
+  return member !== undefined && !ships(member.role);
 }
 
 /**

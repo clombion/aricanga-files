@@ -29,6 +29,7 @@ import { holdsNoRuntimeValue } from './ts-source.ts';
 import { isEmpty } from './lists.ts';
 import { present } from './present.ts';
 import { stringLiterals } from './contract-model.ts';
+import { tierOf } from './roles.ts';
 
 /** The fewest words a union holds to be a contract. */
 const LEAST_WORDS = 2;
@@ -95,7 +96,7 @@ function contracts(scan: Scan, paths: readonly string[]): readonly Contract[] {
   return paths
     .filter((candidate) => {
       const member = scan.population.memberOf(candidate);
-      return member !== undefined && scan.population.kernel.includes(member) && isProduction(scan.population, candidate);
+      return member !== undefined && tierOf(member.role) === 'kernel' && isProduction(scan.population, candidate);
     })
     .flatMap((path) => {
       const file = sourceOf(scan, path);
