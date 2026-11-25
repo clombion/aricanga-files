@@ -23,7 +23,7 @@ import { EXIT_FAILURE, EXIT_SUCCESS } from './output.ts';
 import { MAX_SIZE, RUNS, reportOf } from './dupes-run.ts';
 import type { RunFacts, Runner, Target } from './dupes-run.ts';
 import { cloneKey, clones, scanned } from './dupes-report.ts';
-import { population, typescriptFiles } from './scope.ts';
+import { population, typescriptOf } from './scope.ts';
 import { readFile, stat } from 'node:fs/promises';
 import { Exemptions } from './exemptions.ts';
 import type { Population } from './scope.ts';
@@ -137,15 +137,15 @@ async function scan(target: Target, allowed: Readonly<Exemptions>, runner?: Runn
 }
 
 /**
- * What jscpd scans: each root of the population, as a directory, and each held file outside them.
+ * What jscpd scans of a population: each of its roots, as a directory, and each TypeScript file it
+ * holds outside them, so the roots and the files come from one population.
  *
- * @param {readonly string[]} listed - The held TypeScript files.
  * @param {Population} held - The population.
  * @returns {readonly string[]} The roots and the files, as jscpd's arguments.
  */
-function scanRoots(listed: readonly string[], held: Population): readonly string[] {
+function scanRoots(held: Population): readonly string[] {
   const directories = held.roots.map((root) => root.replace(TRAILING_SLASH, ''));
-  const rootFiles = listed.filter((file) => !held.roots.some((root) => file.startsWith(root)));
+  const rootFiles = typescriptOf(held).filter((file) => !held.roots.some((root) => file.startsWith(root)));
   return [...directories, ...rootFiles];
 }
 
@@ -157,8 +157,9 @@ function scanRoots(listed: readonly string[], held: Population): readonly string
  * @returns {Promise<number>} The exit status.
  */
 async function main(streams: Streams, runner?: Runner): Promise<number> {
-  const [listed, held] = await Promise.all([typescriptFiles(), population()]);
-  const problems = await scan({ listed, root: REPO_ROOT, roots: scanRoots(listed, held) }, ALLOWED, runner);
+  const held = await population();
+  const listed = typescriptOf(held);
+  const problems = await scan({ listed, root: REPO_ROOT, roots: scanRoots(held) }, ALLOWED, runner);
   for (const problem of problems) {
     streams.err(`${problem}\n`);
   }

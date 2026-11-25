@@ -10,7 +10,7 @@ import type { Clone, Reported, Run, Runner } from '#lib/dupes.ts';
 import { EXIT_BROKEN, EXIT_CLEAN } from '#lib/exit-status.ts';
 import { EXIT_FAILURE, EXIT_SUCCESS } from '#lib/output.ts';
 import { afterEach, describe, expect, test } from 'vitest';
-import { cleanRunner, failingRunner, growTo, plant, removePlants, runMain } from './clones.plants.ts';
+import { cleanRunner, failingRunner, growTo, plant, plantedScanRoots, removePlants, runMain } from './clones.plants.ts';
 import { Exemptions } from '#lib/exemptions.ts';
 import type { Outcome } from '#lib/process.ts';
 import { tmpdir } from 'node:os';
@@ -163,6 +163,13 @@ describe('the scan of a clone', () => {
     const stale = new Exemptions({ 'exact a/gone.ts a/one.ts 000000000000': 'planted' });
     const staleProblems = await scan({ listed: ['a/one.ts'], root, roots: ['a'] }, stale);
     expect(lastOf(staleProblems)).toMatch(/^StaleExemptionError: stale exemptions/u);
+  });
+});
+
+describe('the roots jscpd is given', () => {
+  test('scans each held root as a directory and each held file outside them, and nothing a root holds again', async () => {
+    expect.hasAssertions();
+    await expect(plantedScanRoots()).resolves.toStrictEqual(['packages/a', 'harness', 'vitest.gate.config.ts']);
   });
 });
 

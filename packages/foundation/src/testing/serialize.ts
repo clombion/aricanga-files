@@ -6,7 +6,9 @@ const LEFT_FIRST = -1;
 const RIGHT_FIRST = 1;
 
 /**
- * Order a key–value pair by its key's UTF-16 code units, the same under every locale.
+ * Order a key–value pair by its key's UTF-16 code units, the same under every locale. A JSON object
+ * lists integer-like keys (`'9'`, `'10'`) first, ascending, whatever order its entries are written
+ * in, so a golden holds them first and the other keys after, in this order.
  *
  * @param {readonly [string, unknown]} left - One entry, its key first.
  * @param {readonly [string, unknown]} right - The other entry.
@@ -17,7 +19,8 @@ function byKey([left]: readonly [string, unknown], [right]: readonly [string, un
 }
 
 /*
- * Canonical serialization for goldens (testing-strategy.md): deep sorted keys so
+ * Canonical serialization for goldens (testing-strategy.md): deep sorted keys (integer-like keys
+ * first, ascending, as every JSON object lists them; the others by code unit) so
  * the diff is stable across reducer changes that don't change behaviour, and a
  * field whose value is `undefined` (e.g. an empty `Command.payload` or `fx.persist`)
  * is left out, so a present-but-undefined field and an absent one read the same.

@@ -110,6 +110,17 @@ describe('the fixture harness', () => {
 });
 
 describe('the canonical text', () => {
+  test('orders integer-like keys first, ascending, and the others by code unit, whatever order they were written in', () => {
+    expect.hasAssertions();
+    const written = Object.fromEntries([
+      ['bb', 'b'],
+      ['aa', 'a'],
+      ['10', 'ten'],
+      ['9', 'nine'],
+    ]);
+    expect(canonical(written)).toBe('{\n  "9": "nine",\n  "10": "ten",\n  "aa": "a",\n  "bb": "b"\n}');
+  });
+
   test('orders keys by code unit, whatever order they were written in', () => {
     expect.hasAssertions();
     const written: readonly (readonly [string, string])[] = [

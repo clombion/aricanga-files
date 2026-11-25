@@ -1,6 +1,6 @@
 /** The owner registry's plants: one per rule and call form, a canonical use per rule, a use in a test, and the near misses. */
 
-import { Exemptions } from '#lib/exemptions.ts';
+import { Exemptions, site } from '#lib/exemptions.ts';
 import type { PlantedMember } from '#lib/planted-population.ts';
 import type { Population } from '#lib/scope.ts';
 import type { Rule } from '#lib/owner-rules.ts';
@@ -11,12 +11,14 @@ import { nearestOf } from '#lib/package-dirs.ts';
  * roots leave out until they derive from the roles (#58 step 1b), or a scope the rule does not claim.
  */
 const UNGUARDED: Exemptions = new Exemptions({
-  'clock: packages/characterisation/': 'its performance fixture times renders with performance.now (src/fixtures/performance.tsx)',
-  'json-parse: packages/characterisation/': 'its performance spec reads the browser report with JSON.parse (tests/performance.spec.ts)',
-  'network: packages/characterisation/': 'its specs answer routed requests with route.fetch (tests/_helpers.ts)',
-  'process-start: packages/characterisation/': "no use; its root is #58 step 1b's to add, with the roots derived from the roles",
-  'random: packages/characterisation/': "no use; its root is #58 step 1b's to add, with the roots derived from the roles",
-  'timers: packages/characterisation/': 'its fixtures and support wait on setTimeout (src/support.ts, src/fixtures/adapter.tsx)',
+  [site('packages/characterisation/', 'clock')]:
+    'its performance fixture times renders with performance.now (src/fixtures/performance.tsx)',
+  [site('packages/characterisation/', 'json-parse')]:
+    'its performance spec reads the browser report with JSON.parse (tests/performance.spec.ts)',
+  [site('packages/characterisation/', 'network')]: 'its specs answer routed requests with route.fetch (tests/_helpers.ts)',
+  [site('packages/characterisation/', 'process-start')]: "no use; its root is #58 step 1b's to add, with the roots derived from the roles",
+  [site('packages/characterisation/', 'random')]: "no use; its root is #58 step 1b's to add, with the roots derived from the roles",
+  [site('packages/characterisation/', 'timers')]: 'its fixtures and support wait on setTimeout (src/support.ts, src/fixtures/adapter.tsx)',
 });
 
 /** The planted members the plants sit in: a kernel member of each kernel role, and the literal roots' members. */
@@ -103,7 +105,7 @@ const NEAR_MISSES: readonly (readonly [string, string])[] = [
 ];
 
 /**
- * The members no scope of a rule holds, as `rule: member`.
+ * The members no scope of a rule holds, each keyed `site(member, rule)`.
  *
  * @param {readonly Rule[]} rules - The rules.
  * @param {Population} held - The population.
@@ -112,7 +114,7 @@ const NEAR_MISSES: readonly (readonly [string, string])[] = [
 function unguarded(rules: readonly Rule[], held: Population): readonly string[] {
   return rules.flatMap((rule) => {
     const scopeOf = nearestOf(rule.scopes, (scope) => scope.root);
-    return held.members.filter((member) => scopeOf(member.dir) === undefined).map((member) => `${rule.name}: ${member.dir}`);
+    return held.members.filter((member) => scopeOf(member.dir) === undefined).map((member) => site(member.dir, rule.name));
   });
 }
 

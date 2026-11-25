@@ -17,6 +17,7 @@ import {
 import { dirname, join, normalize } from 'node:path/posix';
 import { importsFrom, parse } from '#lib/ts-source.ts';
 import { KINDS } from '#lib/exemptions.ts';
+import type { Kind } from '#lib/exemptions.ts';
 import { population } from '#lib/scope.ts';
 
 const UNDECLARED = 'a literal collection consulted as a list: declare it';
@@ -80,12 +81,12 @@ function namesModule(path: string, target: string, patterns: readonly (readonly 
  * Whether a declaration is consulted in its module or in a module importing it.
  *
  * @param {string} name - The declaration's binding.
- * @param {string} kind - The declaration's class.
+ * @param {Kind} kind - The declaration's kind.
  * @param {readonly SourceFile[]} users - The declaring module and its importers.
  * @returns {boolean} Whether a user consults it.
  */
-function isConsulted(name: string, kind: string, users: readonly SourceFile[]): boolean {
-  return KINDS.has(kind) && KINDS.of(kind) === 'call'
+function isConsulted(name: string, kind: Kind, users: readonly SourceFile[]): boolean {
+  return KINDS.of(kind) === 'call'
     ? users.some((user) => staleFailingReceivers(user).has(name))
     : users.some((user) => reads(user).has(name));
 }

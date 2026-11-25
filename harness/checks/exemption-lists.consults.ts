@@ -24,6 +24,7 @@ import {
   isVariableStatement,
 } from 'typescript/unstable/ast/is';
 import type { CallExpression } from 'typescript/unstable/ast';
+import type { Kind } from '#lib/exemptions.ts';
 import { SyntaxKind } from 'typescript/unstable/ast';
 import { nodes } from '#lib/ts-source.ts';
 
@@ -77,11 +78,15 @@ function builder(built: Expression): Expression | undefined {
  * The declaration a module-level value builds, if it is one.
  *
  * @param {Expression} value - A module-level `const` initializer.
- * @returns {string | undefined} The declaration's class name, or `undefined`.
+ * @returns {Kind | undefined} The declaration's kind, or `undefined`.
  */
-function declaration(value: Expression): string | undefined {
+function declaration(value: Expression): Kind | undefined {
   const callee = builder(unwrap(value));
-  return callee !== undefined && isIdentifier(callee) && KINDS.has(callee.text) ? callee.text : undefined;
+  if (callee === undefined || !isIdentifier(callee)) {
+    return undefined;
+  }
+  const { text } = callee;
+  return KINDS.has(text) ? text : undefined;
 }
 
 /**

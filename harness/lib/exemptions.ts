@@ -38,6 +38,7 @@ const KINDS: Vocabulary<Readonly<Record<Kind, Consulted>>> = new Vocabulary<Read
 });
 
 export { KINDS };
+export type { Kind };
 
 export { Accepted } from './exemptions/accepted.ts';
 export { CountedExemptions } from './exemptions/counted.ts';

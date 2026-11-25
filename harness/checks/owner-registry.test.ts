@@ -105,14 +105,14 @@ const DECLARED = SHAPES.flatMap((shape) =>
 );
 
 /**
- * The owners a set of rules honours, as `rule: owner`.
+ * The owners a set of rules honours, each keyed as a site of its rule (`keyOf`).
  *
  * @param {readonly Rule[]} rules - The rules.
  * @returns {readonly string[]} Each owner, by rule, sorted.
  */
 function honoured(rules: readonly Rule[]): readonly string[] {
   return rules
-    .flatMap((rule) => rule.scopes.flatMap((scope) => (scope.owner === undefined ? [] : [`${rule.name}: ${scope.owner}`])))
+    .flatMap((rule) => rule.scopes.flatMap((scope) => (scope.owner === undefined ? [] : [keyOf({ path: scope.owner, rule: rule.name })])))
     .toSorted();
 }
 
@@ -125,14 +125,17 @@ describe('the repository', () => {
   test('honours every declared owner, so a member demoted from the kernel fails here', async () => {
     expect.hasAssertions();
     const rules = rulesOf(await population());
-    expect(honoured(rules)).toStrictEqual(DECLARED.map(([name, owner]) => `${name}: ${owner}`).toSorted());
+    expect(honoured(rules)).toStrictEqual(DECLARED.map(([name, owner]) => keyOf({ path: owner, rule: name })).toSorted());
   });
 
   test('guards every member under some scope of every rule', async () => {
     expect.hasAssertions();
     const held = await population();
     const missed = unguarded(rulesOf(held), held);
-    expect(UNGUARDED.unexempted(missed)).toStrictEqual([]);
+    expect(
+      UNGUARDED.unexempted(missed),
+      "a member no scope of a rule holds: add its root to the rule's scopes in harness/lib/owner-rules.ts, or list the pair with its reason in UNGUARDED (harness/checks/owner-registry.plants.ts)",
+    ).toStrictEqual([]);
   });
 
   test.each(DECLARED)('the %s owner %s exists and uses its API', async (name, owner) => {

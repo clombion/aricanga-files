@@ -4,11 +4,12 @@ import { COMMON, RUNS, main, scanRoots } from '#lib/dupes.ts';
 import { EXIT_BROKEN, EXIT_CLEAN } from '#lib/exit-status.ts';
 import { dirname, join } from 'node:path/posix';
 import { mkdir, mkdtemp, rm, truncate, writeFile } from 'node:fs/promises';
-import { population, typescriptFiles } from '#lib/scope.ts';
+import { population, typescriptOf } from '#lib/scope.ts';
 import type { Outcome } from '#lib/process.ts';
 import { REPO_ROOT } from '#lib/paths.ts';
 import type { Runner } from '#lib/dupes.ts';
 import { Scripted } from '#lib/doubles.ts';
+import { plantedPopulation } from '#lib/planted-population.ts';
 import { tmpdir } from 'node:os';
 
 /** The planted roots not yet removed. */
@@ -68,6 +69,16 @@ async function writeReport(output: string, files: readonly string[]): Promise<vo
   );
 }
 
+/**
+ * What jscpd scans of a planted population: a root file, a file in a member and a harness file.
+ *
+ * @returns {Promise<readonly string[]>} The roots and files `scanRoots` gives.
+ */
+async function plantedScanRoots(): Promise<readonly string[]> {
+  const held = await plantedPopulation(['vitest.gate.config.ts', 'packages/a/src/x.ts', 'harness/lib/y.ts'], [['packages/a/', 'view']]);
+  return scanRoots(held);
+}
+
 /** Where a run's flags start on its command line: after the binary. */
 const FLAGS_AT = 1;
 
@@ -86,8 +97,9 @@ class CleanRuns extends Scripted<string> {}
  * @returns {Promise<Outcome>} A clean finished run.
  */
 async function cleanRunner(argv: readonly string[]): Promise<Outcome> {
-  const [files, held] = await Promise.all([typescriptFiles(), population()]);
-  const scans = scanRoots(files, held);
+  const held = await population();
+  const files = typescriptOf(held);
+  const scans = scanRoots(held);
   const scripted = RUNS.words.map((name) => [JSON.stringify([RUNS.of(name).flags, scans]), name] as const);
   const runs = new CleanRuns(Object.fromEntries(scripted));
   const [, output = '', ...scanned] = argv.slice(argv.indexOf('--output'));
@@ -134,4 +146,4 @@ async function runMain(
   return { errors, out, status };
 }
 
-export { cleanRunner, failingRunner, growTo, plant, removePlants, runMain };
+export { cleanRunner, failingRunner, growTo, plant, plantedScanRoots, removePlants, runMain };
