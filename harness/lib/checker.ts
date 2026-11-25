@@ -259,15 +259,15 @@ function qualifiedName(checker: Readonly<Checker>, symbol: TsSymbol | undefined)
 }
 
 /**
- * Whether a symbol is declared by the platform: a `lib` file or an installed package's types.
+ * Whether a symbol is declared by the platform (a `lib` file, an installed package's types), held redeclarations merged in.
  *
  * @param {Readonly<Checker>} checker - The scan's checker.
  * @param {TsSymbol | undefined} symbol - The name's symbol.
- * @returns {boolean} Whether every declaration of it is under `node_modules`.
+ * @returns {boolean} Whether some declaration of it is under `node_modules`.
  */
 function isPlatform(checker: Readonly<Checker>, symbol: TsSymbol | undefined): boolean {
   const declarations = resolved(checker, symbol)?.declarations ?? [];
-  return !isEmpty(declarations) && declarations.every((declaration) => declaration.path.includes('/node_modules/'));
+  return !isEmpty(declarations) && declarations.some((declaration) => declaration.path.includes('/node_modules/'));
 }
 
 /**

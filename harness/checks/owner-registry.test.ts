@@ -82,6 +82,26 @@ const nestedFreeScan = usePlanted(
   ],
 );
 
+/** Uses of guarded globals that held modules redeclare, in a declaration file and in a module's global block: each redeclaration is not the platform's, and each use still is. */
+const REDECLARED: readonly (readonly [string, string])[] = [
+  ['packages/foundation/src/__redeclared_dts.ts', 'storage'],
+  ['packages/foundation/src/__redeclared_global.ts', 'storage'],
+  ['packages/foundation/src/__redeclared_timer.ts', 'timers'],
+];
+const redeclaredScan = usePlanted(
+  [
+    ['packages/foundation/src/__redeclare.d.ts', 'declare var localStorage: Storage;\n'],
+    [
+      'packages/foundation/src/__redeclare_global.ts',
+      'declare global {\n  var sessionStorage: Storage;\n  function setInterval(handler: () => void, timeout: number): number;\n}\n\nexport const kept = 1;\n',
+    ],
+    ['packages/foundation/src/__redeclared_dts.ts', "export const read = (): unknown => localStorage.getItem('key');\n"],
+    ['packages/foundation/src/__redeclared_global.ts', "export const read = (): unknown => sessionStorage.getItem('key');\n"],
+    ['packages/foundation/src/__redeclared_timer.ts', 'export const tick = (): unknown => setInterval(() => undefined, 1);\n'],
+  ],
+  [['packages/foundation/', 'foundation']],
+);
+
 /** How many entries an empty table holds. */
 const NONE = 0;
 
@@ -228,6 +248,11 @@ describe('the scan', () => {
   test('lets the owner of the nearest kernel root use its API, when kernel roots nest', () => {
     expect.hasAssertions();
     expect(sitesIn(nestedScan, [NESTED_OWNER])).toStrictEqual([]);
+  });
+
+  test.each(REDECLARED)('sees the use in %s of a guarded global that a held module redeclares', (path, rule) => {
+    expect.hasAssertions();
+    expect(sitesIn(redeclaredScan, [path])).toStrictEqual([{ path, rule }]);
   });
 
   test.each(NEAR_MISSES.map(([path]) => path))('lets the near miss %s through', (path) => {
