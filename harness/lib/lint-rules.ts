@@ -30,11 +30,16 @@ interface Fixture {
   readonly source: string;
 }
 
-/** A diagnostic of an oxlint report: its rule code (`aricanga(env)`), none for an unused directive; its file and its message. */
+/**
+ * A diagnostic of an oxlint report: its rule code (`aricanga(env)`), none for an unused directive; its
+ * file, its message, and its help, none where oxlint writes none (a rule option's own message, such
+ * as a `no-restricted-imports` pattern's, is the help).
+ */
 interface Diagnostic {
   readonly code: string | undefined;
   readonly file: string;
   readonly message: string;
+  readonly help: string | undefined;
 }
 
 /** The code `codeOf` gives an unused disable directive, which oxlint reports with no rule code. */
@@ -138,6 +143,7 @@ function oxlintDiagnostics(output: unknown): readonly Diagnostic[] {
     return {
       code: fields['code'] === undefined ? undefined : stringOf(fields['code'], 'a diagnostic code'),
       file: stringOf(fields['filename'], 'a diagnostic filename'),
+      help: fields['help'] === undefined ? undefined : stringOf(fields['help'], 'a diagnostic help'),
       message: stringOf(fields['message'], 'a diagnostic message'),
     };
   });
@@ -189,6 +195,7 @@ async function lintPlanted(project: Readonly<Project>, paths: readonly string[])
   return oxlintDiagnostics(parsed(outcome.stdout, `oxlint's report (it wrote to stderr: ${outcome.stderr})`)).map((found) => ({
     code: found.code,
     file: found.file.replace(`${project.root}/`, ''),
+    help: found.help,
     message: found.message,
   }));
 }
@@ -284,4 +291,4 @@ export {
   UNUSED_DIRECTIVE,
   writeOxlintConfig,
 };
-export type { Fixture };
+export type { Diagnostic, Fixture };

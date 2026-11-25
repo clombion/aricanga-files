@@ -1,11 +1,12 @@
 /**
- * The file globs oxlint's configuration names that are no member's: the root modules, anchored as an
- * override's `files` anchors a root file, and the listing's unheld lintable files, anchored as
- * `ignorePatterns` anchors one. oxlint reads a slashless glob at any depth in both fields, so a root
+ * The file globs oxlint's configuration names that are no member's: the root modules and the harness's
+ * code, anchored as an override's `files` anchors a root file, and the listing's unheld lintable
+ * files, anchored as `ignorePatterns` anchors one. oxlint reads a slashless glob at any depth in both fields, so a root
  * file is never named bare (`harness/lint-rules/globs.ts`).
  */
 
 import { FILES_ANCHOR, IGNORE_ANCHOR } from '#lint-rules/globs.ts';
+import { HARNESS_ROOT } from './scope.ts';
 import type { Population } from './scope.ts';
 import { ROOT_MODULES } from './config-modules.ts';
 import { dirname } from 'node:path/posix';
@@ -25,6 +26,9 @@ function isLintable(file: string): boolean {
 
 /** The root configuration modules, as an override's `files` names them. */
 const ROOT_MODULE_FILES: readonly string[] = ROOT_MODULES.map((module) => `${FILES_ANCHOR}${module}`);
+
+/** The harness's code, as an override's `files` names it: its directory, and the root modules that run it. */
+const HARNESS_CODE: readonly string[] = [`${HARNESS_ROOT}**`, ...ROOT_MODULE_FILES];
 
 /**
  * The directories above a path, the topmost first, each with its closing `/`.
@@ -55,4 +59,4 @@ function unheldPatterns(held: Population): string[] {
   return [...new Set(patterns)].toSorted();
 }
 
-export { isLintable, ROOT_MODULE_FILES, unheldPatterns };
+export { HARNESS_CODE, isLintable, ROOT_MODULE_FILES, unheldPatterns };
