@@ -6,6 +6,7 @@
 import { Accepted } from './exemptions.ts';
 import type { MemberDir } from './package-dirs.ts';
 import type { Population } from './scope.ts';
+import { nearestOf } from './package-dirs.ts';
 
 /** A root a rule covers, a directory, and its owner there (undefined: no module of the root may use the API). */
 interface Scope {
@@ -40,14 +41,16 @@ function nobody(...roots: readonly MemberDir[]): Scope[] {
 }
 
 /**
- * The scopes of roots one module of which may use an API: the root holding `owner`; no module of the others.
+ * The scopes of roots one module of which may use an API: the root holding `owner` (the nearest, when
+ * roots nest, as every reader of a scope finds it); no module of the others.
  *
  * @param {string | undefined} owner - The owning module; undefined: no module of any root may use it.
  * @param {readonly MemberDir[]} roots - The roots.
  * @returns {Scope[]} A scope per root.
  */
 function ownedBy(owner: string | undefined, roots: readonly MemberDir[]): Scope[] {
-  return roots.map((root) => ({ owner: owner?.startsWith(root) === true ? owner : undefined, root }));
+  const holding = owner === undefined ? undefined : nearestOf(roots, (root) => root)(owner);
+  return roots.map((root) => ({ owner: root === holding ? owner : undefined, root }));
 }
 
 /** Every guarded API as declared, with its owners: the kernel owner and the owner of each other root. */

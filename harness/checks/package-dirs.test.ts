@@ -1,18 +1,18 @@
 /** A package's spelling: one directory, its manifest and importer derived from it, and the nearest root of a path. */
 
+import type { Dir, MemberDir } from '#lib/package-dirs.ts';
 import { describe, expect, test } from 'vitest';
-import { dirOfImporter, importerOf, manifestOf, nearest } from '#lib/package-dirs.ts';
-import type { Dir } from '#lib/package-dirs.ts';
+import { dirOfImporter, importerOf, manifestOf, nearestOf } from '#lib/package-dirs.ts';
 import { QUOTED_KEYS } from './scope.plants.ts';
 import { lockOf } from '#lib/pins.ts';
 
 /**
- * A root's path, for `nearest`.
+ * A root's path, for `nearestOf`.
  *
- * @param {Readonly<{ root: string }>} item - An item with a root.
- * @returns {string} Its root.
+ * @param {Readonly<{ root: MemberDir }>} item - An item with a root.
+ * @returns {MemberDir} Its root.
  */
-function rootOf(item: Readonly<{ root: string }>): string {
+function rootOf(item: Readonly<{ root: MemberDir }>): MemberDir {
   return item.root;
 }
 
@@ -37,13 +37,15 @@ describe('a package', () => {
 
   test('is held by the nearest root whatever order the roots come in', () => {
     expect.hasAssertions();
-    const outer = { root: 'packages/a/' };
-    const inner = { root: 'packages/a/b/' };
+    const outer: Readonly<{ root: MemberDir }> = { root: 'packages/a/' };
+    const inner: Readonly<{ root: MemberDir }> = { root: 'packages/a/b/' };
+    const inOrder = nearestOf([outer, inner], rootOf);
+    const reversed = nearestOf([inner, outer], rootOf);
     expect([
-      nearest([outer, inner], rootOf, 'packages/a/b/x.ts'),
-      nearest([inner, outer], rootOf, 'packages/a/b/x.ts'),
-      nearest([inner, outer], rootOf, 'packages/a/x.ts'),
-      nearest([inner, outer], rootOf, 'harness/x.ts'),
+      inOrder('packages/a/b/x.ts'),
+      reversed('packages/a/b/x.ts'),
+      reversed('packages/a/x.ts'),
+      reversed('harness/x.ts'),
     ]).toStrictEqual([inner, inner, outer, undefined]);
   });
 });

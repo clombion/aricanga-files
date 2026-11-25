@@ -69,6 +69,16 @@ const expected: readonly Site[] = PLANTED.flatMap((plant) => (plant.rule === und
 const plantedScan = usePlanted(plants, MEMBERS);
 const repoScan = useScan();
 
+/** The kernel owner of `json-parse` under a kernel root nested in another, which owns nothing. */
+const NESTED_OWNER = 'packages/foundation/src/host/codec.ts';
+const nestedScan = usePlanted(
+  [[NESTED_OWNER, "JSON.parse('1');\n"]],
+  [
+    ['packages/foundation/', 'foundation'],
+    ['packages/foundation/src/', 'system'],
+  ],
+);
+
 /**
  * The guarded-API sites in some modules of a scan.
  *
@@ -159,6 +169,11 @@ describe('the scan', () => {
     ).toStrictEqual([...roots, ...forms].toSorted());
   });
 
+  test('lets the owner of the nearest kernel root use its API, when kernel roots nest', () => {
+    expect.hasAssertions();
+    expect(sitesIn(nestedScan, [NESTED_OWNER])).toStrictEqual([]);
+  });
+
   test.each(NEAR_MISSES.map(([path]) => path))('lets the near miss %s through', (path) => {
     expect.hasAssertions();
     expect(sitesIn(plantedScan, [path])).toStrictEqual([]);
@@ -166,6 +181,22 @@ describe('the scan', () => {
 });
 
 describe('the rules', () => {
+  test('give a kernel owner to the nearest kernel root holding it, when kernel roots nest', async () => {
+    expect.hasAssertions();
+    const held = await plantedPopulation(
+      [],
+      [
+        ['packages/foundation/', 'foundation'],
+        ['packages/foundation/src/', 'system'],
+      ],
+    );
+    const parse = rulesOf(held).find((rule) => rule.name === 'json-parse');
+    expect(parse?.scopes.filter((scope) => scope.root.startsWith('packages/foundation/'))).toStrictEqual([
+      { owner: undefined, root: 'packages/foundation/' },
+      { owner: 'packages/foundation/src/host/codec.ts', root: 'packages/foundation/src/' },
+    ]);
+  });
+
   test('cover each kernel member, and give a kernel owner the member that holds it', async () => {
     expect.hasAssertions();
     const held = await plantedPopulation(

@@ -34,7 +34,7 @@ import type { Rule } from './owner-rules.ts';
 import type { Scan } from './checker.ts';
 import type { Symbol as TsSymbol } from 'typescript/unstable/sync';
 import { holdsNoRuntimeValue } from './ts-source.ts';
-import { nearest } from './package-dirs.ts';
+import { nearestOf } from './package-dirs.ts';
 import { rulesOf } from './owner-rules.ts';
 import { site } from './exemptions.ts';
 
@@ -178,6 +178,12 @@ function breaks(rule: Rule, found: readonly string[]): boolean {
   return found.some((name) => rule.names.has(name) || [...rule.names].some((member) => name.startsWith(`${member}.`)));
 }
 
+/** A rule, with the lookup of the nearest of its scopes holding a path. */
+interface Scoped {
+  readonly rule: Rule;
+  readonly scopeOf: (target: string) => Rule['scopes'][number] | undefined;
+}
+
 /**
  * The guarded uses in covered files that their rules do not allow there: the rules are the scan's
  * population's, derived once for all the files; a file's rule scope is the nearest root holding it.
@@ -187,16 +193,19 @@ function breaks(rule: Rule, found: readonly string[]): boolean {
  * @returns {readonly Site[]} The sites.
  */
 function sites(scan: Scan, files: readonly SourceFile[]): readonly Site[] {
-  const rules = rulesOf(scan.population);
+  const lookups: readonly Scoped[] = rulesOf(scan.population).map((rule) => ({
+    rule,
+    scopeOf: nearestOf(rule.scopes, (candidate) => candidate.root),
+  }));
   return files.flatMap((file) => {
     const path = pathOf(file);
     const found = uses(scan, file);
-    return rules
-      .filter((rule) => {
-        const scope = nearest(rule.scopes, (candidate) => candidate.root, path);
-        return scope !== undefined && scope.owner !== path && breaks(rule, found);
+    return lookups
+      .filter((scoped: Readonly<Scoped>) => {
+        const scope = scoped.scopeOf(path);
+        return scope !== undefined && scope.owner !== path && breaks(scoped.rule, found);
       })
-      .map((rule) => ({ path, rule: rule.name }));
+      .map((scoped: Readonly<Scoped>) => ({ path, rule: scoped.rule.name }));
   });
 }
 

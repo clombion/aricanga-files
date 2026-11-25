@@ -61,16 +61,18 @@ function dirOfImporter(importer: string): Dir {
 }
 
 /**
- * The item whose root holds a path, the nearest when roots nest.
+ * The lookup of the item whose root holds a path, the nearest when roots nest; every reader of "the
+ * root holding a path" asks it. The items are ordered once, longest root first, so every lookup
+ * reads them in that order.
  *
  * @param {readonly Item[]} items - The items.
- * @param {(item: Item) => string} rootOf - Each item's root, ending in `/`.
- * @param {string} target - A repository-relative path.
- * @returns {Item | undefined} The item with the longest root that starts the path.
+ * @param {(item: Item) => MemberDir} rootOf - Each item's root, a directory.
+ * @returns {(target: string) => Item | undefined} The item with the longest root that starts a path.
  */
-function nearest<Item>(items: readonly Item[], rootOf: (item: Item) => string, target: string): Item | undefined {
-  return items.toSorted((left, right) => rootOf(right).length - rootOf(left).length).find((item) => target.startsWith(rootOf(item)));
+function nearestOf<Item>(items: readonly Item[], rootOf: (item: Item) => MemberDir): (target: string) => Item | undefined {
+  const longestFirst = items.toSorted((left, right) => rootOf(right).length - rootOf(left).length);
+  return (target: string) => longestFirst.find((item) => target.startsWith(rootOf(item)));
 }
 
-export { dirOf, dirOfImporter, importerOf, manifestOf, nearest };
+export { dirOf, dirOfImporter, importerOf, manifestOf, nearestOf };
 export type { Dir, MemberDir };

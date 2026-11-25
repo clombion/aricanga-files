@@ -4,7 +4,7 @@ import { Exemptions } from '#lib/exemptions.ts';
 import type { PlantedMember } from '#lib/scan-hooks.ts';
 import type { Population } from '#lib/scope.ts';
 import type { Rule } from '#lib/owner-rules.ts';
-import { nearest } from '#lib/package-dirs.ts';
+import { nearestOf } from '#lib/package-dirs.ts';
 
 /**
  * The members a rule does not reach, each pair with what keeps it out: the use a rule's non-kernel
@@ -110,11 +110,10 @@ const NEAR_MISSES: readonly (readonly [string, string])[] = [
  * @returns {readonly string[]} Each rule and member it misses.
  */
 function unguarded(rules: readonly Rule[], held: Population): readonly string[] {
-  return rules.flatMap((rule) =>
-    held.members
-      .filter((member) => nearest(rule.scopes, (scope) => scope.root, member.dir) === undefined)
-      .map((member) => `${rule.name}: ${member.dir}`),
-  );
+  return rules.flatMap((rule) => {
+    const scopeOf = nearestOf(rule.scopes, (scope) => scope.root);
+    return held.members.filter((member) => scopeOf(member.dir) === undefined).map((member) => `${rule.name}: ${member.dir}`);
+  });
 }
 
 export { CANONICAL, FORMS, IN_A_TEST, MEMBERS, NEAR_MISSES, UNGUARDED, unguarded };

@@ -7,7 +7,7 @@ import { Accepted, Prefixes } from './exemptions.ts';
 import type { Dir, MemberDir } from './package-dirs.ts';
 import { PopulationError, workspacePackages } from './workspace.ts';
 import { ROLE_WORDS, isRole, ships, tierOf } from './roles.ts';
-import { manifestOf, nearest } from './package-dirs.ts';
+import { manifestOf, nearestOf } from './package-dirs.ts';
 import { object, parsed } from './config.ts';
 import { perRoot, textOf, tracked } from './source-files.ts';
 import { REPO_ROOT } from './paths.ts';
@@ -110,7 +110,7 @@ function declaredWord(manifest: string, text: string): unknown {
  * @returns {Population} The population.
  */
 function assembled(root: string | undefined, listing: readonly string[], members: readonly Member[]): Population {
-  const memberOf = (target: string): Member | undefined => nearest(members, (member) => member.dir, target);
+  const memberOf = nearestOf(members, (member) => member.dir);
   return {
     holds: (target: string) => ROOT_FILES.has(target) || target.startsWith(HARNESS_ROOT) || memberOf(target) !== undefined,
     kernel: members.filter((member) => tierOf(member.role) === 'kernel'),
