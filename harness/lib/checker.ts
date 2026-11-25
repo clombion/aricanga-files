@@ -82,8 +82,9 @@ function isTestInfrastructure(population: Population, file: string): boolean {
  * harness's check support (`harness/checks/`) is held as production is, so every check reads it. Whether coverage reads a module is the gate config's question,
  * not this one: a shipping member's `src/testing/` is test support and covered. Every rule holds both
  * kinds. The distinction decides who counts as a reader of a production module's exports
- * (`type-exports.ts`), which modules declare closed sets (`declared-sets.scan.ts`), and, among the
- * kernel members' modules, which declare contracts (`contracts.ts`).
+ * (`type-exports.ts`), which modules declare closed sets (`declared-sets.scan.ts`), which sheets and
+ * readers the stylesheet check reads (`stylesheets.ts`), and, among the kernel members' modules, which
+ * declare contracts (`contracts.ts`).
  *
  * @param {Population} population - The population.
  * @param {string} file - A repository-relative path.

@@ -61,14 +61,16 @@ const TEXT_START = 0;
 const SUBSTITUTION = '0';
 
 /**
- * The members' held files with the given suffixes: the product's, never the harness's planted sheets.
+ * The product's held files with the given suffixes: a member's production files (`isProduction`),
+ * never a test's, a test infrastructure member's or the harness's planted sheets. The sheets the check
+ * lints and the modules their classes are read from are both this selection.
  *
  * @param {readonly string[]} suffixes - The suffixes.
  * @returns {Promise<readonly string[]>} The files.
  */
 async function productFiles(...suffixes: readonly string[]): Promise<readonly string[]> {
   const [files, held] = await Promise.all([heldFiles(...suffixes), population()]);
-  return files.filter((path) => held.memberOf(path) !== undefined);
+  return files.filter((path) => held.memberOf(path) !== undefined && isProduction(held, path));
 }
 
 /**
@@ -152,8 +154,7 @@ async function sheets(): Promise<readonly Sheet[]> {
  * @returns {Promise<ReadonlyMap<string, string>>} Each reader's text, by path.
  */
 async function readers(): Promise<ReadonlyMap<string, string>> {
-  const [found, held] = await Promise.all([productFiles('.html', ...MODULES.values), population()]);
-  const files = found.filter((path) => isProduction(held, path));
+  const files = await productFiles('.html', ...MODULES.values);
   const texts = await textsOf(files);
   return new Map(texts.map(([path, text]: readonly [string, string]) => [path, withoutSheets(path, text)] as const));
 }
