@@ -1,5 +1,6 @@
 /**
- * The project lint rules' fixtures and the planted lint run that proves them.
+ * The project lint rules' fixtures and the planted lint run that proves them, and the reader of an
+ * oxlint report (`oxlintDiagnostics`, `codeOf`) every planted oxlint run reads its findings with.
  *
  * A fixture is a text file `harness/lint-rules/fixtures/<rule>/<fire|clean>[-<case>].fixture` whose
  * first line is `// path: <where it is planted>`; the rest is the module's source. Kept as text, a
@@ -25,12 +26,15 @@ interface Fixture {
   readonly source: string;
 }
 
-/** A diagnostic of the planted run: the rule code (`aricanga(env)`) and the planted file. */
+/** A diagnostic of an oxlint report: its rule code (`aricanga(env)`), none for an unused directive; its file and its message. */
 interface Diagnostic {
-  readonly code: string;
+  readonly code: string | undefined;
   readonly file: string;
   readonly message: string;
 }
+
+/** The code `codeOf` gives an unused disable directive, which oxlint reports with no rule code. */
+const UNUSED_DIRECTIVE = 'unused-disable-directive';
 
 const FIXTURES_DIR = 'harness/lint-rules/fixtures/';
 
@@ -114,20 +118,33 @@ async function fixtureFolders(): Promise<readonly string[]> {
 }
 
 /**
- * Parse `oxlint --format json` output into diagnostics.
+ * The diagnostics of an `oxlint --format json` report, every reader's: a report with no `diagnostics`
+ * is refused, and a diagnostic's `code` is absent where oxlint writes none (an unused directive).
  *
- * @param {unknown} output - The parsed output.
+ * @param {unknown} output - The parsed report.
  * @returns {readonly Diagnostic[]} The diagnostics.
  */
-function diagnostics(output: unknown): readonly Diagnostic[] {
+function oxlintDiagnostics(output: unknown): readonly Diagnostic[] {
   return list(object(output, 'oxlint output')['diagnostics'], 'oxlint output diagnostics').map((entry: unknown) => {
     const fields = object(entry, 'diagnostic');
     return {
-      code: stringOf(fields['code'], 'a diagnostic code'),
+      code: fields['code'] === undefined ? undefined : stringOf(fields['code'], 'a diagnostic code'),
       file: stringOf(fields['filename'], 'a diagnostic filename'),
       message: stringOf(fields['message'], 'a diagnostic message'),
     };
   });
+}
+
+/**
+ * A diagnostic's code: its rule code; `UNUSED_DIRECTIVE` for an unused directive, which carries none;
+ * else `unrecognised: <message>`, a code no rule has, so a diagnostic of a kind this reader does not
+ * know is never read as a rule's.
+ *
+ * @param {Diagnostic} diagnostic - The diagnostic.
+ * @returns {string} Its code.
+ */
+function codeOf(diagnostic: Readonly<Diagnostic>): string {
+  return diagnostic.code ?? (diagnostic.message.startsWith('Unused ') ? UNUSED_DIRECTIVE : `unrecognised: ${diagnostic.message}`);
 }
 
 /**
@@ -151,7 +168,7 @@ function refuseDuplicates(paths: readonly string[]): void {
  */
 async function lintPlanted(project: Readonly<Project>, paths: readonly string[]): Promise<readonly Diagnostic[]> {
   const outcome = await finished([bin('oxlint'), '--format', 'json', ...paths], { cwd: project.root });
-  return diagnostics(parsed(outcome.stdout, `oxlint's report (it wrote to stderr: ${outcome.stderr})`)).map((found) => ({
+  return oxlintDiagnostics(parsed(outcome.stdout, `oxlint's report (it wrote to stderr: ${outcome.stderr})`)).map((found) => ({
     code: found.code,
     file: found.file.replace(`${project.root}/`, ''),
     message: found.message,
@@ -188,9 +205,9 @@ async function lintFixtures(planted: readonly Fixture[]): Promise<readonly Diagn
 function codesAt(found: readonly Diagnostic[], planted: string): readonly string[] {
   return found
     .filter((diagnostic) => diagnostic.file === planted || diagnostic.file.endsWith(path.join('/', planted)))
-    .map((diagnostic) => diagnostic.code);
+    .map((diagnostic) => codeOf(diagnostic));
 }
 
 export { FixtureError } from './fixture-error.ts';
-export { codesAt, fixtureFolders, fixtures, lintFixtures, OXLINT_CONFIG_FILES, parseFixture };
+export { codeOf, codesAt, fixtureFolders, fixtures, lintFixtures, OXLINT_CONFIG_FILES, oxlintDiagnostics, parseFixture, UNUSED_DIRECTIVE };
 export type { Fixture };

@@ -14,11 +14,12 @@
  */
 
 import { Accepted, Exemptions } from '#lib/exemptions.ts';
+import { ConfigError, object, parsed } from '#lib/config.ts';
 import { ESLINT_DIRECTIVE_TEXT, UNUSED_DIRECTIVE_TEXT, WARNING_PLANT, WARNING_TEXT } from './lint-settings.plants.ts';
 import { EXIT_CLEAN, EXIT_FINDINGS } from '#lib/exit-status.ts';
+import { UNUSED_DIRECTIVE, codeOf, oxlintDiagnostics } from '#lib/lint-rules.ts';
 import { config, lint, plantedCodes, repoConfig } from './lint-settings.run.ts';
 import { describe, expect, test } from 'vitest';
-import { object, parsed } from '#lib/config.ts';
 import type { Options } from './lint-settings.run.ts';
 import { finished } from '#lib/tools.ts';
 import { fromRoot } from '#lib/paths.ts';
@@ -171,6 +172,25 @@ async function jsPlugins(): Promise<readonly unknown[]> {
   const listed: readonly unknown[] = Array.isArray(plugins) ? plugins : [];
   return listed;
 }
+
+describe("oxlint's report", () => {
+  test('reads a diagnostic with no rule code as an unused directive, or else as unrecognised with its message, and refuses a report with no diagnostics', () => {
+    expect.hasAssertions();
+    const report = {
+      diagnostics: [
+        { code: 'eslint(no-console)', filename: 'a.ts', message: 'Unexpected console statement.' },
+        { filename: 'a.ts', message: 'Unused oxlint-disable directive (no problems were reported from no-console).' },
+        { filename: 'a.ts', message: 'A planted diagnostic with no rule code.' },
+      ],
+    };
+    expect(oxlintDiagnostics(report).map((diagnostic) => codeOf(diagnostic))).toStrictEqual([
+      'eslint(no-console)',
+      UNUSED_DIRECTIVE,
+      'unrecognised: A planted diagnostic with no rule code.',
+    ]);
+    expect(() => oxlintDiagnostics({})).toThrow(new ConfigError('oxlint output diagnostics is not a list: undefined'));
+  });
+});
 
 describe('the repository config', () => {
   test('fails each planted violation with exactly its rule, and passes the near misses', async () => {

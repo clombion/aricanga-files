@@ -1,8 +1,8 @@
 /** Runs of the locked oxlint over planted projects, for the `lint-settings` check. */
 
-import { PLANTS, UNUSED_DIRECTIVE } from './lint-settings.plants.ts';
+import { OXLINT_CONFIG_FILES, codeOf, oxlintDiagnostics } from '#lib/lint-rules.ts';
 import { object, parsed } from '#lib/config.ts';
-import { OXLINT_CONFIG_FILES } from '#lib/lint-rules.ts';
+import { PLANTS } from './lint-settings.plants.ts';
 import { Project } from '#lib/tools.ts';
 import { textOf } from '#lib/source-files.ts';
 
@@ -40,45 +40,15 @@ async function config(options: Options, rules: Options = {}): Promise<string> {
 }
 
 /**
- * The text of one field of a diagnostic, or `''`.
- *
- * @param {Options} fields - The diagnostic.
- * @param {string} name - The field.
- * @returns {string} The field's text.
- */
-function field(fields: Options, name: string): string {
-  const value = fields[name];
-  return typeof value === 'string' ? value : '';
-}
-
-/**
- * The code of one diagnostic: its rule code, or `UNUSED_DIRECTIVE` for an unused directive.
- *
- * @param {Options} fields - The diagnostic.
- * @returns {string} The diagnostic's code.
- */
-function codeOf(fields: Options): string {
-  const code = field(fields, 'code');
-  if (code !== '') {
-    return code;
-  }
-  const message = field(fields, 'message');
-  return message.startsWith('Unused ') ? UNUSED_DIRECTIVE : message;
-}
-
-/**
  * The rule codes of the JSON report of oxlint, by file.
  *
  * @param {unknown} report - The parsed report.
  * @returns {ReadonlyMap<string, readonly string[]>} Each file's distinct codes, sorted.
  */
 function codesByFile(report: unknown): ReadonlyMap<string, readonly string[]> {
-  const { diagnostics } = object(report, 'oxlint report');
   const found = new Map<string, readonly string[]>();
-  for (const entry of Array.isArray(diagnostics) ? diagnostics : []) {
-    const fields = object(entry, 'diagnostic');
-    const file = field(fields, 'filename');
-    found.set(file, [...new Set([...(found.get(file) ?? []), codeOf(fields)])].toSorted());
+  for (const diagnostic of oxlintDiagnostics(report)) {
+    found.set(diagnostic.file, [...new Set([...(found.get(diagnostic.file) ?? []), codeOf(diagnostic)])].toSorted());
   }
   return found;
 }

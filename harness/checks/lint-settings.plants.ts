@@ -3,8 +3,7 @@
  * written to break no other rule of the config, so that the codes oxlint reports for it are exactly its own.
  */
 
-/** The code oxlint's JSON report gives an unused disable directive, which carries no rule code. */
-const UNUSED_DIRECTIVE = 'unused-disable-directive';
+import { UNUSED_DIRECTIVE } from '#lib/lint-rules.ts';
 
 const UNUSED_DIRECTIVE_TEXT = "// oxlint-disable-next-line no-console\nexport const value = 'a';\n";
 const ESLINT_DIRECTIVE_TEXT = "export function say(): void {\n  // eslint-disable-next-line no-console\n  console.log('x');\n}\n";
@@ -90,4 +89,4 @@ const PLANTS: Readonly<Record<string, readonly [string, readonly string[]]>> = {
 const WARNING_PLANT = 'src/warning.ts';
 const WARNING_TEXT = 'export function stop(): void {\n  debugger;\n}\n';
 
-export { ESLINT_DIRECTIVE_TEXT, PLANTS, UNUSED_DIRECTIVE, UNUSED_DIRECTIVE_TEXT, WARNING_PLANT, WARNING_TEXT };
+export { ESLINT_DIRECTIVE_TEXT, PLANTS, UNUSED_DIRECTIVE_TEXT, WARNING_PLANT, WARNING_TEXT };
