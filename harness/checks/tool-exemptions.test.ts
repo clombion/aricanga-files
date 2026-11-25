@@ -13,11 +13,11 @@ import { ConfigError, parsed } from '#lib/config.ts';
 import { Exemptions, site } from '#lib/exemptions.ts';
 import { dead, matches } from '#lib/globs.ts';
 import { describe, expect, test } from 'vitest';
+import { knipConfig, oxlintConfig } from '#lib/config-modules.ts';
 import { knipEntries, oxfmtEntries, oxlintEntries, stylelintEntries, vitestEntries } from './tool-exemptions.readers.ts';
 import { textOf, tracked } from '#lib/source-files.ts';
 import type { Entry } from './tool-exemptions.readers.ts';
 import { gateConfig } from './gate-config.ts';
-import { oxlintConfig } from '#lib/config-modules.ts';
 
 const HARNESS_ID = 'tool-exemptions';
 
@@ -57,7 +57,7 @@ async function repoEntries(): Promise<Entry[]> {
   const [vitest, oxfmt, knip, stylelint, oxlint, listed] = await Promise.all([
     gateConfig(),
     listedJson('.oxfmtrc.json'),
-    listedJson('knip.json'),
+    knipConfig(),
     listedJson('.stylelintrc.json'),
     oxlintConfig(),
     tracked(),
@@ -67,7 +67,7 @@ async function repoEntries(): Promise<Entry[]> {
     ...oxlintEntries(oxlint),
     ...vitestEntries(vitest),
     ...(oxfmt === undefined ? [] : oxfmtEntries(oxfmt)),
-    ...(knip === undefined ? [] : knipEntries(knip)),
+    ...knipEntries(knip),
     ...stylelintEntries(stylelint ?? {}, stylelintIgnore),
   ];
 }

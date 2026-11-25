@@ -68,7 +68,7 @@ function oxfmtEntries(config: unknown): Entry[] {
  * @returns {Entry[]} The `ignore` of `knip`, at the top level and per workspace.
  */
 function knipEntries(config: unknown): Entry[] {
-  const fields = object(config, 'knip.json');
+  const fields = object(config, 'knip.config.ts');
   const workspaces = object(fields['workspaces'] ?? {}, 'workspaces');
   return [
     ...strings(absentAs(fields['ignore'], []), 'ignore').map((glob) => ({ glob, tool: 'knip ignore' })),

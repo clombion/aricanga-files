@@ -12,7 +12,7 @@ import { pathToFileURL } from 'node:url';
 type Section = Readonly<Record<string, unknown>>;
 
 /** The root configuration modules, by the tool that loads each: the one list of them. */
-const ROOT_CONFIG_MODULES = { oxlint: 'oxlint.config.ts', vitest: 'vitest.gate.config.ts' } as const;
+const ROOT_CONFIG_MODULES = { knip: 'knip.config.ts', oxlint: 'oxlint.config.ts', vitest: 'vitest.gate.config.ts' } as const;
 
 /** The root configuration modules. */
 const ROOT_MODULES: readonly string[] = Object.values(ROOT_CONFIG_MODULES);
@@ -38,4 +38,14 @@ async function oxlintConfig(): Promise<Section> {
   return config;
 }
 
-export { defaultExport, oxlintConfig, ROOT_CONFIG_MODULES, ROOT_MODULES };
+/**
+ * The knip configuration the gate's unused-code scan loads.
+ *
+ * @returns {Promise<Section>} Its fields.
+ */
+async function knipConfig(): Promise<Section> {
+  const config = await defaultExport(ROOT_CONFIG_MODULES.knip);
+  return config;
+}
+
+export { defaultExport, knipConfig, oxlintConfig, ROOT_CONFIG_MODULES, ROOT_MODULES };

@@ -7,7 +7,7 @@
  * every file is held (listed under the project's own directory) by a project, by no more than one
  * production project (a shipping member's `tsconfig.json`), and no test file by a production project;
  * Vitest's coverage `include` for every file that is not a test; jscpd's roots,
- * held by the clones check's own coverage of the listing; and knip's, once `knip.json` declares it.
+ * held by the clones check's own coverage of the listing; and knip's, once `knip.config.ts` declares it.
  */
 
 import { Accepted, Exemptions } from '#lib/exemptions.ts';
@@ -29,6 +29,7 @@ const UNREACHED = Exemptions.grouped({
   'adopting: configuration modules no test imports; include them in coverage and import them from the settings checks': [
     'experiences/sandbox/playwright.sandbox.config.ts: coverage',
     'experiences/sandbox/vite.config.ts: coverage',
+    'knip.config.ts: coverage',
     'oxlint.config.ts: coverage',
     'vitest.gate.config.ts: coverage',
   ],
@@ -195,7 +196,7 @@ describe('the repository', () => {
 
   test('knip declares its scan set', async () => {
     expect.hasAssertions();
-    await expect(tracked()).resolves.toContain('knip.json');
+    await expect(tracked()).resolves.toContain('knip.config.ts');
   });
 });
 

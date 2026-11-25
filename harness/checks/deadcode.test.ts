@@ -5,23 +5,22 @@
  * production mode, where only `!` entries and project files count, an export only a test reads is
  * unused; in default mode, an export nothing reads is unused. Every issue type knip's schema names
  * is an error, and no file is excused from one. knip hints a stale dependency, binary or workspace
- * ignore, so it fails. Each entry of `knip.json`'s ignore lists is held here with its reason.
+ * ignore, so it fails. Each entry of the configuration's ignore lists is held here with its reason.
  */
 
 import { EXIT_CLEAN, EXIT_FINDINGS } from '#lib/exit-status.ts';
-import { deadcodeRuns, ignoreEntries, issueTypes, knip, repoIgnoreEntries, strictnessProblems } from '#lib/deadcode.ts';
+import { deadcodeRuns, ignoreEntries, issueTypes, knip, repoIgnoreEntries, strictnessProblems, writeKnipConfig } from '#lib/deadcode.ts';
 import { describe, expect, test } from 'vitest';
 import { Exemptions } from '#lib/exemptions.ts';
 import { Project } from '#lib/tools.ts';
 import { REPO_ROOT } from '#lib/paths.ts';
 import { inSequence } from '#lib/lists.ts';
-import { parsed } from '#lib/config.ts';
-import { textOf } from '#lib/source-files.ts';
+import { knipConfig } from '#lib/config-modules.ts';
 
 const HARNESS_ID = 'deadcode';
 
 /**
- * The ignore entries of knip.json, keyed as `ignoreEntries` keys them. Each covers something knip
+ * The ignore entries of knip's configuration, keyed as `ignoreEntries` keys them. Each covers something knip
  * cannot see: code outside the harness's scope, or a package loaded by a tool rather than imported.
  */
 const KNIP_IGNORES = Exemptions.grouped({
@@ -71,7 +70,7 @@ async function plantedRuns(files: Readonly<Record<string, string>>, config: obje
   const project = await Project.create();
   try {
     await project.write('package.json', JSON.stringify({ name: 'plant', private: true, type: 'module', version: '0.0.0' }));
-    await project.write('knip.json', JSON.stringify(config));
+    await writeKnipConfig(project, config);
     await project.writeAll(Object.entries(files));
     const runs = await deadcodeRuns();
     const done = await inSequence(runs, async (args) => {
@@ -129,17 +128,17 @@ describe('the repository', () => {
     await expect(failedRepoRuns()).resolves.toStrictEqual([]);
   });
 
-  test('every ignore entry of knip.json carries its reason', async () => {
+  test("every ignore entry of knip's configuration carries its reason", async () => {
     expect.hasAssertions();
     const entries = await repoIgnoreEntries();
     expect(KNIP_IGNORES.unexempted(entries)).toStrictEqual([]);
   });
 
-  test('knip.json is at the strictest: every issue type an error, no file excused', async () => {
+  test("knip's configuration is at the strictest: every issue type an error, no file excused", async () => {
     expect.hasAssertions();
-    const [types, text] = await Promise.all([issueTypes(), textOf('knip.json')]);
+    const [types, config] = await Promise.all([issueTypes(), knipConfig()]);
     expect(types).toContain('exports');
-    expect(strictnessProblems(parsed(text, 'knip.json'), types)).toStrictEqual([]);
+    expect(strictnessProblems(config, types)).toStrictEqual([]);
   });
 });
 
