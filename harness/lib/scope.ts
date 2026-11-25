@@ -122,13 +122,9 @@ interface PopulationInputs {
 }
 
 /** What a population is assembled from, whatever computed it: its checkout (none for a planted one), listing, root manifest, members and the POC's packages. */
-interface Parts {
-  readonly root: string | undefined;
-  readonly listing: readonly string[];
-  readonly rootManifest: Fields;
-  readonly members: readonly Member[];
+type Parts = Pick<Population, 'listing' | 'members' | 'root' | 'rootManifest'> & {
   readonly pocPackages: readonly ListedPackage[];
-}
+};
 
 /**
  * A population built from its parts, whatever computed them.
