@@ -8,7 +8,7 @@
 
 import type { Member, Population } from './scope.ts';
 import { Accepted } from './exemptions.ts';
-import { matches } from './globs.ts';
+import { matches } from '#lint-rules/globs.ts';
 
 /** The harness's own test project: its checks and their support, which coverage does not read. */
 const HARNESS_CHECKS = 'harness/checks/';

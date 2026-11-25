@@ -193,6 +193,18 @@ describe("oxlint's report", () => {
 });
 
 describe('the repository config', () => {
+  test('refuses the mechanics rule without its files, loudly, set bare or with an empty or missing option', async () => {
+    expect.hasAssertions();
+    const plant = { 'src/a.ts': 'export const value = 1;\n' };
+    const bare = await lint(plant, await config({}, { 'aricanga/mechanics': 'error' }));
+    expect([
+      bare.status,
+      [...bare.codes.values()].flat().some((code) => code.includes('holds nothing without its files option')),
+    ]).toStrictEqual([EXIT_FINDINGS, true]);
+    await expect(lint(plant, await config({}, { 'aricanga/mechanics': ['error', {}] }))).rejects.toThrow(/oxlint's report/u);
+    await expect(lint(plant, await config({}, { 'aricanga/mechanics': ['error', { files: [] }] }))).rejects.toThrow(/oxlint's report/u);
+  });
+
   test('fails each planted violation with exactly its rule, and passes the near misses', async () => {
     expect.hasAssertions();
     const [reported, expected] = await plantedCodes();

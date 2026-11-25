@@ -31,7 +31,7 @@ function configOf(held: Population, plugins: () => RebuildPlugins): ViteUserConf
       allowOnly: false,
       coverage: {
         exclude: [...RUNNER_TESTS],
-        include: [...coverageIncludes(held), 'harness/lib/**', 'harness/scripts/**'],
+        include: [...coverageIncludes(held), 'harness/lib/**', 'harness/lint-rules/globs.ts', 'harness/scripts/**'],
         provider: 'v8',
         reporter: ['text-summary', 'json'],
         reportsDirectory: COVERAGE_DIR,

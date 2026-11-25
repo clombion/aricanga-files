@@ -14,7 +14,7 @@ import { textsOf, tracked, writeText } from './source-files.ts';
 import { Accepted } from './exemptions.ts';
 import { UPSTREAM } from './upstream.ts';
 import { checkModules } from './checks.ts';
-import { matches } from './globs.ts';
+import { matches } from '#lint-rules/globs.ts';
 import { pins } from './pins.ts';
 import { repoTasks } from './repo-tasks.ts';
 

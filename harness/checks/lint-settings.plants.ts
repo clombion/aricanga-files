@@ -61,6 +61,7 @@ const PLANTS: Readonly<Record<string, readonly [string, readonly string[]]>> = {
     ['typescript(no-floating-promises)'],
   ],
   'src/focused.test.ts': [plantedTest('test.only'), ['vitest(no-focused-tests)']],
+  'src/knip.config.ts': ['const settings = {};\n\nexport default settings;\n', ['import(no-default-export)']],
   'src/narrowed.ts': [
     "export function kind(raw: string): 'a' | 'b' {\n  return raw as 'a' | 'b';\n}\n",
     ['typescript(no-unsafe-type-assertion)'],
@@ -96,6 +97,7 @@ const PLANTS: Readonly<Record<string, readonly [string, readonly string[]]>> = {
   ],
   'src/unsafe-return.ts': ["export function read(): number {\n  return JSON.parse('1');\n}\n", ['typescript(no-unsafe-return)']],
   'src/unused-directive.ts': [UNUSED_DIRECTIVE_TEXT, [UNUSED_DIRECTIVE]],
+  'src/vitest.config.ts': ['const settings = {};\n\nexport default settings;\n', ['import(no-default-export)']],
 };
 
 const WARNING_PLANT = 'src/warning.ts';

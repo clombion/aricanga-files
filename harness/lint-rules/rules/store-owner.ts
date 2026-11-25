@@ -1,6 +1,6 @@
 /** One module owns the view store: `createStore` and `reconcile` are imported only by its owners. */
 
-import { OWNERS_SCHEMA, matches, problemMeta } from '#lint-rules/ast.ts';
+import { OWNERS_SCHEMA, optionMatches, problemMeta } from '#lint-rules/ast.ts';
 import { onImports, refuse } from '#lint-rules/rules/imports.ts';
 import type { Rule } from '#lint-rules/ast.ts';
 
@@ -9,7 +9,7 @@ const SOLID = /^solid-js(?:\/|$)/u;
 
 export const storeOwner: Rule = {
   create(context) {
-    if (matches(context, 'owners')) {
+    if (optionMatches(context, 'owners')) {
       return {};
     }
     return onImports((imported) => {

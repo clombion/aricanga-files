@@ -11,12 +11,14 @@
 
 import { ConfigError, parsed } from '#lib/config.ts';
 import { Exemptions, site } from '#lib/exemptions.ts';
-import { dead, matches } from '#lib/globs.ts';
 import { describe, expect, test } from 'vitest';
+import { fieldMatches, matches } from '#lint-rules/globs.ts';
 import { knipConfig, oxlintConfig } from '#lib/config-modules.ts';
 import { knipEntries, oxfmtEntries, oxlintEntries, stylelintEntries, vitestEntries } from './tool-exemptions.readers.ts';
 import { textOf, tracked } from '#lib/source-files.ts';
 import type { Entry } from './tool-exemptions.readers.ts';
+import type { OxlintField } from '#lint-rules/globs.ts';
+import { Project } from '#lib/tools.ts';
 import { gateConfig } from './gate-config.ts';
 
 const HARNESS_ID = 'tool-exemptions';
@@ -32,13 +34,9 @@ const POLICIES = new Exemptions({});
  * @returns {Entry[]} The entries whose glob matches none of `paths`.
  */
 function deadEntries(entries: readonly Entry[], paths: readonly string[]): Entry[] {
-  const unmatched = new Set(
-    dead(
-      entries.map((entry) => entry.glob),
-      paths,
-    ),
+  return entries.filter((entry) =>
+    paths.every((target) => !(entry.reading === 'root' ? matches(entry.glob, target) : fieldMatches(entry.reading, entry.glob, target))),
   );
-  return entries.filter((entry) => unmatched.has(entry.glob));
 }
 
 async function listedJson(path: string): Promise<unknown> {
@@ -79,13 +77,71 @@ describe('the repository', () => {
 });
 
 describe('the matcher', () => {
-  test('a glob matches through directories and a trailing /** matches a directory', () => {
+  test('a glob matches through directories, a trailing /** matches a directory, and a harness glob has no anchor', () => {
     expect.hasAssertions();
-    expect(matches('packages/*/src/**', 'packages/plant/src/a.ts')).toBe(true);
-    expect(matches('**/*.test.ts', 'packages/plant/src/a.test.ts')).toBe(true);
-    expect(matches('docs/**', 'docs/x.md')).toBe(true);
-    expect(matches('./docs/**', 'docs/x.md')).toBe(true);
-    expect(matches('packages/*/src/*.css', 'packages/plant/src/a.ts')).toBe(false);
+    const cases = [
+      ['packages/*/src/**', 'packages/plant/src/a.ts'],
+      ['**/*.test.ts', 'packages/plant/src/a.test.ts'],
+      ['docs/**', 'docs/x.md'],
+      ['./docs/**', 'docs/x.md'],
+      ['/docs/**', 'docs/x.md'],
+      ['**/snapshot-adapter.ts', 'snapshot-adapter.ts'],
+      ['src/**/*.{ts,tsx}', 'src/a.tsx'],
+      ['packages/*/src/*.css', 'packages/plant/src/a.ts'],
+      ['/docs/**', 'packages/docs/x.md'],
+    ] as const;
+    expect(cases.map(([glob, target]) => matches(glob, target))).toStrictEqual([true, true, true, false, false, true, true, false, false]);
+  });
+});
+
+/** The files of the planted project the field readings are asked about. */
+const FIELD_FILES: readonly string[] = ['a.ts', 'pkg/a.ts', 'pkg/x/a.ts', 'x/a.ts', 'x/sub/b.ts'];
+
+/** Globs written into each oxlint field: slashless, each anchor, slash-holding, a subtree, a directory, a trailing slash. */
+const FIELD_GLOBS: readonly string[] = ['a.ts', 'x', './a.ts', './x', '/a.ts', '/x', 'x/**', './x/**', '/x/**', 'pkg/x', '**/x', 'x/'];
+
+/**
+ * The planted files oxlint matches with one glob in one field: the files it lints under an ignore
+ * pattern, or the files an override turning on `no-debugger` reports.
+ *
+ * @param {OxlintField} field - The field.
+ * @param {string} glob - The glob.
+ * @returns {Promise<readonly string[]>} The matched files, sorted.
+ */
+async function oxlintMatched(field: OxlintField, glob: string): Promise<readonly string[]> {
+  const project = await Project.create({ linkModules: false });
+  try {
+    await project.writeAll(FIELD_FILES.map((file) => [file, 'debugger;\n'] as const));
+    const config =
+      field === 'ignorePatterns'
+        ? { categories: {}, ignorePatterns: [glob], rules: { 'no-debugger': 'error' } }
+        : { categories: {}, overrides: [{ files: [glob], rules: { 'no-debugger': 'error' } }], rules: { 'no-debugger': 'off' } };
+    await project.write('planted.json', JSON.stringify(config));
+    const done = await project.tool('oxlint', '-c', 'planted.json', '--format', 'unix', '.');
+    const reported = new Set(done.stdout.split('\n').flatMap((line) => FIELD_FILES.filter((file) => line.startsWith(`${file}:`))));
+    return field === 'ignorePatterns'
+      ? FIELD_FILES.filter((file) => !reported.has(file))
+      : FIELD_FILES.filter((file) => reported.has(file));
+  } finally {
+    await project.remove();
+  }
+}
+
+describe("oxlint's fields", () => {
+  test.each(['files', 'ignorePatterns'] as const)('the matcher reads a glob in %s as oxlint does, each anchor and depth', async (field) => {
+    expect.hasAssertions();
+    const read = FIELD_GLOBS.map((glob) => [glob, FIELD_FILES.filter((file) => fieldMatches(field, glob, file))] as const);
+    const found = await Promise.all(FIELD_GLOBS.map(async (glob) => [glob, await oxlintMatched(field, glob)] as const));
+    expect(read).toStrictEqual(found);
+  });
+
+  test("the census reads a glob with the other field's anchor as dead", () => {
+    expect.hasAssertions();
+    const entries = oxlintEntries({ ignorePatterns: ['./docs/**', '/docs/**'], overrides: [{ files: ['/docs/x.md', './docs/x.md'] }] });
+    expect(deadEntries(entries, ['docs/x.md'])).toStrictEqual([
+      { glob: './docs/**', reading: 'ignorePatterns', tool: 'oxlint ignorePatterns' },
+      { glob: '/docs/x.md', reading: 'files', tool: 'oxlint overrides[0]' },
+    ]);
   });
 });
 
@@ -99,8 +155,8 @@ describe('the readers', () => {
       overrides: [{ files: ['packages/plant/**'] }, { files: ['packages/gone/**'] }],
     });
     expect(deadEntries(entries, LISTED)).toStrictEqual([
-      { glob: 'gone/**', tool: 'oxlint ignorePatterns' },
-      { glob: 'packages/gone/**', tool: 'oxlint overrides[1]' },
+      { glob: 'gone/**', reading: 'ignorePatterns', tool: 'oxlint ignorePatterns' },
+      { glob: 'packages/gone/**', reading: 'files', tool: 'oxlint overrides[1]' },
     ]);
   });
 
@@ -137,23 +193,25 @@ describe('the readers of the other tools', () => {
 
   test('reads oxfmt, knip and stylelint ignores', () => {
     expect.hasAssertions();
-    expect(oxfmtEntries({ ignorePatterns: ['docs/**'] })).toStrictEqual([{ glob: 'docs/**', tool: 'oxfmt ignorePatterns' }]);
+    expect(oxfmtEntries({ ignorePatterns: ['docs/**'] })).toStrictEqual([
+      { glob: 'docs/**', reading: 'root', tool: 'oxfmt ignorePatterns' },
+    ]);
     expect(knipEntries({ ignore: ['docs/**'], workspaces: { 'packages/plant': { ignore: ['src/b.css'] } } })).toStrictEqual([
-      { glob: 'docs/**', tool: 'knip ignore' },
-      { glob: 'packages/plant/src/b.css', tool: 'knip workspaces[packages/plant].ignore' },
+      { glob: 'docs/**', reading: 'root', tool: 'knip ignore' },
+      { glob: 'packages/plant/src/b.css', reading: 'root', tool: 'knip workspaces[packages/plant].ignore' },
     ]);
     expect(stylelintEntries({ ignoreFiles: ['**/b.css'] }, '# a comment\n\ngone/**\n')).toStrictEqual([
-      { glob: '**/b.css', tool: 'stylelint ignoreFiles' },
-      { glob: 'gone/**', tool: '.stylelintignore' },
+      { glob: '**/b.css', reading: 'root', tool: 'stylelint ignoreFiles' },
+      { glob: 'gone/**', reading: 'root', tool: '.stylelintignore' },
     ]);
   });
 
   test('a declared policy passes while it matches nothing, and fails as stale once it matches', () => {
     expect.hasAssertions();
     const policies = new Exemptions({ [site('oxlint ignorePatterns', '**/dist/**')]: 'planted: build output' });
-    const unmatched = deadEntries([{ glob: '**/dist/**', tool: 'oxlint ignorePatterns' }], LISTED);
+    const unmatched = deadEntries([{ glob: '**/dist/**', reading: 'ignorePatterns', tool: 'oxlint ignorePatterns' }], LISTED);
     expect(policies.unexemptedBy(unmatched, (entry) => site(entry.tool, entry.glob))).toStrictEqual([]);
-    const nowMatching = deadEntries([{ glob: '**/dist/**', tool: 'oxlint ignorePatterns' }], ['a/dist/x.js']);
+    const nowMatching = deadEntries([{ glob: '**/dist/**', reading: 'ignorePatterns', tool: 'oxlint ignorePatterns' }], ['a/dist/x.js']);
     expect(() => policies.unexemptedBy(nowMatching, (entry) => site(entry.tool, entry.glob))).toThrow('stale');
   });
 });

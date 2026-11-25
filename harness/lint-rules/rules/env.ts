@@ -1,7 +1,7 @@
 /** The environment is read in one place: no `process.env` outside the settings owners. */
 
 import type { Node, Rule } from '#lint-rules/ast.ts';
-import { OWNERS_SCHEMA, child, children, matches, memberName, moduleSource, nameOf, problemMeta } from '#lint-rules/ast.ts';
+import { OWNERS_SCHEMA, child, children, memberName, moduleSource, nameOf, optionMatches, problemMeta } from '#lint-rules/ast.ts';
 
 const PROCESS = new Set(['process', 'node:process']);
 const MESSAGE = 'the environment is read by its settings owner: take the value from it';
@@ -22,7 +22,7 @@ function importsEnv(node: Node): boolean {
 
 export const env: Rule = {
   create(context) {
-    if (matches(context, 'owners')) {
+    if (optionMatches(context, 'owners')) {
       return {};
     }
     return {

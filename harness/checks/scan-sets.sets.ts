@@ -8,7 +8,7 @@ import { dirOfImporter, nearestOf } from '#lib/package-dirs.ts';
 import { textsOf, tracked } from '#lib/source-files.ts';
 import { dirname } from 'node:path/posix';
 import { knipConfig } from '#lib/config-modules.ts';
-import { matches } from '#lib/globs.ts';
+import { matches } from '#lint-rules/globs.ts';
 import { projects } from '#lib/projects.ts';
 import { relativeTo } from '#lib/relative.ts';
 

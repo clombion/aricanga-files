@@ -9,7 +9,7 @@ import { ROOT_CONFIG_MODULES, defaultExport } from '#lib/config-modules.ts';
 import { list, object, strings } from '#lib/config.ts';
 import { HARNESS_CHECKS } from '#lib/test-globs.ts';
 import { isProduction } from '#lib/checker.ts';
-import { matches } from '#lib/globs.ts';
+import { matches } from '#lint-rules/globs.ts';
 import { population } from '#lib/scope.ts';
 
 type Section = Readonly<Record<string, unknown>>;

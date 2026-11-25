@@ -1,14 +1,18 @@
 /**
- * Oxlint's configuration over a population: the rules and overrides that name members read them from
- * their roles, wherever a member sits, and the ignore patterns are exactly the listed lintable files
- * the population does not hold.
+ * Oxlint's configuration names each member by its role, and oxlint lints exactly the held lintable files.
+ *
+ * The rules and overrides that name members read them from their roles; oxlint, run as the lint
+ * task runs it, lists the files it lints, and the check compares that list (never an emulation of
+ * oxlint's globs) with the listed lintable files the population holds.
  */
 
 import { describe, expect, test } from 'vitest';
-import { list, object, strings } from '#lib/config.ts';
+import { list, object } from '#lib/config.ts';
+import { EXIT_CLEAN } from '#lib/exit-status.ts';
 import type { Population } from '#lib/scope.ts';
-import { matches } from '#lib/globs.ts';
-import { oxlintConfig } from '#lib/config-modules.ts';
+import { REPO_ROOT } from '#lib/paths.ts';
+import { isLintable } from '#lib/oxlint-files.ts';
+import { lintedFiles } from '#lib/lint-rules.ts';
 import { oxlintConfigOf } from '#lib/oxlint-config.ts';
 import { plantedPopulation } from '#lib/planted-population.ts';
 import { population } from '#lib/scope.ts';
@@ -20,20 +24,6 @@ const PURITY = 0;
 
 /** Where the node override sits after it. */
 const NODE = 1;
-
-/**
- * Whether one of oxlint's ignore patterns matches a file.
- *
- * @param {readonly string[]} patterns - The patterns.
- * @param {string} file - The file.
- * @returns {boolean} Whether a pattern matches it.
- */
-function ignoredBy(patterns: readonly string[], file: string): boolean {
-  return patterns.some((pattern) => matches(pattern, file));
-}
-
-/** A listed module oxlint lints, by its extension. */
-const LINTABLE = /\.(?:[cm]?[jt]sx?)$/u;
 
 /** The settings of a configuration that name members. */
 interface MemberSettings {
@@ -101,27 +91,33 @@ describe('the oxlint configuration of a planted population', () => {
         '**/*.test.{ts,tsx}',
         '**/vite.config.ts',
         '**/playwright.*.config.ts',
-        'knip.config.ts',
-        'oxlint.config.ts',
-        'vitest.gate.config.ts',
+        './knip.config.ts',
+        './oxlint.config.ts',
+        './vitest.gate.config.ts',
       ],
     ]);
   });
 });
 
-describe('the repository', () => {
-  test('ignores every listed lintable file the population does not hold, and no file it holds', async () => {
+describe('the oxlint configuration of a population with no mechanics', () => {
+  test('turns the Solid ban off where no member has a mechanics module, since its files may not be empty', async () => {
     expect.hasAssertions();
-    const [config, held] = await Promise.all([oxlintConfig(), population()]);
-    const patterns = strings(config['ignorePatterns'], 'ignorePatterns');
-    const lintable = held.listing.filter((file) => LINTABLE.test(file));
-    const unheld = lintable.filter((file) => !held.holds(file));
-    const heldFiles = lintable.filter((file) => held.holds(file));
-    expect([unheld.filter((file) => !ignoredBy(patterns, file)), heldFiles.filter((file) => ignoredBy(patterns, file))]).toStrictEqual([
-      [],
-      [],
+    const held = await plantedPopulation(['ui/view/src/a.tsx'], [['ui/view/', 'view']]);
+    expect(oxlintConfigOf(held).rules?.['aricanga/mechanics']).toBe('off');
+  });
+});
+
+describe('the repository', () => {
+  test('oxlint, as the lint task runs it, lints exactly the listed lintable files the population holds', async () => {
+    expect.hasAssertions();
+    const [linted, held] = await Promise.all([lintedFiles(REPO_ROOT), population()]);
+    const listed = new Set(held.listing);
+    const lintable = held.listing.filter((file) => isLintable(file));
+    expect([linted.status, linted.files.filter((file) => listed.has(file))]).toStrictEqual([
+      EXIT_CLEAN,
+      lintable.filter((file) => held.holds(file)).toSorted(),
     ]);
-    expect(unheld).not.toStrictEqual([]);
+    expect(lintable.filter((file) => !held.holds(file))).not.toStrictEqual([]);
   });
 });
 

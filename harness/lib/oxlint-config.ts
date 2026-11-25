@@ -7,14 +7,13 @@
 
 import { BROWSER_TESTS, RUNNER_TESTS, TEST_SUPPORT, liveGlobs } from './test-globs.ts';
 import type { OxlintConfig, OxlintOverride } from 'oxlint';
+import { ROOT_MODULE_FILES, unheldPatterns } from './oxlint-files.ts';
 import type { Role, Tier } from './roles.ts';
 import { HARNESS_ROOT } from './scope.ts';
 import type { Population } from './scope.ts';
-import { ROOT_MODULES } from './config-modules.ts';
 import { RULES } from './oxlint-rules.ts';
 import { Vocabulary } from './exemptions.ts';
 import { boundariesOf } from './import-boundaries.ts';
-import { dirname } from 'node:path/posix';
 import { isEmpty } from './lists.ts';
 import { tierOf } from './roles.ts';
 
@@ -47,7 +46,7 @@ const SETTINGS = {
         'harness/lint-rules/plugin.ts',
         '**/vite.config.ts',
         '**/playwright.*.config.ts',
-        ...ROOT_MODULES,
+        ...ROOT_MODULE_FILES,
         'harness/lib/design-tokens.ts',
       ],
       rules: {
@@ -85,11 +84,8 @@ const MECHANICS: Vocabulary<Readonly<Record<Role, readonly string[]>>> = new Voc
 /** A system's reducer surface, under its directory (ADR-0007). */
 const REDUCER: readonly string[] = ['src/system.ts', SYSTEM_MODEL];
 
-/** The extensions oxlint lints. */
-const LINTED = /\.(?:[cm]?[jt]sx?)$/u;
-
 /** The tool configs, which run on Node: a member's Vite and Playwright configs, and the root modules. */
-const NODE_MODULES: readonly string[] = ['**/vite.config.ts', '**/playwright.*.config.ts', ...ROOT_MODULES];
+const NODE_MODULES: readonly string[] = ['**/vite.config.ts', '**/playwright.*.config.ts', ...ROOT_MODULE_FILES];
 
 /**
  * Why a harness module reads no locale: `Intl`, bare or read from `globalThis` (`window` and `self`
@@ -126,35 +122,6 @@ function roleGlobs(held: Population, role: Role, tails: readonly string[]): stri
 }
 
 /**
- * The directories above a path, the topmost first, each with its closing `/`.
- *
- * @param {string} file - The path.
- * @returns {readonly string[]} Its ancestors.
- */
-function ancestors(file: string): readonly string[] {
-  const parent = dirname(file);
-  return parent === '.' ? [] : [...ancestors(parent), `${parent}/`];
-}
-
-/**
- * The listed lintable files the population does not hold, each as the topmost directory above it that
- * holds no held file (`<dir>**`), or as itself where every directory above it does.
- *
- * @param {Population} held - The population.
- * @returns {string[]} The ignore patterns, sorted.
- */
-function unheldPatterns(held: Population): string[] {
-  const kept = held.listing.filter((file) => held.holds(file));
-  const patterns = held.listing
-    .filter((file) => LINTED.test(file) && !held.holds(file))
-    .map((file) => {
-      const top = ancestors(file).find((dir) => !kept.some((path) => path.startsWith(dir)));
-      return top === undefined ? file : `${top}**`;
-    });
-  return [...new Set(patterns)].toSorted();
-}
-
-/**
  * The modules that run on Node: the harness, test support, the runners' tests, a test-infrastructure
  * member's browser tests and the tool configs.
  *
@@ -180,13 +147,11 @@ function nodeModules(held: Population): string[] {
 function memberRules(held: Population): NonNullable<OxlintConfig['rules']> {
   const testInfrastructure = tierGlobs(held, 'test-infrastructure');
   const ignored: ['error', { ignore: string[] }] = ['error', { ignore: testInfrastructure }];
+  const mechanics = held.members.flatMap((member) => MECHANICS.of(member.role).flatMap((tail) => liveGlobs(held, [member], tail)));
   return {
     'aricanga/flags': ignored,
     'aricanga/legacy': ignored,
-    'aricanga/mechanics': [
-      'error',
-      { files: held.members.flatMap((member) => MECHANICS.of(member.role).flatMap((tail) => liveGlobs(held, [member], tail))) },
-    ],
+    'aricanga/mechanics': isEmpty(mechanics) ? 'off' : ['error', { files: mechanics }],
     'aricanga/mirrors': ignored,
     'aricanga/store-owner': ['error', { owners: ['**/snapshot-adapter.ts', ...testInfrastructure] }],
     'aricanga/sync-parts': ignored,

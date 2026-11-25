@@ -4,6 +4,7 @@
  * rules read nodes through these guards instead of casts.
  */
 
+import { matches } from '#lint-rules/globs.ts';
 import path from 'node:path';
 
 /** An ESTree node as oxlint hands it to a visitor. */
@@ -163,20 +164,6 @@ function relativeFile(context: Context): string {
 }
 
 /**
- * A glob compiled to a test of a POSIX path: `**` crosses folders, `*` stays within one.
- * @param {string} glob - The glob.
- * @returns {FileTest} Whether a path matches the whole glob.
- */
-function globTest(glob: string): FileTest {
-  const pattern = glob
-    .split('**')
-    .map((part) => part.replaceAll(/[.+^${}()|[\]\\]/gu, String.raw`\$&`).replaceAll('*', '[^/]*'))
-    .join('.*');
-  const compiled = new RegExp(`^${pattern}$`, 'u');
-  return (file) => compiled.test(file);
-}
-
-/**
  * The globs under `key` in the rule's first option object.
  * @param {Context} context - The rule's context.
  * @param {string} key - The option holding the globs.
@@ -188,7 +175,15 @@ function globs(context: Context, key: string): readonly FileTest[] {
     return [];
   }
   const value: unknown = Reflect.get(first, key);
-  return Array.isArray(value) ? value.filter((entry) => typeof entry === 'string').map((glob) => globTest(glob)) : [];
+  return Array.isArray(value)
+    ? value
+        .filter((entry) => typeof entry === 'string')
+        .map(
+          (glob) =>
+            (file: string): boolean =>
+              matches(glob, file),
+        )
+    : [];
 }
 
 /**
@@ -197,7 +192,7 @@ function globs(context: Context, key: string): readonly FileTest[] {
  * @param {string} key - The option holding the globs.
  * @returns {boolean} Whether one glob matches the linted file.
  */
-function matches(context: Context, key: string): boolean {
+function optionMatches(context: Context, key: string): boolean {
   const file = relativeFile(context);
   return globs(context, key).some((test) => test(file));
 }
@@ -208,7 +203,7 @@ function matches(context: Context, key: string): boolean {
  * @returns {boolean} Whether the rule applies to the linted file.
  */
 function heldComponentFile(context: Context): boolean {
-  return context.filename.endsWith('.tsx') && !matches(context, 'ignore');
+  return context.filename.endsWith('.tsx') && !optionMatches(context, 'ignore');
 }
 
 /**
@@ -235,4 +230,17 @@ function componentRule(description: string, create: Rule['create']): Rule {
 }
 
 export type { Context, Node, Rule, Visitor };
-export { child, children, componentRule, flag, matches, memberName, moduleSource, nameOf, OWNERS_SCHEMA, problemMeta, relativeFile, text };
+export {
+  child,
+  children,
+  componentRule,
+  flag,
+  memberName,
+  moduleSource,
+  nameOf,
+  optionMatches,
+  OWNERS_SCHEMA,
+  problemMeta,
+  relativeFile,
+  text,
+};

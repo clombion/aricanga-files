@@ -17,6 +17,8 @@ import { FixtureError } from './fixture-error.ts';
 import { fromRoot } from './paths.ts';
 import { oxlintConfig } from './config-modules.ts';
 import path from 'node:path';
+import { present } from './present.ts';
+import { repoTasks } from './repo-tasks.ts';
 
 /** A rule fixture: the rule it proves, whether it must fire, where it is planted and its source. */
 interface Fixture {
@@ -225,12 +227,55 @@ function codesAt(found: readonly Diagnostic[], planted: string): readonly string
     .map((diagnostic) => codeOf(diagnostic));
 }
 
+/** The words of an `oxlint` command after the binary's name. */
+const AFTER_BINARY = 1;
+
+/**
+ * The oxlint invocation of the `lint` task: its arguments, without the binary.
+ *
+ * @returns {Promise<readonly string[]>} The arguments.
+ */
+async function lintRun(): Promise<readonly string[]> {
+  const tasks = await repoTasks();
+  const { commands } = present(tasks.get('lint'), 'the lint task');
+  const command = present(
+    commands.find((candidate) => candidate === 'oxlint' || candidate.startsWith('oxlint ')),
+    'the oxlint command of the lint task',
+  );
+  return command.split(' ').slice(AFTER_BINARY);
+}
+
+/** What oxlint lists for a checkout: its exit status, and the files it would lint. */
+interface Listing {
+  readonly status: number;
+  readonly files: readonly string[];
+}
+
+/**
+ * The files oxlint lints in a checkout, as the `lint` task runs it (`--debug=files`: it lists, then exits).
+ *
+ * @param {string} cwd - The checkout.
+ * @returns {Promise<Listing>} Its status and the files, relative to the checkout, sorted.
+ */
+async function lintedFiles(cwd: string): Promise<Listing> {
+  const args = await lintRun();
+  const done = await finished([bin('oxlint'), ...args, '--debug=files'], { cwd });
+  return {
+    files: done.stdout
+      .split('\n')
+      .filter((line) => line !== '')
+      .toSorted(),
+    status: done.status,
+  };
+}
+
 export { FixtureError } from './fixture-error.ts';
 export {
   codeOf,
   codesAt,
   fixtureFolders,
   fixtures,
+  lintedFiles,
   lintFixtures,
   OXLINT_CONFIG_FILES,
   oxlintDiagnostics,
