@@ -1,7 +1,7 @@
 # Project lint rules
 
 An oxlint JS plugin, `aricanga`, for the rules no shipped oxlint or `eslint-plugin-solid` rule
-holds. `.oxlintrc.json` loads `plugin.ts` directly: Node strips its types, so the rules are
+holds. `oxlint.config.ts` loads `plugin.ts` directly: Node strips its types, so the rules are
 TypeScript checked by the harness's own project. Every rule is on as an error, and
 `harness/checks/project-lint-rules.test.ts` proves each one on its fixtures.
 
@@ -49,7 +49,7 @@ the repository's own tools never lint or compile a must-fire case.
 ## Where other rules hold the rest
 
 - Module boundaries and reducer purity are `no-restricted-imports`, `no-restricted-globals` and
-  `no-restricted-properties` overrides in `.oxlintrc.json`, proven by `harness/checks/boundaries.test.ts`.
+  `no-restricted-properties` overrides of `harness/lib/oxlint-config.ts`, proven by `harness/checks/boundaries.test.ts`.
 - Destructured props, reactivity and the rest of Solid's own rules are `eslint-plugin-solid`'s
   v2-strict set.
 - jsx-a11y's `label-has-associated-control` knows only `htmlFor` and has no option for Solid's

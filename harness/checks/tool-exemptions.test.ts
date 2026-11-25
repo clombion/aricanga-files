@@ -17,6 +17,7 @@ import { knipEntries, oxfmtEntries, oxlintEntries, stylelintEntries, vitestEntri
 import { textOf, tracked } from '#lib/source-files.ts';
 import type { Entry } from './tool-exemptions.readers.ts';
 import { gateConfig } from './gate-config.ts';
+import { oxlintConfig } from '#lib/config-modules.ts';
 
 const HARNESS_ID = 'tool-exemptions';
 
@@ -58,7 +59,7 @@ async function repoEntries(): Promise<Entry[]> {
     listedJson('.oxfmtrc.json'),
     listedJson('knip.json'),
     listedJson('.stylelintrc.json'),
-    listedJson('.oxlintrc.json'),
+    oxlintConfig(),
     tracked(),
   ]);
   const stylelintIgnore = listed.includes('.stylelintignore') ? await textOf('.stylelintignore') : '';
@@ -164,7 +165,7 @@ describe('a tool config', () => {
   test('refuses a field written as JSON null where a list is read: null is not an absent field', () => {
     expect.hasAssertions();
     expect(() => oxlintEntries(parsed('{"overrides":null}', 'a planted config'))).toThrow(
-      new ConfigError('.oxlintrc.json overrides is not a list: null'),
+      new ConfigError('oxlint.config.ts overrides is not a list: null'),
     );
     expect(() => oxfmtEntries(parsed('{"ignorePatterns":null}', 'a planted config'))).toThrow(
       new ConfigError('ignorePatterns is not a list: null'),

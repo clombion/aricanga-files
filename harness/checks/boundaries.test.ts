@@ -5,15 +5,16 @@
  * only foundation; an experience imports foundation and systems, never another experience; nothing
  * in the rebuild imports the POC. The reducer-purity rule (ADR-0007) refuses `Date` and
  * `Math.random` in a system's reducer surface. Each fixture is written at its real path in a planted
- * project holding a copy of `.oxlintrc.json`, and every system package has its own override.
+ * project holding the repository's oxlint configuration, and every system package has its own override.
  */
 
+import { OXLINT_CONFIG_FILES, PLANTED_OXLINT_CONFIG, writeOxlintConfig } from '#lib/lint-rules.ts';
 import { describe, expect, test } from 'vitest';
-import { object, parsed } from '#lib/config.ts';
-import { textOf, tracked } from '#lib/source-files.ts';
 import { EXIT_FINDINGS } from '#lib/exit-status.ts';
-import { OXLINT_CONFIG_FILES } from '#lib/lint-rules.ts';
 import { Project } from '#lib/tools.ts';
+import { object } from '#lib/config.ts';
+import { oxlintConfig } from '#lib/config-modules.ts';
+import { tracked } from '#lib/source-files.ts';
 
 const HARNESS_ID = 'boundaries';
 
@@ -54,8 +55,9 @@ const BOUNDARY_RULES = ['no-restricted-imports', 'no-restricted-globals', 'no-re
 async function verdicts(fixtures: readonly Fixture[]): Promise<ReadonlyMap<string, boolean>> {
   const project = await Project.create({ copies: OXLINT_CONFIG_FILES });
   try {
+    await writeOxlintConfig(project);
     await project.writeAll(fixtures.map((fixture) => [fixture.path, fixture.text] as const));
-    const outcome = await project.tool('oxlint', '-c', '.oxlintrc.json', '-A', 'all', ...fixtures.map((fixture) => fixture.path));
+    const outcome = await project.tool('oxlint', '-c', PLANTED_OXLINT_CONFIG, '-A', 'all', ...fixtures.map((fixture) => fixture.path));
     if (outcome.status > EXIT_FINDINGS || outcome.stderr.trim() !== '') {
       throw new Error(`oxlint did not lint the fixtures: ${outcome.status} ${outcome.stderr}`);
     }
@@ -88,8 +90,7 @@ async function systems(): Promise<readonly string[]> {
  * @returns {Promise<readonly unknown[]>} The globs.
  */
 async function overrideGlobs(): Promise<readonly unknown[]> {
-  const text = await textOf('.oxlintrc.json');
-  const { overrides } = object(parsed(text, '.oxlintrc.json'), '.oxlintrc.json');
+  const { overrides } = await oxlintConfig();
   const entries: readonly unknown[] = Array.isArray(overrides) ? overrides : [];
   return entries.flatMap((entry) => object(entry, 'override')['files']);
 }

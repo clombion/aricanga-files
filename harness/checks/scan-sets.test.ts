@@ -29,6 +29,7 @@ const UNREACHED = Exemptions.grouped({
   'adopting: configuration modules no test imports; include them in coverage and import them from the settings checks': [
     'experiences/sandbox/playwright.sandbox.config.ts: coverage',
     'experiences/sandbox/vite.config.ts: coverage',
+    'oxlint.config.ts: coverage',
     'vitest.gate.config.ts: coverage',
   ],
   'adopting: the project lint-rules plugin runs inside oxlint; include harness/lint-rules in coverage and load its rules in-process from the lint-rules check':

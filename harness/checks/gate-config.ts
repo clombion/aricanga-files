@@ -5,12 +5,11 @@
  * the config through these.
  */
 
+import { ROOT_CONFIG_MODULES, defaultExport } from '#lib/config-modules.ts';
 import { list, object, strings } from '#lib/config.ts';
 import { HARNESS_CHECKS } from '#lib/test-globs.ts';
-import { fromRoot } from '#lib/paths.ts';
 import { isProduction } from '#lib/checker.ts';
 import { matches } from '#lib/globs.ts';
-import { pathToFileURL } from 'node:url';
 import { population } from '#lib/scope.ts';
 
 type Section = Readonly<Record<string, unknown>>;
@@ -21,8 +20,8 @@ type Section = Readonly<Record<string, unknown>>;
  * @returns {Promise<Section>} The config's fields.
  */
 async function gateConfig(): Promise<Section> {
-  const loaded: unknown = await import(pathToFileURL(fromRoot('vitest.gate.config.ts')).href);
-  return object(object(loaded, 'vitest.gate.config.ts module')['default'], 'vitest.gate.config.ts');
+  const config = await defaultExport(ROOT_CONFIG_MODULES.vitest);
+  return config;
 }
 
 /**

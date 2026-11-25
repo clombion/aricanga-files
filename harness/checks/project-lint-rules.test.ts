@@ -3,7 +3,7 @@
  *
  * The plugin (`harness/lint-rules/plugin.ts`) holds exactly the declared rules; every rule has a
  * fixture folder with at least one must-fire and one must-stay-clean case, and every folder names a
- * rule. One oxlint run over a planted project, configured by a copy of `.oxlintrc.json`, must report
+ * rule. One oxlint run over a planted project, configured by the repository's oxlint configuration, must report
  * each rule on its must-fire fixtures and nothing at all on the must-stay-clean ones. The config turns
  * on exactly the plugin's rules, as errors, and the README's table lists exactly them with their
  * descriptions.
@@ -12,9 +12,10 @@
 import { FixtureError, codesAt, fixtureFolders, fixtures, lintFixtures, parseFixture } from '#lib/lint-rules.ts';
 import { PLUGIN_NAME, RULES } from '#lint-rules/plugin.ts';
 import { describe, expect, test } from 'vitest';
-import { object, parsed } from '#lib/config.ts';
 import { Accepted } from '#lib/exemptions.ts';
 import type { Fixture } from '#lib/lint-rules.ts';
+import { object } from '#lib/config.ts';
+import { oxlintConfig } from '#lib/config-modules.ts';
 import { textOf } from '#lib/source-files.ts';
 
 const HARNESS_ID = 'project-lint-rules';
@@ -108,7 +109,7 @@ function settingProblems(name: string, setting: unknown, rules: readonly string[
  * @returns {readonly string[]} What breaks "the config turns on exactly the plugin's rules, as errors".
  */
 function configProblems(config: unknown, rules: readonly string[]): readonly string[] {
-  const fields = object(config, '.oxlintrc.json');
+  const fields = object(config, 'oxlint.config.ts');
   const plugins: readonly unknown[] = Array.isArray(fields['jsPlugins']) ? fields['jsPlugins'] : [];
   const loaded = plugins.includes(PLUGIN_PATH) ? [] : [`jsPlugins does not load ${PLUGIN_PATH}`];
   const prefix = `${PLUGIN_NAME}/`;
@@ -187,8 +188,8 @@ describe('the repository', () => {
 
   test('the config turns on exactly the plugin rules, and the README lists them', async () => {
     expect.hasAssertions();
-    const [config, readme] = await Promise.all([textOf('.oxlintrc.json'), textOf(README)]);
-    expect(configProblems(parsed(config, '.oxlintrc.json'), ruleNames())).toStrictEqual([]);
+    const [config, readme] = await Promise.all([oxlintConfig(), textOf(README)]);
+    expect(configProblems(config, ruleNames())).toStrictEqual([]);
     expect(readmeProblems(readme, descriptions())).toStrictEqual([]);
   });
 

@@ -44,7 +44,7 @@ them is missing from the phase branch.
 
 ## The lint configuration and what it forces
 
-Every oxlint category is on at error (`.oxlintrc.json`). A rule is off only where it contradicts
+Every oxlint category is on at error (`harness/lib/oxlint-config.ts`). A rule is off only where it contradicts
 an enabled rule or a tool's loader, and `harness/checks/lint-settings.test.ts` declares each one
 with its reason (`TURNED_OFF`); add any new one there. Shapes the configuration forces, which every
 change meets:

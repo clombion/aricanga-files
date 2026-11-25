@@ -1,5 +1,5 @@
 /**
- * The project lint rules: an oxlint JS plugin, loaded from `.oxlintrc.json` as TypeScript (Node strips
+ * The project lint rules: an oxlint JS plugin, loaded from `oxlint.config.ts` as TypeScript (Node strips
  * the types). Every rule here is turned on in the config and proven by its fixtures
  * (`harness/checks/project-lint-rules.test.ts`).
  */

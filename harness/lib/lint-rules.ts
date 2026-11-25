@@ -5,8 +5,9 @@
  * A fixture is a text file `harness/lint-rules/fixtures/<rule>/<fire|clean>[-<case>].fixture` whose
  * first line is `// path: <where it is planted>`; the rest is the module's source. Kept as text, a
  * must-fire fixture is never linted, type-checked or scanned in the repository itself. The planted
- * run copies the repository's `.oxlintrc.json`, its TypeScript base and the plugin into a throwaway
- * project, writes every fixture at its path, and lints them all in one oxlint run.
+ * run writes the repository's oxlint configuration (the value `oxlint.config.ts` loads) as the planted
+ * project's JSON configuration (`writeOxlintConfig`), copies its TypeScript base and the plugin into a
+ * throwaway project, writes every fixture at its path, and lints them all in one oxlint run.
  */
 
 import { Project, bin, finished } from './tools.ts';
@@ -14,6 +15,7 @@ import { list, object, parsed, stringOf } from './config.ts';
 import { textsOf, tracked } from './source-files.ts';
 import { FixtureError } from './fixture-error.ts';
 import { fromRoot } from './paths.ts';
+import { oxlintConfig } from './config-modules.ts';
 import path from 'node:path';
 
 /** A rule fixture: the rule it proves, whether it must fire, where it is planted and its source. */
@@ -39,10 +41,14 @@ const UNUSED_DIRECTIVE = 'unused-disable-directive';
 const FIXTURES_DIR = 'harness/lint-rules/fixtures/';
 
 /**
- * What a planted project copies to run the repository's oxlint configuration: the config and the
- * project plugin it loads. Every check that plants an oxlint run copies exactly these.
+ * What a planted project copies to run the repository's oxlint configuration: the project plugin it
+ * loads. Every check that plants an oxlint run copies exactly these and writes the configuration
+ * with `writeOxlintConfig`.
  */
-const OXLINT_CONFIG_FILES: readonly string[] = ['.oxlintrc.json', 'harness/lint-rules'];
+const OXLINT_CONFIG_FILES: readonly string[] = ['harness/lint-rules'];
+
+/** The configuration file of a planted oxlint run: JSON, which every oxlint runtime reads. */
+const PLANTED_OXLINT_CONFIG = '.oxlintrc.json';
 const FIXTURE_NAME = /^harness\/lint-rules\/fixtures\/(?<rule>[a-z-]+)\/(?<kind>fire|clean)(?:-[a-z0-9-]+)?\.fixture$/u;
 const PATH_LINE = /^\/\/ path: (?<path>\S+)\n/u;
 
@@ -148,6 +154,16 @@ function codeOf(diagnostic: Readonly<Diagnostic>): string {
 }
 
 /**
+ * Write an oxlint configuration into a planted project, as the file its oxlint run reads.
+ *
+ * @param {Readonly<Project>} project - The planted project.
+ * @param {object} config - The configuration; the repository's by default.
+ */
+async function writeOxlintConfig(project: Readonly<Project>, config?: object): Promise<void> {
+  await project.write(PLANTED_OXLINT_CONFIG, JSON.stringify(config ?? (await oxlintConfig())));
+}
+
+/**
  * Refuse two fixtures planted at one path.
  *
  * @param {readonly string[]} paths - Where the fixtures are planted.
@@ -187,6 +203,7 @@ async function lintFixtures(planted: readonly Fixture[]): Promise<readonly Diagn
   const project = await Project.create({ copies: [...OXLINT_CONFIG_FILES, 'tsconfig.base.json'] });
   try {
     await project.write('tsconfig.json', PLANTED_TSCONFIG);
+    await writeOxlintConfig(project);
     await project.writeAll(planted.map((fixture) => [fixture.path, fixture.source] as const));
     const found = await lintPlanted(project, paths);
     return found;
@@ -209,5 +226,17 @@ function codesAt(found: readonly Diagnostic[], planted: string): readonly string
 }
 
 export { FixtureError } from './fixture-error.ts';
-export { codeOf, codesAt, fixtureFolders, fixtures, lintFixtures, OXLINT_CONFIG_FILES, oxlintDiagnostics, parseFixture, UNUSED_DIRECTIVE };
+export {
+  codeOf,
+  codesAt,
+  fixtureFolders,
+  fixtures,
+  lintFixtures,
+  OXLINT_CONFIG_FILES,
+  oxlintDiagnostics,
+  parseFixture,
+  PLANTED_OXLINT_CONFIG,
+  UNUSED_DIRECTIVE,
+  writeOxlintConfig,
+};
 export type { Fixture };

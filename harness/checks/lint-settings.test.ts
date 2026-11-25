@@ -1,7 +1,7 @@
 /**
  * oxlint, under this project's settings, fails each planted violation of a rule the harness rests on.
  *
- * One type-aware run of the locked oxlint over a planted project holding a copy of `.oxlintrc.json`
+ * One type-aware run of the locked oxlint over a planted project holding the repository's oxlint configuration
  * and `tsconfig.base.json`. Each plant is a file that must fail with exactly its rule; a described
  * `@ts-expect-error` and the clean plant must pass. The options are proven by removal: a lone
  * warning fails the run under `denyWarnings` and passes without it; an unused disable directive
@@ -111,7 +111,7 @@ function enabled(rules: Options, prefix: string): readonly string[] {
  * @returns {readonly string[]} The rules turned off, sorted.
  */
 function turnedOff(configText: unknown): readonly string[] {
-  const repo = object(configText, '.oxlintrc.json');
+  const repo = object(configText, 'oxlint.config.ts');
   const overrides: readonly unknown[] = Array.isArray(repo['overrides']) ? repo['overrides'] : [];
   const ruleSets = [repo['rules'] ?? {}, ...overrides.map((entry) => object(entry, 'override')['rules'] ?? {})];
   const off = ruleSets.flatMap((rules) => {
@@ -129,7 +129,7 @@ function turnedOff(configText: unknown): readonly string[] {
  * @returns {readonly string[]} One problem per category.
  */
 function categoryProblems(configText: unknown): readonly string[] {
-  const categories = object(object(configText, '.oxlintrc.json')['categories'] ?? {}, 'categories');
+  const categories = object(object(configText, 'oxlint.config.ts')['categories'] ?? {}, 'categories');
   return [...CATEGORIES].filter((category) => categories[category] !== 'error').map((category) => `${category} is not at error`);
 }
 

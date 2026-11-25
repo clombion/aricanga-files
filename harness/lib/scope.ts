@@ -10,6 +10,7 @@ import { perRoot, textOf, tracked } from './source-files.ts';
 import { ships, tierOf } from './roles.ts';
 import type { Fields } from './manifests.ts';
 import { REPO_ROOT } from './paths.ts';
+import { ROOT_MODULES } from './config-modules.ts';
 import type { Role } from './roles.ts';
 import { isEmpty } from './lists.ts';
 import { manifestsOf } from './manifests.ts';
@@ -26,16 +27,15 @@ const POC: Prefixes = new Prefixes(
 
 /** Root files the harness holds besides the members and the harness: the configuration the gate reads. */
 const ROOT_FILES = new Accepted<string>([
+  ...ROOT_MODULES,
   'package.json',
   'tsconfig.json',
   'tsconfig.base.json',
-  '.oxlintrc.json',
   '.oxfmtrc.json',
   'knip.json',
   'lefthook.json',
   '.commitlintrc.json',
   'docs/terms.toml',
-  'vitest.gate.config.ts',
   'AGENTS.md',
   'CLAUDE.md',
   'harness.md',

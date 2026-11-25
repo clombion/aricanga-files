@@ -15,7 +15,7 @@ rules as production code (`harness/lib/scope.ts`). A workspace package declares 
 manifest, `"aricanga": { "role": … }`, one of the roles of `harness/lib/roles.ts`. A new member is held,
 type-checked, tested and covered with no list to edit; six lists still name members by hand and need
 the new one added: the owner rules' non-kernel roots (`harness/lib/owner-rules.ts`, which the owner
-registry's member test holds), `knip.json`'s workspaces, the overrides of `.oxlintrc.json`,
+registry's member test holds), `knip.json`'s workspaces, the overrides of `harness/lib/oxlint-config.ts`,
 `test:browser`'s config list in `package.json`, the apps of `harness/checks/build-check.test.ts`
 (a member with a `vite.config.ts`), and the paths of the mechanics' Solid ban
 (`harness/lint-rules/rules/mechanics.ts`, a kernel member outside `packages/foundation/` and

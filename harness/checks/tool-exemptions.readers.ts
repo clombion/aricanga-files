@@ -16,8 +16,8 @@ interface Entry {
  * @returns {Entry[]} oxlint's ignore patterns and override file globs.
  */
 function oxlintEntries(config: unknown): Entry[] {
-  const fields = object(config, '.oxlintrc.json');
-  const overrides = list(absentAs(fields['overrides'], []), '.oxlintrc.json overrides');
+  const fields = object(config, 'oxlint.config.ts');
+  const overrides = list(absentAs(fields['overrides'], []), 'oxlint.config.ts overrides');
   return [
     ...strings(absentAs(fields['ignorePatterns'], []), 'ignorePatterns').map((glob) => ({ glob, tool: 'oxlint ignorePatterns' })),
     ...overrides.flatMap((override: unknown, index) =>
