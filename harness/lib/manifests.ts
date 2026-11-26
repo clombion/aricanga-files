@@ -17,6 +17,7 @@ import { ConfigError, absentAs, object, parsed } from './config.ts';
 import type { ListedPackage, Member } from './scope.ts';
 import { ROLE_WORDS, isRole } from './roles.ts';
 import { PopulationError } from './workspace.ts';
+import { byKind } from './by-kind.ts';
 import { isEmpty } from './lists.ts';
 import { manifestOf } from './package-dirs.ts';
 import { present } from './present.ts';
@@ -47,11 +48,11 @@ type MemberRead =
   | Readonly<{ kind: 'read'; listed: ListedPackage; manifest: ReadManifest }>
   | Readonly<{ kind: 'unread' | 'undeclared'; refused: Refused }>;
 
-/** The root's manifest as its read ends: its fields, or its refusal. */
-interface RootRead {
-  readonly fields: Fields | undefined;
-  readonly refused: readonly Refused[];
-}
+/**
+ * The root's manifest as its read ends: read, with its fields, or unread, with its refusal. It has no
+ * third end: the root declares no role, so its `aricanga` is not read.
+ */
+type RootRead = Readonly<{ kind: 'read'; fields: Fields }> | Readonly<{ kind: 'unread'; refused: Refused }>;
 
 /** The manifests refused, by case: those that cannot be read, and those whose `aricanga` is no object. */
 interface RefusedManifests {
@@ -124,7 +125,7 @@ async function memberRead(listed: ListedPackage, read: (listed: string) => Promi
 }
 
 /**
- * The root's manifest read, its refusal kept.
+ * The root's manifest read: its fields, or its refusal kept.
  *
  * @param {(listed: string) => Promise<string>} read - Reads a listed file's text.
  * @returns {Promise<RootRead>} How its read ends.
@@ -133,8 +134,18 @@ async function rootRead(read: (listed: string) => Promise<string>): Promise<Root
   const path = manifestOf('');
   const outcome = await settled(fieldsOf(path, read(path)));
   return outcome.status === 'fulfilled'
-    ? { fields: outcome.value, refused: [] }
-    : { fields: undefined, refused: [{ path, reason: outcome.reason }] };
+    ? { fields: outcome.value, kind: 'read' }
+    : { kind: 'unread', refused: { path, reason: outcome.reason } };
+}
+
+/**
+ * The root's manifest refused, if its read ended unread.
+ *
+ * @param {RootRead} root - The root's read.
+ * @returns {readonly Refused[]} Its refusal, or none.
+ */
+function rootRefused(root: RootRead): readonly Refused[] {
+  return byKind(root, { read: () => [], unread: (unread) => [unread.refused] });
 }
 
 /**
@@ -164,22 +175,29 @@ function caseLine(refused: readonly Refused[], what: string): readonly string[] 
 }
 
 /**
- * Refuse a population at once, naming every manifest refused, by its case, and every role refused:
- * a `ConfigError` whose `cause` gathers each manifest's error when a manifest is refused, else a
- * `PopulationError`; nothing when neither.
+ * Refuse a population at once, naming every manifest refused, by its case (the root's first, when it
+ * cannot be read), and every role refused: a `ConfigError` whose `cause` gathers each manifest's
+ * error when a manifest is refused, else a `PopulationError`; nothing when neither. So the root's
+ * read is read once this returns: its type says so to the caller.
  *
- * @param {RefusedManifests} refused - The manifests refused, by case.
+ * @param {RefusedManifests} refused - The members' manifests refused, by case.
  * @param {readonly string[]} lines - The refused roles' lines.
+ * @param {RootRead} root - The root's read.
  */
-function refuseAll(refused: RefusedManifests, lines: readonly string[]): void {
+function refuseAll(
+  refused: RefusedManifests,
+  lines: readonly string[],
+  root: RootRead,
+): asserts root is Extract<RootRead, { kind: 'read' }> {
   const roles = isEmpty(lines)
     ? []
     : [...lines, `a workspace package declares one of the roles of harness/lib/roles.ts (${ROLE_WORDS.join(', ')})`];
-  const named = [...caseLine(refused.unread, 'cannot be read'), ...caseLine(refused.undeclared, 'hold an aricanga that is no object')];
+  const unread = [...rootRefused(root), ...refused.unread];
+  const named = [...caseLine(unread, 'cannot be read'), ...caseLine(refused.undeclared, 'hold an aricanga that is no object')];
   if (!isEmpty(named)) {
     throw new ConfigError([...named, "each refusal is also this one's cause", ...roles].join('; '), {
       cause: new AggregateError(
-        [...refused.unread, ...refused.undeclared].map((entry) => entry.reason),
+        [...unread, ...refused.undeclared].map((entry) => entry.reason),
         'each manifest refused',
       ),
     });
@@ -211,14 +229,12 @@ async function manifestsOf(packages: readonly ListedPackage[], read: (listed: st
   refuseAll(
     {
       undeclared: reads.flatMap((entry) => (entry.kind === 'undeclared' ? [entry.refused] : [])),
-      unread: [...root.refused, ...reads.flatMap((entry) => (entry.kind === 'unread' ? [entry.refused] : []))],
+      unread: reads.flatMap((entry) => (entry.kind === 'unread' ? [entry.refused] : [])),
     },
     declared.flatMap((entry) => (entry.kind === 'refused' ? [entry.line] : [])),
+    root,
   );
-  return {
-    members,
-    rootManifest: present(root.fields, 'the root manifest'),
-  };
+  return { members, rootManifest: root.fields };
 }
 
 export { manifestsOf };
