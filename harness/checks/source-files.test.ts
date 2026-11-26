@@ -24,19 +24,19 @@ import { typescriptFiles } from '#lib/scope.ts';
 const OWNER = 'harness/lib/source-files.ts';
 
 /**
- * A literal's text that writes the held kinds: `.ts` alone (a suffix a selection keys on), a glob's
- * braced extension, a glob of every module of a kind (`*.ts`, not `*.spec.ts`, which a tool's own
- * config fixes), or a pattern's optional `x`. `.tsx` alone names a JSX module, which a rule of the
- * view's may key on.
+ * A literal's text that writes the held kinds: `.ts` alone (a suffix a selection keys on) or after a
+ * tool's name and a colon (a census key of a tool and a kind), a glob's braced extension, a glob of
+ * every module of a kind (`*.ts`, not `*.spec.ts`, which a tool's own config fixes), or a pattern's
+ * optional `x`. `.tsx` alone names a JSX module, which a rule of the view's may key on.
  */
-const KIND_WRITTEN = /^\.ts$|\{ts,tsx\}|(?:^|\/)\*\.tsx?$|tsx\?/u;
+const KIND_WRITTEN = /^(?:[\w-]+:)?\.ts$|\{ts,tsx\}|(?:^|\/)\*\.tsx?$|tsx\?/u;
 
 /** A test module or a test's plants: their expected values and planted paths are written out. */
 const TEST_MODULE = /\.(?:test|plants)\.tsx?$/u;
 
-/** The plants of the planted test: a suffix, a glob's extension, a pattern and a glob of every module of a kind. */
+/** The plants of the planted test: a suffix alone and in a census key, a glob's extension, a pattern and a glob of every module of a kind. */
 const PLANTED_KINDS =
-  "export const a = ['.ts'];\nexport const b = 'src/**/*.{ts,tsx}';\nexport const c = /\\.tsx?$/u;\nexport const d = '**/*.tsx';\n";
+  "export const a = ['.ts', 'oxlint:.ts'];\nexport const b = 'src/**/*.{ts,tsx}';\nexport const c = /\\.tsx?$/u;\nexport const d = '**/*.tsx';\n";
 
 /**
  * Whether the scan reads a held module: the harness's, its owner and its tests and plants apart.
@@ -79,7 +79,7 @@ describe('the held kinds', () => {
   test('are seen written as a suffix, a glob and a pattern, and composed from the owner', () => {
     expect.hasAssertions();
     expect([kindsWritten('a.ts', PLANTED_KINDS), typescriptGlob('**/*'), [...TYPESCRIPT]]).toStrictEqual([
-      ['a.ts: .ts', 'a.ts: src/**/*.{ts,tsx}', String.raw`a.ts: /\.tsx?$/u`, 'a.ts: **/*.tsx'],
+      ['a.ts: .ts', 'a.ts: oxlint:.ts', 'a.ts: src/**/*.{ts,tsx}', String.raw`a.ts: /\.tsx?$/u`, 'a.ts: **/*.tsx'],
       '**/*.{ts,tsx}',
       ['.ts', '.tsx'],
     ]);
