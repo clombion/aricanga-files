@@ -9,4 +9,11 @@ describe('a tool run', () => {
     expect.hasAssertions();
     await expect(finished(['planted-tool-that-does-not-exist'], { cwd: REPO_ROOT })).rejects.toThrow(ToolError);
   });
+
+  test('that does not start is refused in words naming the command and the whole outcome', async () => {
+    expect.hasAssertions();
+    await expect(finished(['planted-tool-that-does-not-exist', '--flag'], { cwd: REPO_ROOT })).rejects.toThrow(
+      /^planted-tool-that-does-not-exist --flag did not finish: \{"argv":\["planted-tool-that-does-not-exist","--flag"\],"kind":"not-started","reason":"[^"]*ENOENT[^"]*"\}$/u,
+    );
+  });
 });

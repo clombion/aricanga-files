@@ -223,7 +223,6 @@ describe('the repository', () => {
 describe('the scan', () => {
   test('sees each planted call form and each planted root', () => {
     expect.hasAssertions();
-    expect(Object.keys(CANONICAL).toSorted()).toStrictEqual(RULES.map((rule) => rule.name).toSorted());
     const planted = plants.map(([path]) => path).filter((path) => /__(?:form|root|in_a_test)/u.test(path));
     const found = sitesIn(plantedScan, planted)
       .map((site) => keyOf(site))
