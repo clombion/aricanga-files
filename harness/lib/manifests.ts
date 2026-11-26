@@ -46,7 +46,8 @@ interface Refused {
  */
 type MemberRead =
   | Readonly<{ kind: 'read'; listed: ListedPackage; manifest: ReadManifest }>
-  | Readonly<{ kind: 'unread' | 'undeclared'; refused: Refused }>;
+  | Readonly<{ kind: 'unread'; refused: Refused }>
+  | Readonly<{ kind: 'undeclared'; refused: Refused }>;
 
 /**
  * The root's manifest as its read ends: read, with its fields, or unread, with its refusal. It has no
@@ -224,14 +225,18 @@ async function manifestsOf(packages: readonly ListedPackage[], read: (listed: st
     }),
   );
   const [root, reads] = await Promise.all([rootReading, memberReads]);
-  const declared = reads.flatMap((entry) => (entry.kind === 'read' ? [declaredBy(entry.listed, entry.manifest)] : []));
-  const members = declared.flatMap((entry) => (entry.kind === 'member' ? [entry.member] : []));
+  const declared = reads.flatMap((entry): readonly Declared[] =>
+    byKind(entry, { read: (manifest) => [declaredBy(manifest.listed, manifest.manifest)], undeclared: () => [], unread: () => [] }),
+  );
+  const members = declared.flatMap((entry): readonly Member[] => byKind(entry, { member: (member) => [member.member], refused: () => [] }));
   refuseAll(
     {
-      undeclared: reads.flatMap((entry) => (entry.kind === 'undeclared' ? [entry.refused] : [])),
-      unread: reads.flatMap((entry) => (entry.kind === 'unread' ? [entry.refused] : [])),
+      undeclared: reads.flatMap((entry) =>
+        byKind(entry, { read: () => [], undeclared: (undeclared) => [undeclared.refused], unread: () => [] }),
+      ),
+      unread: reads.flatMap((entry) => byKind(entry, { read: () => [], undeclared: () => [], unread: (unread) => [unread.refused] })),
     },
-    declared.flatMap((entry) => (entry.kind === 'refused' ? [entry.line] : [])),
+    declared.flatMap((entry) => byKind(entry, { member: () => [], refused: (refused) => [refused.line] })),
     root,
   );
   return { members, rootManifest: root.fields };

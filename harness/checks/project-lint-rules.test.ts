@@ -151,11 +151,12 @@ function readmeProblems(readme: string, described: ReadonlyMap<string, string>):
  * @returns {boolean} Whether it holds.
  */
 function holds(fixture: Fixture, codes: readonly string[]): boolean {
-  if (fixture.kind === 'fire') {
-    return codes.includes(`${PLUGIN_NAME}(${fixture.rule})`);
-  }
   const [first] = codes;
-  return first === undefined;
+  const verdicts: Readonly<Record<Fixture['kind'], () => boolean>> = {
+    clean: () => first === undefined,
+    fire: () => codes.includes(`${PLUGIN_NAME}(${fixture.rule})`),
+  };
+  return verdicts[fixture.kind]();
 }
 
 /**

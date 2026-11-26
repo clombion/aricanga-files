@@ -5,7 +5,7 @@
  * counts are measured under jscpd 5.4.2; a jscpd bump re-measures them.
  */
 
-import { COMMON, MAX_SIZE, RUNS, cloneKey, clones, noReport, reportOf, scan } from '#lib/dupes.ts';
+import { COMMON, MAX_SIZE, RUNS, cloneKey, clones, noReport, onReported, reportOf, scan } from '#lib/dupes.ts';
 import type { Clone, Reported, Run, Runner } from '#lib/dupes.ts';
 import { EXIT_BROKEN, EXIT_CLEAN } from '#lib/exit-status.ts';
 import { EXIT_FAILURE, EXIT_SUCCESS } from '#lib/output.ts';
@@ -83,10 +83,13 @@ function lastOf(problems: readonly string[]): string | undefined {
  * @returns {readonly Clone[]} The clones, same-file pairs kept.
  */
 function reportedClones(reported: Reported, name: Run, root: string): readonly Clone[] {
-  if (reported.kind === 'none') {
-    throw new Error(`the run gave no report: ${reported.reason}`);
-  }
-  return clones({ name, sameFile: true }, reported.report, root);
+  return onReported(
+    reported,
+    (report) => clones({ name, sameFile: true }, report, root),
+    (reason) => {
+      throw new Error(`the run gave no report: ${reason}`);
+    },
+  );
 }
 
 describe('the repository', () => {

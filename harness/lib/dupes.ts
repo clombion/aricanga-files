@@ -20,7 +20,7 @@
 
 import type { Clone, Run } from './dupes-report.ts';
 import { EXIT_FAILURE, EXIT_SUCCESS } from './output.ts';
-import { MAX_SIZE, RUNS, reportOf } from './dupes-run.ts';
+import { MAX_SIZE, RUNS, onReported, reportOf } from './dupes-run.ts';
 import type { RunFacts, Runner, Target } from './dupes-run.ts';
 import { cloneKey, clones, scanned } from './dupes-report.ts';
 import { population, typescriptOf } from './scope.ts';
@@ -70,20 +70,16 @@ async function coverageProblem(listed: string, seen: Readonly<ReadonlySet<string
 }
 
 /**
- * The problems and clones of one run.
+ * The problems and clones of a run that gave its report: each listed file jscpd did not scan, where
+ * the run checks it, and the clones.
  *
  * @param {readonly [Run, RunFacts]} named - The run's name and facts.
+ * @param {unknown} report - Its parsed report.
  * @param {Target} target - What the scan covers.
- * @param {Runner | undefined} runner - How jscpd is started; the repository's process owner when undefined.
  * @returns {Promise<RunResult>} The run's problems and its clones.
  */
-async function runOnce(named: readonly [Run, RunFacts], target: Target, runner: Runner | undefined): Promise<RunResult> {
+async function fromReport(named: readonly [Run, RunFacts], report: unknown, target: Target): Promise<RunResult> {
   const [name, facts] = named;
-  const reported = await reportOf(facts.flags, target, runner);
-  if (reported.kind === 'none') {
-    return [[`${name}: ${reported.reason}`], []];
-  }
-  const { report } = reported;
   const seen = scanned(report, target.root);
   const coverage = facts.coverage
     ? await Promise.all(
@@ -94,6 +90,27 @@ async function runOnce(named: readonly [Run, RunFacts], target: Target, runner: 
       )
     : [];
   return [coverage.filter((problem) => problem !== undefined), clones({ name, sameFile: facts.sameFile }, report, target.root)];
+}
+/**
+ * The problems and clones of one run.
+ *
+ * @param {readonly [Run, RunFacts]} named - The run's name and facts.
+ * @param {Target} target - What the scan covers.
+ * @param {Runner | undefined} runner - How jscpd is started; the repository's process owner when undefined.
+ * @returns {Promise<RunResult>} The run's problems and its clones.
+ */
+async function runOnce(named: readonly [Run, RunFacts], target: Target, runner: Runner | undefined): Promise<RunResult> {
+  const [name, facts] = named;
+  const reported = await reportOf(facts.flags, target, runner);
+  const ran = await onReported<Promise<RunResult> | RunResult>(
+    reported,
+    async (report) => {
+      const found = await fromReport(named, report, target);
+      return found;
+    },
+    (reason) => [[`${name}: ${reason}`], []],
+  );
+  return ran;
 }
 
 /**
@@ -172,6 +189,6 @@ async function main(streams: Streams, runner?: Runner): Promise<number> {
 
 export { cloneKey, clones, noReport } from './dupes-report.ts';
 export type { Clone, Run } from './dupes-report.ts';
-export { COMMON, MAX_SIZE, reportOf, RUNS } from './dupes-run.ts';
+export { COMMON, MAX_SIZE, onReported, reportOf, RUNS } from './dupes-run.ts';
 export type { Reported, Runner } from './dupes-run.ts';
 export { main, scan, scanRoots };

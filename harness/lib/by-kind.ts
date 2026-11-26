@@ -1,8 +1,9 @@
 /**
  * A reader of a closed tagged union by its `kind`: an arm per kind, each taking a value of its own
  * kind, so `tsc` refuses a reader missing an arm, and every reader once the union gains a kind. It is
- * the harness's form of a switch over such a union with a `never` arm, which the project's lint
- * (`default-case`, `consistent-return`) and its coverage floor (an arm no value reaches) refuse.
+ * the handler table typed over a closed union that the testing strategy names for total handling, in
+ * place of a switch with a `never` default: that arm is reached by no value, so the coverage floor
+ * would hold it only through a counted coverage suppression at every reader.
  */
 
 /** One arm per kind of a closed tagged union, each taking a value of its own kind. */

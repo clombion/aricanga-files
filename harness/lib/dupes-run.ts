@@ -4,6 +4,7 @@ import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import type { Outcome } from './process.ts';
 import type { Run } from './dupes-report.ts';
 import { Vocabulary } from './exemptions.ts';
+import { byKind } from './by-kind.ts';
 import { fromRoot } from './paths.ts';
 import { isFile } from './source-files.ts';
 import { noReport } from './dupes-report.ts';
@@ -93,6 +94,18 @@ async function defaultRunner(argv: readonly string[], cwd: string): Promise<Outc
 type Reported = { readonly kind: 'report'; readonly report: unknown } | { readonly kind: 'none'; readonly reason: string };
 
 /**
+ * What a jscpd run gave, read by its kind: its report, or the reason it gave none.
+ *
+ * @param {Reported} reported - What the run gave.
+ * @param {(report: unknown) => Result} report - Reads the parsed report.
+ * @param {(reason: string) => Result} none - Reads why there is no report.
+ * @returns {Result} The answer of the arm of its kind.
+ */
+function onReported<Result>(reported: Reported, report: (report: unknown) => Result, none: (reason: string) => Result): Result {
+  return byKind(reported, { none: (given) => none(given.reason), report: (given) => report(given.report) });
+}
+
+/**
  * Run jscpd once.
  *
  * @param {readonly string[]} flags - The run's flags.
@@ -119,5 +132,5 @@ async function reportOf(
   }
 }
 
-export { COMMON, MAX_SIZE, reportOf, RUNS };
+export { COMMON, MAX_SIZE, onReported, reportOf, RUNS };
 export type { Reported, RunFacts, Runner, Target };
