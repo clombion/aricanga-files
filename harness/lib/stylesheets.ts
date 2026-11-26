@@ -8,6 +8,7 @@
  */
 
 import type { Rule, RuleBase } from 'stylelint';
+import { TYPESCRIPT, textsOf } from './source-files.ts';
 import { heldFiles, population } from './scope.ts';
 import { isIdentifier, isNoSubstitutionTemplateLiteral, isTaggedTemplateExpression } from 'typescript/unstable/ast/is';
 import { nodes, parse as parseModule } from './ts-source.ts';
@@ -17,7 +18,6 @@ import { fromRoot } from './paths.ts';
 import { isProduction } from './checker.ts';
 import { present } from './present.ts';
 import stylelint from 'stylelint';
-import { textsOf } from './source-files.ts';
 
 /** A sheet parsed by stylelint's postcss. */
 type Root = ReturnType<RuleBase> extends (root: infer Parsed, ...rest: infer _Rest) => unknown ? Parsed : never;
@@ -46,7 +46,7 @@ interface Template {
 }
 
 /** The files whose `css` tagged templates are sheets. */
-const MODULES = new Prefixes(['.ts', '.tsx']);
+const MODULES = new Prefixes([...TYPESCRIPT]);
 
 /** The first line of a file or sheet. */
 const FIRST_LINE = 1;

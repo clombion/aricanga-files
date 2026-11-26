@@ -11,9 +11,9 @@
  */
 
 import { Project, bin, finished } from './tools.ts';
+import { TYPESCRIPT, textsOf, tracked } from './source-files.ts';
 import { list, object, parsed, stringOf } from './config.ts';
 import { substituted, toolRuns } from './repo-tasks.ts';
-import { textsOf, tracked } from './source-files.ts';
 import type { AnyOxlintConfig } from './oxlint-shape.ts';
 import { FixtureError } from './fixture-error.ts';
 import { fromRoot } from './paths.ts';
@@ -80,7 +80,7 @@ const PLANTED_TSCONFIG = JSON.stringify({
   },
   exclude: ['node_modules', 'harness/lint-rules'],
   extends: './tsconfig.base.json',
-  include: ['**/*.ts', '**/*.tsx'],
+  include: [...TYPESCRIPT].map((suffix) => `**/*${suffix}`),
 });
 
 /**

@@ -13,6 +13,7 @@ import { dependencyNames } from './dependencies.ts';
 import { importerOf } from './package-dirs.ts';
 import { isEmpty } from './lists.ts';
 import { ships } from './roles.ts';
+import { typescriptGlob } from './source-files.ts';
 
 /** The dependencies no held module imports: the POC's (its own packages are the population's POC record) and the tools' own. */
 const IGNORED_DEPENDENCIES: readonly string[] = [
@@ -112,7 +113,7 @@ const SETTINGS: Pick<KnipConfig, 'rules'> = {
 };
 
 /** The TypeScript modules a project glob reads under a directory. */
-const MODULES = '**/*.{ts,tsx}';
+const MODULES = typescriptGlob('**/*');
 
 /** A member's sources: production code where the member ships (`!`), test support where it does not. */
 const SOURCES = 'src/';
@@ -141,7 +142,7 @@ function ownFiles(held: Population, member: Member): readonly string[] {
  */
 function projectOf(held: Population, member: Member): string[] {
   const segments = new Set(ownFiles(held, member).map((file) => FIRST_SEGMENT.exec(file)?.groups?.['segment'] ?? ''));
-  const tails = [...segments].toSorted().map((segment) => (segment === '' ? '*.{ts,tsx}' : `${segment}/${MODULES}`));
+  const tails = [...segments].toSorted().map((segment) => (segment === '' ? typescriptGlob('*') : `${segment}/${MODULES}`));
   return tails.flatMap((tail) => {
     const live = liveGlobs(held, [member], tail).map((glob) => glob.slice(member.dir.length));
     return tail === `${SOURCES}${MODULES}` && ships(member.role) ? live.map((glob) => `${glob}!`) : live;

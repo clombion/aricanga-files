@@ -10,14 +10,16 @@
 import { describe, expect, test } from 'vitest';
 import { Prefixes } from '#lib/exemptions.ts';
 import { heldFiles } from '#lib/scope.ts';
+import { typescriptKind } from '#lib/source-files.ts';
 
 const HARNESS_ID = 'structure';
 
 const BUILD_DIRECTORIES = /(?:^|\/)(?:dist|coverage|\.output|node_modules)\//u;
+/** Where a path's stem starts. */
+const START = 0;
 /** A stem held as more than one kind of module. */
 const ONE_KIND = 1;
 const BUILD_FILES = new Prefixes(['.tsbuildinfo']);
-const MODULE = /\.tsx?$/u;
 
 /**
  * The module stems that exist as both `.ts` and `.tsx`.
@@ -27,9 +29,12 @@ const MODULE = /\.tsx?$/u;
  */
 function doubleModules(paths: readonly string[]): string[] {
   const stems = new Map<string, Set<string>>();
-  for (const path of paths.filter((candidate) => MODULE.test(candidate))) {
-    const stem = path.replace(MODULE, '');
-    stems.set(stem, (stems.get(stem) ?? new Set()).add(path.endsWith('.tsx') ? '.tsx' : '.ts'));
+  for (const path of paths) {
+    const kind = typescriptKind(path);
+    if (kind !== undefined) {
+      const stem = path.slice(START, path.length - kind.length);
+      stems.set(stem, (stems.get(stem) ?? new Set()).add(kind));
+    }
   }
   return [...stems]
     .filter(([, kinds]: readonly [string, ReadonlySet<string>]) => kinds.size > ONE_KIND)

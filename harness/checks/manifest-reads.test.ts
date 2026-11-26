@@ -36,9 +36,9 @@ import {
 } from 'typescript/unstable/ast/is';
 import type { Node } from '#lib/ts-source.ts';
 import { SyntaxKind } from 'typescript/unstable/ast';
-import { heldFiles } from '#lib/scope.ts';
 import { isEmpty } from '#lib/lists.ts';
 import { textsOf } from '#lib/source-files.ts';
+import { typescriptFiles } from '#lib/scope.ts';
 
 const HARNESS_ID = 'manifest-reads';
 
@@ -215,7 +215,7 @@ function manifestReads(path: string, text: string): readonly string[] {
  * @returns {Promise<readonly string[]>} Their paths.
  */
 async function scannedModules(): Promise<readonly string[]> {
-  const files = await heldFiles('.ts');
+  const files = await typescriptFiles();
   return files.filter((path) => path.startsWith('harness/'));
 }
 

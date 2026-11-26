@@ -18,8 +18,8 @@ import { Exemptions, KINDS, StaleExemptionError, Vocabulary, site } from '#lib/e
 import { UNCONSULTED, UNDECLARED, findings } from './exemption-lists.fence.ts';
 import { describe, expect, test } from 'vitest';
 import type { Finding } from './exemption-lists.fence.ts';
-import { heldFiles } from '#lib/scope.ts';
 import { textsOf } from '#lib/source-files.ts';
+import { typescriptFiles } from '#lib/scope.ts';
 
 const HARNESS_ID = 'exemption-lists';
 
@@ -95,7 +95,7 @@ function keyOf(finding: Finding): string {
  * @returns {Promise<Readonly<Record<string, string>>>} Each held module's source, by path.
  */
 async function harnessModules(): Promise<Readonly<Record<string, string>>> {
-  const files = await heldFiles('.ts');
+  const files = await typescriptFiles();
   const texts = await textsOf(files.filter((path) => path.startsWith('harness/checks/') || path.startsWith('harness/lib/')));
   return Object.fromEntries(texts);
 }

@@ -4,8 +4,8 @@
  */
 
 import { REPO_ROOT, fromRoot } from '#lib/paths.ts';
+import { TYPESCRIPT, textsOf, tracked } from '#lib/source-files.ts';
 import { list, object, parsed, stringOf } from '#lib/config.ts';
-import { textsOf, tracked } from '#lib/source-files.ts';
 import { HARNESS_CHECKS } from '#lib/test-globs.ts';
 import type { Resolver } from './doc-references.resolve.ts';
 import type { Span } from '#lib/docs.ts';
@@ -103,13 +103,13 @@ async function installedPaths(spans: readonly Span[], resolver: Omit<Resolver, '
 }
 
 /**
- * Every string value quoted in held TypeScript, JavaScript and JSON outside the checks.
+ * Every string value quoted in held modules (`TYPESCRIPT`) and JSON outside the checks.
  *
  * @returns {Promise<ReadonlySet<string>>} The quoted values.
  */
 async function quotedValues(): Promise<ReadonlySet<string>> {
   const found = new Set<string>();
-  const files = await heldFiles('.ts', '.tsx', '.json');
+  const files = await heldFiles(...TYPESCRIPT, '.json');
   const texts = await textsOf(files.filter((held) => !held.startsWith(HARNESS_CHECKS)));
   for (const [, text] of texts) {
     for (const match of text.matchAll(QUOTED)) {

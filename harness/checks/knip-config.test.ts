@@ -80,7 +80,7 @@ describe('the knip configuration of a planted population', () => {
     const config = knipConfigOf(held);
     expect(config.workspaces).toStrictEqual({
       '.': {
-        entry: ['harness/scripts/*.ts', 'harness/checks/**/*.test.{ts,tsx}'],
+        entry: ['harness/scripts/*.{ts,tsx}', 'harness/checks/**/*.test.{ts,tsx}'],
         playwright: false,
         project: ['harness/**/*.{ts,tsx}'],
       },

@@ -67,6 +67,11 @@ function probe(pattern: Readonly<RegExp>, owner: string, roots: readonly string[
 /** Every registered claim. */
 const CLAIMS: readonly Claim[] = [
   {
+    clause: 'stated once, in',
+    path: 'harness/checks/source-files.test.ts',
+    probe: probe(/\['\.ts', '\.tsx'\]/u, 'harness/lib/source-files.ts', HARNESS_PROBE_ROOTS),
+  },
+  {
     clause: "The one reader of the repository's prose",
     path: 'harness/lib/docs.ts',
     probe: probe(/^const FENCE = /mu, 'harness/lib/markdown-text.ts'),

@@ -14,7 +14,7 @@ import { isIdentifier, isMetaProperty, isPropertyAccessExpression } from 'typesc
 import { textOf, textsOf } from '#lib/source-files.ts';
 import type { SourceFile } from '#lib/ts-source.ts';
 import { SyntaxKind } from 'typescript/unstable/ast';
-import { heldFiles } from '#lib/scope.ts';
+import { typescriptFiles } from '#lib/scope.ts';
 
 const HARNESS_ID = 'repo-paths';
 
@@ -71,7 +71,7 @@ function locating(path: string, text: string): string[] {
  * @returns {Promise<readonly string[]>} Their paths.
  */
 async function otherHarnessModules(): Promise<readonly string[]> {
-  const files = await heldFiles('.ts');
+  const files = await typescriptFiles();
   return files.filter((path) => path.startsWith('harness/') && path !== OWNER);
 }
 

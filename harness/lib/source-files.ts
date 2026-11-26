@@ -16,11 +16,36 @@ import { providedFor } from './provided.ts';
 import { run } from './process.ts';
 import { succeeded } from './exit-status.ts';
 
+/** A suffix's leading dot. */
+const DOT = '.';
+
 /** The extensions oxlint lints: the files that are modules. */
 const LINTED = /\.(?:[cm]?[jt]sx?)$/u;
 
 /** The suffixes of a held module: TypeScript, with or without JSX (a declaration file included), the files every scan, the type check and coverage read. */
 const TYPESCRIPT: Accepted<string> = new Accepted<string>(['.ts', '.tsx']);
+
+/**
+ * A glob that selects the held modules a stem names: `stem`, then the held kinds as a braced
+ * extension composed from `TYPESCRIPT` (`.{ts,tsx}`), so every glob that selects held modules reads
+ * the kinds from here.
+ *
+ * @param {string} stem - The glob up to the dot, such as `**\/*` or `**\/*.test`.
+ * @returns {string} The glob.
+ */
+function typescriptGlob(stem: string): string {
+  return `${stem}.{${[...TYPESCRIPT].map((suffix) => suffix.slice(DOT.length)).join(',')}}`;
+}
+
+/**
+ * The held kind of a file: its suffix in `TYPESCRIPT`, or none.
+ *
+ * @param {string} file - The path.
+ * @returns {string | undefined} The suffix.
+ */
+function typescriptKind(file: string): string | undefined {
+  return [...TYPESCRIPT].find((suffix) => file.endsWith(suffix));
+}
 
 /**
  * Whether oxlint lints a file, by its extension: whether the file is a module.
@@ -39,7 +64,7 @@ function isLintable(file: string): boolean {
  * @returns {boolean} Whether it is `.ts` or `.tsx`.
  */
 function isTypeScript(file: string): boolean {
-  return [...TYPESCRIPT].some((suffix) => file.endsWith(suffix));
+  return typescriptKind(file) !== undefined;
 }
 
 /** The fewest files a listing of this repository can hold; fewer means the listing failed. */
@@ -249,5 +274,7 @@ export {
   textsOf,
   tracked,
   TYPESCRIPT,
+  typescriptGlob,
+  typescriptKind,
   writeText,
 };

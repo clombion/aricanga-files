@@ -19,6 +19,7 @@
  */
 
 import { Accepted, CountedExemptions, Exemptions, StaleExemptionError, site } from '#lib/exemptions.ts';
+import { TYPESCRIPT, textsOf } from '#lib/source-files.ts';
 import { census, suffix } from './suppressions.census.ts';
 import { closeSession, parse } from '#lib/ts-source.ts';
 import { describe, expect, test } from 'vitest';
@@ -28,12 +29,11 @@ import { finished } from '#lib/tools.ts';
 import { fromRoot } from '#lib/paths.ts';
 import { heldFiles } from '#lib/scope.ts';
 import { pathToFileURL } from 'node:url';
-import { textsOf } from '#lib/source-files.ts';
 
 const HARNESS_ID = 'suppressions';
 
 /** The held suffixes whose comments the census reads. */
-const SCANNED = new Accepted(['.ts', '.tsx', '.css']);
+const SCANNED = new Accepted([...TYPESCRIPT, '.css']);
 
 /** The suppressions the code holds, keyed by `site(path, tool:rule)`, with their counts and reasons. */
 const SUPPRESSIONS = new CountedExemptions({

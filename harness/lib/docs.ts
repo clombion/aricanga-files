@@ -11,10 +11,10 @@
  */
 
 import type { Prose, Span } from './markdown-text.ts';
+import { TYPESCRIPT, textOf, textsOf } from './source-files.ts';
 import { comments, parse } from './ts-source.ts';
 import { heldFiles, population } from './scope.ts';
 import { spansOf, withoutSpans } from './markdown-text.ts';
-import { textOf, textsOf } from './source-files.ts';
 import { Doc } from './markdown-doc.ts';
 import type { Population } from './scope.ts';
 import { Prefixes } from './exemptions.ts';
@@ -29,7 +29,7 @@ const HISTORY: Prefixes = new Prefixes(['docs/roadmap/tasks/', 'CHANGELOG.md']);
 const ROADMAP = 'docs/roadmap/';
 
 /** The code files whose comments are current text, by suffix. */
-const SCRIPT = new Prefixes(['.ts', '.tsx', '.js', '.mjs', '.cjs']);
+const SCRIPT = new Prefixes([...TYPESCRIPT, '.js', '.mjs', '.cjs']);
 const STYLE = new Prefixes(['.css']);
 const CONFIG = new Prefixes(['.toml', '.yml', '.yaml']);
 

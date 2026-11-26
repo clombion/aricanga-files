@@ -1,6 +1,7 @@
 /** The rule levels of the gate's oxlint configuration: every rule a category turns on stays at error unless it is set here. */
 
 import type { OxlintConfig } from 'oxlint';
+import { TYPESCRIPT } from './source-files.ts';
 
 /** The rules whose options name members: `oxlint-config.ts` sets each over the population, and `RULES` cannot set one (its type refuses the key), so the two maps compose with no key in both. */
 type MemberRule =
@@ -202,7 +203,7 @@ const RULES: NonNullable<OxlintConfig['rules']> & Readonly<Partial<Record<Member
   'vitest/consistent-test-filename': [
     'error',
     {
-      pattern: String.raw`.*\.(test|spec)\.tsx?$`,
+      pattern: String.raw`.*\.(test|spec)(?:${[...TYPESCRIPT].map((suffix) => suffix.replaceAll('.', String.raw`\.`)).join('|')})$`,
     },
   ],
   'vitest/consistent-test-it': [

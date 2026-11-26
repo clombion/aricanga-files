@@ -14,6 +14,7 @@
 import type { Member, Population } from './scope.ts';
 import { Accepted } from './exemptions.ts';
 import { matches } from '#lint-rules/globs.ts';
+import { typescriptGlob } from './source-files.ts';
 
 /** The harness's own test project: its checks and their support, which coverage does not read. */
 const HARNESS_CHECKS = 'harness/checks/';
@@ -25,7 +26,7 @@ const HARNESS_LIB = 'harness/lib/';
 const HARNESS_SCRIPTS = 'harness/scripts/';
 
 /** The modules a task runs as a script: each top-level module of the harness's scripts (a helper below one is imported, not run). */
-const SCRIPT_ENTRIES: Accepted<string> = new Accepted<string>([`${HARNESS_SCRIPTS}*.ts`]);
+const SCRIPT_ENTRIES: Accepted<string> = new Accepted<string>([typescriptGlob(`${HARNESS_SCRIPTS}*`)]);
 
 /** A member's Vite config, by its name: the one a Vite app is built from. */
 const VITE_CONFIG = 'vite.config.ts';
@@ -46,7 +47,7 @@ const TEST_SUPPORT = 'test/';
 const BROWSER_TESTS = 'tests/';
 
 /** The modules Vitest runs: the gate's test include and its coverage exclude. */
-const VITEST_TESTS = '**/*.test.{ts,tsx}';
+const VITEST_TESTS: string = typescriptGlob('**/*.test');
 
 /** The modules Playwright runs, as `packages/characterisation/browsers.ts` matches them under each config's `testDir`. */
 const PLAYWRIGHT_SPECS = '**/*.spec.ts';

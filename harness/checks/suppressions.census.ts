@@ -5,16 +5,12 @@
 
 import { Accepted, site } from '#lib/exemptions.ts';
 import { body, comments, parse } from '#lib/ts-source.ts';
+import { TYPESCRIPT } from '#lib/source-files.ts';
 
 /** Which suppressing tool checks which file suffix, as `tool:suffix`. */
 const CHECKS = new Accepted([
-  'oxlint:.ts',
-  'oxlint:.tsx',
-  'typescript:.ts',
-  'typescript:.tsx',
+  ...['oxlint', 'typescript', 'coverage'].flatMap((tool) => [...TYPESCRIPT].map((kind) => `${tool}:${kind}`)),
   'stylelint:.css',
-  'coverage:.ts',
-  'coverage:.tsx',
 ]);
 
 const RULES = String.raw`[@\w./-]+(?:\s*,\s*[@\w./-]+)*`;

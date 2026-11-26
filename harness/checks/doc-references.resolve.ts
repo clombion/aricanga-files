@@ -7,10 +7,10 @@
 import { Accepted, site } from '#lib/exemptions.ts';
 import type { Doc, Link, Prose, Span } from '#lib/docs.ts';
 import { basename, dirname, extname, join, normalize } from 'node:path/posix';
+import { TYPESCRIPT } from '#lib/source-files.ts';
 
 const SUFFIXES = new Accepted([
-  '.ts',
-  '.tsx',
+  ...TYPESCRIPT,
   '.js',
   '.mjs',
   '.md',
