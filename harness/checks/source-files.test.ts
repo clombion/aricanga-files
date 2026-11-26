@@ -7,15 +7,18 @@
  * where one can, it does (`heldFiles` takes no held kind, `OtherSuffixes`). This scan is the guard
  * for the rest. It reads the kinds' word, not a list of spellings: each place in a literal (a string,
  * a template's part, a pattern) where `ts` or `tsx` stands as a word. Each place is a file's name
- * (the word after a dot that follows a name, as in `process.ts`, `*.spec.ts` or a template's
- * `${stem}.ts`) or the kind written on its own (alone, in a list, after a tool's name, in a glob of
- * every module of a kind such as `*.ts` or `{ts,tsx}`, or in a pattern over the extension). Outside
- * the tests, a literal holding the kind on its own is refused. In a test or a test's plants, whose
+ * (the word after a dot that follows a name, as in `process.ts`, `playwright.*.config.ts` or a
+ * template's `${stem}.ts`) or the kind written on its own (alone, in a list, after a tool's name, in
+ * a glob of every module of a kind such as `*.ts` or `{ts,tsx}`, or of every module of a kind with a
+ * role, a wildcard stem and its role's suffix such as `*.test.ts`, or in a pattern over the
+ * extension). Outside the tests, a literal holding the kind on its own is refused, but a restatement
+ * of a tool's own setting, exempted with its reason (`RESTATED`). In a test or a test's plants, whose
  * expected values and planted paths are written out, a literal that is a kind alone, and a pattern
  * holding the kind on its own, are refused. Every held harness module is read but the owner and this
  * scan, whose plants spell the kinds.
  */
 
+import { Accepted, Exemptions } from '#lib/exemptions.ts';
 import { TYPESCRIPT, textOf, textsOf, typescriptGlob, typescriptKind, writeText } from '#lib/source-files.ts';
 import { describe, expect, test } from 'vitest';
 import {
@@ -28,7 +31,6 @@ import {
 } from 'typescript/unstable/ast';
 import { mkdir, rm } from 'node:fs/promises';
 import { nodes, parse } from '#lib/ts-source.ts';
-import { Accepted } from '#lib/exemptions.ts';
 import { fromRoot } from '#lib/paths.ts';
 import { typescriptFiles } from '#lib/scope.ts';
 
@@ -41,8 +43,14 @@ const KIND_WORD = /(?<![\w@-])tsx?(?![\w-])(?<optional>\?)?/gu;
 /** A file's name before the word: a dot that follows a name's last character; its segment holds no wildcard but in a named part. */
 const NAMED = /[\w)\]}-]\.$/u;
 
-/** A segment that is a glob of every module of a kind: a wildcard alone before the dot. */
-const EVERY_MODULE = /(?:^|\/)\*\.$/u;
+/** A segment that is a glob of every module of a kind, or of every module of a kind with a role: a wildcard stem, its role's dotted suffix if any, and the dot. */
+const EVERY_MODULE = /(?:^|\/)\*(?:\.[\w-]+)*\.$/u;
+
+/** Literals that restate a tool's own setting, not the held kinds, keyed `path: text`, each with the setting it restates. */
+const RESTATED = new Exemptions({
+  'harness/lib/test-globs.ts: **/*.spec.ts':
+    "Playwright's own testMatch for the suites (packages/characterisation/browsers.ts), which runs .ts specs only: a member's setting, restated",
+});
 
 /** A literal that is a kind alone: the kind's word, its dot or a tool's name before it, and nothing else. */
 const KIND_ALONE = /^(?:[\w-]+:)?\.?tsx?$/u;
@@ -56,10 +64,10 @@ const START = 0;
 /** The literals of the planted test: kinds on their own, globs of every module of a kind, patterns over the extension, and names of files. */
 const PLANTED_KINDS = [
   "export const alone = ['.ts', 'oxlint:.ts', 'ts', 'tsx'];",
-  "export const globs = ['src/**/*.{ts,tsx}', '**/*.tsx', '**/*.test.{ts,tsx,mts}', '*.{tsx,ts}'];",
+  "export const globs = ['src/**/*.{ts,tsx}', '**/*.tsx', '**/*.test.{ts,tsx,mts}', '*.{tsx,ts}', '**/*.test.ts', 'x/*.d.ts'];",
   String.raw`export const patterns = [/\.tsx?$/u, /^\.(?:ts|tsx)$/u, /\.ts$/u, /(?:\.ts)?$/u];`,
   'export const raw = String.raw`.*\\.(test|spec)\\.tsx?$`;',
-  "export const named = ['harness/lib/process.ts', 'a.d.ts', '#lib/ts-source.ts', 'tsconfig.json', '**/*.spec.ts', 'see (a/b.tsx)'];",
+  "export const named = ['harness/lib/process.ts', 'a.d.ts', '#lib/ts-source.ts', 'tsconfig.json', '**/playwright.*.config.ts', 'see (a/b.tsx)'];",
   `export const named2 = [/gen-docs\\.ts\\b/u, (stem: string): string => \`\${stem}.ts\`];`,
   '',
 ].join('\n');
@@ -143,7 +151,7 @@ describe('the held kinds', () => {
     expect.hasAssertions();
     const held = await typescriptFiles();
     const texts = await textsOf(held.filter((path) => isRead(path)));
-    expect(texts.flatMap(([path, text]: readonly [string, string]) => kindsWritten(path, text))).toStrictEqual([]);
+    expect(RESTATED.unexempted(texts.flatMap(([path, text]: readonly [string, string]) => kindsWritten(path, text)))).toStrictEqual([]);
   });
 
   test('are seen written on their own, in a glob and in a pattern, a file name passing, and a glob passing in a test', () => {
@@ -158,6 +166,8 @@ describe('the held kinds', () => {
         '**/*.tsx',
         '**/*.test.{ts,tsx,mts}',
         '*.{tsx,ts}',
+        '**/*.test.ts',
+        'x/*.d.ts',
         String.raw`/\.tsx?$/u`,
         String.raw`/^\.(?:ts|tsx)$/u`,
         String.raw`/\.ts$/u`,

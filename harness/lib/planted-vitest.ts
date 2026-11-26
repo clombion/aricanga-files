@@ -7,6 +7,7 @@
 import { list, object, parsed, stringOf, strings } from './config.ts';
 import { HARNESS_LIB } from './test-globs.ts';
 import { Project } from './tools.ts';
+import { typescriptGlob } from './source-files.ts';
 
 /** The setup module the gate's Vitest config loads for every test. */
 const GUARDS = `${HARNESS_LIB}guards.ts`;
@@ -20,7 +21,7 @@ interface Outcome {
 const CONFIG = `export default {
   test: {
     environment: 'node',
-    include: ['planted/**/*.test.ts'],
+    include: ['${typescriptGlob('planted/**/*.test')}'],
     setupFiles: ['./${GUARDS}'],
     sequence: { shuffle: false },
     fileParallelism: false,
