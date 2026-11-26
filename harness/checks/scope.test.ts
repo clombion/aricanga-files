@@ -8,7 +8,6 @@ import {
   inWorkspaceFolder,
   listing,
   manifest,
-  missedImporters,
   reader,
   refusalOf,
   withoutFile,
@@ -19,6 +18,7 @@ import { describe, expect, test } from 'vitest';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { perRoot, textOf } from '#lib/source-files.ts';
 import { PopulationError } from '#lib/workspace.ts';
+import { missedImporters } from './scope.oracle.ts';
 import path from 'node:path';
 import { plantedPopulation } from '#lib/planted-population.ts';
 

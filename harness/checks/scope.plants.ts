@@ -3,11 +3,8 @@
 import type { Population, PopulationInputs } from '#lib/scope.ts';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import type { Dir } from '#lib/package-dirs.ts';
-import { POC } from '#lib/scope.ts';
 import { Scripted } from '#lib/scripted.ts';
 import type { WorkspacePackage } from '#lib/workspace.ts';
-import { dirOfImporter } from '#lib/package-dirs.ts';
-import { lockOf } from '#lib/pins.ts';
 import path from 'node:path';
 import { run } from '#lib/process.ts';
 import { tmpdir } from 'node:os';
@@ -218,23 +215,8 @@ const UNHELD_SCRIPT: PopulationInputs = {
   workspace: listing(['packages/a/', 'x']),
 };
 
-/**
- * The lockfile's importers, as directories, that the population neither holds nor subtracts as POC.
- *
- * @param {Population} held - The population.
- * @param {string} lockText - The lockfile's text.
- * @returns {readonly string[]} The directories it misses.
- */
-function missedImporters(held: Population, lockText: string): readonly string[] {
-  const members = new Set<string>(held.members.map((member) => member.dir));
-  return [...lockOf(lockText).keys()]
-    .map((importer) => dirOfImporter(importer))
-    .filter((dir) => dir !== '' && !POC.starts(dir) && !members.has(dir));
-}
-
 export {
   BOM,
-  missedImporters,
   UNHELD_SCRIPT,
   causedRefusal,
   headOf,

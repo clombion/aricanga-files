@@ -62,8 +62,8 @@ type KnipRules = Readonly<Record<keyof NonNullable<KnipConfiguration['rules']>, 
  * `ignoreUnresolved`, `ignoreExportsUsedInFile`) and those that leave an issue type out (`exclude`,
  * `include`). So each reader reads it as written and the strictness check need not look for an excuse.
  * A rule name knip lacks, spread in from a variable, is beyond the type (TypeScript checks no object
- * for keys it was not given literally); knip's own schema refuses it where the `deadcode` task loads
- * the configuration.
+ * for keys it was not given literally), and knip only warns of it (`Ignored unknown issue type`) and
+ * runs on; every rule knip has stays at `error` all the same, since `KnipRules` is total.
  */
 type KnipConfig = Readonly<{
   rules: KnipRules;
