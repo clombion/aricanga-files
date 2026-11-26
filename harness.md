@@ -177,6 +177,7 @@ the tool at that version: a `package.json` field, or `pnpm-lock.yaml` with the i
 | `jscpd` | [kucherenko/jscpd](https://github.com/kucherenko/jscpd) | `pnpm-lock.yaml (.)` | 5.4.2 |
 | `knip` | [webpro-nl/knip](https://github.com/webpro-nl/knip) | `pnpm-lock.yaml (.)` | 6.44.1 |
 | `lefthook` | [evilmartians/lefthook](https://github.com/evilmartians/lefthook) | `pnpm-lock.yaml (.)` | 2.2.2 |
+| `minimatch` | [isaacs/minimatch](https://github.com/isaacs/minimatch) | `pnpm-lock.yaml (.)` | 11.0.9 |
 | `node` | [nodejs/node](https://github.com/nodejs/node) | `package.json engines` | >=22.18.0 |
 | `oxfmt` | [oxc-project/oxc](https://github.com/oxc-project/oxc) | `pnpm-lock.yaml (.)` | 0.79.0 |
 | `oxlint` | [oxc-project/oxc](https://github.com/oxc-project/oxc) | `pnpm-lock.yaml (.)` | 1.94.0 |

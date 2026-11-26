@@ -26,6 +26,7 @@ const UPSTREAM: ReadonlyMap<string, string> = new Map([
   ['jscpd', 'kucherenko/jscpd'],
   ['knip', 'webpro-nl/knip'],
   ['lefthook', 'evilmartians/lefthook'],
+  ['minimatch', 'isaacs/minimatch'],
   ['node', 'nodejs/node'],
   ['oxfmt', 'oxc-project/oxc'],
   ['oxlint', 'oxc-project/oxc'],

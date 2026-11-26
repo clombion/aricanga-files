@@ -90,6 +90,9 @@ importers:
       lefthook:
         specifier: 2.2.2
         version: 2.2.2
+      minimatch:
+        specifier: 11.0.9
+        version: 11.0.9
       oxfmt:
         specifier: 0.79.0
         version: 0.79.0
