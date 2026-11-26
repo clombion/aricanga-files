@@ -4,8 +4,8 @@
 // watching run sees a new member, a new file or a renamed one once restarted.
 
 import type { ViteUserConfig } from 'vitest/config';
-import { configOf } from './harness/lib/vitest-config.ts';
-import { population } from './harness/lib/scope.ts';
+import { configOf } from '#lib/vitest-config.ts';
+import { population } from '#lib/scope.ts';
 
 const config: ViteUserConfig = configOf(await population());
 

@@ -5,10 +5,11 @@
  */
 
 import { list, object, parsed, stringOf, strings } from './config.ts';
+import { HARNESS_LIB } from './test-globs.ts';
 import { Project } from './tools.ts';
 
 /** The setup module the gate's Vitest config loads for every test. */
-const GUARDS = 'harness/lib/guards.ts';
+const GUARDS = `${HARNESS_LIB}guards.ts`;
 
 /** What a planted test ended as, and why it failed if it did. */
 interface Outcome {
@@ -57,7 +58,7 @@ function outcomesOf(reportText: string): ReadonlyMap<string, Outcome> {
  * @returns {Promise<ReadonlyMap<string, Outcome>>} Each test's outcome, by its full name.
  */
 async function runPlanted(specs: Readonly<Record<string, string>>): Promise<ReadonlyMap<string, Outcome>> {
-  const project = await Project.create({ copies: ['harness/lib'] });
+  const project = await Project.create({ copies: [HARNESS_LIB] });
   try {
     await project.write('vitest.config.ts', CONFIG);
     await project.writeAll(Object.entries(specs).map(([path, text]: readonly [string, string]) => [`planted/${path}`, text] as const));

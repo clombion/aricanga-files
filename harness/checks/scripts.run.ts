@@ -1,5 +1,6 @@
 /** Running an entry script in the test's own process, with its library function stood in for. */
 
+import { HARNESS_SCRIPTS } from '#lib/test-globs.ts';
 import { fromRoot } from '#lib/paths.ts';
 import { vi } from 'vitest';
 
@@ -50,7 +51,7 @@ function withStoodIn<Module extends object>(module: Readonly<Module>, name: keyo
  * @returns {Promise<number | string | undefined>} The exit code the script set.
  */
 async function exitOf(script: string): Promise<number | string | undefined> {
-  await import(fromRoot('harness/scripts', script));
+  await import(fromRoot(HARNESS_SCRIPTS, script));
   const code = process.exitCode ?? undefined;
   process.exitCode = undefined;
   return code;

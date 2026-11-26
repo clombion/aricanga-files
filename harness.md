@@ -48,6 +48,7 @@ list.
 - `flake-hunter` (`harness/checks/flake-hunter.test.ts`): The flake hunter fails a test that passes only in its usual order or only when nothing runs beside it.
 - `gate` (`harness/checks/gate.test.ts`): The gate writes no file, runs only locked tools, and the git hooks run the gate's own tasks.
 - `generated-docs` (`harness/checks/generated-docs.test.ts`): Every generated block of the docs equals a fresh render, names a known generator, and every generator has a block.
+- `harness-paths` (`harness/checks/harness-paths.test.ts`): Every harness path in harness code is composed from its directory's one owner.
 - `history-narration` (`harness/checks/history-narration.test.ts`): Current text describes the project as it is: no comment or doc narrates how it got there.
 - `holders` (`harness/checks/holders.test.ts`): Every held module is one holder's code (`Population.holderOf`): its nearest member's, or else the
 - `isolation` (`harness/checks/isolation.test.ts`): A test that leaves a timer pending when it ends fails, and the next test starts clean.

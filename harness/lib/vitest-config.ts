@@ -15,6 +15,7 @@
 
 import {
   HARNESS_LIB,
+  HARNESS_LINT_RULES,
   HARNESS_SCRIPTS,
   HARNESS_TESTS,
   RUNNER_TESTS,
@@ -36,7 +37,7 @@ const SHARED: NonNullable<ViteUserConfig['test']> = {
   globals: false,
   hookTimeout: 30_000,
   restoreMocks: true,
-  setupFiles: ['./harness/lib/guards.ts'],
+  setupFiles: [`./${HARNESS_LIB}guards.ts`],
   testTimeout: 30_000,
   unstubEnvs: true,
   unstubGlobals: true,
@@ -81,7 +82,7 @@ function configOf(held: Population): ViteUserConfig {
       allowOnly: false,
       coverage: {
         exclude: [...RUNNER_TESTS],
-        include: [...coverageIncludes(held), `${HARNESS_LIB}**`, 'harness/lint-rules/globs.ts', `${HARNESS_SCRIPTS}**`, ...ROOT_MODULES],
+        include: [...coverageIncludes(held), `${HARNESS_LIB}**`, `${HARNESS_LINT_RULES}globs.ts`, `${HARNESS_SCRIPTS}**`, ...ROOT_MODULES],
         provider: 'v8',
         reporter: ['text-summary', 'json'],
         reportsDirectory: COVERAGE_DIR,

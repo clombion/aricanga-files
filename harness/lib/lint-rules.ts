@@ -13,13 +13,13 @@
 import { Project, bin, finished } from './tools.ts';
 import { TYPESCRIPT, textsOf, tracked } from './source-files.ts';
 import { list, object, parsed, stringOf } from './config.ts';
-import { substituted, toolRuns } from './repo-tasks.ts';
+import { substituted, toolRun } from './repo-tasks.ts';
 import type { AnyOxlintConfig } from './oxlint-shape.ts';
 import { FixtureError } from './fixture-error.ts';
+import { HARNESS_LINT_RULES } from './test-globs.ts';
 import { fromRoot } from './paths.ts';
 import { oxlintConfig } from './config-modules.ts';
 import path from 'node:path';
-import { present } from './present.ts';
 
 /** A rule fixture: the rule it proves, whether it must fire, where it is planted and its source. */
 interface Fixture {
@@ -46,18 +46,21 @@ interface Diagnostic {
 /** The code `codeOf` gives an unused disable directive, which oxlint reports with no rule code. */
 const UNUSED_DIRECTIVE = 'unused-disable-directive';
 
-const FIXTURES_DIR = 'harness/lint-rules/fixtures/';
+const FIXTURES_DIR = `${HARNESS_LINT_RULES}fixtures/`;
 
 /**
  * What a planted project copies to run the repository's oxlint configuration: the project plugin it
  * loads. Every check that plants an oxlint run copies exactly these and writes the configuration
  * with `writeOxlintConfig`.
  */
-const OXLINT_CONFIG_FILES: readonly string[] = ['harness/lint-rules'];
+const OXLINT_CONFIG_FILES: readonly string[] = [HARNESS_LINT_RULES];
 
 /** The configuration file of a planted oxlint run: JSON, which every oxlint runtime reads. */
 const PLANTED_OXLINT_CONFIG = '.oxlintrc.json';
-const FIXTURE_NAME = /^harness\/lint-rules\/fixtures\/(?<rule>[a-z-]+)\/(?<kind>fire|clean)(?:-[a-z0-9-]+)?\.fixture$/u;
+const FIXTURE_NAME = new RegExp(
+  String.raw`^${FIXTURES_DIR.replaceAll('/', String.raw`\/`)}(?<rule>[a-z-]+)\/(?<kind>fire|clean)(?:-[a-z0-9-]+)?\.fixture$`,
+  'u',
+);
 const PATH_LINE = /^\/\/ path: (?<path>\S+)\n/u;
 
 /** Where the workspace installs Solid for the planted lint project: the characterisation package's own install. */
@@ -78,7 +81,7 @@ const PLANTED_TSCONFIG = JSON.stringify({
     },
     types: ['node'],
   },
-  exclude: ['node_modules', 'harness/lint-rules'],
+  exclude: ['node_modules', HARNESS_LINT_RULES],
   extends: './tsconfig.base.json',
   include: [...TYPESCRIPT].map((suffix) => `**/*${suffix}`),
 });
@@ -241,8 +244,8 @@ function codesAt(found: readonly Diagnostic[], planted: string): readonly string
  * @returns {Promise<readonly string[]>} The arguments.
  */
 async function lintRun(): Promise<readonly string[]> {
-  const [run] = await toolRuns('lint', 'oxlint');
-  return present(run, 'the oxlint command of the lint task');
+  const run = await toolRun('lint', 'oxlint');
+  return run;
 }
 
 /**

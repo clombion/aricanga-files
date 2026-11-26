@@ -5,7 +5,16 @@
  * `config-modules.ts`), and a planted run writes that value as its JSON configuration (`writeOxlintConfig`).
  */
 
-import { BROWSER_TESTS, RUNNER_CONFIGS, RUNNER_TESTS, TEST_SUPPORT, VITE_CONFIGS, liveGlobs } from './test-globs.ts';
+import {
+  BROWSER_TESTS,
+  HARNESS_LIB,
+  HARNESS_LINT_RULES,
+  RUNNER_CONFIGS,
+  RUNNER_TESTS,
+  TEST_SUPPORT,
+  VITE_CONFIGS,
+  liveGlobs,
+} from './test-globs.ts';
 import type { GateOverride, GateOxlintConfig } from './oxlint-shape.ts';
 import { HARNESS_CODE, ROOT_MODULE_FILES, unheldPatterns } from './oxlint-files.ts';
 import type { Member, Population } from './scope.ts';
@@ -33,7 +42,7 @@ const SETTINGS = {
     builtin: true,
     es2024: true,
   },
-  jsPlugins: ['eslint-plugin-solid', './harness/lint-rules/plugin.ts'],
+  jsPlugins: ['eslint-plugin-solid', `./${HARNESS_LINT_RULES}plugin.ts`],
   options: {
     denyWarnings: true,
     reportUnusedDisableDirectives: 'error',
@@ -42,19 +51,19 @@ const SETTINGS = {
   },
   overrides: [
     {
-      files: ['harness/lint-rules/plugin.ts', ...VITE_CONFIGS, ...RUNNER_CONFIGS, ...ROOT_MODULE_FILES, 'harness/lib/design-tokens.ts'],
+      files: [`${HARNESS_LINT_RULES}plugin.ts`, ...VITE_CONFIGS, ...RUNNER_CONFIGS, ...ROOT_MODULE_FILES, `${HARNESS_LIB}design-tokens.ts`],
       rules: {
         'import/no-default-export': 'off',
       },
     },
     {
-      files: ['harness/lib/guards.ts'],
+      files: [`${HARNESS_LIB}guards.ts`],
       rules: {
         'vitest/require-top-level-describe': 'off',
       },
     },
     {
-      files: ['harness/lib/checker.ts'],
+      files: [`${HARNESS_LIB}checker.ts`],
       rules: {
         'eslint/no-bitwise': 'off',
       },

@@ -7,6 +7,7 @@
  */
 
 import { Accepted, Vocabulary } from './exemptions.ts';
+import { HARNESS_LIB } from './test-globs.ts';
 import type { MemberDir } from './package-dirs.ts';
 import type { Population } from './scope.ts';
 import type { Tier } from './roles.ts';
@@ -143,7 +144,7 @@ const SHAPES: Vocabulary<RuleShapes> = new Vocabulary<RuleShapes>({
   'json-parse': {
     names: ['JSON.parse'],
     policies: {
-      harness: { kind: 'owned', owner: 'harness/lib/config.ts' },
+      harness: { kind: 'owned', owner: `${HARNESS_LIB}config.ts` },
       kernel: { kind: 'owned', owner: 'packages/foundation/src/host/codec.ts' },
       product: NOBODY,
       'test-infrastructure': {
@@ -181,7 +182,7 @@ const SHAPES: Vocabulary<RuleShapes> = new Vocabulary<RuleShapes>({
   'process-start': {
     names: ['spawn', 'spawnSync', 'exec', 'execSync', 'execFile', 'execFileSync', 'fork'].map((call) => `child_process.${call}`),
     policies: {
-      harness: { kind: 'owned', owner: 'harness/lib/process.ts' },
+      harness: { kind: 'owned', owner: `${HARNESS_LIB}process.ts` },
       kernel: NOBODY,
       product: NOBODY,
       'test-infrastructure': NOBODY,
@@ -199,7 +200,7 @@ const SHAPES: Vocabulary<RuleShapes> = new Vocabulary<RuleShapes>({
       'crypto.getRandomValues',
     ],
     policies: {
-      harness: { kind: 'owned', owner: 'harness/lib/stress.ts' },
+      harness: { kind: 'owned', owner: `${HARNESS_LIB}stress.ts` },
       kernel: NOBODY,
       product: NOBODY,
       'test-infrastructure': NOBODY,
@@ -209,7 +210,7 @@ const SHAPES: Vocabulary<RuleShapes> = new Vocabulary<RuleShapes>({
   settings: {
     names: ['NodeJS.Process.env', 'process.env'],
     policies: {
-      harness: { kind: 'owned', owner: 'harness/lib/process.ts' },
+      harness: { kind: 'owned', owner: `${HARNESS_LIB}process.ts` },
       kernel: NOBODY,
       product: NOBODY,
       'test-infrastructure': NOBODY,
@@ -219,7 +220,7 @@ const SHAPES: Vocabulary<RuleShapes> = new Vocabulary<RuleShapes>({
   'standard-streams': {
     names: ['console', 'NodeJS.Process.stdout', 'NodeJS.Process.stderr'],
     policies: {
-      harness: { kind: 'owned', owner: 'harness/lib/output.ts' },
+      harness: { kind: 'owned', owner: `${HARNESS_LIB}output.ts` },
       kernel: NOBODY,
       product: NOBODY,
       'test-infrastructure': { kind: 'owned', owner: 'packages/characterisation/src/harness.ts' },

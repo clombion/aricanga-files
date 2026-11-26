@@ -3,9 +3,9 @@
 // is fixed when it loads. A failure while it loads stays failed for that process: a module's
 // failed top-level await is kept by the module cache, so a long-lived process that meets one starts again.
 
-import type { KnipConfig } from './harness/lib/knip-config.ts';
-import { knipConfigOf } from './harness/lib/knip-config.ts';
-import { population } from './harness/lib/scope.ts';
+import type { KnipConfig } from '#lib/knip-config.ts';
+import { knipConfigOf } from '#lib/knip-config.ts';
+import { population } from '#lib/scope.ts';
 
 const config: KnipConfig = knipConfigOf(await population());
 

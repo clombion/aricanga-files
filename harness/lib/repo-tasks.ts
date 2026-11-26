@@ -47,6 +47,18 @@ async function toolRuns(task: string, binary: string): Promise<readonly (readonl
 }
 
 /**
+ * The first invocation of a tool a task makes (`toolRuns`), refused when it makes none.
+ *
+ * @param {string} task - The task's name.
+ * @param {string} binary - The tool's binary.
+ * @returns {Promise<readonly string[]>} Its arguments.
+ */
+async function toolRun(task: string, binary: string): Promise<readonly string[]> {
+  const [run] = await toolRuns(task, binary);
+  return present(run, `the ${binary} command of the ${task} task`);
+}
+
+/**
  * A tool's arguments with the value of one flag replaced: a planted run makes the task's invocation
  * with its own configuration file.
  *
@@ -60,4 +72,4 @@ function substituted(args: readonly string[], flag: string, value: string): read
   return args.map((word, index) => (before[index] === flag ? value : word));
 }
 
-export { repoTasks, runsOf, substituted, toolRuns };
+export { repoTasks, runsOf, substituted, toolRun, toolRuns };

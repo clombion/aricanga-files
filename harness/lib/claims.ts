@@ -10,7 +10,7 @@
  * A phrase written inside a code span is a quotation, not a claim.
  */
 
-import { HARNESS_LIB, HARNESS_SCRIPTS } from './test-globs.ts';
+import { HARNESS_CHECKS, HARNESS_LIB, HARNESS_SCRIPTS } from './test-globs.ts';
 
 /** A claim of a single owner, up to the end of its clause. */
 const CLAIM = /\b(?:the (?:one|only) (?:owner|module|place|reader|writer)|nowhere else|stated once)\b[^.;:]*/giu;
@@ -87,33 +87,33 @@ function probe(pattern: Readonly<RegExp>, owner: string, scope: ProbeScope = EVE
 const CLAIMS: readonly Claim[] = [
   {
     clause: "the one reader of a manifest's  every other asks",
-    path: 'harness/lib/workspace.ts',
-    probe: probe(/is no string: a package[']s name is a string, or none/u, 'harness/lib/workspace.ts', HARNESS_PROBE_ROOTS),
+    path: `${HARNESS_LIB}workspace.ts`,
+    probe: probe(/is no string: a package[']s name is a string, or none/u, `${HARNESS_LIB}workspace.ts`, HARNESS_PROBE_ROOTS),
   },
   {
     clause: 'stated once, in',
-    path: 'harness/checks/source-files.test.ts',
-    probe: probe(/new Accepted<HeldKind>\(/u, 'harness/lib/source-files.ts', HARNESS_PROBE_ROOTS),
+    path: `${HARNESS_CHECKS}source-files.test.ts`,
+    probe: probe(/new Accepted<HeldKind>\(/u, `${HARNESS_LIB}source-files.ts`, HARNESS_PROBE_ROOTS),
   },
   {
     clause: "The one reader of the repository's prose",
-    path: 'harness/lib/docs.ts',
-    probe: probe(/^const FENCE = /mu, 'harness/lib/markdown-text.ts'),
+    path: `${HARNESS_LIB}docs.ts`,
+    probe: probe(/^const FENCE = /mu, `${HARNESS_LIB}markdown-text.ts`),
   },
   {
     clause: 'The one owner of exemption lists',
-    path: 'harness/lib/exemptions.ts',
-    probe: probe(/^export \{[^}]*\b(?:Accepted|Exemptions|Prefixes)\b[^}]*\} from '\.\/exemptions\//mu, 'harness/lib/exemptions.ts'),
+    path: `${HARNESS_LIB}exemptions.ts`,
+    probe: probe(/^export \{[^}]*\b(?:Accepted|Exemptions|Prefixes)\b[^}]*\} from '\.\/exemptions\//mu, `${HARNESS_LIB}exemptions.ts`),
   },
   {
     clause: 'nowhere else in the harness',
-    path: 'harness/lib/paths.ts',
-    probe: probe(LOCATES_ITSELF, 'harness/lib/paths.ts', HARNESS_PROBE_ROOTS),
+    path: `${HARNESS_LIB}paths.ts`,
+    probe: probe(LOCATES_ITSELF, `${HARNESS_LIB}paths.ts`, HARNESS_PROBE_ROOTS),
   },
   {
     clause: 'The one module allowed to compute where the repository is',
-    path: 'harness/checks/repo-paths.test.ts',
-    probe: probe(LOCATES_ITSELF, 'harness/lib/paths.ts', HARNESS_PROBE_ROOTS),
+    path: `${HARNESS_CHECKS}repo-paths.test.ts`,
+    probe: probe(LOCATES_ITSELF, `${HARNESS_LIB}paths.ts`, HARNESS_PROBE_ROOTS),
   },
   {
     clause: 'the one place a',
@@ -127,38 +127,38 @@ const CLAIMS: readonly Claim[] = [
   },
   {
     clause: "The one module of the harness's scripts that writes to the standard streams",
-    path: 'harness/lib/output.ts',
-    probe: probe(/\bprocess\.(?:stdout|stderr)\b/u, 'harness/lib/output.ts', HARNESS_PROBE_ROOTS),
+    path: `${HARNESS_LIB}output.ts`,
+    probe: probe(/\bprocess\.(?:stdout|stderr)\b/u, `${HARNESS_LIB}output.ts`, HARNESS_PROBE_ROOTS),
   },
   {
     clause: 'The one owner of building the product from the gate',
-    path: 'harness/lib/build.ts',
-    probe: probe(/\bbin\('vite'\)/u, 'harness/lib/build.ts', HARNESS_MODULES),
+    path: `${HARNESS_LIB}build.ts`,
+    probe: probe(/\bbin\('vite'\)/u, `${HARNESS_LIB}build.ts`, HARNESS_MODULES),
   },
   {
     clause: 'The one owner of the unused-code scan',
-    path: 'harness/lib/deadcode.ts',
-    probe: probe(/\bbin\('knip'\)/u, 'harness/lib/deadcode.ts', HARNESS_MODULES),
+    path: `${HARNESS_LIB}deadcode.ts`,
+    probe: probe(/\bbin\('knip'\)/u, `${HARNESS_LIB}deadcode.ts`, HARNESS_MODULES),
   },
   {
     clause: 'The one owner of the Node floor',
-    path: 'harness/lib/node-floor.ts',
-    probe: probe(/\['engines'\]/u, 'harness/lib/node-floor.ts', HARNESS_MODULES),
+    path: `${HARNESS_LIB}node-floor.ts`,
+    probe: probe(/\['engines'\]/u, `${HARNESS_LIB}node-floor.ts`, HARNESS_MODULES),
   },
   {
     clause: "The one owner of the harness's stylesheet scans",
-    path: 'harness/lib/stylesheets.ts',
-    probe: probe(/\bstylelint\.lint\(/u, 'harness/lib/stylesheets.ts', HARNESS_MODULES),
+    path: `${HARNESS_LIB}stylesheets.ts`,
+    probe: probe(/\bstylelint\.lint\(/u, `${HARNESS_LIB}stylesheets.ts`, HARNESS_MODULES),
   },
   {
     clause: 'The one owner of starting a child process',
-    path: 'harness/lib/process.ts',
-    probe: probe(/^import .* from 'node:child_process';$/mu, 'harness/lib/process.ts'),
+    path: `${HARNESS_LIB}process.ts`,
+    probe: probe(/^import .* from 'node:child_process';$/mu, `${HARNESS_LIB}process.ts`),
   },
   {
     clause: "the one writer of the repository's own files, for the fixers",
-    path: 'harness/lib/source-files.ts',
-    probe: probe(/\bwrite\w*\((?:path\.join\(REPO_ROOT|fromRoot\()/u, 'harness/lib/source-files.ts', HARNESS_MODULES),
+    path: `${HARNESS_LIB}source-files.ts`,
+    probe: probe(/\bwrite\w*\((?:path\.join\(REPO_ROOT|fromRoot\()/u, `${HARNESS_LIB}source-files.ts`, HARNESS_MODULES),
   },
 ];
 

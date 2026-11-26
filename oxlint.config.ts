@@ -3,9 +3,9 @@
 // is fixed when it loads. A failure while it loads stays failed for that process: a module's
 // failed top-level await is kept by the module cache, so a long-lived process that meets one starts again.
 
-import type { GateOxlintConfig } from './harness/lib/oxlint-shape.ts';
-import { oxlintConfigOf } from './harness/lib/oxlint-config.ts';
-import { population } from './harness/lib/scope.ts';
+import type { GateOxlintConfig } from '#lib/oxlint-shape.ts';
+import { oxlintConfigOf } from '#lib/oxlint-config.ts';
+import { population } from '#lib/scope.ts';
 
 const config: GateOxlintConfig = oxlintConfigOf(await population());
 

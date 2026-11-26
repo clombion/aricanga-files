@@ -55,6 +55,8 @@ const EXEMPT = new Exemptions({
     "the population's reading of the manifests: the root's and each member's, at one moment, through the reader its inputs name",
   [site('harness/checks/doc-references.packages.ts', READ)]:
     'reads the name of every tracked manifest, the POC reference included, since a reference may name any package of the checkout',
+  [site('harness/checks/harness-paths.test.ts', READ)]:
+    "reads harness/lint-rules/package.json's import map, which is no population's manifest: it is held to the harness's directory owners",
   [site('harness/checks/json-files.test.ts', READ)]:
     "parses every held package.json for its dependency groups, harness/lint-rules/package.json included, which is no population's manifest: a package listed twice is a fact of the file",
 });

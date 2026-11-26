@@ -1,5 +1,6 @@
 /** The rule levels of the gate's oxlint configuration: every rule a category turns on stays at error unless it is set here. */
 
+import { HARNESS_LIB } from './test-globs.ts';
 import type { OxlintConfig } from 'oxlint';
 import { TYPESCRIPT } from './source-files.ts';
 
@@ -20,7 +21,7 @@ const RULES: NonNullable<OxlintConfig['rules']> & Readonly<Partial<Record<Member
   'aricanga/env': [
     'error',
     {
-      owners: ['harness/lib/process.ts', 'harness/lib/tools.ts'],
+      owners: [`${HARNESS_LIB}process.ts`, `${HARNESS_LIB}tools.ts`],
     },
   ],
   'aricanga/json': 'error',

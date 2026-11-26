@@ -1,8 +1,10 @@
 /**
  * The gate's test and tool-config globs: which modules a test runner runs (`RUNNER_TESTS`:
  * `VITEST_TESTS` and `PLAYWRIGHT_SPECS`), which configs it loads (`RUNNER_CONFIGS`), the test
- * directories (`TEST_DIRECTORIES`), the Vite configs (`VITE_CONFIG`), the harness's own library,
- * tests and scripts (`HARNESS_LIB`, `HARNESS_CHECKS`, `HARNESS_TESTS`, `HARNESS_SCRIPTS`), which
+ * directories (`TEST_DIRECTORIES`), the Vite configs (`VITE_CONFIG`), the harness's own directories
+ * (`HARNESS_DIRECTORIES`: its library, checks, scripts and lint rules, `HARNESS_LIB`,
+ * `HARNESS_CHECKS`, `HARNESS_SCRIPTS`, `HARNESS_LINT_RULES`; every harness path in harness code is
+ * composed from one of these) and tests (`HARNESS_TESTS`), which
  * tests the `rebuild` project collects and which sources coverage reads. Their readers:
  * `isProduction` (`checker.ts`), the coverage include and exclude, oxlint's Node env and
  * default-export override, knip's entries and Playwright configs, the build check and the claims'
@@ -24,6 +26,12 @@ const HARNESS_LIB = 'harness/lib/';
 
 /** The harness's scripts: the entry points its tasks run (each top-level module), and their helpers below. */
 const HARNESS_SCRIPTS = 'harness/scripts/';
+
+/** The harness's lint-rules package: the project's oxlint plugin, its rules and their fixtures. */
+const HARNESS_LINT_RULES = 'harness/lint-rules/';
+
+/** The harness's directories, each spelled by its one owner above: every other harness path is composed from one of them. */
+const HARNESS_DIRECTORIES: Accepted<string> = new Accepted<string>([HARNESS_CHECKS, HARNESS_LIB, HARNESS_LINT_RULES, HARNESS_SCRIPTS]);
 
 /** The modules a task runs as a script: each top-level module of the harness's scripts (a helper below one is imported, not run). */
 const SCRIPT_ENTRIES: Accepted<string> = new Accepted<string>([`${HARNESS_SCRIPTS}*${NODE_SCRIPT}`]);
@@ -132,7 +140,9 @@ export {
   BROWSER_TESTS,
   coverageIncludes,
   HARNESS_CHECKS,
+  HARNESS_DIRECTORIES,
   HARNESS_LIB,
+  HARNESS_LINT_RULES,
   HARNESS_SCRIPTS,
   HARNESS_TESTS,
   isRunnerConfig,
