@@ -9,9 +9,10 @@
 
 import type { Rule, RuleBase } from 'stylelint';
 import { TYPESCRIPT, textsOf } from './source-files.ts';
-import { heldFiles, population } from './scope.ts';
+import { heldFiles, population, typescriptOf } from './scope.ts';
 import { isIdentifier, isNoSubstitutionTemplateLiteral, isTaggedTemplateExpression } from 'typescript/unstable/ast/is';
 import { nodes, parse as parseModule } from './ts-source.ts';
+import type { OtherSuffix } from './source-files.ts';
 import { Prefixes } from './exemptions.ts';
 import { Slot } from './lists.ts';
 import { fromRoot } from './paths.ts';
@@ -61,16 +62,16 @@ const TEXT_START = 0;
 const SUBSTITUTION = '0';
 
 /**
- * The product's held files with the given suffixes: a member's production files (`isProduction`),
- * never a test's, a test infrastructure member's or the harness's planted sheets. The sheets the check
- * lints and the modules their classes are read from are both this selection.
+ * The product's held files of one other suffix and its held modules: a member's production files
+ * (`isProduction`), never a test's, a test infrastructure member's or the harness's planted sheets.
+ * The sheets the check lints and the modules their classes are read from are both this selection.
  *
- * @param {readonly string[]} suffixes - The suffixes.
- * @returns {Promise<readonly string[]>} The files.
+ * @param {OtherSuffix<Suffix>} suffix - The other suffix (`.css`, `.html`).
+ * @returns {Promise<readonly string[]>} The files, those of the suffix first.
  */
-async function productFiles(...suffixes: readonly string[]): Promise<readonly string[]> {
-  const [files, held] = await Promise.all([heldFiles(...suffixes), population()]);
-  return files.filter((path) => held.memberOf(path) !== undefined && isProduction(held, path));
+async function productFiles<const Suffix extends string>(suffix: OtherSuffix<Suffix>): Promise<readonly string[]> {
+  const [files, held] = await Promise.all([heldFiles(suffix), population()]);
+  return [...files, ...typescriptOf(held)].filter((path) => held.memberOf(path) !== undefined && isProduction(held, path));
 }
 
 /**
@@ -142,7 +143,7 @@ function withoutSheets(path: string, text: string): string {
  * @returns {Promise<readonly Sheet[]>} The sheets.
  */
 async function sheets(): Promise<readonly Sheet[]> {
-  const files = await productFiles('.css', ...MODULES.values);
+  const files = await productFiles('.css');
   const texts = await textsOf(files);
   return texts.flatMap(([path, text]: readonly [string, string]) => sheetsOf(path, text));
 }
@@ -154,7 +155,7 @@ async function sheets(): Promise<readonly Sheet[]> {
  * @returns {Promise<ReadonlyMap<string, string>>} Each reader's text, by path.
  */
 async function readers(): Promise<ReadonlyMap<string, string>> {
-  const files = await productFiles('.html', ...MODULES.values);
+  const files = await productFiles('.html');
   const texts = await textsOf(files);
   return new Map(texts.map(([path, text]: readonly [string, string]) => [path, withoutSheets(path, text)] as const));
 }

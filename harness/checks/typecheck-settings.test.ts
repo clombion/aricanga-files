@@ -15,7 +15,7 @@
 
 import { PLANTS, SHAPES, TSC_DEFAULT } from './typecheck-settings.plants.ts';
 import { describe, expect, test } from 'vitest';
-import { textsOf, tracked } from '#lib/source-files.ts';
+import { isTypeScript, textsOf, tracked } from '#lib/source-files.ts';
 import { Project } from '#lib/tools.ts';
 import type { Setting } from './typecheck-settings.plants.ts';
 
@@ -23,8 +23,8 @@ const HARNESS_ID = 'typecheck-settings';
 
 /** Where the harness library lives; the exemptions owner and its modules are copied from under it. */
 const LIB = 'harness/lib/';
-/** The exemptions owner and the modules it re-exports. */
-const EXEMPTIONS_MODULE = /^harness\/lib\/exemptions(?:\.ts|\/[^/]+\.ts)$/u;
+/** The exemptions owner and the modules it re-exports, by their paths up to their kind. */
+const EXEMPTIONS_MODULE = /^harness\/lib\/exemptions(?:\/[^/.]+)?\.[^/]+$/u;
 
 const SUPPORT: Readonly<Record<string, string>> = {
   'src/clean.ts': 'export function double(value: number): number {\n  return value * 2;\n}\n',
@@ -76,7 +76,7 @@ function plantedConfig(overrides: Readonly<Record<string, Setting>>): string {
  */
 async function plantAll(project: Project, overrides: Readonly<Record<string, Setting>>): Promise<void> {
   const listed = await tracked();
-  const libraries = await textsOf(listed.filter((candidate) => EXEMPTIONS_MODULE.test(candidate)));
+  const libraries = await textsOf(listed.filter((candidate) => isTypeScript(candidate) && EXEMPTIONS_MODULE.test(candidate)));
   const files: readonly (readonly [string, string])[] = [
     [
       'node_modules/@typescript/lib-dom/package.json',

@@ -6,8 +6,8 @@
  * new file before it is committed. A listing below `FLOOR` files is an error, never an empty scan.
  */
 
+import { Accepted, Vocabulary } from './exemptions.ts';
 import { readFile, stat, writeFile } from 'node:fs/promises';
-import { Accepted } from './exemptions.ts';
 import { REPO_ROOT } from './paths.ts';
 import { byKind } from './by-kind.ts';
 import { isolatedEnv } from './tools.ts';
@@ -22,13 +22,30 @@ const DOT = '.';
 /** The extensions oxlint lints: the files that are modules. */
 const LINTED = /\.(?:[cm]?[jt]sx?)$/u;
 
+/** A held kind, as a type: what a selection by suffix may not name on its own (`OtherSuffixes`). */
+type HeldKind = '.ts' | '.tsx';
+
 /** The suffixes of a held module: TypeScript, with or without JSX (a declaration file included), the files every scan, the type check and coverage read. */
-const TYPESCRIPT: Accepted<string> = new Accepted<string>(['.ts', '.tsx']);
+const TYPESCRIPT: Accepted<HeldKind> = new Accepted<HeldKind>(['.ts', '.tsx']);
+
+/** The name jscpd gives each held kind, its `--format`: a kind without one does not compile. */
+const JSCPD_FORMATS: Vocabulary<Readonly<Record<HeldKind, string>>> = new Vocabulary<Readonly<Record<HeldKind, string>>>({
+  '.ts': 'typescript',
+  '.tsx': 'tsx',
+});
+
+/** The held kind Node runs as a script: it strips types and transforms no JSX, so a script is `.ts`. */
+const NODE_SCRIPT: HeldKind = '.ts';
+
+/** Suffixes a selection names, each none of the held kinds: a selection of held modules reads `TYPESCRIPT`. */
+type OtherSuffixes<Suffixes extends readonly string[]> = { readonly [Index in keyof Suffixes]: OtherSuffix<Suffixes[Index]> };
+
+/** A suffix a selection names, none of the held kinds. */
+type OtherSuffix<Suffix extends string> = Suffix extends HeldKind ? never : Suffix;
 
 /**
- * A glob that selects the held modules a stem names: `stem`, then the held kinds as a braced
- * extension composed from `TYPESCRIPT` (`.{ts,tsx}`), so every glob that selects held modules reads
- * the kinds from here.
+ * A glob that selects the held modules a stem names: `stem`, then the held kinds as a braced extension
+ * composed from `TYPESCRIPT` (`.{ts,tsx}`), which every glob that selects held modules reads.
  *
  * @param {string} stem - The glob up to the dot, such as `**\/*` or `**\/*.test`.
  * @returns {string} The glob.
@@ -273,8 +290,11 @@ export {
   textOf,
   textsOf,
   tracked,
+  JSCPD_FORMATS,
+  NODE_SCRIPT,
   TYPESCRIPT,
   typescriptGlob,
   typescriptKind,
   writeText,
 };
+export type { OtherSuffix, OtherSuffixes };

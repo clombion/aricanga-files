@@ -197,13 +197,16 @@ function optionMatches(context: Context, key: string): boolean {
   return globs(context, key).some((test) => test(file));
 }
 
+/** A JSX module, of either language: the extensions JSX is written in. */
+const JSX_MODULE = /\.[jt]sx$/u;
+
 /**
- * Whether the linted file is a `.tsx` module the rule holds (not under its `ignore` globs).
+ * Whether the linted file is a JSX module the rule holds (not under its `ignore` globs).
  * @param {Context} context - The rule's context.
  * @returns {boolean} Whether the rule applies to the linted file.
  */
 function heldComponentFile(context: Context): boolean {
-  return context.filename.endsWith('.tsx') && !optionMatches(context, 'ignore');
+  return JSX_MODULE.test(context.filename) && !optionMatches(context, 'ignore');
 }
 
 /**

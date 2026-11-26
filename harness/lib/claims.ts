@@ -69,7 +69,7 @@ const CLAIMS: readonly Claim[] = [
   {
     clause: 'stated once, in',
     path: 'harness/checks/source-files.test.ts',
-    probe: probe(/\['\.ts', '\.tsx'\]/u, 'harness/lib/source-files.ts', HARNESS_PROBE_ROOTS),
+    probe: probe(/new Accepted<HeldKind>\(/u, 'harness/lib/source-files.ts', HARNESS_PROBE_ROOTS),
   },
   {
     clause: "The one reader of the repository's prose",

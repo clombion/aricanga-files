@@ -6,7 +6,10 @@ import type { Rule } from '#lint-rules/ast.ts';
 
 const VIEW = '/src/view/';
 const KERNEL_NAMES = new Set(['reduce', 'Effect', 'FoundationEffect', 'ReduceResult', 'ReduceContext']);
-const KERNEL_MODULES = /(?:^|\/)(?:reduce|sim\/effect|sim\/context|model\/[^/]+)(?:\.ts)?$/u;
+/** A kernel module, by its specifier with any extension taken off. */
+const KERNEL_MODULES = /(?:^|\/)(?:reduce|sim\/effect|sim\/context|model\/[^/]+)$/u;
+/** A specifier's extension, after its last segment's last dot. */
+const EXTENSION = /\.[^./]+$/u;
 
 export const viewImports: Rule = {
   create(context) {
@@ -18,7 +21,7 @@ export const viewImports: Rule = {
       const [first] = kernel;
       if (first !== undefined) {
         refuse(context, imported, `a view reads view-models, not the kernel: ${kernel.join(', ')}`);
-      } else if (KERNEL_MODULES.test(imported.source)) {
+      } else if (KERNEL_MODULES.test(imported.source.replace(EXTENSION, ''))) {
         refuse(context, imported, `a view reads view-models, not the kernel: ${imported.source}`);
       }
     });

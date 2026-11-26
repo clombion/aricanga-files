@@ -1,12 +1,12 @@
 /** Runs jscpd once, with every flag stated here, and reads its JSON report. */
 
+import { JSCPD_FORMATS, isFile } from './source-files.ts';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import type { Outcome } from './process.ts';
 import type { Run } from './dupes-report.ts';
 import { Vocabulary } from './exemptions.ts';
 import { byKind } from './by-kind.ts';
 import { fromRoot } from './paths.ts';
-import { isFile } from './source-files.ts';
 import { noReport } from './dupes-report.ts';
 import { parsed } from './config.ts';
 import path from 'node:path';
@@ -34,7 +34,7 @@ const MAX_SIZE: number = MAX_SIZE_MB * BYTES_PER_MB;
 
 const COMMON: readonly string[] = [
   '--format',
-  'typescript,tsx',
+  JSCPD_FORMATS.words.map((kind) => JSCPD_FORMATS.of(kind)).join(','),
   '--max-size',
   `${MAX_SIZE_MB}mb`,
   '--absolute',

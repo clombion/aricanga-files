@@ -14,6 +14,7 @@ import { manifestOf, nearestOf } from './package-dirs.ts';
 import { ships, tierOf } from './roles.ts';
 import type { Fields } from './manifests.ts';
 import type { MemberDir } from './package-dirs.ts';
+import type { OtherSuffixes } from './source-files.ts';
 import { REPO_ROOT } from './paths.ts';
 import { ROOT_MODULES } from './config-modules.ts';
 import type { WorkspacePackage } from './workspace.ts';
@@ -256,12 +257,13 @@ function heldOf(held: Population, ...suffixes: readonly string[]): readonly stri
 }
 
 /**
- * The listed files the harness holds, optionally filtered by suffix.
+ * The listed files the harness holds, optionally filtered by suffix. A held kind is no suffix this
+ * takes (`OtherSuffixes`): the held modules are `typescriptFiles`', selected by `TYPESCRIPT`.
  *
- * @param {readonly string[]} suffixes - The suffixes to keep; none keeps every file.
+ * @param {OtherSuffixes<Suffixes>} suffixes - The suffixes to keep; none keeps every file.
  * @returns {Promise<readonly string[]>} The held files.
  */
-async function heldFiles(...suffixes: readonly string[]): Promise<readonly string[]> {
+async function heldFiles<const Suffixes extends readonly string[]>(...suffixes: OtherSuffixes<Suffixes>): Promise<readonly string[]> {
   const held = await population();
   return heldOf(held, ...suffixes);
 }

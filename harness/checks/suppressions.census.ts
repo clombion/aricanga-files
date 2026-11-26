@@ -181,5 +181,15 @@ function census(path: string, text: string): Census {
   return { problems, sites };
 }
 
+/**
+ * Whether some tool the census reads checks a file: its suffix is one of `CHECKS`' suffixes.
+ *
+ * @param {string} path - The file's path.
+ * @returns {boolean} Whether the census reads it.
+ */
+function isCensused(path: string): boolean {
+  return [...CHECKS].some((check) => check.endsWith(`:${suffix(path)}`));
+}
+
 export type { Census };
-export { census, suffix };
+export { census, isCensused };

@@ -1,11 +1,22 @@
 /**
  * The fixers' writer writes a repository file as given, read back as written; and the held kinds are
  * stated once, in `TYPESCRIPT`: no other held module of the harness writes a held kind as a literal
- * of its own (a suffix, a glob's extension, a pattern's alternative). A test's expected values and
- * planted paths are its oracle, written out by design, so test modules and their plants are not read.
+ * of its own.
+ *
+ * The kinds are text at every site that names a file, so no type can keep a site from writing them;
+ * where one can, it does (`heldFiles` takes no held kind, `OtherSuffixes`). This scan is the guard
+ * for the rest. It reads the kinds' word, not a list of spellings: each place in a literal (a string,
+ * a template's part, a pattern) where `ts` or `tsx` stands as a word. Each place is a file's name
+ * (the word after a dot that follows a name, as in `process.ts`, `*.spec.ts` or a template's
+ * `${stem}.ts`) or the kind written on its own (alone, in a list, after a tool's name, in a glob of
+ * every module of a kind such as `*.ts` or `{ts,tsx}`, or in a pattern over the extension). Outside
+ * the tests, a literal holding the kind on its own is refused. In a test or a test's plants, whose
+ * expected values and planted paths are written out, a literal that is a kind alone, and a pattern
+ * holding the kind on its own, are refused. Every held harness module is read but the owner and this
+ * scan, whose plants spell the kinds.
  */
 
-import { TYPESCRIPT, textOf, textsOf, typescriptGlob, writeText } from '#lib/source-files.ts';
+import { TYPESCRIPT, textOf, textsOf, typescriptGlob, typescriptKind, writeText } from '#lib/source-files.ts';
 import { describe, expect, test } from 'vitest';
 import {
   isNoSubstitutionTemplateLiteral,
@@ -17,72 +28,158 @@ import {
 } from 'typescript/unstable/ast';
 import { mkdir, rm } from 'node:fs/promises';
 import { nodes, parse } from '#lib/ts-source.ts';
+import { Accepted } from '#lib/exemptions.ts';
 import { fromRoot } from '#lib/paths.ts';
 import { typescriptFiles } from '#lib/scope.ts';
 
-/** The one statement of the held kinds. */
-const OWNER = 'harness/lib/source-files.ts';
+/** The one statement of the held kinds, and the scan, whose plants spell them: the two modules it does not read. */
+const UNREAD = new Accepted(['harness/lib/source-files.ts', 'harness/checks/source-files.test.ts']);
+
+/** The kinds' word: `ts` or `tsx` standing as a word, not a part of one (`tsc`, `mts`, `ts-source`, `@ts-expect-error`). */
+const KIND_WORD = /(?<![\w@-])tsx?(?![\w-])(?<optional>\?)?/gu;
+
+/** A file's name before the word: a dot that follows a name's last character; its segment holds no wildcard but in a named part. */
+const NAMED = /[\w)\]}-]\.$/u;
+
+/** A segment that is a glob of every module of a kind: a wildcard alone before the dot. */
+const EVERY_MODULE = /(?:^|\/)\*\.$/u;
+
+/** A literal that is a kind alone: the kind's word, its dot or a tool's name before it, and nothing else. */
+const KIND_ALONE = /^(?:[\w-]+:)?\.?tsx?$/u;
+
+/** The stems that make a module a test or a test's plants, their kind taken off. */
+const TEST_STEM = /\.(?:test|plants)$/u;
+
+/** Where a path's stem starts. */
+const START = 0;
+
+/** The literals of the planted test: kinds on their own, globs of every module of a kind, patterns over the extension, and names of files. */
+const PLANTED_KINDS = [
+  "export const alone = ['.ts', 'oxlint:.ts', 'ts', 'tsx'];",
+  "export const globs = ['src/**/*.{ts,tsx}', '**/*.tsx', '**/*.test.{ts,tsx,mts}', '*.{tsx,ts}'];",
+  String.raw`export const patterns = [/\.tsx?$/u, /^\.(?:ts|tsx)$/u, /\.ts$/u, /(?:\.ts)?$/u];`,
+  'export const raw = String.raw`.*\\.(test|spec)\\.tsx?$`;',
+  "export const named = ['harness/lib/process.ts', 'a.d.ts', '#lib/ts-source.ts', 'tsconfig.json', '**/*.spec.ts', 'see (a/b.tsx)'];",
+  `export const named2 = [/gen-docs\\.ts\\b/u, (stem: string): string => \`\${stem}.ts\`];`,
+  '',
+].join('\n');
 
 /**
- * A literal's text that writes the held kinds: `.ts` alone (a suffix a selection keys on) or after a
- * tool's name and a colon (a census key of a tool and a kind), a glob's braced extension, a glob of
- * every module of a kind (`*.ts`, not `*.spec.ts`, which a tool's own config fixes), or a pattern's
- * optional `x`. `.tsx` alone names a JSX module, which a rule of the view's may key on.
- */
-const KIND_WRITTEN = /^(?:[\w-]+:)?\.ts$|\{ts,tsx\}|(?:^|\/)\*\.tsx?$|tsx\?/u;
-
-/** A test module or a test's plants: their expected values and planted paths are written out. */
-const TEST_MODULE = /\.(?:test|plants)\.tsx?$/u;
-
-/** The plants of the planted test: a suffix alone and in a census key, a glob's extension, a pattern and a glob of every module of a kind. */
-const PLANTED_KINDS =
-  "export const a = ['.ts', 'oxlint:.ts'];\nexport const b = 'src/**/*.{ts,tsx}';\nexport const c = /\\.tsx?$/u;\nexport const d = '**/*.tsx';\n";
-
-/**
- * Whether the scan reads a held module: the harness's, its owner and its tests and plants apart.
+ * Whether a module is a test or a test's plants: its stem, its held kind taken off, ends `.test` or `.plants`.
  *
  * @param {string} path - The module's path.
- * @returns {boolean} Whether it is read.
+ * @returns {boolean} Whether it is.
  */
-function isRead(path: string): boolean {
-  return path.startsWith('harness/') && path !== OWNER && !TEST_MODULE.test(path);
+function isTestModule(path: string): boolean {
+  const kind = typescriptKind(path);
+  return kind !== undefined && TEST_STEM.test(path.slice(START, path.length - kind.length));
 }
 
 /**
- * Each literal of a module that writes a held kind, as `path: text`.
+ * Whether a literal writes the kind on its own at some place: its word where it names no file.
+ *
+ * @param {string} text - The literal's text, a pattern's escapes taken off.
+ * @param {boolean} part - Whether it is a template's part after a substitution.
+ * @returns {boolean} Whether some place is no file's name.
+ */
+function writesKind(text: string, part: boolean): boolean {
+  for (const found of text.matchAll(KIND_WORD)) {
+    const before = text.slice(START, found.index);
+    const named = NAMED.test(before) || (part && before === '.');
+    if (!named || EVERY_MODULE.test(before) || found.groups?.['optional'] !== undefined) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Each literal of a module that writes a held kind where its module may not, as `path: text`.
  *
  * @param {string} path - The module's path.
  * @param {string} text - Its text.
  * @returns {readonly string[]} Each such literal.
  */
 function kindsWritten(path: string, text: string): readonly string[] {
+  const oracle = isTestModule(path);
   return nodes(parse(path, text)).flatMap((node) => {
-    const literal =
-      isStringLiteral(node) ||
-      isNoSubstitutionTemplateLiteral(node) ||
-      isRegularExpressionLiteral(node) ||
-      isTemplateHead(node) ||
-      isTemplateMiddle(node) ||
-      isTemplateTail(node);
-    return literal && KIND_WRITTEN.test(node.text) ? [`${path}: ${node.text}`] : [];
+    const whole = isStringLiteral(node) || isNoSubstitutionTemplateLiteral(node) || isTemplateHead(node);
+    const part = isTemplateMiddle(node) || isTemplateTail(node);
+    const pattern = isRegularExpressionLiteral(node);
+    if (!(whole || part || pattern)) {
+      return [];
+    }
+    const own = writesKind(pattern ? node.text.replaceAll(String.raw`\.`, '.') : node.text, part);
+    const refused = oracle ? (pattern && own) || (whole && KIND_ALONE.test(node.text)) : own;
+    return refused ? [`${path}: ${node.text}`] : [];
   });
 }
 
+/** The length of `: ` between a found literal's module and its text. */
+const SEPARATOR = 2;
+
+/**
+ * Whether the scan reads a held module: the harness's, the owner and the scan apart.
+ *
+ * @param {string} path - The module's path.
+ * @returns {boolean} Whether it is read.
+ */
+function isRead(path: string): boolean {
+  return path.startsWith('harness/') && !UNREAD.has(path);
+}
+
+/**
+ * The literals found, each without its module.
+ *
+ * @param {readonly string[]} found - Each found literal, as `path: text`.
+ * @returns {readonly string[]} Each literal's text.
+ */
+function strip(found: readonly string[]): readonly string[] {
+  return found.map((entry) => entry.slice(entry.indexOf(': ') + SEPARATOR));
+}
+
 describe('the held kinds', () => {
-  test('are written by no held harness module but their owner, tests and plants apart', async () => {
+  test('are written on their own by no held harness module but their owner', async () => {
     expect.hasAssertions();
     const held = await typescriptFiles();
     const texts = await textsOf(held.filter((path) => isRead(path)));
     expect(texts.flatMap(([path, text]: readonly [string, string]) => kindsWritten(path, text))).toStrictEqual([]);
   });
 
-  test('are seen written as a suffix, a glob and a pattern, and composed from the owner', () => {
+  test('are seen written on their own, in a glob and in a pattern, a file name passing, and a glob passing in a test', () => {
     expect.hasAssertions();
-    expect([kindsWritten('a.ts', PLANTED_KINDS), typescriptGlob('**/*'), [...TYPESCRIPT]]).toStrictEqual([
-      ['a.ts: .ts', 'a.ts: oxlint:.ts', 'a.ts: src/**/*.{ts,tsx}', String.raw`a.ts: /\.tsx?$/u`, 'a.ts: **/*.tsx'],
-      '**/*.{ts,tsx}',
-      ['.ts', '.tsx'],
+    expect([strip(kindsWritten('a.ts', PLANTED_KINDS)), strip(kindsWritten('a.test.ts', PLANTED_KINDS))]).toStrictEqual([
+      [
+        '.ts',
+        'oxlint:.ts',
+        'ts',
+        'tsx',
+        'src/**/*.{ts,tsx}',
+        '**/*.tsx',
+        '**/*.test.{ts,tsx,mts}',
+        '*.{tsx,ts}',
+        String.raw`/\.tsx?$/u`,
+        String.raw`/^\.(?:ts|tsx)$/u`,
+        String.raw`/\.ts$/u`,
+        String.raw`/(?:\.ts)?$/u`,
+        '.*.(test|spec).tsx?$',
+      ],
+      [
+        '.ts',
+        'oxlint:.ts',
+        'ts',
+        'tsx',
+        String.raw`/\.tsx?$/u`,
+        String.raw`/^\.(?:ts|tsx)$/u`,
+        String.raw`/\.ts$/u`,
+        String.raw`/(?:\.ts)?$/u`,
+      ],
     ]);
+  });
+
+  test('are composed from the owner', () => {
+    expect.hasAssertions();
+    expect([typescriptGlob('**/*'), [...TYPESCRIPT]]).toStrictEqual(['**/*.{ts,tsx}', ['.ts', '.tsx']]);
   });
 });
 

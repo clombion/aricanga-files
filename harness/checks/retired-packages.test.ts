@@ -9,9 +9,9 @@
 
 import { describe, expect, test } from 'vitest';
 import { isCallExpression, isExportDeclaration, isImportDeclaration, isStringLiteral } from 'typescript/unstable/ast/is';
+import { isLintable, textOf, tracked } from '#lib/source-files.ts';
 import { nodes, parse } from '#lib/ts-source.ts';
 import { object, parsed } from '#lib/config.ts';
-import { textOf, tracked } from '#lib/source-files.ts';
 import { Accepted } from '#lib/exemptions.ts';
 import type { Node } from '#lib/ts-source.ts';
 import { SyntaxKind } from 'typescript/unstable/ast';
@@ -21,8 +21,8 @@ const HARNESS_ID = 'retired-packages';
 /** The retired packages. `lit`: the view layer is Solid (ADR-0002), and the sandbox's part is Solid. */
 const RETIRED = new Accepted(['lit']);
 
-/** The modules the scan reads. */
-const MODULE = /\.(?:[cm]?js|jsx|ts|tsx)$/u;
+/** The modules the scan reads: the files oxlint lints. */
+const MODULE = { test: isLintable };
 
 /** A manifest, at the root or in a package. */
 const MANIFEST = /(?:^|\/)package\.json$/u;

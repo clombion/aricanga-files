@@ -18,9 +18,8 @@
  * session, and a process that exits with its session open exits cleanly.
  */
 
-import { Accepted, CountedExemptions, Exemptions, StaleExemptionError, site } from '#lib/exemptions.ts';
-import { TYPESCRIPT, textsOf } from '#lib/source-files.ts';
-import { census, suffix } from './suppressions.census.ts';
+import { CountedExemptions, Exemptions, StaleExemptionError, site } from '#lib/exemptions.ts';
+import { census, isCensused } from './suppressions.census.ts';
 import { closeSession, parse } from '#lib/ts-source.ts';
 import { describe, expect, test } from 'vitest';
 import type { Census } from './suppressions.census.ts';
@@ -29,11 +28,9 @@ import { finished } from '#lib/tools.ts';
 import { fromRoot } from '#lib/paths.ts';
 import { heldFiles } from '#lib/scope.ts';
 import { pathToFileURL } from 'node:url';
+import { textsOf } from '#lib/source-files.ts';
 
 const HARNESS_ID = 'suppressions';
-
-/** The held suffixes whose comments the census reads. */
-const SCANNED = new Accepted([...TYPESCRIPT, '.css']);
 
 /** The suppressions the code holds, keyed by `site(path, tool:rule)`, with their counts and reasons. */
 const SUPPRESSIONS = new CountedExemptions({
@@ -84,7 +81,7 @@ const ONE_STATEMENT = 1;
  */
 async function repoCensus(): Promise<Census> {
   const files = await heldFiles();
-  const texts = await textsOf(files.filter((path) => SCANNED.has(suffix(path))));
+  const texts = await textsOf(files.filter((path) => isCensused(path)));
   const all = texts.map(([path, text]: readonly [string, string]) => census(path, text));
   return { problems: all.flatMap((one) => one.problems), sites: all.flatMap((one) => one.sites) };
 }
