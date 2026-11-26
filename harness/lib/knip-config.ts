@@ -7,6 +7,8 @@
 import { HARNESS_ROOT, pocNames } from './scope.ts';
 import { HARNESS_TESTS, SCRIPT_ENTRIES, isRunnerConfig, liveGlobs } from './test-globs.ts';
 import type { Member, Population } from './scope.ts';
+import type { KnipConfiguration } from 'knip';
+import type { NoOther } from './readonly.ts';
 import { dependencyNames } from './dependencies.ts';
 import { importerOf } from './package-dirs.ts';
 import { isEmpty } from './lists.ts';
@@ -28,24 +30,47 @@ const IGNORED_DEPENDENCIES: readonly string[] = [
   '@solidjs/compiler',
 ];
 
-/** A workspace of the gate's knip configuration: its globs as lists, its Playwright configs, if any. */
-interface KnipWorkspace {
-  readonly entry?: readonly string[];
-  readonly project: readonly string[];
-  readonly playwright?: false | Readonly<{ config: readonly string[] }>;
-}
+/** The configuration of one workspace, as knip's own type has it. */
+type KnipWorkspaceConfiguration = NonNullable<KnipConfiguration['workspaces']>[string];
+
+/** The Playwright plugin's settings as an object, as knip's own type has them. */
+type KnipPlaywright = Exclude<NonNullable<KnipWorkspaceConfiguration['playwright']>, boolean | string | readonly unknown[]>;
 
 /**
- * The gate's knip configuration, narrower than knip's own type: every glob and ignore a list of
- * strings, and no field that excuses a file from an issue type (`ignoreFiles`, `ignoreIssues`), so
- * each reader reads it as written and the strictness check need not look for them.
+ * The fields of knip's configuration that excuse a file from an issue type: `ignore` (from every
+ * type), `ignoreFiles` (from the unused files) and `ignoreIssues` (from the types it names). Neither
+ * the gate's configuration nor a planted run's sets one.
  */
-interface KnipConfig {
-  readonly rules: Readonly<Record<string, 'error'>>;
-  readonly ignoreDependencies: readonly string[];
-  readonly ignoreWorkspaces: readonly string[];
-  readonly workspaces: Readonly<Record<string, KnipWorkspace>>;
-}
+type KnipExcuse = 'ignore' | 'ignoreFiles' | 'ignoreIssues';
+
+/** A glob or ignore field of knip's own type, narrowed to a list of strings: the form the gate writes. */
+type ListOf<Field> = Field extends readonly (infer Item)[] ? readonly Extract<Item, string>[] : never;
+
+/**
+ * A workspace of the gate's knip configuration, knip's own workspace type narrowed: its globs as
+ * lists, its Playwright configs if any, and every other field of knip's refused.
+ */
+type KnipWorkspace = Readonly<{
+  entry?: ListOf<KnipWorkspaceConfiguration['entry']>;
+  project: ListOf<KnipWorkspaceConfiguration['project']>;
+  playwright?: false | Readonly<{ config: ListOf<KnipPlaywright['config']> }>;
+}> &
+  NoOther<KnipWorkspaceConfiguration, 'entry' | 'playwright' | 'project'>;
+
+/**
+ * The gate's knip configuration, knip's own type (`KnipConfiguration`) narrowed: each rule one of
+ * knip's issue types, at `error`; every glob and ignore a list of strings; and every other field of
+ * knip's refused, a field that excuses a file from an issue type (`KnipExcuse`) among them, written,
+ * held in a variable or spread. So each reader reads it as written and the strictness check need not
+ * look for an excuse.
+ */
+type KnipConfig = Readonly<{
+  rules: Readonly<Partial<Record<keyof NonNullable<KnipConfiguration['rules']>, 'error'>>>;
+  ignoreDependencies: ListOf<KnipConfiguration['ignoreDependencies']>;
+  ignoreWorkspaces: ListOf<KnipConfiguration['ignoreWorkspaces']>;
+  workspaces: Readonly<Record<string, KnipWorkspace>>;
+}> &
+  NoOther<KnipConfiguration, 'ignoreDependencies' | 'ignoreWorkspaces' | 'rules' | 'workspaces'>;
 
 /** The settings every population shares. */
 const SETTINGS: Pick<KnipConfig, 'rules'> = {
@@ -159,4 +184,4 @@ function knipConfigOf(held: Population): KnipConfig {
 }
 
 export { knipConfigOf };
-export type { KnipConfig };
+export type { KnipConfig, KnipExcuse, KnipWorkspaceConfiguration };

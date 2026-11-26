@@ -7,11 +7,13 @@
  * A planted run makes the task's invocations with its own configuration file (`planted`).
  */
 
+import type { KnipConfig, KnipExcuse, KnipWorkspaceConfiguration } from './knip-config.ts';
 import { Project, bin, finished } from './tools.ts';
 import { object, parsed } from './config.ts';
 import { substituted, toolRuns } from './repo-tasks.ts';
+import type { DeepReadonly } from './readonly.ts';
 import type { Finished } from './process.ts';
-import type { KnipConfig } from './knip-config.ts';
+import type { KnipConfiguration } from 'knip';
 import { inSequence } from './lists.ts';
 import { knipConfig } from './config-modules.ts';
 import { textOf } from './source-files.ts';
@@ -25,6 +27,17 @@ async function deadcodeRuns(): Promise<readonly (readonly string[])[]> {
   const runs = await toolRuns('deadcode', 'knip');
   return runs;
 }
+
+/** No field that excuses a file from an issue type (`KnipExcuse`). */
+type Unexcused = Readonly<Partial<Record<KnipExcuse, never>>>;
+
+/**
+ * A planted knip run's configuration: knip's own type, read only, with no field that excuses a file
+ * from an issue type, at the top or in a workspace; a rule name knip lacks does not compile.
+ */
+type PlantedKnipConfig = DeepReadonly<Omit<KnipConfiguration, 'workspaces'>> &
+  Unexcused &
+  Readonly<{ workspaces?: Readonly<Record<string, DeepReadonly<KnipWorkspaceConfiguration> & Unexcused>> }>;
 
 /** The configuration file of a planted knip run: JSON, which knip reads without loading a module. */
 const PLANTED_KNIP_CONFIG = 'knip.json';
@@ -47,9 +60,9 @@ function planted(args: readonly string[]): readonly string[] {
  * Write a knip configuration into a planted project, as the file its knip run reads.
  *
  * @param {Readonly<Project>} project - The planted project.
- * @param {object} config - The configuration, as JSON.
+ * @param {PlantedKnipConfig} config - The configuration, written as JSON.
  */
-async function writeKnipConfig(project: Readonly<Project>, config: object): Promise<void> {
+async function writeKnipConfig(project: Readonly<Project>, config: PlantedKnipConfig): Promise<void> {
   await project.write(PLANTED_KNIP_CONFIG, JSON.stringify(config));
 }
 
@@ -125,10 +138,10 @@ interface Run {
  * written as its configuration: the one planted runner every check of knip uses.
  *
  * @param {readonly (readonly [string, string])[]} files - Each planted file's path and text, manifests included.
- * @param {object} config - The configuration, as JSON.
+ * @param {PlantedKnipConfig} config - The configuration, written as JSON.
  * @returns {Promise<readonly Run[]>} Each run's exit status and output, in the task's order.
  */
-async function plantedKnipRuns(files: readonly (readonly [string, string])[], config: object): Promise<readonly Run[]> {
+async function plantedKnipRuns(files: readonly (readonly [string, string])[], config: PlantedKnipConfig): Promise<readonly Run[]> {
   const project = await Project.create();
   try {
     await writeKnipConfig(project, config);
@@ -145,4 +158,4 @@ async function plantedKnipRuns(files: readonly (readonly [string, string])[], co
 }
 
 export { deadcodeRuns, ignoreEntries, issueTypes, knip, plantedKnipRuns, repoIgnoreEntries, strictnessProblems };
-export type { Run };
+export type { PlantedKnipConfig, Run };

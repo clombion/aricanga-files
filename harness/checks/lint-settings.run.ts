@@ -2,6 +2,7 @@
 
 import type { AnyOxlintConfig, GateOxlintConfig } from '#lib/oxlint-shape.ts';
 import { OXLINT_CONFIG_FILES, codeOf, oxlintDiagnostics, plantedLintRun, writeOxlintConfig } from '#lib/lint-rules.ts';
+import type { NoOther } from '#lib/readonly.ts';
 import { PLANTS } from './lint-settings.plants.ts';
 import { Project } from '#lib/tools.ts';
 import { oxlintConfig } from '#lib/config-modules.ts';
@@ -25,13 +26,17 @@ async function repoConfig(): Promise<GateOxlintConfig> {
   return loaded;
 }
 
+/** What a planted lint config merges over the repository's: oxlint's options and rule settings, and no other field of its config. */
+type Merged = Pick<AnyOxlintConfig, 'options' | 'rules'> & NoOther<AnyOxlintConfig, 'options' | 'rules'>;
+
 /**
- * A copy of the repository's oxlint config with `options` merged over its options.
+ * A copy of the repository's oxlint config with `merged`'s options merged over its options and its
+ * rule settings over its rule settings; a field it would drop does not compile.
  *
- * @param {AnyOxlintConfig} merged - The options and rule settings to merge over the config's.
+ * @param {Merged} merged - The options and rule settings to merge over the config's.
  * @returns {Promise<AnyOxlintConfig>} The config.
  */
-async function config(merged: AnyOxlintConfig = {}): Promise<AnyOxlintConfig> {
+async function config(merged: Merged = {}): Promise<AnyOxlintConfig> {
   const repo = await repoConfig();
   return {
     ...repo,

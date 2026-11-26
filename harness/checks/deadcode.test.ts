@@ -9,6 +9,7 @@
  */
 
 import { EXIT_CLEAN, EXIT_FINDINGS } from '#lib/exit-status.ts';
+import type { PlantedKnipConfig, Run } from '#lib/deadcode.ts';
 import { ROOT_CONFIG_MODULES, knipConfig } from '#lib/config-modules.ts';
 import { deadcodeRuns, ignoreEntries, issueTypes, knip, plantedKnipRuns, repoIgnoreEntries, strictnessProblems } from '#lib/deadcode.ts';
 import { describe, expect, test } from 'vitest';
@@ -16,7 +17,6 @@ import { runsOf, substituted } from '#lib/repo-tasks.ts';
 import { Exemptions } from '#lib/exemptions.ts';
 import type { KnipConfig } from '#lib/knip-config.ts';
 import { REPO_ROOT } from '#lib/paths.ts';
-import type { Run } from '#lib/deadcode.ts';
 import { inSequence } from '#lib/lists.ts';
 
 const HARNESS_ID = 'deadcode';
@@ -51,7 +51,7 @@ const KNIP_IGNORES = Exemptions.grouped({
   'run by harness/scripts/dupes.ts through tools.bin, which knip cannot see': ['ignoreDependencies:jscpd'],
 });
 
-const PLANT_CONFIG = {
+const PLANT_CONFIG: PlantedKnipConfig = {
   entry: ['src/index.ts!', 'src/**/*.test.ts'],
   project: ['src/**/*.ts!'],
 };
@@ -66,10 +66,10 @@ const PLANT_MANIFEST: readonly [string, string] = [
  * Run every knip invocation of the deadcode task on a planted package.
  *
  * @param {Readonly<Record<string, string>>} files - The files.
- * @param {object} config - The config.
+ * @param {PlantedKnipConfig} config - The config.
  * @returns {Promise<readonly Run[]>} Each run's exit status and output.
  */
-async function plantedRuns(files: Readonly<Record<string, string>>, config: object = PLANT_CONFIG): Promise<readonly Run[]> {
+async function plantedRuns(files: Readonly<Record<string, string>>, config: PlantedKnipConfig = PLANT_CONFIG): Promise<readonly Run[]> {
   const runs = await plantedKnipRuns([PLANT_MANIFEST, ...Object.entries(files)], config);
   return runs;
 }

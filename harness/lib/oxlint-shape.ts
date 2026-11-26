@@ -4,11 +4,8 @@
  * is `never`, so a field no check reads (`extends`, an override's `excludeFiles`) cannot be set.
  */
 
+import type { DeepReadonly, NoOther } from './readonly.ts';
 import type { OxlintConfig, OxlintOverride } from 'oxlint';
-import type { DeepReadonly } from './readonly.ts';
-
-/** The fields of `Type` beside `Keys`, each refused. */
-type NoOther<Type, Keys extends keyof Type> = Readonly<Partial<Record<Exclude<keyof Type, Keys>, never>>>;
 
 /** An override of the gate's configuration: its files and rules, and an environment where it sets one. */
 type GateOverride = DeepReadonly<Required<Pick<OxlintOverride, 'files' | 'rules'>> & Pick<OxlintOverride, 'env'>> &

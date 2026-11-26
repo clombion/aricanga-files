@@ -2,7 +2,7 @@
  * The root configuration modules the tools load, read as the tools read them: a module's default
  * export, loaded from the root. oxlint's and knip's are loaded by a literal import of the module, so
  * each reader reads the gate's own type of it (`GateOxlintConfig`, derived from oxlint's types;
- * `KnipConfig`) and never narrows it again; the gate's Vitest config is read
+ * `KnipConfig`, from knip's) and never narrows it again; the gate's Vitest config is read
  * as plain values (`gate-config.ts`), its sections being Vitest's open types. Every check reads a
  * tool's computed configuration through these, never by computing it again.
  */
