@@ -12,9 +12,26 @@
 import { dirOf, manifestOf } from './package-dirs.ts';
 import { list, object, parsed, stringOf } from './config.ts';
 import type { Dir } from './package-dirs.ts';
+import { Vocabulary } from './exemptions.ts';
 import { listingOutput } from './source-files.ts';
 import { realpath } from 'node:fs/promises';
 import { relativeTo } from './relative.ts';
+
+/** A state a population is refused for, by its key in `POPULATION_CASES`. */
+type PopulationCase = 'kind' | 'listing' | 'name' | 'planted' | 'role' | 'root';
+
+/**
+ * Each state a population is refused for, by the words `PopulationError`'s docstring documents it by:
+ * a refusal names its state, so a state the docstring does not name has no case to be thrown for.
+ */
+const POPULATION_CASES: Vocabulary<Readonly<Record<PopulationCase, string>>> = new Vocabulary<Readonly<Record<PopulationCase, string>>>({
+  kind: 'a held module is not TypeScript',
+  listing: 'pnpm could not list the workspace',
+  name: "a package's name is no string",
+  planted: 'a planted population holds what production never holds',
+  role: "a member's role is refused",
+  root: 'an owner rule holds one root twice',
+});
 
 /**
  * A refusal of a population: pnpm could not list the workspace, a package's name is no string, a
@@ -23,6 +40,21 @@ import { relativeTo } from './relative.ts';
  */
 class PopulationError extends Error {
   public override readonly name = 'PopulationError';
+
+  /** The state it is thrown for. */
+  public readonly state: PopulationCase;
+
+  /**
+   * A refusal of a population's state.
+   *
+   * @param {PopulationCase} state - The state it is thrown for.
+   * @param {string} message - What it says.
+   * @param {Readonly<ErrorOptions>} options - Its cause, if any.
+   */
+  public constructor(state: PopulationCase, message: string, options?: Readonly<ErrorOptions>) {
+    super(message, options);
+    this.state = state;
+  }
 }
 
 /** A workspace package as pnpm lists it: its directory, and the name its manifest declares (none when it declares none). */
@@ -32,19 +64,33 @@ interface WorkspacePackage {
 }
 
 /**
- * A package's name, by the one rule every reader of a manifest's `name` asks: the string the manifest
- * declares, none when it declares none, and a `PopulationError` naming the manifest when the `name` it
- * declares is no string (pnpm lists any value it finds there).
+ * The refusal of a manifest's `name` that is present and no string (`packageName`'s), or none.
+ *
+ * @param {unknown} name - The manifest's `name`.
+ * @param {string} manifest - The manifest's path.
+ * @returns {PopulationError | undefined} The refusal, or none.
+ */
+function nameRefusal(name: unknown, manifest: string): PopulationError | undefined {
+  return name === undefined || typeof name === 'string'
+    ? undefined
+    : new PopulationError('name', `${manifest}: the name ${JSON.stringify(name)} is no string: a package's name is a string, or none`);
+}
+
+/**
+ * A package's name, read by the one reader of a manifest's `name` every other asks: the string the
+ * manifest declares, none when it declares none, and a `PopulationError` naming the manifest when the
+ * `name` it declares is no string (pnpm lists any value it finds there).
  *
  * @param {unknown} name - The manifest's `name`, as pnpm lists it or as the manifest holds it.
  * @param {string} manifest - The manifest's path, for the refusal.
  * @returns {string | undefined} The name, or none.
  */
 function packageName(name: unknown, manifest: string): string | undefined {
-  if (name === undefined || typeof name === 'string') {
-    return name;
+  const refusal = nameRefusal(name, manifest);
+  if (refusal !== undefined) {
+    throw refusal;
   }
-  throw new PopulationError(`${manifest}: the name ${JSON.stringify(name)} is no string: a package's name is a string, or none`);
+  return typeof name === 'string' ? name : undefined;
 }
 
 /**
@@ -80,12 +126,12 @@ async function workspacePackages(root: string): Promise<readonly WorkspacePackag
     listingOutput(
       ['pnpm', 'ls', '-r', '--depth', '-1', '--json', '--config.manage-package-manager-versions=false'],
       root,
-      (outcome) => new PopulationError(`pnpm could not list the workspace at ${root}: ${outcome}`),
+      (outcome) => new PopulationError('listing', `pnpm could not list the workspace at ${root}: ${outcome}`),
     ),
     realpath(root),
   ]);
   return packagesOf(stdout, base);
 }
 
-export { packageName, packagesOf, PopulationError, workspacePackages };
+export { nameRefusal, packageName, packagesOf, POPULATION_CASES, PopulationError, workspacePackages };
 export type { WorkspacePackage };

@@ -67,6 +67,11 @@ function probe(pattern: Readonly<RegExp>, owner: string, roots: readonly string[
 /** Every registered claim. */
 const CLAIMS: readonly Claim[] = [
   {
+    clause: "the one reader of a manifest's  every other asks",
+    path: 'harness/lib/workspace.ts',
+    probe: probe(/is no string: a package[']s name is a string, or none/u, 'harness/lib/workspace.ts', HARNESS_PROBE_ROOTS),
+  },
+  {
     clause: 'stated once, in',
     path: 'harness/checks/source-files.test.ts',
     probe: probe(/new Accepted<HeldKind>\(/u, 'harness/lib/source-files.ts', HARNESS_PROBE_ROOTS),

@@ -189,7 +189,7 @@ async function populationOf(inputs: Readonly<PopulationInputs>): Promise<Populat
   const others = held.listing.filter((file) => held.holds(file) && isLintable(file) && !isTypeScript(file));
   if (!isEmpty(others)) {
     const why = `a held module is TypeScript (${[...TYPESCRIPT].join(', ')}), the kind every scan, the type check and coverage read`;
-    throw new PopulationError(`${why}: ${others.join(', ')}`);
+    throw new PopulationError('kind', `${why}: ${others.join(', ')}`);
   }
   return held;
 }

@@ -24,7 +24,9 @@ import { Doc, currentSpans, currentText, markdownDocs } from '#lib/docs.ts';
 import { adrProblems, fenceProblems, key, linkProblems, spanProblems } from './doc-references.resolve.ts';
 import { describe, expect, test } from 'vitest';
 import { installedPaths, oxlintRuleIds, quotedValues } from './doc-references.installed.ts';
+import { PopulationError } from '#lib/workspace.ts';
 import type { Resolver } from './doc-references.resolve.ts';
+import { packagesNamed } from './doc-references.packages.ts';
 import { repoTasks } from '#lib/repo-tasks.ts';
 import { tracked } from '#lib/source-files.ts';
 
@@ -202,6 +204,21 @@ describe('the fence check', () => {
       '```sh\noxlint\n$ vitest run\nnpx knip\npnpm dlx jscpd\npnpm exec oxlint\npnpm run check\ngit status\n```\n\n```ts\nconst tsc = 1;\n```\n',
     );
     expect(fenceProblems(doc).map((problem) => problem.reference)).toStrictEqual(['oxlint', '$ vitest run', 'npx knip', 'pnpm dlx jscpd']);
+  });
+});
+
+describe('the packages a reference may name', () => {
+  test("read each manifest's name by the population's one rule, refusing a name that is no string as the population does", () => {
+    expect.hasAssertions();
+    expect(
+      packagesNamed([
+        ['packages/a/package.json', '{"name":"@p/a"}'],
+        ['packages/b/package.json', '{}'],
+      ]),
+    ).toStrictEqual([['@p/a', 'packages/a']]);
+    expect(() => packagesNamed([['packages/c/package.json', '{"name":7}']])).toThrow(
+      new PopulationError('name', "packages/c/package.json: the name 7 is no string: a package's name is a string, or none"),
+    );
   });
 });
 

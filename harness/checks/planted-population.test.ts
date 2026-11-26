@@ -44,6 +44,7 @@ describe('a planted population', () => {
     );
     await expect(planting).rejects.toThrow(
       new PopulationError(
+        'planted',
         "a planted population refused: packages/a/ is declared twice; packages/a/x.ts is planted twice; packages/c/'s fields hold aricanga; packages/a/package.json is a planted manifest; packages/framework/ is declared and is no member; utils/x.ts is held by no planted member or the harness",
       ),
     );
@@ -53,6 +54,7 @@ describe('a planted population', () => {
     expect.hasAssertions();
     await expect(plantedPopulation([], WIDENED)).rejects.toThrow(
       new PopulationError(
+        'planted',
         'a planted population refused: packages/b/ is declared twice; packages/a/ is declared twice; packages/a-b/ is declared twice',
       ),
     );
@@ -80,6 +82,7 @@ describe("a planted population's one refusal", () => {
     const planting = plantedPopulation(['packages/a/x.ts', 'packages/a/x.ts'], [['packages/a/', 'view'], ['packages/a/', 'view'], widened]);
     await expect(planting).rejects.toThrow(
       new PopulationError(
+        'planted',
         'a planted population refused: packages/a/ is declared twice; packages/a/x.ts is planted twice; PopulationError: packages/b/package.json: aricanga.role is "nobody"; a workspace package declares one of the roles of harness/lib/roles.ts (experience, foundation, system, test-infrastructure, view)',
       ),
     );
@@ -87,10 +90,28 @@ describe("a planted population's one refusal", () => {
 });
 
 describe("a planted member's name", () => {
+  test("that is no string is named beside the lists' refused states, in one refusal", async () => {
+    expect.hasAssertions();
+    await expect(
+      plantedPopulation(
+        [],
+        [
+          ['packages/a/', 'view', { name: 7 }],
+          ['packages/a/', 'view'],
+        ],
+      ),
+    ).rejects.toThrow(
+      new PopulationError(
+        'planted',
+        "a planted population refused: packages/a/ is declared twice; PopulationError: packages/a/package.json: the name 7 is no string: a package's name is a string, or none",
+      ),
+    );
+  });
+
   test("is refused by pnpm's listing's rule when it is no string, the refusal naming its manifest", async () => {
     expect.hasAssertions();
     await expect(plantedPopulation([], [['packages/a/', 'view', { name: 7 }]])).rejects.toThrow(
-      new PopulationError("packages/a/package.json: the name 7 is no string: a package's name is a string, or none"),
+      new PopulationError('name', "packages/a/package.json: the name 7 is no string: a package's name is a string, or none"),
     );
   });
 });

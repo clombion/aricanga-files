@@ -8,23 +8,28 @@
  * never builds is refused at once, each named: a member or a plant given twice, a member's fields
  * holding `aricanga` (its role is the planted one), a plant no member or the harness holds, a plant
  * at a planted manifest, a declared member the population leaves out (a POC directory). A role that
- * is no role (a value widened past `Role`) is refused by the population's own rule: alone, by the
- * population's own refusal, its class and text as `populationOf` throws them; beside a state of the
- * lists, which are read before the population is built, in the one refusal naming those states. The
+ * is no role (a value widened past `Role`), and a name that is no string, are refused by the
+ * population's own rule: alone, by the population's own refusal, its class and text as
+ * `populationOf` throws them; beside a state of the lists, which are read before the population is
+ * built, in the one refusal naming those states. The
  * states that need the population (a member it leaves out, a plant it holds nowhere) are named when
  * it builds. Fields that are no object (`null`, widened past `Fields`) are held by the types alone:
  * the check of their `aricanga` throws a `TypeError` on them.
  */
 
-import { PopulationError, packageName } from './workspace.ts';
+import { PopulationError, nameRefusal, packageName } from './workspace.ts';
 import type { Fields } from './manifests.ts';
 import type { MemberDir } from './package-dirs.ts';
 import type { Population } from './scope.ts';
 import type { Role } from './roles.ts';
+import type { WorkspacePackage } from './workspace.ts';
 import { isEmpty } from './lists.ts';
 import { manifestOf } from './package-dirs.ts';
 import { populationOf } from './scope.ts';
 import { present } from './present.ts';
+
+/** A list of one. */
+const ONE = 1;
 
 /** A planted member: its directory, the role its manifest declares, and the other fields its manifest holds. */
 type PlantedMember = readonly [MemberDir, Role, Fields?];
@@ -97,7 +102,33 @@ function readerOf(texts: ReadonlyMap<string, string>): (listed: string) => Promi
  * @returns {never} Nothing: it throws.
  */
 function refusedBeside(given: readonly string[], reason: unknown): never {
-  throw new PopulationError(`a planted population refused: ${[...given, String(reason)].join('; ')}`, { cause: reason });
+  throw new PopulationError('planted', `a planted population refused: ${[...given, String(reason)].join('; ')}`, { cause: reason });
+}
+
+/**
+ * The planted members' workspace packages, each named by `nameOf`; a name that is no string is
+ * refused by the population's own refusal, alone, or beside the lists' states in one refusal naming
+ * them all.
+ *
+ * @param {readonly Declared[]} declared - The planted members.
+ * @param {readonly string[]} given - The lists' refusals.
+ * @returns {readonly WorkspacePackage[]} The packages.
+ */
+function workspaceOf(declared: readonly Declared[], given: readonly string[]): readonly WorkspacePackage[] {
+  const refusals = declared.flatMap((member) => {
+    const refusal = nameRefusal(member.fields['name'], manifestOf(member.dir));
+    return refusal === undefined ? [] : [refusal];
+  });
+  const [first] = refusals;
+  if (first !== undefined) {
+    if (isEmpty(given) && refusals.length === ONE) {
+      throw first;
+    }
+    throw new PopulationError('planted', `a planted population refused: ${[...given, ...refusals.map(String)].join('; ')}`, {
+      cause: new AggregateError(refusals, 'each name refused'),
+    });
+  }
+  return declared.map((member) => ({ dir: member.dir, name: nameOf(member) }));
 }
 
 /**
@@ -124,7 +155,7 @@ function builtRefusals(built: Population, declared: readonly Declared[], files: 
  */
 function refuseAny(refused: readonly string[]): void {
   if (!isEmpty(refused)) {
-    throw new PopulationError(`a planted population refused: ${refused.join('; ')}`);
+    throw new PopulationError('planted', `a planted population refused: ${refused.join('; ')}`);
   }
 }
 
@@ -146,7 +177,7 @@ async function plantedPopulation(files: readonly string[], members: readonly Pla
   const building = populationOf({
     listing: [...files, ...texts.keys()],
     read: readerOf(texts),
-    workspace: declared.map((member) => ({ dir: member.dir, name: nameOf(member) })),
+    workspace: workspaceOf(declared, given),
   });
   const [built] = await Promise.allSettled([building]);
   if (built.status === 'rejected') {

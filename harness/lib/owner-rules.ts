@@ -255,7 +255,7 @@ function refuseTwice(rule: Rule): void {
   const roots = rule.roots.map((entry) => entry.root);
   const twice = roots.find((root, index) => roots.indexOf(root) !== index);
   if (twice !== undefined) {
-    throw new PopulationError(`the owner rule ${rule.name} holds the root ${twice} twice: a member sits at the harness's root`);
+    throw new PopulationError('root', `the owner rule ${rule.name} holds the root ${twice} twice: a member sits at the harness's root`);
   }
 }
 

@@ -204,7 +204,7 @@ function refuseAll(
     });
   }
   if (!isEmpty(roles)) {
-    throw new PopulationError(roles.join('; '));
+    throw new PopulationError('role', roles.join('; '));
   }
 }
 

@@ -4,13 +4,14 @@
  */
 
 import { BOM, causedRefusal, inWorkspaceFolder, manifest, refusalOf } from './scope.plants.ts';
-import { PopulationError, packagesOf, workspacePackages } from '#lib/workspace.ts';
+import { POPULATION_CASES, PopulationError, packagesOf, workspacePackages } from '#lib/workspace.ts';
 import { describe, expect, test, vi } from 'vitest';
 import { mkdir, rm, symlink, writeFile } from 'node:fs/promises';
 import { ConfigError } from '#lib/config.ts';
 import { finished } from '#lib/tools.ts';
 import path from 'node:path';
 import { population } from '#lib/scope.ts';
+import { textOf } from '#lib/source-files.ts';
 import { tmpdir } from 'node:os';
 
 /** A pnpm version to pin that the machine's pnpm is not, and the one to pin when it is. */
@@ -156,8 +157,29 @@ describe("pnpm's answer", () => {
     (name: string) => {
       expect.hasAssertions();
       expect(() => packagesOf(`[{"name":${name},"path":"/w/b"}]`, '/w')).toThrow(
-        new PopulationError(`b/package.json: the name ${name} is no string: a package's name is a string, or none`),
+        new PopulationError('name', `b/package.json: the name ${name} is no string: a package's name is a string, or none`),
       );
     },
   );
+});
+
+/** `PopulationError`'s docstring: the comment that opens the class, its stars taken off. */
+const CLASS_DOC = /\/\*\*(?<doc>(?:(?!\*\/).)*)\*\/\s*class PopulationError\b/su;
+
+/**
+ * `PopulationError`'s docstring in a module's text, its lines joined; none reads as `undefined`.
+ *
+ * @param {string} text - The module's text.
+ * @returns {string} The docstring's words.
+ */
+function classDoc(text: string): string {
+  return String(CLASS_DOC.exec(text)?.groups?.['doc']).replaceAll(/\s*\*\s*/gu, ' ');
+}
+
+describe("a population's refusal", () => {
+  test('is documented by its class for every state it is thrown for', async () => {
+    expect.hasAssertions();
+    const words = classDoc(await textOf('harness/lib/workspace.ts'));
+    expect(POPULATION_CASES.words.filter((state) => !words.includes(POPULATION_CASES.of(state)))).toStrictEqual([]);
+  });
 });
