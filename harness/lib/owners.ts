@@ -13,7 +13,7 @@
  */
 
 import type { Identifier, Node, SourceFile } from 'typescript/unstable/ast';
-import type { Root, Rule } from './owner-rules.ts';
+import type { Root, Rule, RuleName } from './owner-rules.ts';
 import {
   isBindingElement,
   isCallExpression,
@@ -34,6 +34,7 @@ import {
 import { isPlatform, nameText, nodes, pathOf, qualifiedName } from './checker.ts';
 import type { Scan } from './checker.ts';
 import type { Symbol as TsSymbol } from 'typescript/unstable/sync';
+import { byKind } from './by-kind.ts';
 import { holdsNoRuntimeValue } from './ts-source.ts';
 import { nearestOf } from './package-dirs.ts';
 import { rulesOf } from './owner-rules.ts';
@@ -42,7 +43,7 @@ import { site } from './exemptions.ts';
 /** One use of a guarded API outside its owner: the file it is in and the rule it breaks. */
 interface Site {
   readonly path: string;
-  readonly rule: string;
+  readonly rule: RuleName;
 }
 
 /** The argument count of a `new Date()` that reads the clock. */
@@ -179,6 +180,18 @@ function breaks(rule: Rule, found: readonly string[]): boolean {
   return found.some((name) => rule.names.has(name) || [...rule.names].some((member) => name.startsWith(`${member}.`)));
 }
 
+/**
+ * Whether a root reports a use of its rule's API in a file: a scoped root, unless the file is its
+ * owner; never a free root, nor a file no root holds.
+ *
+ * @param {Root | undefined} root - The nearest root holding the file, if any.
+ * @param {string} path - The file.
+ * @returns {boolean} Whether a use there is a site.
+ */
+function reports(root: Root | undefined, path: string): boolean {
+  return root !== undefined && byKind(root, { free: () => false, scoped: (scoped) => scoped.owner !== path });
+}
+
 /** A rule, with the lookup of the nearest of its roots holding a path. */
 interface Scoped {
   readonly rule: Rule;
@@ -203,10 +216,7 @@ function sites(scan: Scan, files: readonly SourceFile[]): readonly Site[] {
     const path = pathOf(file);
     const found = uses(scan, file);
     return lookups
-      .filter((scoped: Readonly<Scoped>) => {
-        const root = scoped.rootOf(path);
-        return root?.kind === 'scoped' && root.owner !== path && breaks(scoped.rule, found);
-      })
+      .filter((scoped: Readonly<Scoped>) => reports(scoped.rootOf(path), path) && breaks(scoped.rule, found))
       .map((scoped: Readonly<Scoped>) => ({ path, rule: scoped.rule.name }));
   });
 }

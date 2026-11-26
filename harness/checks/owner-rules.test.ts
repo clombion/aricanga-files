@@ -4,12 +4,24 @@
  * carries its reason, and a rule that would hold one root twice is refused.
  */
 
+import type { Root, RuleName } from '#lib/owner-rules.ts';
 import { describe, expect, test } from 'vitest';
 import { listing, reader } from './scope.plants.ts';
 import { ruleNamed, scopedOf } from './owner-registry.plants.ts';
+import { byKind } from '#lib/by-kind.ts';
 import { plantedPopulation } from '#lib/planted-population.ts';
 import { populationOf } from '#lib/scope.ts';
 import { rulesOf } from '#lib/owners.ts';
+
+/**
+ * Whether a root is free.
+ *
+ * @param {Root} entry - The root.
+ * @returns {boolean} Whether every module of it may use the API.
+ */
+function isFree(entry: Root): boolean {
+  return byKind(entry, { free: () => true, scoped: () => false });
+}
 
 describe('the rules', () => {
   test('give a kernel owner to the nearest kernel root holding it, when kernel roots nest', async () => {
@@ -34,7 +46,7 @@ describe('the rules over each tier', () => {
     expect.hasAssertions();
     const held = await plantedPopulation([], [['packages/probe/', 'test-infrastructure']]);
     const rules = rulesOf(held);
-    expect(ruleNamed(rules, 'timers').roots.filter((entry) => entry.kind === 'free')).toStrictEqual([
+    expect(ruleNamed(rules, 'timers').roots.filter((entry) => isFree(entry))).toStrictEqual([
       {
         kind: 'free',
         root: 'packages/probe/',
@@ -53,9 +65,7 @@ describe('the rules over a population the harness or the kernel shapes', () => {
       read: reader({ 'harness/package.json': JSON.stringify({ aricanga: { role: 'experience' } }), 'package.json': '{}' }),
       workspace: listing([''], ['harness/']),
     });
-    expect(() => rulesOf(held)).toThrow(
-      /^the owner rule process-start holds the root harness\/ twice: a member sits at the harness's root$/u,
-    );
+    expect(() => rulesOf(held)).toThrow(/^the owner rule clock holds the root harness\/ twice: a member sits at the harness's root$/u);
   });
 
   test('cover each kernel member, and give a kernel owner the member that holds it', async () => {
@@ -69,7 +79,8 @@ describe('the rules over a population the harness or the kernel shapes', () => {
       ],
     );
     const rules = rulesOf(held);
-    expect(['clock', 'json-parse'].map((name) => scopedOf(ruleNamed(rules, name)))).toStrictEqual([
+    const names: readonly RuleName[] = ['clock', 'json-parse'];
+    expect(names.map((name) => scopedOf(ruleNamed(rules, name)))).toStrictEqual([
       [
         { owner: undefined, root: 'harness/' },
         { owner: undefined, root: 'packages/foundation/' },

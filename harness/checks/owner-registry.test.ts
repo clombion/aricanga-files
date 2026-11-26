@@ -9,12 +9,14 @@
  */
 
 import { CANONICAL, FORMS, IN_A_TEST, MEMBERS, NEAR_MISSES, ruleNamed, scopedOf, unguarded } from './owner-registry.plants.ts';
+import type { Root, Rule, RuleName } from '#lib/owner-rules.ts';
 import { SHAPES, keyOf, ownerUses, rulesOf, sites } from '#lib/owners.ts';
 import { describe, expect, test } from 'vitest';
 import { usePlanted, useScan } from '#lib/scan-hooks.ts';
-import type { Rule } from '#lib/owner-rules.ts';
 import type { Scan } from '#lib/checker.ts';
 import type { Site } from '#lib/owners.ts';
+import { byKind } from '#lib/by-kind.ts';
+import { ownersOf } from '#lib/owner-rules.ts';
 import { plantedPopulation } from '#lib/planted-population.ts';
 import { population } from '#lib/scope.ts';
 import { sourceOf } from '#lib/checker.ts';
@@ -29,7 +31,7 @@ const RULES = rulesOf(await plantedPopulation([], MEMBERS));
 interface Plant {
   readonly path: string;
   readonly text: string;
-  readonly rule?: string;
+  readonly rule?: RuleName;
 }
 
 /**
@@ -38,7 +40,7 @@ interface Plant {
  * @returns {readonly Plant[]} The form plants, each with its rule.
  */
 function formPlants(): readonly Plant[] {
-  return FORMS.map(([rule, text]: readonly [string, string], index) => ({
+  return FORMS.map(([rule, text]: readonly [RuleName, string], index) => ({
     path: `packages/foundation/src/__form_${index}.ts`,
     rule,
     text,
@@ -51,13 +53,9 @@ function formPlants(): readonly Plant[] {
  * @returns {readonly Plant[]} The root plants, each with its rule.
  */
 function rootPlants(): readonly Plant[] {
-  const canonical = new Map(CANONICAL);
-  return RULES.flatMap((rule) => {
-    const text = canonical.get(rule.name);
-    return text === undefined
-      ? []
-      : scopedOf(rule).map((scope) => ({ path: `${scope.root}__root_${rule.name}.ts`, rule: rule.name, text }));
-  });
+  return RULES.flatMap((rule) =>
+    scopedOf(rule).map((scope) => ({ path: `${scope.root}__root_${rule.name}.ts`, rule: rule.name, text: CANONICAL[rule.name] })),
+  );
 }
 
 const PLANTED: readonly Plant[] = [
@@ -82,7 +80,7 @@ const nestedFreeScan = usePlanted(
 );
 
 /** Uses of guarded globals that held modules redeclare, in a declaration file and in a module's global block: each redeclaration is not the platform's, and each use still is. */
-const REDECLARED: readonly (readonly [string, string])[] = [
+const REDECLARED: readonly (readonly [string, RuleName])[] = [
   ['packages/foundation/src/__redeclared_dts.ts', 'storage'],
   ['packages/foundation/src/__redeclared_global.ts', 'storage'],
   ['packages/foundation/src/__redeclared_timer.ts', 'timers'],
@@ -143,14 +141,26 @@ function usersUnder(scan: Scan, root: string, rule: Rule): readonly string[] {
   return scan.paths.filter((path) => path.startsWith(root) && ownerUses(scan, sourceOf(scan, path), rule));
 }
 
+/**
+ * A free root of a rule, as the rule's name, the root and its reason; none for a scoped root.
+ *
+ * @param {RuleName} name - The rule's name.
+ * @param {Root} entry - One of its roots.
+ * @returns {readonly (readonly [RuleName, string, string])[]} The free root, or none.
+ */
+function freed(name: RuleName, entry: Root): readonly (readonly [RuleName, string, string])[] {
+  return byKind(entry, {
+    free: (free) => [[name, free.root, free.why]],
+    scoped: () => [],
+  });
+}
+
 /** Each root the repository's rules free, as the rule's name and the root: a free root no module uses the API in is tightened to no owner. */
-const FREED = rulesOf(await population()).flatMap((rule) =>
-  rule.roots.flatMap((entry) => (entry.kind === 'free' ? [[rule.name, entry.root, entry.why] as const] : [])),
-);
+const FREED = rulesOf(await population()).flatMap((rule) => rule.roots.flatMap((entry) => freed(rule.name, entry)));
 
 /** Each declared owner, kernel owners included, as the rule's name and its owner module. */
-const DECLARED = SHAPES.flatMap((shape) =>
-  Object.values(shape.policies).flatMap((policy) => (policy.kind === 'owned' ? [[shape.name, policy.owner] as const] : [])),
+const DECLARED = SHAPES.words.flatMap((name) =>
+  Object.values(SHAPES.of(name).policies).flatMap((policy) => ownersOf(policy).map((owner) => [name, owner] as const)),
 );
 
 /**
@@ -213,7 +223,7 @@ describe('the repository', () => {
 describe('the scan', () => {
   test('sees each planted call form and each planted root', () => {
     expect.hasAssertions();
-    expect(CANONICAL.map(([name]) => name).toSorted()).toStrictEqual(RULES.map((rule) => rule.name).toSorted());
+    expect(Object.keys(CANONICAL).toSorted()).toStrictEqual(RULES.map((rule) => rule.name).toSorted());
     const planted = plants.map(([path]) => path).filter((path) => /__(?:form|root|in_a_test)/u.test(path));
     const found = sitesIn(plantedScan, planted)
       .map((site) => keyOf(site))

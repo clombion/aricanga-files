@@ -11,6 +11,7 @@ import type { MemberDir } from './package-dirs.ts';
 import type { Population } from './scope.ts';
 import { PopulationError } from './workspace.ts';
 import type { Tier } from './roles.ts';
+import { byKind } from './by-kind.ts';
 import { nearestOf } from './package-dirs.ts';
 
 /**
@@ -23,9 +24,16 @@ type Root =
   | Readonly<{ kind: 'scoped'; root: MemberDir; owner: string | undefined }>
   | Readonly<{ kind: 'free'; root: MemberDir; why: string }>;
 
+/**
+ * The guarded APIs' names: the words of `SHAPES`, which is keyed by this union, so `tsc` refuses a
+ * rule missing from either, named in one alone, or named twice. (`isolatedDeclarations` keeps an
+ * exported type from being inferred from `SHAPES` itself.)
+ */
+type RuleName = 'clock' | 'json-parse' | 'network' | 'process-start' | 'random' | 'settings' | 'standard-streams' | 'storage' | 'timers';
+
 /** A guarded API: the declarations that make it up, its roots, and why it has an owner. */
 interface Rule {
-  readonly name: string;
+  readonly name: RuleName;
   readonly names: Readonly<Accepted<string>>;
   readonly roots: readonly Root[];
   readonly why: string;
@@ -40,53 +48,70 @@ type Holder = Tier | 'harness';
  */
 type Policy = Readonly<{ kind: 'owned'; owner: string }> | Readonly<{ kind: 'nobody' }> | Readonly<{ kind: 'free'; why: string }>;
 
-/** A guarded API as declared: a policy for every holder, so a holder without one does not compile. */
+/**
+ * A guarded API as declared, as plain data: the qualified names of its declarations, a policy for
+ * every holder (so a holder without one does not compile), and why it has an owner.
+ */
 interface RuleShape {
-  readonly name: string;
-  readonly names: Readonly<Accepted<string>>;
+  readonly names: readonly string[];
   readonly policies: Readonly<Record<Holder, Policy>>;
   readonly why: string;
 }
+
+/** Every guarded API as declared, by its name. */
+type RuleShapes = Readonly<Record<RuleName, RuleShape>>;
 
 /** No module of a holder's roots may use the API. */
 const NOBODY: Policy = { kind: 'nobody' };
 
 /**
- * A holder's roots under its policy: the root holding the owner scoped to it (the nearest of the
- * holder's roots: a member is never nested in another, #58 1c refuses it), the others scoped to no
- * module; every root free, with the policy's reason.
+ * The module a policy names its owner: one when owned, none when no module may use the API or
+ * every module may.
+ *
+ * @param {Policy} policy - The holder's policy.
+ * @returns {readonly string[]} Its owner, or none.
+ */
+function ownersOf(policy: Policy): readonly string[] {
+  return byKind(policy, { free: () => [], nobody: () => [], owned: (owned) => [owned.owner] });
+}
+
+/**
+ * The roots scoped to an owner, or to none: the root holding the owner scoped to it (the nearest of
+ * the holder's roots: a member is never nested in another, #58 1c refuses it), the others to no module.
+ *
+ * @param {string | undefined} owner - The owner, if any.
+ * @param {readonly MemberDir[]} roots - The holder's roots.
+ * @returns {Root[]} A scoped root per directory.
+ */
+function scopedTo(owner: string | undefined, roots: readonly MemberDir[]): Root[] {
+  const holding = owner === undefined ? undefined : nearestOf(roots, (root) => root)(owner);
+  return roots.map((root) => ({ kind: 'scoped', owner: root === holding ? owner : undefined, root }));
+}
+
+/**
+ * A holder's roots under its policy: scoped to its owner, or to no module; every root free, with the
+ * policy's reason.
  *
  * @param {Policy} policy - The holder's policy.
  * @param {readonly MemberDir[]} roots - The holder's roots.
  * @returns {Root[]} A root per directory.
  */
 function rootsUnder(policy: Policy, roots: readonly MemberDir[]): Root[] {
-  if (policy.kind === 'free') {
-    return roots.map((root) => ({ kind: 'free', root, why: policy.why }));
-  }
-  const owner = policy.kind === 'owned' ? policy.owner : undefined;
-  const holding = owner === undefined ? undefined : nearestOf(roots, (root) => root)(owner);
-  return roots.map((root) => ({ kind: 'scoped', owner: root === holding ? owner : undefined, root }));
+  const scoped = (held: Policy): Root[] => {
+    const [owner] = ownersOf(held);
+    return scopedTo(owner, roots);
+  };
+  return byKind(policy, {
+    free: (free) => roots.map((root) => ({ kind: 'free', root, why: free.why })),
+    nobody: scoped,
+    owned: scoped,
+  });
 }
 
-/** Every guarded API as declared, with each holder's policy. */
-const SHAPES: readonly RuleShape[] = [
-  {
-    name: 'process-start',
-    names: new Accepted(
-      ['spawn', 'spawnSync', 'exec', 'execSync', 'execFile', 'execFileSync', 'fork'].map((call) => `child_process.${call}`),
-    ),
-    policies: {
-      harness: { kind: 'owned', owner: 'harness/lib/process.ts' },
-      kernel: NOBODY,
-      product: NOBODY,
-      'test-infrastructure': NOBODY,
-    },
-    why: 'every child process is bounded and its outcome is one of three',
-  },
-  {
-    name: 'clock',
-    names: new Accepted(['DateConstructor.now', 'new Date()', 'Date()', 'Performance.now', 'NodeJS.Process.hrtime']),
+/** Every guarded API as declared, with each holder's policy, by its name: a closed vocabulary of plain data. */
+const SHAPES: Vocabulary<RuleShapes> = new Vocabulary<RuleShapes>({
+  clock: {
+    names: ['DateConstructor.now', 'new Date()', 'Date()', 'Performance.now', 'NodeJS.Process.hrtime'],
     policies: {
       harness: NOBODY,
       kernel: NOBODY,
@@ -98,39 +123,8 @@ const SHAPES: readonly RuleShape[] = [
     },
     why: 'time is simulation-derived: the kernel reads it from its input, a host from its injected clock',
   },
-  {
-    name: 'random',
-    names: new Accepted([
-      'Math.random',
-      'Crypto.randomUUID',
-      'Crypto.getRandomValues',
-      'crypto.randomUUID',
-      'crypto.randomBytes',
-      'crypto.randomInt',
-      'crypto.getRandomValues',
-    ]),
-    policies: {
-      harness: { kind: 'owned', owner: 'harness/lib/stress.ts' },
-      kernel: NOBODY,
-      product: NOBODY,
-      'test-infrastructure': NOBODY,
-    },
-    why: 'ids and draws come from the seed, so a run replays; the flake hunter draws the seed it prints and replays from',
-  },
-  {
-    name: 'standard-streams',
-    names: new Accepted(['console', 'NodeJS.Process.stdout', 'NodeJS.Process.stderr']),
-    policies: {
-      harness: { kind: 'owned', owner: 'harness/lib/output.ts' },
-      kernel: NOBODY,
-      product: NOBODY,
-      'test-infrastructure': { kind: 'owned', owner: 'packages/characterisation/src/harness.ts' },
-    },
-    why: 'the kernel reports through effects and the event bus; one module of a tool says what it says',
-  },
-  {
-    name: 'json-parse',
-    names: new Accepted(['JSON.parse']),
+  'json-parse': {
+    names: ['JSON.parse'],
     policies: {
       harness: { kind: 'owned', owner: 'harness/lib/config.ts' },
       kernel: { kind: 'owned', owner: 'packages/foundation/src/host/codec.ts' },
@@ -142,9 +136,8 @@ const SHAPES: readonly RuleShape[] = [
     },
     why: "one typed boundary narrows JSON's untyped values: the snapshot codec, the harness's config reader",
   },
-  {
-    name: 'network',
-    names: new Accepted([
+  network: {
+    names: [
       'fetch',
       'XMLHttpRequest',
       'WebSocket',
@@ -156,7 +149,7 @@ const SHAPES: readonly RuleShape[] = [
       'https.get',
       'net.connect',
       'net.createConnection',
-    ]),
+    ],
     policies: {
       harness: NOBODY,
       kernel: NOBODY,
@@ -168,9 +161,61 @@ const SHAPES: readonly RuleShape[] = [
     },
     why: 'data reaches the kernel through the Fetch effect; one module of a host makes the request',
   },
-  {
-    name: 'timers',
-    names: new Accepted(['setTimeout', 'setInterval', 'setImmediate', 'requestAnimationFrame', 'requestIdleCallback']),
+  'process-start': {
+    names: ['spawn', 'spawnSync', 'exec', 'execSync', 'execFile', 'execFileSync', 'fork'].map((call) => `child_process.${call}`),
+    policies: {
+      harness: { kind: 'owned', owner: 'harness/lib/process.ts' },
+      kernel: NOBODY,
+      product: NOBODY,
+      'test-infrastructure': NOBODY,
+    },
+    why: 'every child process is bounded and its outcome is one of three',
+  },
+  random: {
+    names: [
+      'Math.random',
+      'Crypto.randomUUID',
+      'Crypto.getRandomValues',
+      'crypto.randomUUID',
+      'crypto.randomBytes',
+      'crypto.randomInt',
+      'crypto.getRandomValues',
+    ],
+    policies: {
+      harness: { kind: 'owned', owner: 'harness/lib/stress.ts' },
+      kernel: NOBODY,
+      product: NOBODY,
+      'test-infrastructure': NOBODY,
+    },
+    why: 'ids and draws come from the seed, so a run replays; the flake hunter draws the seed it prints and replays from',
+  },
+  settings: {
+    names: ['NodeJS.Process.env', 'process.env'],
+    policies: {
+      harness: { kind: 'owned', owner: 'harness/lib/process.ts' },
+      kernel: NOBODY,
+      product: NOBODY,
+      'test-infrastructure': NOBODY,
+    },
+    why: 'every setting is read once, in one module',
+  },
+  'standard-streams': {
+    names: ['console', 'NodeJS.Process.stdout', 'NodeJS.Process.stderr'],
+    policies: {
+      harness: { kind: 'owned', owner: 'harness/lib/output.ts' },
+      kernel: NOBODY,
+      product: NOBODY,
+      'test-infrastructure': { kind: 'owned', owner: 'packages/characterisation/src/harness.ts' },
+    },
+    why: 'the kernel reports through effects and the event bus; one module of a tool says what it says',
+  },
+  storage: {
+    names: ['localStorage', 'sessionStorage', 'indexedDB', 'Document.cookie', 'caches'],
+    policies: { harness: NOBODY, kernel: NOBODY, product: NOBODY, 'test-infrastructure': NOBODY },
+    why: 'saves go through the Persist effect and the injected Store',
+  },
+  timers: {
+    names: ['setTimeout', 'setInterval', 'setImmediate', 'requestAnimationFrame', 'requestIdleCallback'],
     policies: {
       harness: NOBODY,
       kernel: NOBODY,
@@ -182,24 +227,7 @@ const SHAPES: readonly RuleShape[] = [
     },
     why: 'time passes through the injected Scheduler, so a test drives it',
   },
-  {
-    name: 'storage',
-    names: new Accepted(['localStorage', 'sessionStorage', 'indexedDB', 'Document.cookie', 'caches']),
-    policies: { harness: NOBODY, kernel: NOBODY, product: NOBODY, 'test-infrastructure': NOBODY },
-    why: 'saves go through the Persist effect and the injected Store',
-  },
-  {
-    name: 'settings',
-    names: new Accepted(['NodeJS.Process.env', 'process.env']),
-    policies: {
-      harness: { kind: 'owned', owner: 'harness/lib/process.ts' },
-      kernel: NOBODY,
-      product: NOBODY,
-      'test-infrastructure': NOBODY,
-    },
-    why: 'every setting is read once, in one module',
-  },
-];
+});
 
 /**
  * Each holder's roots in a population: the harness's own, and a tier's members' directories. A total
@@ -240,10 +268,11 @@ function refuseTwice(rule: Rule): void {
  */
 function rulesOf(population: Population): readonly Rule[] {
   const roots = rootsOf(population);
-  return SHAPES.map((shape) => {
+  return SHAPES.words.map((name) => {
+    const shape = SHAPES.of(name);
     const rule: Rule = {
-      name: shape.name,
-      names: shape.names,
+      name,
+      names: new Accepted(shape.names),
       roots: roots.words.flatMap((holder) => rootsUnder(shape.policies[holder], roots.of(holder))),
       why: shape.why,
     };
@@ -252,5 +281,5 @@ function rulesOf(population: Population): readonly Rule[] {
   });
 }
 
-export { rulesOf, SHAPES };
-export type { Root, Rule };
+export { ownersOf, rulesOf, SHAPES };
+export type { Root, Rule, RuleName };

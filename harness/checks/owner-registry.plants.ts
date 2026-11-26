@@ -1,8 +1,9 @@
 /** The owner registry's plants: one per rule and call form, a canonical use per rule, a use in a test, and the near misses. */
 
+import type { Rule, RuleName } from '#lib/owner-rules.ts';
 import type { PlantedMember } from '#lib/planted-population.ts';
 import type { Population } from '#lib/scope.ts';
-import type { Rule } from '#lib/owner-rules.ts';
+import { byKind } from '#lib/by-kind.ts';
 import { present } from '#lib/present.ts';
 import { site } from '#lib/exemptions.ts';
 
@@ -18,7 +19,7 @@ const MEMBERS: readonly PlantedMember[] = [
 ];
 
 /** One plant per rule and call form: [rule, source]. */
-const FORMS: readonly (readonly [string, string])[] = [
+const FORMS: readonly (readonly [RuleName, string])[] = [
   ['process-start', "import { spawn } from 'node:child_process';\nspawn('x');\n"],
   ['process-start', "import { spawn as go } from 'node:child_process';\ngo('x');\n"],
   ['process-start', "import * as cp from 'child_process';\ncp.execSync('x');\n"],
@@ -62,18 +63,18 @@ const FORMS: readonly (readonly [string, string])[] = [
   ['settings', "export const x = process['env'];\n"],
 ];
 
-/** One canonical use per rule, planted in every root the rule covers. */
-const CANONICAL: readonly (readonly [string, string])[] = [
-  ['process-start', "import { spawn } from 'node:child_process';\nspawn('x');\n"],
-  ['clock', 'Date.now();\n'],
-  ['random', 'Math.random();\n'],
-  ['standard-streams', "console.log('x');\n"],
-  ['json-parse', "JSON.parse('1');\n"],
-  ['network', "void fetch('x');\n"],
-  ['timers', 'setTimeout(() => undefined, 1);\n'],
-  ['storage', "localStorage.getItem('a');\n"],
-  ['settings', 'export const x = process.env.X;\n'],
-];
+/** One canonical use per rule, by its name, planted in every root the rule covers: a rule without one does not compile. */
+const CANONICAL: Readonly<Record<RuleName, string>> = {
+  clock: 'Date.now();\n',
+  'json-parse': "JSON.parse('1');\n",
+  network: "void fetch('x');\n",
+  'process-start': "import { spawn } from 'node:child_process';\nspawn('x');\n",
+  random: 'Math.random();\n',
+  settings: 'export const x = process.env.X;\n',
+  'standard-streams': "console.log('x');\n",
+  storage: "localStorage.getItem('a');\n",
+  timers: 'setTimeout(() => undefined, 1);\n',
+};
 
 const IN_A_TEST = 'packages/systems/chat/test/__in_a_test.test.ts';
 
@@ -116,17 +117,17 @@ function unguarded(rules: readonly Rule[], held: Population): readonly string[] 
  * @returns {readonly (readonly { root: string; owner: string | undefined })[]} Its scoped roots.
  */
 function scopedOf(rule: Rule): readonly Readonly<{ root: string; owner: string | undefined }>[] {
-  return rule.roots.flatMap((entry) => (entry.kind === 'scoped' ? [{ owner: entry.owner, root: entry.root }] : []));
+  return rule.roots.flatMap((entry) => byKind(entry, { free: () => [], scoped: (scoped) => [{ owner: scoped.owner, root: scoped.root }] }));
 }
 
 /**
  * The rule of a name, which must exist.
  *
  * @param {readonly Rule[]} rules - The rules.
- * @param {string} name - Its name.
+ * @param {RuleName} name - Its name.
  * @returns {Rule} The rule.
  */
-function ruleNamed(rules: readonly Rule[], name: string): Rule {
+function ruleNamed(rules: readonly Rule[], name: RuleName): Rule {
   return present(
     rules.find((rule) => rule.name === name),
     `the rule ${name}`,
