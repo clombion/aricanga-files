@@ -1,10 +1,13 @@
 /** What the population's tests plant: scripted manifests, refusals as text, and git folders holding a workspace. */
 
+import type { Population, PopulationInputs } from '#lib/scope.ts';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import type { Dir } from '#lib/package-dirs.ts';
-import type { Population } from '#lib/scope.ts';
+import { POC } from '#lib/scope.ts';
 import { Scripted } from '#lib/scripted.ts';
 import type { WorkspacePackage } from '#lib/workspace.ts';
+import { dirOfImporter } from '#lib/package-dirs.ts';
+import { lockOf } from '#lib/pins.ts';
 import path from 'node:path';
 import { run } from '#lib/process.ts';
 import { tmpdir } from 'node:os';
@@ -208,4 +211,39 @@ packages:
     resolution: {integrity: sha512-x}
 `;
 
-export { BOM, causedRefusal, headOf, inWorkspaceFolder, listing, LOCK, manifest, QUOTED_KEYS, reader, refusalOf, withoutFile };
+/** A checkout whose listing holds, at its root, a script no member or the harness holds: a module the population does not hold, refused by no rule. */
+const UNHELD_SCRIPT: PopulationInputs = {
+  listing: ['package.json', 'packages/a/package.json', 'packages/a/src/b.ts', 'stray.js'],
+  read: reader({ 'package.json': '{}', 'packages/a/package.json': manifest('foundation') }),
+  workspace: listing(['packages/a/', 'x']),
+};
+
+/**
+ * The lockfile's importers, as directories, that the population neither holds nor subtracts as POC.
+ *
+ * @param {Population} held - The population.
+ * @param {string} lockText - The lockfile's text.
+ * @returns {readonly string[]} The directories it misses.
+ */
+function missedImporters(held: Population, lockText: string): readonly string[] {
+  const members = new Set<string>(held.members.map((member) => member.dir));
+  return [...lockOf(lockText).keys()]
+    .map((importer) => dirOfImporter(importer))
+    .filter((dir) => dir !== '' && !POC.starts(dir) && !members.has(dir));
+}
+
+export {
+  BOM,
+  missedImporters,
+  UNHELD_SCRIPT,
+  causedRefusal,
+  headOf,
+  inWorkspaceFolder,
+  listing,
+  LOCK,
+  manifest,
+  QUOTED_KEYS,
+  reader,
+  refusalOf,
+  withoutFile,
+};

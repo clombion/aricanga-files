@@ -4,9 +4,9 @@
  */
 
 import { BOM, causedRefusal, inWorkspaceFolder, manifest, refusalOf } from './scope.plants.ts';
+import { PopulationError, packagesOf, workspacePackages } from '#lib/workspace.ts';
 import { describe, expect, test, vi } from 'vitest';
 import { mkdir, rm, symlink, writeFile } from 'node:fs/promises';
-import { packagesOf, workspacePackages } from '#lib/workspace.ts';
 import { ConfigError } from '#lib/config.ts';
 import { finished } from '#lib/tools.ts';
 import path from 'node:path';
@@ -138,16 +138,26 @@ describe("pnpm's listing", () => {
 });
 
 describe("pnpm's answer", () => {
-  test("reads each package's path relative to the workspace and its name, none where pnpm gives no string, and refuses a path that is no string", () => {
+  test("reads each package's path relative to the workspace and its name, none where pnpm gives none, and refuses a path that is no string", () => {
     expect.hasAssertions();
     expect(packagesOf(answer(['/w', '/w/a/x']), '/w')).toStrictEqual([
       { dir: '', name: 'x' },
       { dir: 'a/x/', name: 'x' },
     ]);
-    expect(packagesOf(JSON.stringify([{ path: '/w/a' }, { name: 1, path: '/w/b' }]), '/w')).toStrictEqual([
+    expect(packagesOf(JSON.stringify([{ path: '/w/a' }, { name: '', path: '/w/b' }]), '/w')).toStrictEqual([
       { dir: 'a/', name: undefined },
-      { dir: 'b/', name: undefined },
+      { dir: 'b/', name: '' },
     ]);
     expect(() => packagesOf(answer([undefined]), '/w')).toThrow(new ConfigError('pnpm ls entry 0 ("x") path is not a string: undefined'));
   });
+
+  test.each(['1', 'null', 'true', '{"ab":1}', '["x"]'])(
+    'refuses a package whose name is no string (%s), naming its manifest',
+    (name: string) => {
+      expect.hasAssertions();
+      expect(() => packagesOf(`[{"name":${name},"path":"/w/b"}]`, '/w')).toThrow(
+        new PopulationError(`b/package.json: the name ${name} is no string: a package's name is a string, or none`),
+      );
+    },
+  );
 });

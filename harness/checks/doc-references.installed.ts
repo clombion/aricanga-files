@@ -4,33 +4,18 @@
  */
 
 import { REPO_ROOT, fromRoot } from '#lib/paths.ts';
-import { TYPESCRIPT, textsOf, tracked } from '#lib/source-files.ts';
+import { TYPESCRIPT, textsOf } from '#lib/source-files.ts';
 import { list, object, parsed, stringOf } from '#lib/config.ts';
 import { HARNESS_CHECKS } from '#lib/test-globs.ts';
 import type { Resolver } from './doc-references.resolve.ts';
 import type { Span } from '#lib/docs.ts';
 import { access } from 'node:fs/promises';
-import { dirname } from 'node:path/posix';
 import { finished } from '#lib/tools.ts';
 import { heldFiles } from '#lib/scope.ts';
+import { namedPackages } from './doc-references.packages.ts';
 import { spanProblems } from './doc-references.resolve.ts';
 
 const QUOTED = /['"](?<value>[^'"\n]+)['"]/gu;
-
-/**
- * The listed manifests that carry a name, each name with its folder: the packages a reference may
- * name, the POC's included. Membership of the workspace is `harness/lib/scope.ts`'s question.
- *
- * @returns {Promise<readonly (readonly [string, string])[]>} Each package's name and folder.
- */
-async function namedPackages(): Promise<readonly (readonly [string, string])[]> {
-  const listed = await tracked();
-  const texts = await textsOf(listed.filter((path) => path.endsWith('package.json') && !path.includes('node_modules/')));
-  return texts.flatMap(([path, text]: readonly [string, string]) => {
-    const { name } = object(parsed(text, path), path);
-    return name === undefined ? [] : [[stringOf(name, `${path} name`), dirname(path)] as const];
-  });
-}
 
 /**
  * Whether a path exists under the repository root.

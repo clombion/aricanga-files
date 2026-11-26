@@ -1,7 +1,7 @@
 /**
  * The population of planted files and planted members, built by the rule a checkout's is
  * (`populationOf`): each member's manifest is listed, declares its role, and is a workspace package
- * named, as pnpm names it, by its manifest's `name`;
+ * named by its manifest's `name`, read by pnpm's listing's rule (`packageName`);
  * the root's manifest is read with them; there is no checkout. The members and the plants are lists
  * of entries, so a directory or a path given twice reaches here however the list was built (a
  * literal, a spread or `Object.fromEntries` would each have collapsed it), and every state production
@@ -16,10 +16,10 @@
  * the check of their `aricanga` throws a `TypeError` on them.
  */
 
+import { PopulationError, packageName } from './workspace.ts';
 import type { Fields } from './manifests.ts';
 import type { MemberDir } from './package-dirs.ts';
 import type { Population } from './scope.ts';
-import { PopulationError } from './workspace.ts';
 import type { Role } from './roles.ts';
 import { isEmpty } from './lists.ts';
 import { manifestOf } from './package-dirs.ts';
@@ -65,14 +65,14 @@ function givenRefusals(declared: readonly Declared[], files: readonly string[], 
 }
 
 /**
- * A planted member's package name, as pnpm reads it from its manifest: the `name` its fields hold, when a string.
+ * A planted member's package name, read from the `name` its fields hold by the rule pnpm's listing is
+ * read by (`packageName`): a string, none, or the refusal of a name that is no string.
  *
- * @param {Fields} fields - The planted manifest's fields.
+ * @param {Declared} member - The planted member.
  * @returns {string | undefined} The name.
  */
-function nameOf(fields: Fields): string | undefined {
-  const name: unknown = fields['name'];
-  return typeof name === 'string' ? name : undefined;
+function nameOf(member: Declared): string | undefined {
+  return packageName(member.fields['name'], manifestOf(member.dir));
 }
 
 /**
@@ -146,7 +146,7 @@ async function plantedPopulation(files: readonly string[], members: readonly Pla
   const building = populationOf({
     listing: [...files, ...texts.keys()],
     read: readerOf(texts),
-    workspace: declared.map(({ dir, fields }) => ({ dir, name: nameOf(fields) })),
+    workspace: declared.map((member) => ({ dir: member.dir, name: nameOf(member) })),
   });
   const [built] = await Promise.allSettled([building]);
   if (built.status === 'rejected') {

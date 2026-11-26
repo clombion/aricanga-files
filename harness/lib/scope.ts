@@ -287,4 +287,4 @@ async function typescriptFiles(): Promise<readonly string[]> {
 }
 
 export { HARNESS_ROOT, POC, heldFiles, pocNames, population, populationOf, typescriptFiles, typescriptOf };
-export type { Member, Parts, ListedPackage, Population };
+export type { Member, Parts, ListedPackage, Population, PopulationInputs };

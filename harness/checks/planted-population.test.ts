@@ -85,3 +85,12 @@ describe("a planted population's one refusal", () => {
     );
   });
 });
+
+describe("a planted member's name", () => {
+  test("is refused by pnpm's listing's rule when it is no string, the refusal naming its manifest", async () => {
+    expect.hasAssertions();
+    await expect(plantedPopulation([], [['packages/a/', 'view', { name: 7 }]])).rejects.toThrow(
+      new PopulationError("packages/a/package.json: the name 7 is no string: a package's name is a string, or none"),
+    );
+  });
+});

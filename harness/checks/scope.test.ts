@@ -1,32 +1,28 @@
 /** The population: pnpm's workspace packages whose manifests git lists, less the POC, each with its role; every held module is TypeScript. */
 
-import { BOM, causedRefusal, headOf, inWorkspaceFolder, listing, manifest, reader, refusalOf, withoutFile } from './scope.plants.ts';
+import {
+  BOM,
+  UNHELD_SCRIPT,
+  causedRefusal,
+  headOf,
+  inWorkspaceFolder,
+  listing,
+  manifest,
+  missedImporters,
+  reader,
+  refusalOf,
+  withoutFile,
+} from './scope.plants.ts';
 import { LOCKFILE, lockOf } from '#lib/pins.ts';
 import { POC, population, populationOf } from '#lib/scope.ts';
 import { describe, expect, test } from 'vitest';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { perRoot, textOf } from '#lib/source-files.ts';
-import type { Population } from '#lib/scope.ts';
 import { PopulationError } from '#lib/workspace.ts';
-import { dirOfImporter } from '#lib/package-dirs.ts';
 import path from 'node:path';
 import { plantedPopulation } from '#lib/planted-population.ts';
 
 const HARNESS_ID = 'population';
-
-/**
- * The lockfile's importers, as directories, that the population neither holds nor subtracts as POC.
- *
- * @param {Population} held - The population.
- * @param {string} lockText - The lockfile's text.
- * @returns {readonly string[]} The directories it misses.
- */
-function missedImporters(held: Population, lockText: string): readonly string[] {
-  const members = new Set<string>(held.members.map((member) => member.dir));
-  return [...lockOf(lockText).keys()]
-    .map((importer) => dirOfImporter(importer))
-    .filter((dir) => dir !== '' && !POC.starts(dir) && !members.has(dir));
-}
 
 /**
  * The refusal of a one-member population whose manifest is `text`, with its first cause's head.
@@ -191,9 +187,11 @@ describe("a population's modules", () => {
       ['packages/a/src/b.d.ts', 'packages/a/src/c.tsx', 'packages/a/d.json', 'harness/lib/e.ts'],
       [['packages/a/', 'foundation']],
     );
-    expect([refusal, near.members.map((member) => member.dir)]).toStrictEqual([
+    const unheld = await populationOf(UNHELD_SCRIPT);
+    expect([refusal, near.members.map((member) => member.dir), unheld.holds('stray.js')]).toStrictEqual([
       `PopulationError: a held module is TypeScript (.ts, .tsx), the kind every scan, the type check and coverage read: ${others.join(', ')}`,
       ['packages/a/'],
+      false,
     ]);
   });
 });
