@@ -156,14 +156,18 @@ async function scan(target: Target, allowed: Readonly<Exemptions>, runner?: Runn
 
 /**
  * What jscpd scans of a population: each holder's directory (`heldDir`: every member's and the
- * harness's), and each harness module outside the harness's directory (the root configuration
- * modules), so the directories and the files come from one population's holders.
+ * harness's) that no other holder's directory holds, so a member nested in another (#58 1c refuses
+ * it) is scanned once, inside the outer one; and each harness module outside the harness's directory
+ * (the root configuration modules). The directories and the files come from one population's holders.
  *
  * @param {Population} held - The population.
  * @returns {readonly string[]} The directories and the files, as jscpd's arguments.
  */
 function scanRoots(held: Population): readonly string[] {
-  const directories = [...held.members, 'harness' as const].map((holder) => heldDir(holder).replace(TRAILING_SLASH, ''));
+  const dirs = [...held.members, 'harness' as const].map((holder) => heldDir(holder));
+  const directories = dirs
+    .filter((dir) => !dirs.some((other) => other !== dir && dir.startsWith(other)))
+    .map((dir) => dir.replace(TRAILING_SLASH, ''));
   const harnessDir = heldDir('harness');
   const rootFiles = harnessModules(held).filter((file) => !file.startsWith(harnessDir));
   return [...directories, ...rootFiles];

@@ -170,7 +170,7 @@ describe('the scan of a clone', () => {
 });
 
 describe('the roots jscpd is given', () => {
-  test('scans each held root as a directory and each held file outside them, and nothing a root holds again', async () => {
+  test("scans each holder's directory once, a nested member's inside the outer one, and each held file outside them", async () => {
     expect.hasAssertions();
     await expect(plantedScanRoots()).resolves.toStrictEqual(['packages/a', 'harness', 'vitest.gate.config.ts']);
   });

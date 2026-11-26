@@ -70,12 +70,19 @@ async function writeReport(output: string, files: readonly string[]): Promise<vo
 }
 
 /**
- * What jscpd scans of a planted population: a root file, a file in a member and a harness file.
+ * What jscpd scans of a planted population: a root file, a file in a member, a file in a member nested in it, and a
+ * harness file.
  *
  * @returns {Promise<readonly string[]>} The roots and files `scanRoots` gives.
  */
 async function plantedScanRoots(): Promise<readonly string[]> {
-  const held = await plantedPopulation(['vitest.gate.config.ts', 'packages/a/src/x.ts', 'harness/lib/y.ts'], [['packages/a/', 'view']]);
+  const held = await plantedPopulation(
+    ['vitest.gate.config.ts', 'packages/a/src/x.ts', 'packages/a/inner/src/z.ts', 'harness/lib/y.ts'],
+    [
+      ['packages/a/', 'view'],
+      ['packages/a/inner/', 'view'],
+    ],
+  );
   return scanRoots(held);
 }
 
