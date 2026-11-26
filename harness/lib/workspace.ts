@@ -80,6 +80,10 @@ function nameRefusal(name: unknown, manifest: string): PopulationError | undefin
  * A package's name, read by the one reader of a manifest's `name` every other asks: the string the
  * manifest declares, none when it declares none, and a `PopulationError` naming the manifest when the
  * `name` it declares is no string (pnpm lists any value it finds there).
+ * The claim's probe (`claims.ts`) refuses a second statement of the rule in the harness's library and
+ * scripts: the refusal's words, or a narrowing of a name to a string by `typeof`. A reader that
+ * narrows by another means (`stringOf`, a schema) is beyond it, a known limit: the readers that exist
+ * ask this one, held by the doc-references and planted-population tests.
  *
  * @param {unknown} name - The manifest's `name`, as pnpm lists it or as the manifest holds it.
  * @param {string} manifest - The manifest's path, for the refusal.

@@ -15,6 +15,12 @@ import { HARNESS_CHECKS, HARNESS_LIB, HARNESS_SCRIPTS } from './test-globs.ts';
 /** A claim of a single owner, up to the end of its clause. */
 const CLAIM = /\b(?:the (?:one|only) (?:owner|module|place|reader|writer)|nowhere else|stated once)\b[^.;:]*/giu;
 
+/**
+ * A package's name rule, as only `harness/lib/workspace.ts` may write it: the refusal's words, or a
+ * `typeof` narrowing of a variable named `name`, or of a `name` field read by key, to a string.
+ */
+const NAME_RULE = /typeof [\w.]*(?:\bname|\[[']name[']\]) === [']string[']|is no string: a package[']s name is a string, or none/u;
+
 /** How a module finds where it is on disk: the one thing only `harness/lib/paths.ts` may do. */
 const LOCATES_ITSELF = /\bimport\.meta\.(?:url|dirname|filename)\b/u;
 
@@ -88,7 +94,7 @@ const CLAIMS: readonly Claim[] = [
   {
     clause: "the one reader of a manifest's  every other asks",
     path: `${HARNESS_LIB}workspace.ts`,
-    probe: probe(/is no string: a package[']s name is a string, or none/u, `${HARNESS_LIB}workspace.ts`, HARNESS_PROBE_ROOTS),
+    probe: probe(NAME_RULE, `${HARNESS_LIB}workspace.ts`, HARNESS_PROBE_ROOTS),
   },
   {
     clause: 'stated once, in',
