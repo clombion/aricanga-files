@@ -9,14 +9,14 @@
  */
 
 import { EXIT_CLEAN, EXIT_FINDINGS } from '#lib/exit-status.ts';
-import type { PlantedKnipConfig, Run } from '#lib/deadcode.ts';
+import type { KnipConfig, PlantedKnipConfig } from '#lib/knip-config.ts';
 import { ROOT_CONFIG_MODULES, knipConfig } from '#lib/config-modules.ts';
 import { deadcodeRuns, ignoreEntries, issueTypes, knip, plantedKnipRuns, repoIgnoreEntries, strictnessProblems } from '#lib/deadcode.ts';
 import { describe, expect, test } from 'vitest';
 import { runsOf, substituted } from '#lib/repo-tasks.ts';
 import { Exemptions } from '#lib/exemptions.ts';
-import type { KnipConfig } from '#lib/knip-config.ts';
 import { REPO_ROOT } from '#lib/paths.ts';
+import type { Run } from '#lib/deadcode.ts';
 import { inSequence } from '#lib/lists.ts';
 
 const HARNESS_ID = 'deadcode';
@@ -129,7 +129,7 @@ describe('the repository', () => {
     expect.hasAssertions();
     const [types, config] = await Promise.all([issueTypes(), knipConfig()]);
     expect(types).toContain('exports');
-    expect(strictnessProblems(config, types)).toStrictEqual([]);
+    expect(strictnessProblems(config.rules, types)).toStrictEqual([]);
   });
 });
 
@@ -178,8 +178,8 @@ describe('the deadcode check, on a planted package', () => {
 describe('the deadcode check, on planted configs', () => {
   test('refuses an issue type whose rule is not set, and keys each ignore entry', () => {
     expect.hasAssertions();
-    const config: KnipConfig = { ignoreDependencies: ['d'], ignoreWorkspaces: ['w'], rules: { exports: 'error' }, workspaces: {} };
-    expect([strictnessProblems(config, ['exports', 'types']), ignoreEntries(config)]).toStrictEqual([
+    const ignores: Pick<KnipConfig, 'ignoreDependencies' | 'ignoreWorkspaces'> = { ignoreDependencies: ['d'], ignoreWorkspaces: ['w'] };
+    expect([strictnessProblems({ exports: 'error' }, ['exports', 'types']), ignoreEntries(ignores)]).toStrictEqual([
       ['rule types is not set at error'],
       ['ignoreWorkspaces:w', 'ignoreDependencies:d'],
     ]);

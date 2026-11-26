@@ -36,13 +36,6 @@ type KnipWorkspaceConfiguration = NonNullable<KnipConfiguration['workspaces']>[s
 /** The Playwright plugin's settings as an object, as knip's own type has them. */
 type KnipPlaywright = Exclude<NonNullable<KnipWorkspaceConfiguration['playwright']>, boolean | string | readonly unknown[]>;
 
-/**
- * The fields of knip's configuration that excuse a file from an issue type: `ignore` (from every
- * type), `ignoreFiles` (from the unused files) and `ignoreIssues` (from the types it names). Neither
- * the gate's configuration nor a planted run's sets one.
- */
-type KnipExcuse = 'ignore' | 'ignoreFiles' | 'ignoreIssues';
-
 /** A glob or ignore field of knip's own type, narrowed to a list of strings: the form the gate writes. */
 type ListOf<Field> = Field extends readonly (infer Item)[] ? readonly Extract<Item, string>[] : never;
 
@@ -57,20 +50,43 @@ type KnipWorkspace = Readonly<{
 }> &
   NoOther<KnipWorkspaceConfiguration, 'entry' | 'playwright' | 'project'>;
 
+/** Every issue type knip's own type names, at `error`: a type knip names and the rules leave out does not compile. */
+type KnipRules = Readonly<Record<keyof NonNullable<KnipConfiguration['rules']>, 'error'>>;
+
 /**
- * The gate's knip configuration, knip's own type (`KnipConfiguration`) narrowed: each rule one of
- * knip's issue types, at `error`; every glob and ignore a list of strings; and every other field of
- * knip's refused, a field that excuses a file from an issue type (`KnipExcuse`) among them, written,
- * held in a variable or spread. So each reader reads it as written and the strictness check need not
- * look for an excuse.
+ * The gate's knip configuration, knip's own type (`KnipConfiguration`) narrowed: every issue type at
+ * `error` (`KnipRules`); every glob and ignore a list of strings; and every other field of knip's
+ * refused, written, held in a variable or spread: among them each field that excuses a file or a
+ * name from an issue type (`ignore`, `ignoreFiles`, `ignoreIssues`, `ignoreBinaries`, `ignoreMembers`,
+ * `ignoreUnresolved`, `ignoreExportsUsedInFile`) and those that leave an issue type out (`exclude`,
+ * `include`). So each reader reads it as written and the strictness check need not look for an excuse.
+ * A rule name knip lacks, spread in from a variable, is beyond the type (TypeScript checks no object
+ * for keys it was not given literally); knip's own schema refuses it where the `deadcode` task loads
+ * the configuration.
  */
 type KnipConfig = Readonly<{
-  rules: Readonly<Partial<Record<keyof NonNullable<KnipConfiguration['rules']>, 'error'>>>;
+  rules: KnipRules;
   ignoreDependencies: ListOf<KnipConfiguration['ignoreDependencies']>;
   ignoreWorkspaces: ListOf<KnipConfiguration['ignoreWorkspaces']>;
   workspaces: Readonly<Record<string, KnipWorkspace>>;
 }> &
   NoOther<KnipConfiguration, 'ignoreDependencies' | 'ignoreWorkspaces' | 'rules' | 'workspaces'>;
+
+/**
+ * A planted knip run's configuration: what the gate's sets (its rules, at `error`, as many as the plant
+ * needs; its ignore lists; its workspaces) and the root workspace's own entries and project, which a
+ * single-package plant writes at the top; every other field of knip's refused, so a plant excuses no
+ * file, name or issue type the gate's configuration could not.
+ */
+type PlantedKnipConfig = Readonly<{
+  entry?: ListOf<KnipConfiguration['entry']>;
+  project?: ListOf<KnipConfiguration['project']>;
+  rules?: Readonly<Partial<KnipRules>>;
+  ignoreDependencies?: ListOf<KnipConfiguration['ignoreDependencies']>;
+  ignoreWorkspaces?: ListOf<KnipConfiguration['ignoreWorkspaces']>;
+  workspaces?: Readonly<Record<string, KnipWorkspace>>;
+}> &
+  NoOther<KnipConfiguration, 'entry' | 'ignoreDependencies' | 'ignoreWorkspaces' | 'project' | 'rules' | 'workspaces'>;
 
 /** The settings every population shares. */
 const SETTINGS: Pick<KnipConfig, 'rules'> = {
@@ -184,4 +200,4 @@ function knipConfigOf(held: Population): KnipConfig {
 }
 
 export { knipConfigOf };
-export type { KnipConfig, KnipExcuse, KnipWorkspaceConfiguration };
+export type { KnipConfig, PlantedKnipConfig };

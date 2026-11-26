@@ -7,13 +7,11 @@
  * A planted run makes the task's invocations with its own configuration file (`planted`).
  */
 
-import type { KnipConfig, KnipExcuse, KnipWorkspaceConfiguration } from './knip-config.ts';
+import type { KnipConfig, PlantedKnipConfig } from './knip-config.ts';
 import { Project, bin, finished } from './tools.ts';
 import { object, parsed } from './config.ts';
 import { substituted, toolRuns } from './repo-tasks.ts';
-import type { DeepReadonly } from './readonly.ts';
 import type { Finished } from './process.ts';
-import type { KnipConfiguration } from 'knip';
 import { inSequence } from './lists.ts';
 import { knipConfig } from './config-modules.ts';
 import { textOf } from './source-files.ts';
@@ -27,17 +25,6 @@ async function deadcodeRuns(): Promise<readonly (readonly string[])[]> {
   const runs = await toolRuns('deadcode', 'knip');
   return runs;
 }
-
-/** No field that excuses a file from an issue type (`KnipExcuse`). */
-type Unexcused = Readonly<Partial<Record<KnipExcuse, never>>>;
-
-/**
- * A planted knip run's configuration: knip's own type, read only, with no field that excuses a file
- * from an issue type, at the top or in a workspace; a rule name knip lacks does not compile.
- */
-type PlantedKnipConfig = DeepReadonly<Omit<KnipConfiguration, 'workspaces'>> &
-  Unexcused &
-  Readonly<{ workspaces?: Readonly<Record<string, DeepReadonly<KnipWorkspaceConfiguration> & Unexcused>> }>;
 
 /** The configuration file of a planted knip run: JSON, which knip reads without loading a module. */
 const PLANTED_KNIP_CONFIG = 'knip.json';
@@ -82,10 +69,10 @@ async function knip(cwd: string, args: readonly string[]): Promise<Finished> {
  * Every ignore entry of the gate's knip configuration, as a key: `ignoreWorkspaces:<workspace>` or
  * `ignoreDependencies:<package>`; it holds no other ignore (`KnipConfig`).
  *
- * @param {KnipConfig} config - The configuration.
+ * @param {Pick<KnipConfig, 'ignoreDependencies' | 'ignoreWorkspaces'>} config - The configuration's ignore lists.
  * @returns {readonly string[]} The entries' keys.
  */
-function ignoreEntries(config: KnipConfig): readonly string[] {
+function ignoreEntries(config: Pick<KnipConfig, 'ignoreDependencies' | 'ignoreWorkspaces'>): readonly string[] {
   return [
     ...config.ignoreWorkspaces.map((entry) => `ignoreWorkspaces:${entry}`),
     ...config.ignoreDependencies.map((entry) => `ignoreDependencies:${entry}`),
@@ -115,16 +102,16 @@ async function issueTypes(): Promise<readonly string[]> {
 }
 
 /**
- * What keeps the gate's knip configuration from knip's strictest setting: an issue type knip names
- * whose rule the configuration does not set (its type sets a rule only at `error`, and writes no
- * file excuse).
+ * What keeps a knip configuration's rules from knip's strictest setting: an issue type knip's
+ * installed schema names that the rules do not set. The gate's type sets every issue type knip's own
+ * type names, each at `error` (`KnipRules`); this holds those types against the schema knip runs by.
  *
- * @param {KnipConfig} config - The configuration.
- * @param {readonly string[]} types - The issue types knip names.
+ * @param {Readonly<Partial<Record<string, 'error'>>>} rules - The configuration's rules.
+ * @param {readonly string[]} types - The issue types knip's schema names.
  * @returns {readonly string[]} Each problem.
  */
-function strictnessProblems(config: KnipConfig, types: readonly string[]): readonly string[] {
-  return types.filter((type) => !Object.hasOwn(config.rules, type)).map((type) => `rule ${type} is not set at error`);
+function strictnessProblems(rules: Readonly<Partial<Record<string, 'error'>>>, types: readonly string[]): readonly string[] {
+  return types.filter((type) => !Object.hasOwn(rules, type)).map((type) => `rule ${type} is not set at error`);
 }
 
 /** A planted knip run: its exit status and output. */
@@ -158,4 +145,4 @@ async function plantedKnipRuns(files: readonly (readonly [string, string])[], co
 }
 
 export { deadcodeRuns, ignoreEntries, issueTypes, knip, plantedKnipRuns, repoIgnoreEntries, strictnessProblems };
-export type { PlantedKnipConfig, Run };
+export type { Run };
