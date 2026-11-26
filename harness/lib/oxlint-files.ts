@@ -6,7 +6,7 @@
  */
 
 import { FILES_ANCHOR, IGNORE_ANCHOR } from '#lint-rules/globs.ts';
-import { HARNESS_ROOT } from './scope.ts';
+import { HARNESS_ROOT } from './holders.ts';
 import type { Population } from './scope.ts';
 import { ROOT_MODULES } from './config-modules.ts';
 import { dirname } from 'node:path/posix';
@@ -15,7 +15,11 @@ import { isLintable } from './source-files.ts';
 /** The root configuration modules, as an override's `files` names them. */
 const ROOT_MODULE_FILES: readonly string[] = ROOT_MODULES.map((module) => `${FILES_ANCHOR}${module}`);
 
-/** The harness's code, as an override's `files` names it: its directory, and the root modules that run it. */
+/**
+ * The harness's code, as an override's `files` names it: its directory, and the root configuration
+ * modules, the two arms of the population's harness holder (`Population.holderOf`), from the same
+ * constants (`holders.test.ts` holds that both give one answer).
+ */
 const HARNESS_CODE: readonly string[] = [`${HARNESS_ROOT}**`, ...ROOT_MODULE_FILES];
 
 /**

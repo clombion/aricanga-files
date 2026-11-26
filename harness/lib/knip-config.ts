@@ -4,14 +4,15 @@
  * `knip.config.ts`; every check reads the value it loads (`knipConfig`, `config-modules.ts`).
  */
 
-import { HARNESS_ROOT, pocNames } from './scope.ts';
 import { HARNESS_TESTS, SCRIPT_ENTRIES, isRunnerConfig, liveGlobs } from './test-globs.ts';
 import type { Member, Population } from './scope.ts';
+import { HARNESS_ROOT } from './holders.ts';
 import type { KnipConfiguration } from 'knip';
 import type { NoOther } from './readonly.ts';
 import { dependencyNames } from './dependencies.ts';
 import { importerOf } from './package-dirs.ts';
 import { isEmpty } from './lists.ts';
+import { pocNames } from './scope.ts';
 import { ships } from './roles.ts';
 import { typescriptGlob } from './source-files.ts';
 

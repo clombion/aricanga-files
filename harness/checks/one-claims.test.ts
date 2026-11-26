@@ -2,19 +2,22 @@
  * Every claim of a single owner in current text is registered, and its probe holds it.
  *
  * The claims and their probes are `CLAIMS` in `harness/lib/claims.ts`. A probe must match in the
- * claim's owner and in no other held TypeScript file under its roots: a second match means the
- * claim is false.
+ * claim's owner and in no other held TypeScript file in its scope (under its path prefixes, or among
+ * the harness's modules, asked of the population): a second match means the claim is false.
  */
 
 import { CLAIMS, clauses } from '#lib/claims.ts';
-import type { Claim, Probe } from '#lib/claims.ts';
+import type { Claim, Probe, ProbeScope } from '#lib/claims.ts';
 import { Doc, currentText } from '#lib/docs.ts';
 import { Exemptions, StaleExemptionError, site } from '#lib/exemptions.ts';
 import { describe, expect, test } from 'vitest';
+import { population, typescriptFiles } from '#lib/scope.ts';
 import type { DeepReadonly } from '#lib/readonly.ts';
+import type { Population } from '#lib/scope.ts';
 import type { Prose } from '#lib/docs.ts';
+import { byKind } from '#lib/by-kind.ts';
+import { plantedPopulation } from '#lib/planted-population.ts';
 import { textsOf } from '#lib/source-files.ts';
-import { typescriptFiles } from '#lib/scope.ts';
 
 const HARNESS_ID = 'one-claims';
 
@@ -53,15 +56,32 @@ function registry(claims: readonly DeepReadonly<Claim>[]): Exemptions {
 }
 
 /**
+ * Whether a path is in a probe's scope: under one of its prefixes, or one of the harness's modules,
+ * asked of the population (`Population.holderOf`).
+ *
+ * @param {ProbeScope} scope - The scope.
+ * @param {Population} held - The population.
+ * @returns {(path: string) => boolean} The predicate.
+ */
+function inScope(scope: DeepReadonly<ProbeScope>, held: Population): (path: string) => boolean {
+  return byKind(scope, {
+    harness: () => (path: string) => held.holderOf(path) === 'harness',
+    prefixes: (prefixes) => (path: string) => prefixes.roots.some((root) => path.startsWith(root)),
+  });
+}
+
+/**
  * What breaks a probe: no match in its owner, or a match outside it.
  *
  * @param {Probe} probe - The probe.
  * @param {ReadonlyMap<string, string>} texts - The texts.
+ * @param {Population} held - The population whose holders a probe over the harness's modules asks.
  * @returns {string[]} What breaks a probe: no match in its owner, or a match outside it.
  */
-function probeProblems(probe: DeepReadonly<Probe>, texts: ReadonlyMap<string, string>): string[] {
+function probeProblems(probe: DeepReadonly<Probe>, texts: ReadonlyMap<string, string>, held: Population): string[] {
+  const scoped = inScope(probe.scope, held);
   const matched = [...texts]
-    .filter(([path, text]: readonly [string, string]) => probe.roots.some((root) => path.startsWith(root)) && probe.pattern.test(text))
+    .filter(([path, text]: readonly [string, string]) => scoped(path) && probe.pattern.test(text))
     .map(([path]: readonly [string, string]) => path)
     .toSorted();
   const problems = matched.includes(probe.owner) ? [] : [`${patternText(probe.pattern)} does not match in its owner ${probe.owner}`];
@@ -93,7 +113,8 @@ describe('the repository', () => {
     'the claim %s holds',
     async (_label: string, claim: DeepReadonly<Claim>) => {
       expect.hasAssertions();
-      expect(probeProblems(claim.probe, await sources())).toStrictEqual([]);
+      const [texts, held] = await Promise.all([sources(), population()]);
+      expect(probeProblems(claim.probe, texts, held)).toStrictEqual([]);
     },
   );
 });
@@ -111,24 +132,42 @@ describe('the claims check', () => {
       {
         clause: 'the only reader of the cache',
         path: 'src/planted.ts',
-        probe: { owner: 'src/planted.ts', pattern: /x/u, roots: ['src/'] },
+        probe: { owner: 'src/planted.ts', pattern: /x/u, scope: { kind: 'prefixes', roots: ['src/'] } },
       },
     ];
     expect(() => registry(gone).unexempted([])).toThrow(StaleExemptionError);
   });
 
-  test('fails a probe that matches outside its owner or not in it', () => {
+  test('fails a probe that matches outside its owner or not in it', async () => {
     expect.hasAssertions();
+    const held = await plantedPopulation([], []);
     const texts = new Map([
       ['src/owner.ts', 'export function read() {}\n'],
       ['src/other.ts', 'export function read() {}\n'],
       ['docs/x.ts', 'export function read() {}\n'],
     ]);
-    expect(probeProblems({ owner: 'src/owner.ts', pattern: /^export function read\b/mu, roots: ['src/'] }, texts)).toStrictEqual([
+    const scope: ProbeScope = { kind: 'prefixes', roots: ['src/'] };
+    expect(probeProblems({ owner: 'src/owner.ts', pattern: /^export function read\b/mu, scope }, texts, held)).toStrictEqual([
       String.raw`/^export function read\b/mu matches outside its owner, in src/other.ts`,
     ]);
-    expect(probeProblems({ owner: 'src/owner.ts', pattern: /^export function write\b/mu, roots: ['src/'] }, texts)).toStrictEqual([
+    expect(probeProblems({ owner: 'src/owner.ts', pattern: /^export function write\b/mu, scope }, texts, held)).toStrictEqual([
       String.raw`/^export function write\b/mu does not match in its owner src/owner.ts`,
+    ]);
+  });
+});
+
+describe("the claims check's scope", () => {
+  test("reads a probe over the harness's modules by holder: a root configuration module is in it, a member's module is not", async () => {
+    expect.hasAssertions();
+    const held = await plantedPopulation(
+      ['harness/lib/owner.ts', 'vitest.gate.config.ts', 'packages/a/src/x.ts'],
+      [['packages/a/', 'view']],
+    );
+    const texts = new Map(
+      ['harness/lib/owner.ts', 'vitest.gate.config.ts', 'packages/a/src/x.ts'].map((path) => [path, 'spawn();\n'] as const),
+    );
+    expect(probeProblems({ owner: 'harness/lib/owner.ts', pattern: /\bspawn\(/u, scope: { kind: 'harness' } }, texts, held)).toStrictEqual([
+      String.raw`/\bspawn\(/u matches outside its owner, in vitest.gate.config.ts`,
     ]);
   });
 

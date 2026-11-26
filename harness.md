@@ -49,6 +49,7 @@ list.
 - `gate` (`harness/checks/gate.test.ts`): The gate writes no file, runs only locked tools, and the git hooks run the gate's own tasks.
 - `generated-docs` (`harness/checks/generated-docs.test.ts`): Every generated block of the docs equals a fresh render, names a known generator, and every generator has a block.
 - `history-narration` (`harness/checks/history-narration.test.ts`): Current text describes the project as it is: no comment or doc narrates how it got there.
+- `holders` (`harness/checks/holders.test.ts`): Every held module is one holder's code (`Population.holderOf`): its nearest member's, or else the
 - `isolation` (`harness/checks/isolation.test.ts`): A test that leaves a timer pending when it ends fails, and the next test starts clean.
 - `json-files` (`harness/checks/json-files.test.ts`): Every held JSON file is strict JSON a reader cannot misread, and no manifest lists a dependency twice.
 - `knip-config` (`harness/checks/knip-config.test.ts`): Knip's configuration gives each member a workspace of its own files, and knip reports an orphan under it.
@@ -122,12 +123,14 @@ list.
 
 - **Holds:** every clause of current text claiming a single owner (`the one owner`, `nowhere else`,
   `stated once`) is registered in `CLAIMS` with a probe, and the probe matches in the owner and in
-  no other held TypeScript file under its roots.
+  no other held TypeScript file in its scope: under its path prefixes, or among the harness's
+  modules (`harnessModules`, asked of the population).
 - **Owner:** `harness/lib/claims.ts`.
 - **Write it:** a new claim adds a `Claim` whose probe is a pattern only the owner can match, such
   as the owner's defining line.
 - **Planted test:** an unregistered claim, an entry whose claim is gone, and a probe matching
-  outside its owner or not in it each fail; a phrase in a code span is a quotation.
+  outside its owner or not in it each fail, and a probe over the harness's modules sees a root
+  configuration module; a phrase in a code span is a quotation.
 - **No-op when:** current text makes no claim.
 
 ## generated-docs: Every generated block of the docs is current

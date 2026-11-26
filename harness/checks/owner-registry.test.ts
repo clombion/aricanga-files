@@ -3,8 +3,8 @@
  *
  * The scan resolves every name through TypeScript's checker, so each call form is planted: a plain
  * call, an aliased import, a destructured binding, a `globalThis.`/`window.` chain and an element
- * access. Each rule is also planted once in every root it covers, and once in a test: tests are held
- * as production code is. The near misses: a type-only import, a module's own `fetch` or `now`, a
+ * access. Each rule is also planted once in every root it covers (each holder's: a member's, the
+ * harness's), and once in a test: tests are held as production code is. The near misses: a type-only import, a module's own `fetch` or `now`, a
  * pure constructor call, the owner itself, and a root a rule frees.
  */
 
@@ -69,7 +69,7 @@ const expected: readonly Site[] = PLANTED.flatMap((plant) => (plant.rule === und
 const plantedScan = usePlanted(plants, MEMBERS);
 const repoScan = useScan();
 
-/** A free root nested in a scoped one: its module uses the API the outer root forbids, and the nearest root, the free one, holds it. */
+/** A free root nested in a scoped one: its module uses the API the outer root forbids, and its holder, the nearest member, frees it. */
 const NESTED_FREE = 'packages/foundation/probe/src/__free.ts';
 const nestedFreeScan = usePlanted(
   [[NESTED_FREE, 'export const wait = (): void => {\n  setTimeout(() => undefined, 1);\n};\n']],

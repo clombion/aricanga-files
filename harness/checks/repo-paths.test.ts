@@ -14,7 +14,8 @@ import { isIdentifier, isMetaProperty, isPropertyAccessExpression } from 'typesc
 import { textOf, textsOf } from '#lib/source-files.ts';
 import type { SourceFile } from '#lib/ts-source.ts';
 import { SyntaxKind } from 'typescript/unstable/ast';
-import { typescriptFiles } from '#lib/scope.ts';
+import { harnessModules } from '#lib/holders.ts';
+import { population } from '#lib/scope.ts';
 
 const HARNESS_ID = 'repo-paths';
 
@@ -66,13 +67,13 @@ function locating(path: string, text: string): string[] {
 }
 
 /**
- * The held harness modules other than the owner.
+ * The harness's modules (`harnessModules`) other than the owner.
  *
  * @returns {Promise<readonly string[]>} Their paths.
  */
 async function otherHarnessModules(): Promise<readonly string[]> {
-  const files = await typescriptFiles();
-  return files.filter((path) => path.startsWith('harness/') && path !== OWNER);
+  const held = await population();
+  return harnessModules(held).filter((path) => path !== OWNER);
 }
 
 describe('the repository', () => {

@@ -1,24 +1,23 @@
 /**
  * The owner registry's table: for each guarded API, which module of each root may use it. A rule
  * declares one tagged policy per tier of the population (`roles.ts`) and one for the harness; its
- * roots are that tier's members' directories, read from the population, and the harness's own, one
- * list of scoped and free roots.
+ * roots are that tier's members, read from the population, and the harness, each keyed by its
+ * directory, one list of scoped and free roots. A file's root is its holder's (`Population.holderOf`),
+ * so a root configuration module is under the harness's policy.
  */
 
 import { Accepted, Vocabulary } from './exemptions.ts';
-import { HARNESS_ROOT } from './scope.ts';
 import type { MemberDir } from './package-dirs.ts';
 import type { Population } from './scope.ts';
-import { PopulationError } from './workspace.ts';
 import type { Tier } from './roles.ts';
 import { byKind } from './by-kind.ts';
-import { nearestOf } from './package-dirs.ts';
+import { heldDir } from './holders.ts';
 
 /**
- * A root of a rule, a directory, and what the rule allows there: a scoped root, one module of which
- * may use the API (its `owner`; none: no module of the root may), or a free root, every module of
- * which may, for a reason. One list holds both kinds, so every reader finds a file's root by one
- * nearest lookup, whatever its kind.
+ * A root of a rule, a holder keyed by its directory, and what the rule allows there: a scoped root,
+ * one module of which may use the API (its `owner`; none: no module of the root may), or a free root,
+ * every module of which may, for a reason. One list holds both kinds, so every reader finds a file's
+ * root by one lookup of its holder (`rootOf`), whatever its kind.
  */
 type Root =
   | Readonly<{ kind: 'scoped'; root: MemberDir; owner: string | undefined }>
@@ -76,15 +75,32 @@ function ownersOf(policy: Policy): readonly string[] {
 }
 
 /**
- * The roots scoped to an owner, or to none: the root holding the owner scoped to it (the nearest of
- * the holder's roots: a member is never nested in another, #58 1c refuses it), the others to no module.
+ * The root of a rule a path is under: its holder's (`Population.holderOf`), none for a path no holder
+ * holds or a holder the rule does not list.
+ *
+ * @param {Rule} rule - The rule.
+ * @param {Population} population - The population whose holders key the rule's roots.
+ * @returns {(path: string) => Root | undefined} The lookup.
+ */
+function rootOf(rule: Rule, population: Population): (path: string) => Root | undefined {
+  return (path: string): Root | undefined => {
+    const holder = population.holderOf(path);
+    return holder === undefined ? undefined : rule.roots.find((entry) => entry.root === heldDir(holder));
+  };
+}
+
+/**
+ * The roots scoped to an owner, or to none: the root of the owner's holder scoped to it, the others
+ * to no module.
  *
  * @param {string | undefined} owner - The owner, if any.
  * @param {readonly MemberDir[]} roots - The holder's roots.
+ * @param {Population} population - The population whose holders key the roots.
  * @returns {Root[]} A scoped root per directory.
  */
-function scopedTo(owner: string | undefined, roots: readonly MemberDir[]): Root[] {
-  const holding = owner === undefined ? undefined : nearestOf(roots, (root) => root)(owner);
+function scopedTo(owner: string | undefined, roots: readonly MemberDir[], population: Population): Root[] {
+  const holder = owner === undefined ? undefined : population.holderOf(owner);
+  const holding = holder === undefined ? undefined : heldDir(holder);
   return roots.map((root) => ({ kind: 'scoped', owner: root === holding ? owner : undefined, root }));
 }
 
@@ -94,12 +110,13 @@ function scopedTo(owner: string | undefined, roots: readonly MemberDir[]): Root[
  *
  * @param {Policy} policy - The holder's policy.
  * @param {readonly MemberDir[]} roots - The holder's roots.
+ * @param {Population} population - The population whose holders key the roots.
  * @returns {Root[]} A root per directory.
  */
-function rootsUnder(policy: Policy, roots: readonly MemberDir[]): Root[] {
+function rootsUnder(policy: Policy, roots: readonly MemberDir[], population: Population): Root[] {
   const scoped = (held: Policy): Root[] => {
     const [owner] = ownersOf(held);
-    return scopedTo(owner, roots);
+    return scopedTo(owner, roots, population);
   };
   return byKind(policy, {
     free: (free) => roots.map((root) => ({ kind: 'free', root, why: free.why })),
@@ -230,16 +247,17 @@ const SHAPES: Vocabulary<RuleShapes> = new Vocabulary<RuleShapes>({
 });
 
 /**
- * Each holder's roots in a population: the harness's own, and a tier's members' directories. A total
- * record, so a holder missing here does not compile; its words are the order a rule lists its roots in.
+ * Each holder's roots in a population, by directory (`heldDir`): the harness's, and a tier's members'.
+ * A total record, so a holder missing here does not compile; its words are the order a rule lists its
+ * roots in. No two are one directory: the population refuses a member at the harness's.
  *
  * @param {Population} population - The population.
  * @returns {Vocabulary<Readonly<Record<Holder, readonly MemberDir[]>>>} The roots, by holder.
  */
 function rootsOf(population: Population): Vocabulary<Readonly<Record<Holder, readonly MemberDir[]>>> {
-  const ofTier = (tier: Tier): readonly MemberDir[] => population.tiers[tier].map((member) => member.dir);
+  const ofTier = (tier: Tier): readonly MemberDir[] => population.tiers[tier].map((member) => heldDir(member));
   return new Vocabulary<Readonly<Record<Holder, readonly MemberDir[]>>>({
-    harness: [HARNESS_ROOT],
+    harness: [heldDir('harness')],
     kernel: ofTier('kernel'),
     product: ofTier('product'),
     'test-infrastructure': ofTier('test-infrastructure'),
@@ -247,21 +265,8 @@ function rootsOf(population: Population): Vocabulary<Readonly<Record<Holder, rea
 }
 
 /**
- * Refuse a rule that holds one root twice: a lookup of the nearest root would read only the first.
- *
- * @param {Rule} rule - The rule.
- */
-function refuseTwice(rule: Rule): void {
-  const roots = rule.roots.map((entry) => entry.root);
-  const twice = roots.find((root, index) => roots.indexOf(root) !== index);
-  if (twice !== undefined) {
-    throw new PopulationError('root', `the owner rule ${rule.name} holds the root ${twice} twice: a member sits at the harness's root`);
-  }
-}
-
-/**
- * The owner registry's rules over a population: each holder's roots under its policy, the root
- * holding an owner that owner's; a rule holding one root twice is refused.
+ * The owner registry's rules over a population: each holder's roots under its policy, the root of an
+ * owner's holder that owner's.
  *
  * @param {Population} population - The population.
  * @returns {readonly Rule[]} The rules.
@@ -270,16 +275,14 @@ function rulesOf(population: Population): readonly Rule[] {
   const roots = rootsOf(population);
   return SHAPES.words.map((name) => {
     const shape = SHAPES.of(name);
-    const rule: Rule = {
+    return {
       name,
       names: new Accepted(shape.names),
-      roots: roots.words.flatMap((holder) => rootsUnder(shape.policies[holder], roots.of(holder))),
+      roots: roots.words.flatMap((holder) => rootsUnder(shape.policies[holder], roots.of(holder), population)),
       why: shape.why,
     };
-    refuseTwice(rule);
-    return rule;
   });
 }
 
-export { ownersOf, rulesOf, SHAPES };
+export { ownersOf, rootOf, rulesOf, SHAPES };
 export type { Root, Rule, RuleName };

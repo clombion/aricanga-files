@@ -1,10 +1,10 @@
 /**
- * Finds copied code with the pinned jscpd, over the harness's roots, with every flag stated here.
+ * Finds copied code with the pinned jscpd, over each holder's directory, with every flag stated here.
  *
  * Two runs, each from the repository root with no config file, over TypeScript only and reading
  * only the JSON report:
  *
- * - `exact`: clones of at least 5 lines and 50 tokens, jscpd's default floor, anywhere in the roots;
+ * - `exact`: clones of at least 5 lines and 50 tokens, jscpd's default floor, anywhere in what it scans;
  * - `cross-file`: clones of at least 30 tokens whose two copies are in different files (a six-line
  *   copy is 30 tokens or more), where a copy is most often a rule restated, such as a test
  *   rebuilding production's logic. Copies inside one file at this floor are left to the exact run.
@@ -23,6 +23,7 @@ import { EXIT_FAILURE, EXIT_SUCCESS } from './output.ts';
 import { MAX_SIZE, RUNS, onReported, reportOf } from './dupes-run.ts';
 import type { RunFacts, Runner, Target } from './dupes-run.ts';
 import { cloneKey, clones, scanned } from './dupes-report.ts';
+import { harnessModules, heldDir } from './holders.ts';
 import { population, typescriptOf } from './scope.ts';
 import { readFile, stat } from 'node:fs/promises';
 import { Exemptions } from './exemptions.ts';
@@ -154,20 +155,22 @@ async function scan(target: Target, allowed: Readonly<Exemptions>, runner?: Runn
 }
 
 /**
- * What jscpd scans of a population: each of its roots, as a directory, and each TypeScript file it
- * holds outside them, so the roots and the files come from one population.
+ * What jscpd scans of a population: each holder's directory (`heldDir`: every member's and the
+ * harness's), and each harness module outside the harness's directory (the root configuration
+ * modules), so the directories and the files come from one population's holders.
  *
  * @param {Population} held - The population.
- * @returns {readonly string[]} The roots and the files, as jscpd's arguments.
+ * @returns {readonly string[]} The directories and the files, as jscpd's arguments.
  */
 function scanRoots(held: Population): readonly string[] {
-  const directories = held.roots.map((root) => root.replace(TRAILING_SLASH, ''));
-  const rootFiles = typescriptOf(held).filter((file) => !held.roots.some((root) => file.startsWith(root)));
+  const directories = [...held.members, 'harness' as const].map((holder) => heldDir(holder).replace(TRAILING_SLASH, ''));
+  const harnessDir = heldDir('harness');
+  const rootFiles = harnessModules(held).filter((file) => !file.startsWith(harnessDir));
   return [...directories, ...rootFiles];
 }
 
 /**
- * Scan the held TypeScript (the roots, and held files outside them).
+ * Scan the held TypeScript (each holder's directory, and the harness's modules outside its own).
  *
  * @param {Streams} streams - Where the result and the problems are written.
  * @param {Runner | undefined} runner - How jscpd is started; the repository's process owner when undefined.

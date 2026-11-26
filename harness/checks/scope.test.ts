@@ -54,7 +54,6 @@ describe('a population', () => {
     expect([held.holds('packages/view/src/a.ts'), held.holds('packages/framework/src/a.ts'), held.holds('harness/lib/a.ts')]).toStrictEqual(
       [true, false, true],
     );
-    expect(held.roots).toStrictEqual(['packages/view/', 'harness/']);
   });
 
   test('refuses a member with no role or an unknown one, naming its manifest, the roles and their module', async () => {

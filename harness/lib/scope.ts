@@ -1,8 +1,11 @@
 /**
  * What the harness holds: the members (pnpm's workspace packages whose manifests git lists, less the
  * POC record), the harness, and the root files; a held module is TypeScript (`.ts`, `.tsx`), and a
- * population holding a module of another kind is refused. Every scan asks this module, never a list
- * of its own.
+ * population holding a module of another kind is refused. Every held module is one holder's code
+ * (`HeldBy`, `Population.holderOf`): its nearest member's, or else the harness's, which holds
+ * `harness/` and the root configuration modules (`ROOT_MODULES`); a member at the harness's own
+ * directory is refused, since its files would have two holders. Every scan asks this module, never a
+ * list of its own.
  */
 
 import { Accepted, Prefixes } from './exemptions.ts';
@@ -10,19 +13,16 @@ import { PopulationError, workspacePackages } from './workspace.ts';
 import type { Role, Tier } from './roles.ts';
 import { TYPESCRIPT, isLintable, isTypeScript, perRoot, textOf, tracked } from './source-files.ts';
 import { byCodeUnit, groupedBy, isEmpty, partitioned } from './lists.ts';
-import { manifestOf, nearestOf } from './package-dirs.ts';
 import { ships, tierOf } from './roles.ts';
 import type { Fields } from './manifests.ts';
 import type { MemberDir } from './package-dirs.ts';
 import type { OtherSuffixes } from './source-files.ts';
 import { REPO_ROOT } from './paths.ts';
-import { ROOT_MODULES } from './config-modules.ts';
 import type { WorkspacePackage } from './workspace.ts';
+import { holderIn } from './holders.ts';
+import { manifestOf } from './package-dirs.ts';
 import { manifestsOf } from './manifests.ts';
 import { providedFor } from './provided.ts';
-
-/** The harness's own place: held, and not a workspace package. */
-const HARNESS_ROOT: MemberDir = 'harness/';
 
 /**
  * The POC reference (ADR-0006, "Scope"): read-only, outside the harness until it is deleted. Its one
@@ -40,9 +40,8 @@ const POC_DIRS: readonly MemberDir[] = [
 /** The POC's directories as the prefixes a path is tested against. */
 const POC: Prefixes = new Prefixes(POC_DIRS);
 
-/** Root files the harness holds besides the members and the harness: the configuration the gate reads. */
+/** Root files the harness holds that are no one's code (no module): the configuration and prose the gate reads. */
 const ROOT_FILES = new Accepted<string>([
-  ...ROOT_MODULES,
   'package.json',
   'tsconfig.json',
   'tsconfig.base.json',
@@ -71,6 +70,9 @@ interface Member {
 }
 
 /** A package pnpm lists below the root, a member's or the POC's: its directory, and its name (none: it is imported by no name). */
+/** Whose code a held module is: its nearest member's, or the harness's. */
+type HeldBy = Member | 'harness';
+
 interface ListedPackage {
   readonly dir: MemberDir;
   readonly name: string | undefined;
@@ -100,11 +102,11 @@ interface Population {
   readonly testInfrastructure: readonly Member[];
   /** The members of each tier (`roles.ts`), selected once, for a reader whose answer is total over the tiers. */
   readonly tiers: Readonly<Record<Tier, readonly Member[]>>;
-  /** The held directories: every member's and the harness's. */
-  readonly roots: readonly MemberDir[];
-  /** Whether a listed path is held: a root file, a harness file or a member's file. */
+  /** Whether a listed path is held: a root file, or a file with a holder. */
   readonly holds: (path: string) => boolean;
-  /** The nearest member holding a path. */
+  /** Whose code a path is: the nearest member holding it, or else the harness for a path under `harness/` or a root configuration module; none for any other path. Every reader of "whose code" asks this. */
+  readonly holderOf: (path: string) => HeldBy | undefined;
+  /** The member whose code a path is (`holderOf`), none for the harness's code or an unheld path. */
   readonly memberOf: (path: string) => Member | undefined;
   /** A member's own listed files, not a nested member's, from one pass over the listing keyed by the member itself: the one answer every member-scoped glob reads; none for a member this population does not hold, whatever its directory. */
   readonly filesOf: (member: Member) => readonly string[];
@@ -136,7 +138,11 @@ type Parts = Pick<Population, 'listing' | 'members' | 'root' | 'rootManifest'> &
 function assembled(parts: Readonly<Parts>): Population {
   const { listing, members, pocPackages, root, rootManifest } = parts;
   const packageDirs = new Set<string>(pocPackages.map((entry) => entry.dir));
-  const memberOf = nearestOf(members, (member) => member.dir);
+  const holderOf: (path: string) => HeldBy | undefined = holderIn(members);
+  const memberOf = (target: string): Member | undefined => {
+    const holder = holderOf(target);
+    return holder === 'harness' ? undefined : holder;
+  };
   const owned = groupedBy(listing, memberOf);
   const tiered = (tier: Tier): readonly Member[] => members.filter((member) => tierOf(member.role) === tier);
   const [shipping, testInfrastructure] = partitioned(members, (member) => ships(member.role));
@@ -147,14 +153,14 @@ function assembled(parts: Readonly<Parts>): Population {
   };
   return {
     filesOf: (member: Member) => owned.get(member) ?? [],
-    holds: (target: string) => ROOT_FILES.has(target) || target.startsWith(HARNESS_ROOT) || memberOf(target) !== undefined,
+    holderOf,
+    holds: (target: string) => ROOT_FILES.has(target) || holderOf(target) !== undefined,
     listing,
     memberOf,
     members,
     poc: { directories: POC_DIRS.filter((dir) => !packageDirs.has(dir)), packages: pocPackages },
     root,
     rootManifest,
-    roots: [...members.map((member) => member.dir), HARNESS_ROOT],
     shipping,
     testInfrastructure,
     tiers,
@@ -288,5 +294,5 @@ async function typescriptFiles(): Promise<readonly string[]> {
   return typescriptOf(held);
 }
 
-export { HARNESS_ROOT, POC, heldFiles, pocNames, population, populationOf, typescriptFiles, typescriptOf };
+export { POC, heldFiles, pocNames, population, populationOf, typescriptFiles, typescriptOf };
 export type { Member, Parts, ListedPackage, Population, PopulationInputs };

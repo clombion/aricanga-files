@@ -30,12 +30,12 @@ const POPULATION_CASES: Vocabulary<Readonly<Record<PopulationCase, string>>> = n
   name: "a package's name is no string",
   planted: 'a planted population holds what production never holds',
   role: "a member's role is refused",
-  root: 'an owner rule holds one root twice',
+  root: "a member sits at the harness's root",
 });
 
 /**
  * A refusal of a population: pnpm could not list the workspace, a package's name is no string, a
- * member's role is refused, a held module is not TypeScript, an owner rule holds one root twice, or a
+ * member's role is refused, a held module is not TypeScript, a member sits at the harness's root, or a
  * planted population holds what production never holds.
  */
 class PopulationError extends Error {

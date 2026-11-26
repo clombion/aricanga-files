@@ -1,16 +1,15 @@
 /**
  * The owner rules over a population: each tier's roots under its tagged policy, in one list of
- * scoped and free roots; a kernel owner goes to the nearest kernel root holding it, a free root
- * carries its reason, and a rule that would hold one root twice is refused.
+ * scoped and free roots; a kernel owner goes to the root of its holder (the nearest kernel member
+ * holding it), and a free root carries its reason.
  */
 
 import type { Root, RuleName } from '#lib/owner-rules.ts';
 import { describe, expect, test } from 'vitest';
-import { listing, reader } from './scope.plants.ts';
 import { ruleNamed, scopedOf } from './owner-registry.plants.ts';
 import { byKind } from '#lib/by-kind.ts';
 import { plantedPopulation } from '#lib/planted-population.ts';
-import { populationOf } from '#lib/scope.ts';
+import { rootOf } from '#lib/owner-rules.ts';
 import { rulesOf } from '#lib/owners.ts';
 
 /**
@@ -41,6 +40,16 @@ describe('the rules', () => {
   });
 });
 
+describe("the rules' lookup of a path's root", () => {
+  test("gives a path its holder's root: a root configuration module the harness's, a path no holder holds none", async () => {
+    expect.hasAssertions();
+    const held = await plantedPopulation([], [['packages/view/', 'view']]);
+    const lookup = rootOf(ruleNamed(rulesOf(held), 'clock'), held);
+    const paths = ['packages/view/src/a.ts', 'oxlint.config.ts', 'packages/framework/src/a.ts'];
+    expect(paths.map((path) => lookup(path)?.root)).toStrictEqual(['packages/view/', 'harness/', undefined]);
+  });
+});
+
 describe('the rules over each tier', () => {
   test('free a test-infrastructure member where its tier uses the API, with the reason', async () => {
     expect.hasAssertions();
@@ -58,16 +67,6 @@ describe('the rules over each tier', () => {
 });
 
 describe('the rules over a population the harness or the kernel shapes', () => {
-  test('refuse a member at the harness root, which one rule would hold twice', async () => {
-    expect.hasAssertions();
-    const held = await populationOf({
-      listing: ['package.json', 'harness/package.json'],
-      read: reader({ 'harness/package.json': JSON.stringify({ aricanga: { role: 'experience' } }), 'package.json': '{}' }),
-      workspace: listing([''], ['harness/']),
-    });
-    expect(() => rulesOf(held)).toThrow(/^the owner rule clock holds the root harness\/ twice: a member sits at the harness's root$/u);
-  });
-
   test('cover each kernel member, and give a kernel owner the member that holds it', async () => {
     expect.hasAssertions();
     const held = await plantedPopulation(

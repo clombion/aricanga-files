@@ -2,9 +2,9 @@
  * The owner registry: for each guarded API, which module of each root may use it.
  *
  * A `Rule` names the qualified names of the declarations that make up an API and its roots (each
- * tier's members' directories and the harness's, from `owner-rules.ts`): a scoped root with its owner
- * (the module allowed to use it there, or none when no module may), or a free root, every module of
- * which may. A file's root is the nearest of them holding it, whatever its kind.
+ * tier's members and the harness, from `owner-rules.ts`): a scoped root with its owner (the module
+ * allowed to use it there, or none when no module may), or a free root, every module of which may. A
+ * file's root is its holder's (`Population.holderOf`), whatever its kind.
  * The scan asks TypeScript's checker what each name resolves to, so an aliased import, a destructured
  * binding, a `globalThis.` or `window.` chain and an element access all resolve to the declaration
  * they stand for. It matches uses, never imports or types: importing a type to annotate with it is
@@ -32,12 +32,11 @@ import {
   isVariableDeclaration,
 } from 'typescript/unstable/ast';
 import { isPlatform, nameText, nodes, pathOf, qualifiedName } from './checker.ts';
+import { rootOf, rulesOf } from './owner-rules.ts';
 import type { Scan } from './checker.ts';
 import type { Symbol as TsSymbol } from 'typescript/unstable/sync';
 import { byKind } from './by-kind.ts';
 import { holdsNoRuntimeValue } from './ts-source.ts';
-import { nearestOf } from './package-dirs.ts';
-import { rulesOf } from './owner-rules.ts';
 import { site } from './exemptions.ts';
 
 /** One use of a guarded API outside its owner: the file it is in and the rule it breaks. */
@@ -184,7 +183,7 @@ function breaks(rule: Rule, found: readonly string[]): boolean {
  * Whether a root reports a use of its rule's API in a file: a scoped root, unless the file is its
  * owner; never a free root, nor a file no root holds.
  *
- * @param {Root | undefined} root - The nearest root holding the file, if any.
+ * @param {Root | undefined} root - The root of the file's holder, if any.
  * @param {string} path - The file.
  * @returns {boolean} Whether a use there is a site.
  */
@@ -192,7 +191,7 @@ function reports(root: Root | undefined, path: string): boolean {
   return root !== undefined && byKind(root, { free: () => false, scoped: (scoped) => scoped.owner !== path });
 }
 
-/** A rule, with the lookup of the nearest of its roots holding a path. */
+/** A rule, with the lookup of a path's root: its holder's. */
 interface Scoped {
   readonly rule: Rule;
   readonly rootOf: (target: string) => Root | undefined;
@@ -200,8 +199,8 @@ interface Scoped {
 
 /**
  * The guarded uses in covered files that their rules do not allow there: the rules are the scan's
- * population's, derived once for all the files; a file's root is the nearest root of the rule holding
- * it, and a free root reports none.
+ * population's, derived once for all the files; a file's root is its holder's, and a free root
+ * reports none.
  *
  * @param {Scan} scan - The open scan.
  * @param {readonly SourceFile[]} files - The files.
@@ -209,7 +208,7 @@ interface Scoped {
  */
 function sites(scan: Scan, files: readonly SourceFile[]): readonly Site[] {
   const lookups: readonly Scoped[] = rulesOf(scan.population).map((rule) => ({
-    rootOf: nearestOf(rule.roots, (candidate) => candidate.root),
+    rootOf: rootOf(rule, scan.population),
     rule,
   }));
   return files.flatMap((file) => {

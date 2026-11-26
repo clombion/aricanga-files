@@ -4,7 +4,7 @@
  * A sentence of current text saying `the one owner`, `the only module`, `nowhere else` or `stated
  * once` makes a claim about the code. `CLAIMS` registers each claim by its path and clause with a
  * `Probe`: a pattern that must match in the claim's owner and in no other held TypeScript file
- * under the probe's roots. A claim with no entry, an entry whose clause is gone, and a probe that
+ * in the probe's scope: under its path prefixes, or among the harness's modules (`harnessModules`). A claim with no entry, an entry whose clause is gone, and a probe that
  * matches outside its owner or not in it all fail `harness/checks/one-claims.test.ts`.
  *
  * A phrase written inside a code span is a quotation, not a claim.
@@ -18,17 +18,36 @@ const CLAIM = /\b(?:the (?:one|only) (?:owner|module|place|reader|writer)|nowher
 /** How a module finds where it is on disk: the one thing only `harness/lib/paths.ts` may do. */
 const LOCATES_ITSELF = /\bimport\.meta\.(?:url|dirname|filename)\b/u;
 
-/** The harness's library and scripts, as path prefixes: the roots of the probes that hold the harness's own claims. */
-const HARNESS_PROBE_ROOTS: readonly string[] = [HARNESS_LIB, HARNESS_SCRIPTS];
+/**
+ * Where else a probe's pattern must not match: in the held TypeScript files under some path prefixes,
+ * or in the harness's modules, its holder's code wherever it sits (`harnessModules`).
+ */
+type ProbeScope = Readonly<{ kind: 'prefixes'; roots: readonly string[] }> | Readonly<{ kind: 'harness' }>;
 
-/** The probe roots of a claim held over every held TypeScript file: the empty prefix every path starts with. */
-const EVERY_HELD_FILE: readonly string[] = [''];
+/**
+ * The scope of the held TypeScript files under some path prefixes.
+ *
+ * @param {readonly string[]} roots - The prefixes.
+ * @returns {ProbeScope} The scope.
+ */
+function under(...roots: readonly string[]): ProbeScope {
+  return { kind: 'prefixes', roots };
+}
 
-/** A pattern that must match in `owner` and in no other held TypeScript file under `roots`. */
+/** The harness's library and scripts, by path prefix: the scope of the probes that hold claims made of them alone. */
+const HARNESS_PROBE_ROOTS: ProbeScope = under(HARNESS_LIB, HARNESS_SCRIPTS);
+
+/** The harness's modules: the scope of the probes that hold claims made of the harness's code. */
+const HARNESS_MODULES: ProbeScope = { kind: 'harness' };
+
+/** The scope of a claim held over every held TypeScript file: the empty prefix every path starts with. */
+const EVERY_HELD_FILE: ProbeScope = under('');
+
+/** A pattern that must match in `owner` and in no other held TypeScript file in its `scope`. */
 interface Probe {
   readonly pattern: Readonly<RegExp>;
   readonly owner: string;
-  readonly roots: readonly string[];
+  readonly scope: ProbeScope;
 }
 
 /** A registered claim: where it is written, its clause, and the probe that holds it. */
@@ -55,13 +74,13 @@ function clauses(text: string): readonly string[] {
 /**
  * A probe of `pattern` in `owner`.
  *
- * @param {Readonly<RegExp>} pattern - What must match in the owner and in no other module under `roots`.
+ * @param {Readonly<RegExp>} pattern - What must match in the owner and in no other module in `scope`.
  * @param {string} owner - The owning module.
- * @param {readonly string[]} roots - Where else the pattern must not match.
+ * @param {ProbeScope} scope - Where else the pattern must not match.
  * @returns {Probe} The probe.
  */
-function probe(pattern: Readonly<RegExp>, owner: string, roots: readonly string[] = EVERY_HELD_FILE): Probe {
-  return { owner, pattern, roots };
+function probe(pattern: Readonly<RegExp>, owner: string, scope: ProbeScope = EVERY_HELD_FILE): Probe {
+  return { owner, pattern, scope };
 }
 
 /** Every registered claim. */
@@ -99,12 +118,12 @@ const CLAIMS: readonly Claim[] = [
   {
     clause: 'the one place a',
     path: 'packages/foundation/src/sim/system.ts',
-    probe: probe(/^function reclaim\(/mu, 'packages/foundation/src/sim/system.ts', ['packages/']),
+    probe: probe(/^function reclaim\(/mu, 'packages/foundation/src/sim/system.ts', under('packages/')),
   },
   {
     clause: "The one reader of chat's records keyed by chat id",
     path: 'packages/systems/chat/src/model/keyed.ts',
-    probe: probe(/\bObject\.hasOwn\(record, key\)/u, 'packages/systems/chat/src/model/keyed.ts', ['packages/systems/chat/']),
+    probe: probe(/\bObject\.hasOwn\(record, key\)/u, 'packages/systems/chat/src/model/keyed.ts', under('packages/systems/chat/')),
   },
   {
     clause: "The one module of the harness's scripts that writes to the standard streams",
@@ -114,22 +133,22 @@ const CLAIMS: readonly Claim[] = [
   {
     clause: 'The one owner of building the product from the gate',
     path: 'harness/lib/build.ts',
-    probe: probe(/\bbin\('vite'\)/u, 'harness/lib/build.ts', ['harness/']),
+    probe: probe(/\bbin\('vite'\)/u, 'harness/lib/build.ts', HARNESS_MODULES),
   },
   {
     clause: 'The one owner of the unused-code scan',
     path: 'harness/lib/deadcode.ts',
-    probe: probe(/\bbin\('knip'\)/u, 'harness/lib/deadcode.ts', ['harness/']),
+    probe: probe(/\bbin\('knip'\)/u, 'harness/lib/deadcode.ts', HARNESS_MODULES),
   },
   {
     clause: 'The one owner of the Node floor',
     path: 'harness/lib/node-floor.ts',
-    probe: probe(/\['engines'\]/u, 'harness/lib/node-floor.ts', ['harness/']),
+    probe: probe(/\['engines'\]/u, 'harness/lib/node-floor.ts', HARNESS_MODULES),
   },
   {
     clause: "The one owner of the harness's stylesheet scans",
     path: 'harness/lib/stylesheets.ts',
-    probe: probe(/\bstylelint\.lint\(/u, 'harness/lib/stylesheets.ts', ['harness/']),
+    probe: probe(/\bstylelint\.lint\(/u, 'harness/lib/stylesheets.ts', HARNESS_MODULES),
   },
   {
     clause: 'The one owner of starting a child process',
@@ -139,9 +158,9 @@ const CLAIMS: readonly Claim[] = [
   {
     clause: "the one writer of the repository's own files, for the fixers",
     path: 'harness/lib/source-files.ts',
-    probe: probe(/\bwrite\w*\((?:path\.join\(REPO_ROOT|fromRoot\()/u, 'harness/lib/source-files.ts', ['harness/']),
+    probe: probe(/\bwrite\w*\((?:path\.join\(REPO_ROOT|fromRoot\()/u, 'harness/lib/source-files.ts', HARNESS_MODULES),
   },
 ];
 
 export { CLAIMS, clauses };
-export type { Claim, Probe };
+export type { Claim, Probe, ProbeScope };
