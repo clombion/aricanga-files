@@ -9,6 +9,7 @@ import { bin, isolatedEnv } from './tools.ts';
 import { Accepted } from './exemptions.ts';
 import type { Outcome } from './process.ts';
 import { REPO_ROOT } from './paths.ts';
+import { byKind } from './by-kind.ts';
 import { randomInt } from 'node:crypto';
 import { runConcurrently } from './process.ts';
 
@@ -93,9 +94,12 @@ function copyArgv(options: Hunt, index: number): readonly string[] {
  * @returns {CopyResult} Its result.
  */
 function copyResult(outcome: Outcome, seed: number): CopyResult {
-  return outcome.kind === 'finished'
-    ? { output: outcome.stdout + outcome.stderr, seed, status: outcome.status }
-    : { output: JSON.stringify(outcome), seed, status: NOT_FINISHED };
+  const unfinished = (run: Outcome): CopyResult => ({ output: JSON.stringify(run), seed, status: NOT_FINISHED });
+  return byKind(outcome, {
+    finished: (run) => ({ output: run.stdout + run.stderr, seed, status: run.status }),
+    'not-started': unfinished,
+    'timed-out': unfinished,
+  });
 }
 
 /**

@@ -9,6 +9,7 @@
 import { readFile, stat, writeFile } from 'node:fs/promises';
 import { Accepted } from './exemptions.ts';
 import { REPO_ROOT } from './paths.ts';
+import { byKind } from './by-kind.ts';
 import { isolatedEnv } from './tools.ts';
 import path from 'node:path';
 import { providedFor } from './provided.ts';
@@ -139,10 +140,14 @@ function perRoot<Value>(compute: (root: string) => Promise<Value>): (root: strin
  */
 async function listingOutput(argv: readonly string[], root: string, refuse: (outcome: string) => Error): Promise<string> {
   const outcome = await run(argv, { cwd: root, env: isolatedEnv(), timeoutMs: LISTING_TIMEOUT_MS });
-  if (outcome.kind !== 'finished' || !succeeded(outcome)) {
-    throw refuse(JSON.stringify(outcome));
-  }
-  return outcome.stdout;
+  const refused = (ended: unknown): never => {
+    throw refuse(JSON.stringify(ended));
+  };
+  return byKind(outcome, {
+    finished: (ended) => (succeeded(ended) ? ended.stdout : refused(ended)),
+    'not-started': refused,
+    'timed-out': refused,
+  });
 }
 
 /**

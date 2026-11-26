@@ -5,6 +5,7 @@ import { environment, run } from '#lib/process.ts';
 import { EXIT_CLEAN } from '#lib/exit-status.ts';
 import type { Outcome } from '#lib/process.ts';
 import { REPO_ROOT } from '#lib/paths.ts';
+import { byKind } from '#lib/by-kind.ts';
 
 /** A bound no planted child here comes near. */
 const GENEROUS_MS = 10_000;
@@ -25,7 +26,11 @@ const OPTIONS = { cwd: REPO_ROOT, timeoutMs: GENEROUS_MS };
  * @returns {string} The reason it did not start.
  */
 function notStartedBecause(outcome: Outcome): string {
-  return outcome.kind === 'not-started' ? outcome.reason : '';
+  return byKind(outcome, {
+    finished: () => '',
+    'not-started': (ended) => ended.reason,
+    'timed-out': () => '',
+  });
 }
 
 describe('a bounded run', () => {

@@ -4,6 +4,7 @@
  */
 
 import type { Writable } from 'node:stream';
+import { byKind } from './by-kind.ts';
 import { env } from 'node:process';
 import { once } from 'node:events';
 import { spawn } from 'node:child_process';
@@ -118,6 +119,23 @@ async function closeOf(
 }
 
 /**
+ * How a run ended, given whether its input reached it: a run that finished with its input unfed did
+ * not start as asked, so it ends not started, naming the failure; any other end stands.
+ *
+ * @param {Outcome} outcome - How the child ended.
+ * @param {string | undefined} failure - Why its input could not be fed, if it could not.
+ * @returns {Outcome} How the run ended.
+ */
+function fedOrNot(outcome: Outcome, failure: string | undefined): Outcome {
+  const stands = (ended: Outcome): Outcome => ended;
+  return byKind(outcome, {
+    finished: (ended) => (failure === undefined ? ended : { argv: ended.argv, kind: 'not-started', reason: failure }),
+    'not-started': stands,
+    'timed-out': stands,
+  });
+}
+
+/**
  * Run `argv` to its end or its bound, never through a shell. At the bound the child is killed with
  * `SIGKILL`; a child a signal ended counts as having outlived its bound, as no status is left.
  *
@@ -135,8 +153,7 @@ async function run(argv: readonly string[], options: RunOptions): Promise<Outcom
   const piped = feed(child.stdin, options.input);
   const closing: Promise<Closed> = Promise.all([once(child, 'close'), text(child.stdout), text(child.stderr)]);
   const outcome = await closeOf(argv, bound, closing);
-  const finished = outcome ?? { argv, kind: 'timed-out', timeoutMs: options.timeoutMs };
-  return finished.kind === 'finished' && piped.failure !== undefined ? { argv, kind: 'not-started', reason: piped.failure } : finished;
+  return fedOrNot(outcome ?? { argv, kind: 'timed-out', timeoutMs: options.timeoutMs }, piped.failure);
 }
 
 /**

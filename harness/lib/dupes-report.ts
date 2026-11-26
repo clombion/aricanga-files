@@ -5,6 +5,7 @@
 
 import { list, object, stringOf } from './config.ts';
 import type { Outcome } from './process.ts';
+import { byKind } from './by-kind.ts';
 import { createHash } from 'node:crypto';
 import { relativeTo as posixRelative } from './relative.ts';
 import { succeeded } from './exit-status.ts';
@@ -109,16 +110,16 @@ function scanned(report: unknown, root: string): ReadonlySet<string> {
  * @returns {string | undefined} Why there is no report, or undefined when there is one.
  */
 function noReport(outcome: Outcome, reported: boolean): string | undefined {
-  if (outcome.kind === 'timed-out') {
-    return `jscpd ran past ${outcome.timeoutMs} ms`;
-  }
-  if (outcome.kind === 'not-started') {
-    return `jscpd could not start (${outcome.reason}): run \`pnpm install\``;
-  }
-  if (!succeeded(outcome)) {
-    return `jscpd exited ${outcome.status}: ${outcome.stdout}${outcome.stderr}`;
-  }
-  return reported ? undefined : 'jscpd wrote no report';
+  return byKind(outcome, {
+    finished: (run) => {
+      if (!succeeded(run)) {
+        return `jscpd exited ${run.status}: ${run.stdout}${run.stderr}`;
+      }
+      return reported ? undefined : 'jscpd wrote no report';
+    },
+    'not-started': (run) => `jscpd could not start (${run.reason}): run \`pnpm install\``,
+    'timed-out': (run) => `jscpd ran past ${run.timeoutMs} ms`,
+  });
 }
 
 export { cloneKey, clones, noReport, scanned };

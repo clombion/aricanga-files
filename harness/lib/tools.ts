@@ -4,12 +4,13 @@
  * violation meets the tools under the configuration the gate uses.
  */
 
+import type { Finished, Outcome } from './process.ts';
 import { REPO_ROOT, fromRoot } from './paths.ts';
 import { cp, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises';
 import { environment, run } from './process.ts';
-import type { Finished } from './process.ts';
 import { Prefixes } from './exemptions.ts';
 import { ToolError } from './tool-error.ts';
+import { byKind } from './by-kind.ts';
 import path from 'node:path';
 import { tmpdir } from 'node:os';
 
@@ -54,10 +55,14 @@ function isolatedEnv(extra: Readonly<Record<string, string>> = {}): Record<strin
  */
 async function finished(argv: readonly string[], options: ToolOptions): Promise<Finished> {
   const outcome = await run(argv, { env: options.env ?? isolatedEnv(), timeoutMs: TIMEOUT_MS, ...options });
-  if (outcome.kind !== 'finished') {
-    throw new ToolError(`${argv.join(' ')} did not finish: ${JSON.stringify(outcome)}`);
-  }
-  return outcome;
+  const unfinished = (ended: Outcome): never => {
+    throw new ToolError(`${argv.join(' ')} did not finish: ${JSON.stringify(ended)}`);
+  };
+  return byKind(outcome, {
+    finished: (ended) => ended,
+    'not-started': unfinished,
+    'timed-out': unfinished,
+  });
 }
 
 /**
