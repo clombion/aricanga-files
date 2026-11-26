@@ -17,23 +17,31 @@ import { Vocabulary } from './exemptions.ts';
  */
 type Tier = 'kernel' | 'product' | 'test-infrastructure';
 
+/** A record whose every value is a tier, keyed by its own words: the constraint `RoleTiers` is checked against. */
+type Tiered<Words extends Readonly<{ [Word in keyof Words]: Tier }>> = Words;
+
 /**
- * A package's role. The words are this union; `ROLES` is typed by it, so `tsc` refuses a word
- * missing from `ROLES` or not in the union. (`isolatedDeclarations` keeps an exported type from
- * being inferred from `ROLES` itself.)
+ * Each role's tier, as a literal, so a type can read which roles ship. The role words are this
+ * record's keys and are written here and in `ROLES`, which is typed by it: `tsc` refuses a word in
+ * one and not the other, and a tier outside `Tier`.
  */
-type Role = 'experience' | 'foundation' | 'system' | 'test-infrastructure' | 'view';
+type RoleTiers = Tiered<
+  Readonly<{
+    experience: 'product';
+    foundation: 'kernel';
+    system: 'kernel';
+    'test-infrastructure': 'test-infrastructure';
+    view: 'product';
+  }>
+>;
 
-/** Each role's tier, as a literal, so a type can read which roles ship. */
-type RoleTiers = Readonly<{
-  experience: 'product';
-  foundation: 'kernel';
-  system: 'kernel';
-  'test-infrastructure': 'test-infrastructure';
-  view: 'product';
-}>;
+/**
+ * A package's role: a key of `RoleTiers`, a type derived from a type (`isolatedDeclarations` keeps
+ * an exported type from being inferred from `ROLES` itself).
+ */
+type Role = keyof RoleTiers;
 
-/** Every role word with its tier: a word is a key, so it is declared once and carries its own tier. */
+/** Every role word with its tier: each word a key of `RoleTiers`, carrying its own tier. */
 const ROLES: Vocabulary<RoleTiers> = new Vocabulary<RoleTiers>({
   experience: 'product',
   foundation: 'kernel',
@@ -53,12 +61,12 @@ type TierFacts = Readonly<{
   'test-infrastructure': Readonly<{ ships: false }>;
 }>;
 
-/** Each tier with its facts. */
+/** Each tier with its facts: its words are `Tier`'s, so `tsc` refuses a word of one missing from the other. */
 const TIERS: Vocabulary<TierFacts> = new Vocabulary<TierFacts>({
   kernel: { ships: true },
   product: { ships: true },
   'test-infrastructure': { ships: false },
-});
+} satisfies Readonly<Record<Tier, TierFacts[Tier]>>);
 
 /** The roles whose tier ships. */
 type ShippingRole = { [Each in Role]: TierFacts[RoleTiers[Each]]['ships'] extends true ? Each : never }[Role];
