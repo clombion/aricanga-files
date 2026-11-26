@@ -6,10 +6,11 @@ import { REPO_ROOT, fromRoot, relative } from '#lib/paths.ts';
 import { dirOfImporter, nearestOf } from '#lib/package-dirs.ts';
 import { textsOf, tracked } from '#lib/source-files.ts';
 import { ConfigError } from '#lib/config.ts';
-import { dirname } from 'node:path/posix';
+import type { Population } from '#lib/scope.ts';
 import { knipConfig } from '#lib/config-modules.ts';
 import { lintedFiles } from '#lib/lint-rules.ts';
 import { matches } from '#lint-rules/globs.ts';
+import { population } from '#lib/scope.ts';
 import { projects } from '#lib/projects.ts';
 
 const UNFORMATTED = '\nconst   plantedUnformatted   =   1  ;\n';
@@ -115,33 +116,42 @@ async function knipFiles(files: readonly string[]): Promise<ReadonlySet<string>>
 }
 
 /**
- * The directory a project file sits in, with a trailing slash (empty at the root).
+ * The files a TypeScript project holds of those it lists: its holder's (`Population.holderOf`), so the
+ * harness's project holds the root configuration modules it imports, and a package's source a
+ * dependent project resolves through the package's exports stays its own package's.
  *
+ * @param {Population} held - The population.
  * @param {string} project - The project file.
- * @returns {string} Its directory.
+ * @param {readonly string[]} listed - The files it lists.
+ * @returns {ReadonlySet<string>} The files it holds.
  */
-function projectDirectory(project: string): string {
-  const directory = dirname(project);
-  return directory === '.' ? '' : `${directory}/`;
+function heldByProject(held: Population, project: string, listed: readonly string[]): ReadonlySet<string> {
+  const holder = held.holderOf(project);
+  return new Set(listed.filter((path) => held.holderOf(path) === holder));
 }
 
 /**
- * The files each TypeScript project holds: those it lists (`tsc --listFilesOnly`) under its own
- * directory. A package's source a dependent project resolves through the package's exports is
- * listed there too, but held by its own package.
+ * The files each TypeScript project holds: those it lists (`tsc --listFilesOnly`) whose holder is its
+ * own (`heldByProject`).
  *
  * @returns {Promise<ReadonlyMap<string, ReadonlySet<string>>>} Each project's held files, by project.
  */
 async function projectMembers(): Promise<ReadonlyMap<string, ReadonlySet<string>>> {
-  const all = await projects();
+  const [all, held] = await Promise.all([projects(), population()]);
   const members = await Promise.all(
     all.map(async (project) => {
       const done = await finished([fromRoot('node_modules', '.bin', 'tsc'), '--listFilesOnly', '-p', project], { cwd: REPO_ROOT });
-      const listed = lines(done.stdout).map((path) => relative(path));
-      return [project, new Set(listed.filter((path) => path.startsWith(projectDirectory(project))))] as const;
+      return [
+        project,
+        heldByProject(
+          held,
+          project,
+          lines(done.stdout).map((path) => relative(path)),
+        ),
+      ] as const;
     }),
   );
   return new Map(members);
 }
 
-export { knipFiles, knipWorkspace, oxfmtFiles, oxlintFiles, projectDirectory, projectMembers };
+export { heldByProject, knipFiles, knipWorkspace, oxfmtFiles, oxlintFiles, projectMembers };

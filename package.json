@@ -9,7 +9,8 @@
     "#lint-rules/*": "./harness/lint-rules/*",
     "#scripts/*": "./harness/scripts/*",
     "#root/knip.config.ts": "./knip.config.ts",
-    "#root/oxlint.config.ts": "./oxlint.config.ts"
+    "#root/oxlint.config.ts": "./oxlint.config.ts",
+    "#root/vitest.gate.config.ts": "./vitest.gate.config.ts"
   },
   "scripts": {
     "setup": "pnpm install --frozen-lockfile && lefthook install && node harness/scripts/gen-docs.ts",
@@ -103,7 +104,6 @@
     "@narratives/framework": "workspace:*",
     "@narratives/test-utils": "workspace:*",
     "@playwright/test": "^1.65.1",
-    "@solidjs/vite-plugin": "3.0.1",
     "@types/iarna__toml": "^2.0.5",
     "@types/node": "^26.6.6",
     "@vitest/coverage-v8": "5.1.1",

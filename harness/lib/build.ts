@@ -3,15 +3,15 @@
  * mode into a temporary directory, and a build that writes into the checkout is a finding.
  */
 
+import { VITE_CONFIG, viteApps } from './test-globs.ts';
 import { bin, finished } from './tools.ts';
 import { mkdtemp, readFile, rm, stat } from 'node:fs/promises';
 import type { Finished } from './process.ts';
 import { REPO_ROOT } from './paths.ts';
-import { VITE_CONFIG } from './test-globs.ts';
 import { createHash } from 'node:crypto';
-import { heldFiles } from './scope.ts';
 import { isFile } from './source-files.ts';
 import path from 'node:path';
+import { population } from './scope.ts';
 import { tmpdir } from 'node:os';
 
 /** One app's build: whether it succeeded, its output, and what it wrote into the checkout. */
@@ -26,13 +26,13 @@ interface BuildResult {
 const STATUS_WIDTH = 3;
 
 /**
- * The held Vite apps: every held directory with a `vite.config.ts`.
+ * The held Vite apps (`viteApps`): each member whose root holds a `vite.config.ts`.
  *
  * @returns {Promise<readonly string[]>} The apps' directories.
  */
 async function apps(): Promise<readonly string[]> {
-  const configs = await heldFiles(`/${VITE_CONFIG}`);
-  return configs.map((config) => path.dirname(config));
+  const held = await population();
+  return viteApps(held).map((app) => path.dirname(`${app.dir}${VITE_CONFIG}`));
 }
 
 /**

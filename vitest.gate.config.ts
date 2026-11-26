@@ -6,10 +6,8 @@
 import type { ViteUserConfig } from 'vitest/config';
 import { configOf } from './harness/lib/vitest-config.ts';
 import { population } from './harness/lib/scope.ts';
-import solid from '@solidjs/vite-plugin';
 
-// The sandbox's parts are Solid JSX, compiled by Solid's own plugin.
-const config: ViteUserConfig = configOf(await population(), () => [solid()]);
+const config: ViteUserConfig = configOf(await population());
 
 // Vitest loads a config module's default export.
 export default config;

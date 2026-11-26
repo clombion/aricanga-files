@@ -5,11 +5,12 @@
  * the config through these.
  */
 
-import { ROOT_CONFIG_MODULES, defaultExport } from '#lib/config-modules.ts';
+import { ROOT_CONFIG_MODULES, vitestConfig } from '#lib/config-modules.ts';
 import { list, object, strings } from '#lib/config.ts';
 import { HARNESS_CHECKS } from '#lib/test-globs.ts';
 import { isProduction } from '#lib/checker.ts';
 import { matches } from '#lint-rules/globs.ts';
+import { normalize } from 'node:path/posix';
 import { population } from '#lib/scope.ts';
 
 type Section = Readonly<Record<string, unknown>>;
@@ -20,8 +21,8 @@ type Section = Readonly<Record<string, unknown>>;
  * @returns {Promise<Section>} The config's fields.
  */
 async function gateConfig(): Promise<Section> {
-  const config = await defaultExport(ROOT_CONFIG_MODULES.vitest);
-  return config;
+  const config = await vitestConfig();
+  return object(config, ROOT_CONFIG_MODULES.vitest);
 }
 
 /**
@@ -86,15 +87,18 @@ function globsOf(section: Section, field: string): readonly string[] {
 }
 
 /**
- * Whether the gate's coverage reads a path: its coverage `include` reaches it and its `exclude` does
- * not take it back.
+ * Whether the gate's coverage reads a path: its coverage `include` reaches it, and neither its
+ * `exclude` nor Vitest's own exclusions take it back. Vitest leaves out its config file and its setup
+ * files whatever the include says (its config resolution adds them to every coverage exclude).
  *
  * @returns {Promise<(path: string) => boolean>} The predicate over the gate config's globs.
  */
 async function coverageReads(): Promise<(path: string) => boolean> {
-  const coverage = await gateCoverage();
+  const test = await gateTest();
+  const coverage = coverageOf(test);
   const include = globsOf(coverage, 'include');
-  const exclude = globsOf(coverage, 'exclude');
+  const setup = globsOf(test, 'setupFiles').map((file) => normalize(file));
+  const exclude = [...globsOf(coverage, 'exclude'), ROOT_CONFIG_MODULES.vitest, ...setup];
   return (path: string): boolean => include.some((glob) => matches(glob, path)) && !exclude.some((glob) => matches(glob, path));
 }
 

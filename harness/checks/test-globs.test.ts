@@ -1,9 +1,10 @@
-/** The gate's Vitest globs: a shipping member's tests are collected and its sources covered. */
+/** The gate's Vitest globs: a shipping member's tests are collected, in its app's own project when it is a Vite app, and its sources covered. */
 
-import { HARNESS_CHECKS, VITEST_TESTS, coverageIncludes, isRunnerTest, testIncludes } from '#lib/test-globs.ts';
+import { HARNESS_CHECKS, VITEST_TESTS, coverageIncludes, isRunnerTest, testIncludes, viteApps } from '#lib/test-globs.ts';
 import { coverageOf, gateTest, globsOf, projectsOf } from './gate-config.ts';
 import { describe, expect, test } from 'vitest';
 import type { Population } from '#lib/scope.ts';
+import { configOf } from '#lib/vitest-config.ts';
 import { matches } from '#lint-rules/globs.ts';
 import { plantedPopulation } from '#lib/planted-population.ts';
 import { typescriptFiles } from '#lib/scope.ts';
@@ -40,6 +41,36 @@ async function planted(): Promise<Population> {
   );
   return held;
 }
+
+describe("the gate config's projects", () => {
+  test("give each shipping Vite app a project extending its own Vite config, with the gate's settings, and its tests to no other project", async () => {
+    expect.hasAssertions();
+    const held = await plantedPopulation(
+      ['packages/app/vite.config.ts', 'packages/app/src/a.test.tsx', 'packages/probe/vite.config.ts', 'packages/core/test/a.test.ts'],
+      [
+        ['packages/app/', 'experience'],
+        ['packages/core/', 'foundation'],
+        ['packages/probe/', 'test-infrastructure'],
+      ],
+    );
+    expect([viteApps(held).map((app) => app.dir), configOf(held).test?.projects]).toMatchObject([
+      ['packages/app/', 'packages/probe/'],
+      [
+        {
+          extends: './packages/app/vite.config.ts',
+          test: {
+            expect: { requireAssertions: true },
+            include: ['packages/app/**/*.test.{ts,tsx}'],
+            name: 'packages/app/',
+            restoreMocks: true,
+          },
+        },
+        { extends: true, test: { include: ['packages/core/**/*.test.{ts,tsx}'], name: 'rebuild' } },
+        { extends: true, test: { name: 'harness' } },
+      ],
+    ]);
+  });
+});
 
 describe('the gate globs', () => {
   test("collect each shipping member's listed tests, a .test.tsx included, and no test-infrastructure member's", async () => {

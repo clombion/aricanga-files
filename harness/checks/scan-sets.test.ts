@@ -4,7 +4,7 @@
  * The scan sets: oxlint's own file list (`oxlint --debug=files`); oxfmt's, read by planting every held
  * file unformatted in a copy of the checkout and listing what `oxfmt --list-different` would change;
  * the TypeScript projects of `harness/lib/projects.ts`, each listing its files (`tsc --listFilesOnly`):
- * every file is held (listed under the project's own directory) by a project, by no more than one
+ * every file is held (listed by a project of its own holder, `Population.holderOf`) by a project, by no more than one
  * production project (a shipping member's `tsconfig.json`), and no test file by a production project;
  * Vitest's coverage `include` for every file that is not a test; jscpd's roots,
  * held by the clones check's own coverage of the listing; and knip's, each file matched by a `project`
@@ -15,7 +15,7 @@ import { Accepted, Exemptions } from '#lib/exemptions.ts';
 import { FLOOR, ListingError, listing, tracked } from '#lib/source-files.ts';
 import { coverageReached, testsOutsideCoverage } from './gate-config.ts';
 import { describe, expect, test } from 'vitest';
-import { knipFiles, knipWorkspace, oxfmtFiles, oxlintFiles, projectDirectory, projectMembers } from './scan-sets.sets.ts';
+import { heldByProject, knipFiles, knipWorkspace, oxfmtFiles, oxlintFiles, projectMembers } from './scan-sets.sets.ts';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { population, typescriptFiles } from '#lib/scope.ts';
 import type { Population } from '#lib/scope.ts';
@@ -27,12 +27,6 @@ const HARNESS_ID = 'scan-sets';
 
 /** Held files a scan set leaves out while the gap is being closed, keyed by `<path>: <scan set>`. */
 const UNREACHED = Exemptions.grouped({
-  'adopting: configuration modules no test imports; include them in coverage and import them from the settings checks': [
-    'experiences/sandbox/vite.config.ts: coverage',
-    'knip.config.ts: coverage',
-    'oxlint.config.ts: coverage',
-    'vitest.gate.config.ts: coverage',
-  ],
   'adopting: the project lint-rules plugin runs inside oxlint; include harness/lint-rules in coverage and load its rules in-process from the lint-rules check':
     [
       'harness/lint-rules/ast.ts: coverage',
@@ -61,11 +55,16 @@ const UNREACHED = Exemptions.grouped({
       'harness/lint-rules/rules/view-imports.ts: coverage',
       'harness/lint-rules/rules/vm-prop.ts: coverage',
     ],
+  "adopting: the sandbox's Vite config, which no test imports; include it in the sandbox's coverage and import it from a settings check": [
+    'experiences/sandbox/vite.config.ts: coverage',
+  ],
   "knip enters them itself: its own config, and the vitest and oxlint plugins' configs, outside every project glob": [
     'knip.config.ts: knip',
     'oxlint.config.ts: knip',
     'vitest.gate.config.ts: knip',
   ],
+  "the test runner leaves its own config file and its setup files out of coverage, whatever the include: Vitest's config resolution adds them to every coverage exclude":
+    ['harness/lib/guards.ts: coverage', 'vitest.gate.config.ts: coverage'],
 });
 
 /** Project problems carried while the gap is being closed, keyed by the problem. */
@@ -218,14 +217,6 @@ describe("the reach check's reading of knip's configuration", () => {
 });
 
 describe('the scan-set checks', () => {
-  test('a project holds the files under its own directory', () => {
-    expect.hasAssertions();
-    expect([projectDirectory('tsconfig.json'), projectDirectory('packages/foundation/test/tsconfig.json')]).toStrictEqual([
-      '',
-      'packages/foundation/test/',
-    ]);
-  });
-
   test('see a file a planted scan set misses', () => {
     expect.hasAssertions();
     expect(unreached(['a.ts', 'b.ts'], { oxfmt: new Set(['a.ts', 'b.ts']), oxlint: new Set(['a.ts']) })).toStrictEqual(['b.ts: oxlint']);
@@ -258,6 +249,24 @@ describe('the scan-set checks', () => {
       'shared.ts: in 2 production projects',
       'loose.ts: in no TypeScript project',
     ]);
+  });
+});
+
+describe("the project check's holding", () => {
+  test("a project holds the files it lists of its holder's: the harness's a root configuration module, a member's its own", async () => {
+    expect.hasAssertions();
+    const held = await plantedPopulation([], [['packages/core/', 'foundation']]);
+    const listed = [
+      'harness/lib/a.ts',
+      'knip.config.ts',
+      'packages/core/src/a.ts',
+      'packages/core/test/a.test.ts',
+      'node_modules/x/index.d.ts',
+    ];
+    expect([
+      ...heldByProject(held, 'harness/tsconfig.json', listed),
+      ...heldByProject(held, 'packages/core/test/tsconfig.json', listed),
+    ]).toStrictEqual(['harness/lib/a.ts', 'knip.config.ts', 'packages/core/src/a.ts', 'packages/core/test/a.test.ts']);
   });
 });
 

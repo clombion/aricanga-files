@@ -51,7 +51,7 @@ describe("a run's config", () => {
   test("provides a checkout's population, and nothing for a population of no checkout", async () => {
     expect.hasAssertions();
     const [repository, planted] = await Promise.all([population(), plantedPopulation([], [['packages/a/', 'view']])]);
-    const [fromRepository, fromPlanted] = [repository, planted].map((held) => configOf(held, () => []).test?.provide);
+    const [fromRepository, fromPlanted] = [repository, planted].map((held) => configOf(held).test?.provide);
     expect([fromRepository?.population?.root, fromPlanted]).toStrictEqual([REPO_ROOT, {}]);
   });
 });

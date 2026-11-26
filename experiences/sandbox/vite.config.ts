@@ -55,10 +55,10 @@ const config: UserConfigFnPromise = defineConfig(async () => ({
   build: { emptyOutDir: true, outDir: 'build' },
   plugins: [compileInk(await compiledStory()), solid()],
   resolve: {
-    alias: {
-      '@narratives/foundation': fromHere('../../packages/foundation/src/index.ts'),
-      '@narratives/system-chat': fromHere('../../packages/systems/chat/src/index.ts'),
-    },
+    alias: [
+      { find: /^@narratives\/foundation$/u, replacement: fromHere('../../packages/foundation/src/index.ts') },
+      { find: /^@narratives\/system-chat$/u, replacement: fromHere('../../packages/systems/chat/src/index.ts') },
+    ],
   },
 }));
 

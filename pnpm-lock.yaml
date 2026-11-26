@@ -51,9 +51,6 @@ importers:
       '@playwright/test':
         specifier: ^1.65.1
         version: 1.65.1
-      '@solidjs/vite-plugin':
-        specifier: 3.0.1
-        version: 3.0.1(@solidjs/web@2.0.3(solid-js@2.0.3))(solid-js@2.0.3)(vite@8.3.8(@types/node@26.6.6)(esbuild@0.27.2)(jiti@2.7.0)(yaml@2.9.1))
       '@types/iarna__toml':
         specifier: ^2.0.5
         version: 2.0.5

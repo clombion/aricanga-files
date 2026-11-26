@@ -135,7 +135,7 @@ function plantedConfig(plantPath: string, overrides: Overrides): string {
     `import { configOf } from ${gate};`,
     `import { plantedPopulation } from ${scope};`,
     `const held = await plantedPopulation([${JSON.stringify(plantPath)}], [['packages/plant/', 'foundation']]);`,
-    `export default mergeConfig(configOf(held, () => []), ${JSON.stringify({ test: overrides })});`,
+    `export default mergeConfig(configOf(held), ${JSON.stringify({ test: overrides })});`,
     '',
   ].join('\n');
 }

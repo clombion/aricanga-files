@@ -96,14 +96,26 @@ function liveGlobs(population: Population, members: readonly Member[], tail: str
 }
 
 /**
- * The tests of the `rebuild` project: each shipping member's `*.test.ts` and `*.test.tsx`. A test
+ * The Vitest tests of shipping members: each one's `*.test.ts` and `*.test.tsx`. A test
  * infrastructure package's tests are not Vitest's: `test:browser` lists the Playwright configs.
  *
  * @param {Population} population - The population.
+ * @param {readonly Member[]} members - The shipping members whose tests are read (all of them by default).
  * @returns {string[]} The include globs.
  */
-function testIncludes(population: Population): string[] {
-  return liveGlobs(population, population.shipping, VITEST_TESTS);
+function testIncludes(population: Population, members: readonly Member[] = population.shipping): string[] {
+  return liveGlobs(population, members, VITEST_TESTS);
+}
+
+/**
+ * The Vite apps: each member whose root holds its `vite.config.ts` (`VITE_CONFIG`), the one a Vite
+ * app is built from (`build.ts`' `apps`) and its tests run under (the gate's Vitest config).
+ *
+ * @param {Population} population - The population.
+ * @returns {readonly Member[]} The apps, in the population's order.
+ */
+function viteApps(population: Population): readonly Member[] {
+  return population.members.filter((member) => population.filesOf(member).includes(`${member.dir}${VITE_CONFIG}`));
 }
 
 /**
@@ -135,4 +147,5 @@ export {
   VITE_CONFIG,
   VITE_CONFIGS,
   VITEST_TESTS,
+  viteApps,
 };

@@ -71,7 +71,7 @@ list.
 - `stylesheets` (`harness/checks/stylesheets.test.ts`): Every stylesheet passes stylelint, reads raw values only through design tokens, and every class and custom property it names is used.
 - `suppressions` (`harness/checks/suppressions.test.ts`): Every suppression names its rule, a tool that checks the file, and its reason, and each is counted.
 - `terms` (`harness/checks/terms.test.ts`): No current text uses a retired term or a refused pattern of `docs/terms.toml`.
-- `test-globs` (`harness/checks/test-globs.test.ts`): The gate's Vitest globs: a shipping member's tests are collected and its sources covered.
+- `test-globs` (`harness/checks/test-globs.test.ts`): The gate's Vitest globs: a shipping member's tests are collected, in its app's own project when it is a Vite app, and its sources covered.
 - `tool-exemptions` (`harness/checks/tool-exemptions.test.ts`): Every tool exemption is live: each ignore, override, include and exclude glob matches a listed file.
 - `tool-upgrades` (`harness/checks/tool-upgrades.test.ts`): Every pinned tool has its upstream repository named, and every named repository pins a tool.
 - `type-exports` (`harness/checks/type-exports.test.ts`): An exported type is read by another production module (or a harness check) or carries `@public`.
@@ -166,7 +166,7 @@ the tool at that version: a `package.json` field, or `pnpm-lock.yaml` with the i
 | `@iarna/toml` | [iarna/iarna-toml](https://github.com/iarna/iarna-toml) | `pnpm-lock.yaml (.)` | 2.2.5 |
 | `@playwright/test` | [microsoft/playwright](https://github.com/microsoft/playwright) | `pnpm-lock.yaml (.)` | 1.65.1 |
 | `@solidjs/compiler` | [solidjs/solid](https://github.com/solidjs/solid) | `pnpm-lock.yaml (experiences/sandbox, packages/characterisation)` | 2.0.2 |
-| `@solidjs/vite-plugin` | [solidjs/vite-plugin-solid](https://github.com/solidjs/vite-plugin-solid) | `pnpm-lock.yaml (., experiences/sandbox, packages/characterisation)` | 3.0.1 |
+| `@solidjs/vite-plugin` | [solidjs/vite-plugin-solid](https://github.com/solidjs/vite-plugin-solid) | `pnpm-lock.yaml (experiences/sandbox, packages/characterisation)` | 3.0.1 |
 | `@types/iarna__toml` | [DefinitelyTyped/DefinitelyTyped](https://github.com/DefinitelyTyped/DefinitelyTyped) | `pnpm-lock.yaml (.)` | 2.0.5 |
 | `@types/node` | [DefinitelyTyped/DefinitelyTyped](https://github.com/DefinitelyTyped/DefinitelyTyped) | `pnpm-lock.yaml (.)` | 26.6.6 |
 | `@vitest/coverage-v8` | [vitest-dev/vitest](https://github.com/vitest-dev/vitest) | `pnpm-lock.yaml (.)` | 5.1.1 |

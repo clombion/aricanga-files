@@ -43,7 +43,6 @@ const POC: Prefixes = new Prefixes(POC_DIRS);
 /** Root files the harness holds that are no one's code (no module): the configuration and prose the gate reads. */
 const ROOT_FILES = new Accepted<string>([
   'package.json',
-  'tsconfig.json',
   'tsconfig.base.json',
   '.oxfmtrc.json',
   'lefthook.json',

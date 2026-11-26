@@ -1,12 +1,13 @@
 /**
  * Each computed-config tool reads its configuration module and no rival file: every task that runs
- * the tool names the module after the tool's configuration flag, and the harness maps no root file
- * into its imports but the modules it loads typed.
+ * the tool names the module after the tool's configuration flag, and the harness maps each root
+ * configuration module into its imports, and no other root file: each is loaded typed by a literal
+ * import, so each is in the harness's TypeScript project.
  */
 
+import { ROOT_CONFIG_MODULES, ROOT_MODULES } from '#lib/config-modules.ts';
 import { describe, expect, test } from 'vitest';
 import { repoTasks, runsOf } from '#lib/repo-tasks.ts';
-import { ROOT_CONFIG_MODULES } from '#lib/config-modules.ts';
 import { object } from '#lib/config.ts';
 import { population } from '#lib/scope.ts';
 
@@ -41,11 +42,11 @@ describe('the repository', () => {
     ]).toStrictEqual([[], [], true]);
   });
 
-  test("maps no root file into the harness's imports but the config modules it loads typed", async () => {
+  test("maps each root configuration module into the harness's imports, and no other root file", async () => {
     expect.hasAssertions();
     const held = await population();
     const imports = Object.keys(object(held.rootManifest['imports'], 'imports')).filter((key) => key.startsWith('#root/'));
-    expect(imports).toStrictEqual([`#root/${ROOT_CONFIG_MODULES.knip}`, `#root/${ROOT_CONFIG_MODULES.oxlint}`]);
+    expect(imports).toStrictEqual(ROOT_MODULES.map((module) => `#root/${module}`));
   });
 });
 
