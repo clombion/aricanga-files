@@ -1,9 +1,10 @@
 /**
- * Every pinned tool has its upstream repository named, and every named repository pins a tool.
+ * Every pinned tool has its upstream repository named, every named repository pins a tool, and no directly declared package is locked at two versions.
  *
  * The pins come from the root `package.json`, the members' dependencies and devDependencies, and `pnpm-lock.yaml`
  * (`harness/lib/pins.ts`). `harness.md`'s table of them is generated
- * (`harness/lib/generated.ts`), so a bump the fix task has not rendered fails the generated-docs check.
+ * (`harness/lib/generated.ts`), so a bump the fix task has not rendered fails the generated-docs check. The split
+ * packages are read from the same lockfile, over every importer (`harness/lib/lock-splits.ts`).
  */
 
 import { describe, expect, test } from 'vitest';
@@ -13,6 +14,7 @@ import { Exemptions } from '#lint-rules/exemptions.ts';
 import { LOCK } from './scope.plants.ts';
 import type { Pin } from '#lib/pins.ts';
 import { UPSTREAM } from '#lib/upstream.ts';
+import { repositoryLockSplits } from '#lib/lock-splits.ts';
 
 const HARNESS_ID = 'tool-upgrades';
 
@@ -48,6 +50,11 @@ describe('the repository', () => {
     expect.hasAssertions();
     const problems = pinProblems(await pins(), UPSTREAM);
     expect(PENDING.unexempted(problems)).toStrictEqual([]);
+  });
+
+  test('locks no directly declared package at two versions, under any importer', async () => {
+    expect.hasAssertions();
+    await expect(repositoryLockSplits()).resolves.toStrictEqual([]);
   });
 });
 

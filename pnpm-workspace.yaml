@@ -3,6 +3,8 @@ packages:
   - 'packages/systems/*'
   - 'experiences/*'
 # The version of every package two or more manifests name, written once: each of those manifests writes `catalog:`.
+# A literal version beside it is not refused by pnpm; the tool-upgrades check refuses a package locked at two versions
+# (harness/lib/lock-splits.ts). That a package named twice is in the catalog is not checked.
 catalog:
   '@playwright/test': ^1.65.1
   '@solidjs/compiler': 2.0.2

@@ -74,7 +74,7 @@ list.
 - `terms` (`harness/checks/terms.test.ts`): No current text uses a retired term or a refused pattern of `docs/terms.toml`.
 - `test-globs` (`harness/checks/test-globs.test.ts`): The gate's Vitest globs: a shipping member's tests are collected, in its app's own project when it is a Vite app, and its sources covered.
 - `tool-exemptions` (`harness/checks/tool-exemptions.test.ts`): Every tool exemption is live: each ignore, override, include and exclude glob matches a listed file.
-- `tool-upgrades` (`harness/checks/tool-upgrades.test.ts`): Every pinned tool has its upstream repository named, and every named repository pins a tool.
+- `tool-upgrades` (`harness/checks/tool-upgrades.test.ts`): Every pinned tool has its upstream repository named, every named repository pins a tool, and no directly declared package is locked at two versions.
 - `type-exports` (`harness/checks/type-exports.test.ts`): An exported type is read by another production module (or a harness check) or carries `@public`.
 - `typecheck-settings` (`harness/checks/typecheck-settings.test.ts`): `tsc`, under this project's settings, fails each planted typing hole a setting closes, and passes it once that setting is removed.
 - `vitest-settings` (`harness/checks/vitest-settings.test.ts`): Vitest, under this project's settings, fails each planted test a bare configuration would pass, in every project of the gate's config.
