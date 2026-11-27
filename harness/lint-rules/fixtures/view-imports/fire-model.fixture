@@ -1,2 +1,3 @@
 // path: packages/systems/chat/src/view/view-imports-model.ts
+// tsc: TS2307
 export type { ReadState } from '@narratives/system-chat/model/read-state';

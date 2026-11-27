@@ -44,7 +44,13 @@ exemptions"), through which every list a rule consults is declared.
 `fixtures/<rule>/fire[-<case>].fixture` must make its rule fire; `fixtures/<rule>/clean[-<case>].fixture`
 must pass the whole configuration with no finding. The first line, `// path: <path>`, is where the
 check plants the source; a rule scoped by path is proven at a path it holds. A fixture is text, so
-the repository's own tools never lint or compile a must-fire case.
+the repository's own tools never lint or compile a must-fire case: the check lints and compiles them
+in its planted project, which maps each member's `.` export by name and Solid's packages to their
+types. A fixture must compile there with no error, unless a second line, `// tsc: TS2322`, names the
+codes of the errors its source has on purpose; the check compares each fixture's codes with that line
+both ways, so an error it does not declare and a declared one it does not have both fail. Two fixtures declare
+one: `harness/lint-rules/fixtures/labels/fire-htmlfor.fixture` (`htmlFor` is no attribute of Solid's `<label>`, TS2322) and
+`harness/lint-rules/fixtures/view-imports/fire-model.fixture` (a subpath the member does not export, TS2307).
 
 ## Options
 

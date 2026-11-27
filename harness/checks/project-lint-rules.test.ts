@@ -1,16 +1,18 @@
 /**
- * Every project lint rule fires on its must-fire fixtures and passes its must-stay-clean ones under the repository's oxlint.
+ * Every project lint rule fires on its must-fire fixtures and passes its must-stay-clean ones under the repository's oxlint, and every fixture compiles to the errors it declares.
  *
  * The plugin (`harness/lint-rules/plugin.ts`) holds exactly the declared rules; every rule has a
  * fixture folder with at least one must-fire and one must-stay-clean case, and every folder names a
  * rule. One oxlint run over a planted project, configured by the repository's oxlint configuration, must report
- * each rule on its must-fire fixtures and nothing at all on the must-stay-clean ones. The config turns
+ * each rule on its must-fire fixtures and nothing at all on the must-stay-clean ones, and `tsc` over the same
+ * project must report on each fixture exactly the error codes its `// tsc:` line declares, and nothing outside
+ * the fixtures (`harness/lib/lint-fixtures.ts`). The config turns
  * on exactly the plugin's rules, as errors, and the README's table lists exactly them with their
  * descriptions. A rule's list restating the kernel's names is held live here: each name in
  * `view-imports`' `KERNEL_NAMES` is exported, under that name, by a kernel member's shipping module's own declaration.
  */
 
-import { FixtureError, codesAt, fixtureFolders, fixtures, lintFixtures, parseFixture } from '#lib/lint-fixtures.ts';
+import { FixtureError, codesAt, compileProblems, fixtureFolders, fixtures, parseFixture, runFixtures } from '#lib/lint-fixtures.ts';
 import { PLUGIN_NAME, RULES } from '#lint-rules/plugin.ts';
 import { describe, expect, test } from 'vitest';
 import { Accepted } from '#lint-rules/exemptions.ts';
@@ -164,17 +166,21 @@ function holds(fixture: Fixture, codes: readonly string[]): boolean {
 }
 
 /**
- * The fixtures whose lint does not hold, with the codes reported.
+ * The fixtures whose lint does not hold, with the codes reported, and the compile problems of the same run (`compileProblems`).
  *
- * @returns {Promise<readonly { readonly codes: readonly string[]; readonly file: string }[]>} Each fixture that does not hold.
+ * @returns {Promise<{ readonly compile: readonly string[]; readonly lint: readonly { readonly codes: readonly string[]; readonly file: string }[] }>} What does not hold.
  */
-async function unheldFixtures(): Promise<readonly { readonly codes: readonly string[]; readonly file: string }[]> {
+async function unheldFixtures(): Promise<{
+  readonly compile: readonly string[];
+  readonly lint: readonly { readonly codes: readonly string[]; readonly file: string }[];
+}> {
   const planted = await fixtures();
-  const found = await lintFixtures(planted);
-  return planted.flatMap((fixture) => {
-    const codes = codesAt(found, fixture.path);
+  const found = await runFixtures(planted);
+  const lint = planted.flatMap((fixture) => {
+    const codes = codesAt(found.lint, fixture.path);
     return holds(fixture, codes) ? [] : [{ codes, file: fixture.file }];
   });
+  return { compile: compileProblems(planted, found.compiled), lint };
 }
 
 describe('the repository', () => {
@@ -204,9 +210,9 @@ describe('the repository', () => {
     expect([...KERNEL_NAMES].filter((name) => !exported.has(name))).toStrictEqual([]);
   });
 
-  test('each must-fire fixture fails on its rule and each must-stay-clean fixture passes', async () => {
+  test('each must-fire fixture fails on its rule, each must-stay-clean fixture passes, and each compiles to the errors it declares', async () => {
     expect.hasAssertions();
-    await expect(unheldFixtures()).resolves.toStrictEqual([]);
+    await expect(unheldFixtures()).resolves.toStrictEqual({ compile: [], lint: [] });
   });
 });
 
@@ -215,6 +221,7 @@ describe('the fixture reader', () => {
     expect.hasAssertions();
     const fixture = parseFixture('harness/lint-rules/fixtures/env/fire-import.fixture', '// path: a/b.ts\nexport {};\n');
     expect(fixture).toStrictEqual({
+      errors: [],
       file: 'harness/lint-rules/fixtures/env/fire-import.fixture',
       kind: 'fire',
       path: 'a/b.ts',
@@ -234,7 +241,7 @@ describe('the fixture reader', () => {
 });
 
 function plantedFixture(rule: string, kind: 'fire' | 'clean'): Fixture {
-  return { file: `harness/lint-rules/fixtures/${rule}/${kind}.fixture`, kind, path: `${rule}-${kind}.ts`, rule, source: '' };
+  return { errors: [], file: `harness/lint-rules/fixtures/${rule}/${kind}.fixture`, kind, path: `${rule}-${kind}.ts`, rule, source: '' };
 }
 
 describe('the check', () => {
