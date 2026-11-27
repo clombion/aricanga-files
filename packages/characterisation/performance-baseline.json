@@ -1,22 +1,22 @@
 {
   "chromium": {
-    "render": 17.200000000186265,
-    "updates": 136.8999999994412
+    "render": 24,
+    "updates": 148.5
   },
   "firefox": {
-    "render": 55,
-    "updates": 401
+    "render": 40,
+    "updates": 241
   },
   "mobile-chrome": {
-    "render": 21.09999999962747,
-    "updates": 164.1000000005588
+    "render": 23.5,
+    "updates": 132.09999999962747
   },
   "mobile-safari": {
-    "render": 49,
-    "updates": 191
+    "render": 33,
+    "updates": 144
   },
   "webkit": {
-    "render": 31,
-    "updates": 167
+    "render": 32,
+    "updates": 146
   }
 }
