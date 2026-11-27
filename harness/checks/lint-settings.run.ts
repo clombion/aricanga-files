@@ -1,7 +1,7 @@
 /** Runs of the locked oxlint over planted projects, for the `lint-settings` check. */
 
 import type { AnyOxlintConfig, GateOxlintConfig } from '#lib/oxlint-shape.ts';
-import { OXLINT_CONFIG_FILES, codeOf, oxlintDiagnostics, plantedLintRun, writeOxlintConfig } from '#lib/lint-rules.ts';
+import { TYPED_OXLINT_CONFIG_FILES, codeOf, oxlintDiagnostics, plantedLintRun, writeOxlintConfig } from '#lib/lint-rules.ts';
 import type { NoOther } from '#lib/readonly.ts';
 import { PLANTS } from './lint-settings.plants.ts';
 import { Project } from '#lib/tools.ts';
@@ -67,7 +67,7 @@ function codesByFile(report: unknown): ReadonlyMap<string, readonly string[]> {
  * @returns {Promise<Lint>} The run's exit status and codes.
  */
 async function lint(files: Readonly<Record<string, string>>, planted: AnyOxlintConfig): Promise<Lint> {
-  const project = await Project.create({ copies: [...OXLINT_CONFIG_FILES, 'tsconfig.base.json'] });
+  const project = await Project.create({ copies: TYPED_OXLINT_CONFIG_FILES });
   try {
     await writeOxlintConfig(project, planted);
     await project.write(

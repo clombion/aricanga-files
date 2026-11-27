@@ -5,9 +5,10 @@ holds. `oxlint.config.ts` loads `plugin.ts` directly: Node strips its types, so 
 TypeScript checked by the harness's own project. Every rule is on as an error, and
 `harness/checks/project-lint-rules.test.ts` proves each one on its fixtures.
 
-The modules import each other as `#lint-rules/…`. This folder's own `package.json` maps that
-prefix, so the plugin also loads where a check copies the folder into a planted project, outside
-the repository's root manifest. `ast.ts` holds the node and context helpers and `jsx.ts` the JSX
+The rules and their helpers import each other as `#lint-rules/…`, and the exemption owner's
+modules (`exemptions.ts` and `exemptions/`) each other by relative path. This folder's own
+`package.json` maps that prefix, so the plugin also loads where a check copies the folder into a
+planted project, outside the repository's root manifest. `ast.ts` holds the node and context helpers and `jsx.ts` the JSX
 ones, and `closed.ts` the readers the closed-set rules share; `rules/jsx-rules.ts`,
 `rules/module-rules.ts` and `rules/closed-rules.ts` collect the rules for `plugin.ts`. `solid.ts` holds
 the names of `solid-js` the rules read, typed by Solid's own declarations, so the type-check refuses

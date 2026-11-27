@@ -49,11 +49,11 @@ const UNUSED_DIRECTIVE = 'unused-disable-directive';
 const FIXTURES_DIR = `${HARNESS_LINT_RULES}fixtures/`;
 
 /**
- * What a planted project copies to run the repository's oxlint configuration: the project plugin it
- * loads. Every check that plants an oxlint run copies exactly these and writes the configuration
- * with `writeOxlintConfig`.
+ * What a planted oxlint run copies: the plugin the configuration loads; a type-aware run copies the TypeScript base its
+ * tsconfig extends too (`TYPED_OXLINT_CONFIG_FILES`). Every planted oxlint run copies one of the two, then `writeOxlintConfig`.
  */
 const OXLINT_CONFIG_FILES: readonly string[] = [HARNESS_LINT_RULES];
+const TYPED_OXLINT_CONFIG_FILES: readonly string[] = [...OXLINT_CONFIG_FILES, 'tsconfig.base.json'];
 
 /** The configuration file of a planted oxlint run: JSON, which every oxlint runtime reads. */
 const PLANTED_OXLINT_CONFIG = '.oxlintrc.json';
@@ -213,13 +213,12 @@ async function lintPlanted(project: Readonly<Project>, paths: readonly string[])
 async function lintFixtures(planted: readonly Fixture[]): Promise<readonly Diagnostic[]> {
   const paths = planted.map((fixture) => fixture.path);
   refuseDuplicates(paths);
-  const project = await Project.create({ copies: [...OXLINT_CONFIG_FILES, 'tsconfig.base.json'] });
+  const project = await Project.create({ copies: TYPED_OXLINT_CONFIG_FILES });
   try {
     await project.write('tsconfig.json', PLANTED_TSCONFIG);
     await writeOxlintConfig(project);
     await project.writeAll(planted.map((fixture) => [fixture.path, fixture.source] as const));
-    const found = await lintPlanted(project, paths);
-    return found;
+    return await lintPlanted(project, paths);
   } finally {
     await project.remove();
   }
@@ -294,6 +293,7 @@ export {
   oxlintDiagnostics,
   parseFixture,
   plantedLintRun,
+  TYPED_OXLINT_CONFIG_FILES,
   UNUSED_DIRECTIVE,
   writeOxlintConfig,
 };

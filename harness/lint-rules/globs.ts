@@ -103,9 +103,10 @@ function selfAndAncestors(target: string): readonly string[] {
 
 /**
  * Whether a glob written into an oxlint field matches a repository-relative path, as oxlint reads
- * that field: the field's own anchor anchors it at the root, the other field's matches nothing, a
- * glob holding a slash (a trailing one aside) is read from the root, and a slashless one at any
- * depth; an ignore pattern matching a directory covers the files below it.
+ * that field: the field's own anchor anchors it at the root, the other field's matches nothing (it
+ * stays in the pattern, and no repository-relative path starts with it), a glob holding a slash (a
+ * trailing one aside) is read from the root, and a slashless one at any depth; an ignore pattern
+ * matching a directory covers the files below it.
  *
  * @param {OxlintField} field - The field the glob is written in.
  * @param {string} glob - The glob.
@@ -115,9 +116,6 @@ function selfAndAncestors(target: string): readonly string[] {
 function fieldMatches(field: OxlintField, glob: string, target: string): boolean {
   const own = ANCHORS.of(field);
   const anchored = glob.startsWith(own);
-  if (!anchored && ANCHORS.words.some((other) => glob.startsWith(ANCHORS.of(other)))) {
-    return false;
-  }
   const body = (anchored ? glob.slice(own.length) : glob).replace(TRAILING_SLASH, '');
   const pattern = anchored || body.includes('/') ? body : `**/${body}`;
   const candidates = field === 'ignorePatterns' ? selfAndAncestors(target) : [target];
