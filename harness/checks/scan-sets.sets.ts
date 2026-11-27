@@ -115,10 +115,19 @@ async function knipFiles(files: readonly string[]): Promise<ReadonlySet<string>>
   return new Set(files.filter((file) => (holding(file) ?? root)?.globs.some((glob) => matches(glob, file)) === true));
 }
 
+/** A project file's name, after its directory. */
+const FILE_NAME = /[^/]*$/u;
+
+/** A file at the repository's root, under no directory. */
+const ROOT_FILE = /^[^/]+$/u;
+
 /**
- * The files a TypeScript project holds of those it lists: its holder's (`Population.holderOf`), so the
- * harness's project holds the root configuration modules it imports, and a package's source a
- * dependent project resolves through the package's exports stays its own package's.
+ * The files a TypeScript project holds of those it lists: its holder's (`Population.holderOf`) under
+ * its own directory, and its holder's at the repository's root, which sit under no project's
+ * directory. So the harness's project holds the root configuration modules it imports; a member's
+ * test project holds its own directory's files and not the member's sources it lists, which only the
+ * member's production project holds; and a package's source a dependent project resolves through the
+ * package's exports stays its own package's.
  *
  * @param {Population} held - The population.
  * @param {string} project - The project file.
@@ -127,12 +136,12 @@ async function knipFiles(files: readonly string[]): Promise<ReadonlySet<string>>
  */
 function heldByProject(held: Population, project: string, listed: readonly string[]): ReadonlySet<string> {
   const holder = held.holderOf(project);
-  return new Set(listed.filter((path) => held.holderOf(path) === holder));
+  const directory = project.replace(FILE_NAME, '');
+  return new Set(listed.filter((path) => held.holderOf(path) === holder && (path.startsWith(directory) || ROOT_FILE.test(path))));
 }
 
 /**
- * The files each TypeScript project holds: those it lists (`tsc --listFilesOnly`) whose holder is its
- * own (`heldByProject`).
+ * The files each TypeScript project holds of those it lists (`tsc --listFilesOnly`): `heldByProject`.
  *
  * @returns {Promise<ReadonlyMap<string, ReadonlySet<string>>>} Each project's held files, by project.
  */

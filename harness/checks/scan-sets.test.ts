@@ -4,8 +4,8 @@
  * The scan sets: oxlint's own file list (`oxlint --debug=files`); oxfmt's, read by planting every held
  * file unformatted in a copy of the checkout and listing what `oxfmt --list-different` would change;
  * the TypeScript projects of `harness/lib/projects.ts`, each listing its files (`tsc --listFilesOnly`):
- * every file is held (listed by a project of its own holder, `Population.holderOf`) by a project, by no more than one
- * production project (a shipping member's `tsconfig.json`), and no test file by a production project;
+ * every file is held by a project (listed by a project of its own holder, `Population.holderOf`, under
+ * the project's directory, or at the root), by no more than one production project (a shipping member's `tsconfig.json`), and no test file by a production project;
  * Vitest's coverage `include` for every file that is not a test; jscpd's roots,
  * held by the clones check's own coverage of the listing; and knip's, each file matched by a `project`
  * or `entry` glob of the workspace holding it in the configuration knip loads.
@@ -253,7 +253,7 @@ describe('the scan-set checks', () => {
 });
 
 describe("the project check's holding", () => {
-  test("a project holds the files it lists of its holder's: the harness's a root configuration module, a member's its own", async () => {
+  test("a project holds the files it lists of its holder's under its directory, the harness's a root configuration module, and a test project none of its member's sources", async () => {
     expect.hasAssertions();
     const held = await plantedPopulation([], [['packages/core/', 'foundation']]);
     const listed = [
@@ -263,10 +263,15 @@ describe("the project check's holding", () => {
       'packages/core/test/a.test.ts',
       'node_modules/x/index.d.ts',
     ];
-    expect([
-      ...heldByProject(held, 'harness/tsconfig.json', listed),
-      ...heldByProject(held, 'packages/core/test/tsconfig.json', listed),
-    ]).toStrictEqual(['harness/lib/a.ts', 'knip.config.ts', 'packages/core/src/a.ts', 'packages/core/test/a.test.ts']);
+    expect(
+      ['harness/tsconfig.json', 'packages/core/tsconfig.json', 'packages/core/test/tsconfig.json'].map((project) =>
+        heldByProject(held, project, listed),
+      ),
+    ).toStrictEqual([
+      new Set(['harness/lib/a.ts', 'knip.config.ts']),
+      new Set(['packages/core/src/a.ts', 'packages/core/test/a.test.ts']),
+      new Set(['packages/core/test/a.test.ts']),
+    ]);
   });
 });
 
