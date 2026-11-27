@@ -9,7 +9,9 @@ The modules import each other as `#lint-rules/…`. This folder's own `package.j
 prefix, so the plugin also loads where a check copies the folder into a planted project, outside
 the repository's root manifest. `ast.ts` holds the node and context helpers and `jsx.ts` the JSX
 ones, and `closed.ts` the readers the closed-set rules share; `rules/jsx-rules.ts`,
-`rules/module-rules.ts` and `rules/closed-rules.ts` collect the rules for `plugin.ts`.
+`rules/module-rules.ts` and `rules/closed-rules.ts` collect the rules for `plugin.ts`. `solid.ts` holds
+the names of `solid-js` the rules read, typed by Solid's own declarations, so the type-check refuses
+a name Solid does not export.
 
 The folder also holds two owners the whole harness imports from here, because a rule loaded by
 oxlint resolves only `#lint-rules/…`: `globs.ts`, the one matcher of tool globs, and

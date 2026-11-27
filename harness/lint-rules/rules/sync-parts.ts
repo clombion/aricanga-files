@@ -6,6 +6,7 @@
 import type { Node, Rule } from '#lint-rules/ast.ts';
 import { child, componentRule, flag, memberName, nameOf } from '#lint-rules/ast.ts';
 import { Accepted } from '#lint-rules/exemptions.ts';
+import { LOADING } from '#lint-rules/solid.ts';
 import { jsxName } from '#lint-rules/jsx.ts';
 
 const CHAINS = new Accepted<string>(['then', 'catch', 'finally']);
@@ -34,7 +35,7 @@ export const syncParts: Rule = componentRule('No async, await, promise, .then or
     FunctionDeclaration: onFunction,
     FunctionExpression: onFunction,
     JSXOpeningElement(node) {
-      if (jsxName(node) === 'Loading') {
+      if (jsxName(node) === LOADING) {
         refuse(node, '<Loading>');
       }
     },

@@ -62,6 +62,10 @@ const SUPPRESSIONS = new CountedExemptions({
     count: 1,
     reason: 'the planted destructured part whose staleness the fixture records',
   },
+  [site('harness/lint-rules/solid.ts', 'oxlint:import/no-namespace')]: {
+    count: 1,
+    reason: "the type of Solid's export names reads every export: no named import can say any of them",
+  },
   [site('packages/characterisation/src/fixtures/csp.tsx', 'oxlint:aricanga/style-prop')]: {
     count: 1,
     reason: 'the planted style prop whose CSP effect the fixture records',

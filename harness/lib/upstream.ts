@@ -34,6 +34,7 @@ const UPSTREAM: ReadonlyMap<string, string> = new Map([
   ['pnpm', 'pnpm/pnpm'],
   ['remark-parse', 'remarkjs/remark'],
   ['sharp', 'lovell/sharp'],
+  ['solid-js', 'solidjs/solid'],
   ['stylelint', 'stylelint/stylelint'],
   ['stylelint-config-standard', 'stylelint/stylelint-config-standard'],
   ['stylelint-declaration-strict-value', 'AndyOGo/stylelint-declaration-strict-value'],

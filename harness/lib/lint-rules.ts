@@ -63,7 +63,7 @@ const FIXTURE_NAME = new RegExp(
 );
 const PATH_LINE = /^\/\/ path: (?<path>\S+)\n/u;
 
-/** Where the workspace installs Solid for the planted lint project: the characterisation package's own install. */
+/** Where the planted lint project finds Solid's types: the characterisation package's install, which holds `@solidjs/web` too. */
 const SOLID_HOME = fromRoot('packages', 'characterisation', 'node_modules');
 
 /**

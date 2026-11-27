@@ -34,9 +34,10 @@ import { provision } from './provided.ts';
 
 /**
  * The lint-rules package's modules the harness runs in its own process, which coverage reads: the
- * glob matcher and the exemption owner. The package's rules run inside oxlint.
+ * glob matcher, the exemption owner and the Solid names the rules read. The package's rules run
+ * inside oxlint.
  */
-const IN_PROCESS_LINT_RULES: readonly string[] = ['globs.ts', 'exemptions.ts', 'exemptions/**'];
+const IN_PROCESS_LINT_RULES: readonly string[] = ['globs.ts', 'exemptions.ts', 'exemptions/**', 'solid.ts'];
 
 /** The test settings every project of the run holds: the root's, and each app's project's, which extends no root. */
 const SHARED: NonNullable<ViteUserConfig['test']> = {

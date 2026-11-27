@@ -3,8 +3,8 @@
 import type { Node, Rule } from '#lint-rules/ast.ts';
 import { child, children, componentRule, nameOf } from '#lint-rules/ast.ts';
 import { Accepted } from '#lint-rules/exemptions.ts';
+import { EFFECTS } from '#lint-rules/solid.ts';
 
-const EFFECTS = new Accepted<string>(['createEffect', 'createRenderEffect']);
 const SETTER = /^set[A-Z]/u;
 const FUNCTIONS = new Accepted<string>(['ArrowFunctionExpression', 'FunctionExpression']);
 

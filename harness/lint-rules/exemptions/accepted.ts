@@ -1,8 +1,11 @@
-/** `Accepted`: the values a rule defines as valid; consulted by membership, nothing has to match. */
+/**
+ * `Accepted`: the values a rule accepts as valid, which it defines or which its value type takes from
+ * another owner's declarations; consulted by membership, nothing has to match.
+ */
 
 import { byCodeUnit } from './order.ts';
 
-/** The values a rule defines as valid, such as exit codes or file suffixes. */
+/** The values a rule accepts as valid, such as exit codes, file suffixes or an installed package's export names. */
 class Accepted<Value extends string | number> {
   public readonly values: Readonly<ReadonlySet<Value>>;
 

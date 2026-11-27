@@ -2,10 +2,9 @@
 
 import { OWNERS_SCHEMA, optionMatches, problemMeta } from '#lint-rules/ast.ts';
 import { onImports, refuse } from '#lint-rules/rules/imports.ts';
-import { Accepted } from '#lint-rules/exemptions.ts';
+import { OWNED } from '#lint-rules/solid.ts';
 import type { Rule } from '#lint-rules/ast.ts';
 
-const OWNED = new Accepted<string>(['createStore', 'reconcile']);
 const SOLID = /^solid-js(?:\/|$)/u;
 
 export const storeOwner: Rule = {

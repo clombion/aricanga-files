@@ -105,6 +105,9 @@ importers:
       sharp:
         specifier: ^0.35.5
         version: 0.35.5(@types/node@26.6.6)
+      solid-js:
+        specifier: 2.0.3
+        version: 2.0.3
       stylelint:
         specifier: 17.16.0
         version: 17.16.0(typescript@7.0.2)

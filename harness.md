@@ -189,6 +189,7 @@ the tool at that version: a `package.json` field, or `pnpm-lock.yaml` with the i
 | `pnpm` | [pnpm/pnpm](https://github.com/pnpm/pnpm) | `package.json packageManager` | 10.28.0 |
 | `remark-parse` | [remarkjs/remark](https://github.com/remarkjs/remark) | `pnpm-lock.yaml (.)` | 11.0.0 |
 | `sharp` | [lovell/sharp](https://github.com/lovell/sharp) | `pnpm-lock.yaml (.)` | 0.35.5 |
+| `solid-js` | [solidjs/solid](https://github.com/solidjs/solid) | `pnpm-lock.yaml (.)` | 2.0.3 |
 | `stylelint` | [stylelint/stylelint](https://github.com/stylelint/stylelint) | `pnpm-lock.yaml (.)` | 17.16.0 |
 | `stylelint-config-standard` | [stylelint/stylelint-config-standard](https://github.com/stylelint/stylelint-config-standard) | `pnpm-lock.yaml (.)` | 40.0.0 |
 | `stylelint-declaration-strict-value` | [AndyOGo/stylelint-declaration-strict-value](https://github.com/AndyOGo/stylelint-declaration-strict-value) | `pnpm-lock.yaml (.)` | 1.12.1 |
