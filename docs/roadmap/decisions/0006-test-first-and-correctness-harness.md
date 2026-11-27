@@ -63,7 +63,8 @@ keeps that file true.
 - **Live exemptions.** Every list a check consults is declared through one
   exemption owner, by its kind: a tolerated key carries a reason, and one that
   matches nothing fails; a value, prefix or vocabulary word the code defines is
-  consulted by membership and need not match. Every suppression comment carries
+  consulted by membership and need not match. A list restating names owned
+  elsewhere is derived from their owner or held live. Every suppression comment carries
   its reason, and a suppression that silences the gate itself is refused.
 - **Complete scan sets.** Checks read files from one listing (git's), and every
   tool is proven to reach every listed file it should scan.

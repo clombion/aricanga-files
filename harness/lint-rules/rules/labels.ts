@@ -6,8 +6,9 @@
 import type { Node, Rule } from '#lint-rules/ast.ts';
 import { child, children, problemMeta } from '#lint-rules/ast.ts';
 import { jsxAttributes, jsxName } from '#lint-rules/jsx.ts';
+import { Accepted } from '#lint-rules/exemptions.ts';
 
-const CONTROLS = new Set(['input', 'select', 'textarea', 'meter', 'output', 'progress']);
+const CONTROLS = new Accepted<string>(['input', 'select', 'textarea', 'meter', 'output', 'progress']);
 /** How many elements deep a wrapped control may sit inside its label. */
 const DEPTH = 2;
 /** The depth below which no further level is searched. */

@@ -5,9 +5,10 @@
 
 import type { Node, Rule } from '#lint-rules/ast.ts';
 import { child, children, componentRule, nameOf } from '#lint-rules/ast.ts';
+import { Accepted } from '#lint-rules/exemptions.ts';
 
 const FLAG = /^(?:is|has)?(?:loading|pending|busy|error|errored|failed|failure)$/iu;
-const SIGNALS = new Set(['createSignal', 'createStore']);
+const SIGNALS = new Accepted<string>(['createSignal', 'createStore']);
 
 /**
  * The name a signal or store is bound to: the first element of an array pattern, or the identifier.

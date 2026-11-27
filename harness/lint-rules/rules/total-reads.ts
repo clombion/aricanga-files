@@ -7,12 +7,13 @@
 import type { Node, Rule } from '#lint-rules/ast.ts';
 import { SET_FLOOR, literalStrings, pathOf, stringOf } from '#lint-rules/closed.ts';
 import { child, memberName, problemMeta } from '#lint-rules/ast.ts';
+import { Accepted } from '#lint-rules/exemptions.ts';
 
 /** The equality operators an arm compares a subject to a word with. */
-const EQUALITY = new Set(['===', '==']);
+const EQUALITY = new Accepted<string>(['===', '==']);
 
 /** The methods a membership test calls on a list. */
-const MEMBERSHIP = new Set(['has', 'includes']);
+const MEMBERSHIP = new Accepted<string>(['has', 'includes']);
 
 /** How often a subject was compared before the first arm. */
 const NONE_YET = 0;

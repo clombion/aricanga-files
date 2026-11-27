@@ -1,7 +1,8 @@
 /**
  * Every literal list a check consults is an exemption declaration, and every declaration is consulted.
  *
- * Over the modules of `harness/checks` and `harness/lib`: a module-level array, object, or pre-filled
+ * Over the harness's modules, as the population partitions them (`harnessModules`): its checks, its
+ * library, its lint rules, its scripts and the root configuration modules. A module-level array, object, or pre-filled
  * `Set` or `Map` literal (through `as const` and `satisfies`) that the module consults — with
  * `includes`, `has`, `indexOf`, `get`, `some`, `every`, `find`, `in`, `Object.hasOwn`, a computed lookup
  * `NAME[key]`, or by handing it to a module function that does one of these with its parameter —
@@ -18,8 +19,9 @@ import { Exemptions, KINDS, StaleExemptionError, Vocabulary, site } from '#lint-
 import { UNCONSULTED, UNDECLARED, findings } from './exemption-lists.fence.ts';
 import { describe, expect, test } from 'vitest';
 import type { Finding } from './exemption-lists.fence.ts';
+import { harnessModules } from '#lib/holders.ts';
+import { population } from '#lib/scope.ts';
 import { textsOf } from '#lib/source-files.ts';
-import { typescriptFiles } from '#lib/scope.ts';
 
 const HARNESS_ID = 'exemption-lists';
 
@@ -90,20 +92,19 @@ function keyOf(finding: Finding): string {
 }
 
 /**
- * The harness modules the fence holds, by path.
+ * The harness's modules, the fence's population, by path.
  *
- * @returns {Promise<Readonly<Record<string, string>>>} Each held module's source, by path.
+ * @returns {Promise<Readonly<Record<string, string>>>} Each of the harness's modules' source, by path.
  */
-async function harnessModules(): Promise<Readonly<Record<string, string>>> {
-  const files = await typescriptFiles();
-  const texts = await textsOf(files.filter((path) => path.startsWith('harness/checks/') || path.startsWith('harness/lib/')));
+async function fenced(): Promise<Readonly<Record<string, string>>> {
+  const texts = await textsOf(harnessModules(await population()));
   return Object.fromEntries(texts);
 }
 
 describe('the repository', () => {
   test('every consulted list is declared and every declaration is consulted', async () => {
     expect.hasAssertions();
-    const found = await findings(await harnessModules());
+    const found = await findings(await fenced());
     expect(ADOPTING.unexemptedBy(found, keyOf)).toStrictEqual([]);
   });
 });

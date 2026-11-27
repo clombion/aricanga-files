@@ -15,6 +15,7 @@
  */
 
 import { Minimatch } from 'minimatch';
+import { Vocabulary } from '#lint-rules/exemptions.ts';
 import path from 'node:path';
 
 /** An oxlint configuration field that holds globs: an override's `files`, or `ignorePatterns`. */
@@ -27,7 +28,10 @@ const FILES_ANCHOR = './';
 const IGNORE_ANCHOR = '/';
 
 /** Each oxlint field's anchor. */
-const ANCHORS: Readonly<Record<OxlintField, string>> = { files: FILES_ANCHOR, ignorePatterns: IGNORE_ANCHOR };
+const ANCHORS: Vocabulary<Readonly<Record<OxlintField, string>>> = new Vocabulary<Readonly<Record<OxlintField, string>>>({
+  files: FILES_ANCHOR,
+  ignorePatterns: IGNORE_ANCHOR,
+});
 
 /** The suffix of a glob that matches a directory's whole subtree. */
 const SUBTREE = '/**';
@@ -109,9 +113,9 @@ function selfAndAncestors(target: string): readonly string[] {
  * @returns {boolean} Whether oxlint's field matches the file.
  */
 function fieldMatches(field: OxlintField, glob: string, target: string): boolean {
-  const own = ANCHORS[field];
+  const own = ANCHORS.of(field);
   const anchored = glob.startsWith(own);
-  if (!anchored && Object.values(ANCHORS).some((anchor) => glob.startsWith(anchor))) {
+  if (!anchored && ANCHORS.words.some((other) => glob.startsWith(ANCHORS.of(other)))) {
     return false;
   }
   const body = (anchored ? glob.slice(own.length) : glob).replace(TRAILING_SLASH, '');

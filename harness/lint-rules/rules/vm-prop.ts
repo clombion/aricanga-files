@@ -5,9 +5,10 @@
 
 import type { Node, Rule } from '#lint-rules/ast.ts';
 import { child, children, componentRule, nameOf } from '#lint-rules/ast.ts';
+import { Accepted } from '#lint-rules/exemptions.ts';
 
 const COMPONENT = /^[A-Z]/u;
-const FUNCTIONS = new Set(['ArrowFunctionExpression', 'FunctionExpression']);
+const FUNCTIONS = new Accepted<string>(['ArrowFunctionExpression', 'FunctionExpression']);
 const WRONG_TYPE = 'a part takes exactly one prop, vm: type props as { vm: T } or PartProps<T>';
 
 /**

@@ -14,7 +14,7 @@ ones, and `closed.ts` the readers the closed-set rules share; `rules/jsx-rules.t
 The folder also holds two owners the whole harness imports from here, because a rule loaded by
 oxlint resolves only `#lint-rules/…`: `globs.ts`, the one matcher of tool globs, and
 `exemptions.ts` with its `exemptions/` modules, the one exemption owner (ADR-0006, "Live
-exemptions").
+exemptions"), through which every list a rule consults is declared.
 
 | Rule | Holds |
 |---|---|

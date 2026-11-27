@@ -8,6 +8,7 @@
 
 import { describe, expect, test } from 'vitest';
 import { usePlanted, useScan } from '#lib/scan-hooks.ts';
+import { ownExportsOf } from '#lib/exports-of.ts';
 import { unread } from '#lib/type-exports.ts';
 
 const HARNESS_ID = 'type-exports';
@@ -73,6 +74,27 @@ describe('the scan', () => {
         .map((type) => type.name)
         .toSorted(),
     ).toStrictEqual(['ListedUnread', 'OnlyReexported', 'ReadByTest', 'Unread']);
+  });
+});
+
+describe("a module's own exports", () => {
+  test('reads each declaration a module exports of its own, and no local or re-export', () => {
+    expect.hasAssertions();
+    const source = [
+      'export const a = 1, { b } = { b: 2 };',
+      'export function c() {}',
+      'export class D {}',
+      'export interface E {}',
+      'export type F = 1;',
+      'export enum G { X }',
+      'export default function () {}',
+      'const h = 1;',
+      'function i() {}',
+      'let k = 1;',
+      'export { h as renamed };',
+      "export { j } from './j.ts';",
+    ].join('\n');
+    expect(ownExportsOf([['planted.ts', source]])).toStrictEqual(new Set(['D', 'E', 'F', 'G', 'a', 'c', 'h']));
   });
 });
 

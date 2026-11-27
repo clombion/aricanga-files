@@ -2,8 +2,9 @@
 
 import type { Node, Rule } from '#lint-rules/ast.ts';
 import { OWNERS_SCHEMA, child, children, memberName, moduleSource, nameOf, optionMatches, problemMeta } from '#lint-rules/ast.ts';
+import { Accepted } from '#lint-rules/exemptions.ts';
 
-const PROCESS = new Set(['process', 'node:process']);
+const PROCESS = new Accepted<string>(['process', 'node:process']);
 const MESSAGE = 'the environment is read by its settings owner: take the value from it';
 
 /**

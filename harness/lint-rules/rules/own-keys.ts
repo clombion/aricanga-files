@@ -7,10 +7,11 @@
 
 import type { Node, Rule } from '#lint-rules/ast.ts';
 import { child, children, flag, memberName, nameOf, problemMeta } from '#lint-rules/ast.ts';
+import { Accepted } from '#lint-rules/exemptions.ts';
 import { pathOf } from '#lint-rules/closed.ts';
 
 /** The node types whose `test` guards their first branch. */
-const GUARDS = new Set(['ConditionalExpression', 'IfStatement']);
+const GUARDS = new Accepted<string>(['ConditionalExpression', 'IfStatement']);
 
 /**
  * The parent of a node, as oxlint links it.

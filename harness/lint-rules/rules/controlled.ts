@@ -8,6 +8,7 @@
 import type { Node, Rule } from '#lint-rules/ast.ts';
 import { child, problemMeta } from '#lint-rules/ast.ts';
 import { jsxAttributes, jsxName } from '#lint-rules/jsx.ts';
+import { Accepted } from '#lint-rules/exemptions.ts';
 
 /** Each controlled property and the attribute that sets only its initial value. */
 const CONTROLLED: ReadonlyMap<string, string> = new Map([
@@ -15,7 +16,7 @@ const CONTROLLED: ReadonlyMap<string, string> = new Map([
   ['selected', 'defaultSelected'],
   ['value', 'defaultValue'],
 ]);
-const HANDLERS = ['onInput', 'onChange', 'onClick', 'on:input', 'on:change', 'on:click'];
+const HANDLERS = new Accepted<string>(['onInput', 'onChange', 'onClick', 'on:input', 'on:change', 'on:click']);
 
 /**
  * Whether an element handles its own change.
@@ -24,7 +25,7 @@ const HANDLERS = ['onInput', 'onChange', 'onClick', 'on:input', 'on:change', 'on
  */
 function handlesChange(opening: Node): boolean {
   const attributes = jsxAttributes(opening);
-  return HANDLERS.some((handler) => attributes.has(handler));
+  return [...HANDLERS].some((handler) => attributes.has(handler));
 }
 
 /**

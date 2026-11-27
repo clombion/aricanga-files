@@ -5,9 +5,10 @@
 
 import type { Node, Rule } from '#lint-rules/ast.ts';
 import { child, componentRule, flag, memberName, nameOf } from '#lint-rules/ast.ts';
+import { Accepted } from '#lint-rules/exemptions.ts';
 import { jsxName } from '#lint-rules/jsx.ts';
 
-const CHAINS = new Set(['then', 'catch', 'finally']);
+const CHAINS = new Accepted<string>(['then', 'catch', 'finally']);
 
 export const syncParts: Rule = componentRule('No async, await, promise, .then or <Loading> in a component module.', (context) => {
   const refuse = (node: Node, what: string): void => {

@@ -4,13 +4,14 @@
  */
 
 import { child, children, flag, nameOf, text } from '#lint-rules/ast.ts';
+import { Accepted } from '#lint-rules/exemptions.ts';
 import type { Node } from '#lint-rules/ast.ts';
 
 /** The fewest members a restated set or a chain names before it reads a closed set. */
 const SET_FLOOR = 2;
 
 /** The wrappers a literal list may sit in and still be the list it wraps. */
-const LIST_WRAPPERS = new Set(['TSAsExpression', 'TSSatisfiesExpression']);
+const LIST_WRAPPERS = new Accepted<string>(['TSAsExpression', 'TSSatisfiesExpression']);
 
 /**
  * The value of a string literal.
