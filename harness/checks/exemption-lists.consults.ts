@@ -16,6 +16,7 @@ import {
   isIdentifier,
   isImportClause,
   isImportSpecifier,
+  isJSDoc,
   isNamespaceImport,
   isNewExpression,
   isNumericLiteral,
@@ -26,10 +27,10 @@ import {
   isVariableDeclaration,
   isVariableStatement,
 } from 'typescript/unstable/ast/is';
+import { nodes, within } from '#lib/ts-source.ts';
 import type { CallExpression } from 'typescript/unstable/ast';
 import type { Kind } from '#lint-rules/exemptions.ts';
 import { SyntaxKind } from 'typescript/unstable/ast';
-import { nodes } from '#lib/ts-source.ts';
 
 const STALE_FAILING_CALLS = new Accepted(['unexempted', 'unexemptedBy', 'mismatches', 'assertExact']);
 const CONSULTING_METHODS = new Accepted([
@@ -245,7 +246,8 @@ function isStaleFailingReference(reference: Node): boolean {
 }
 
 /**
- * Whether a reference to a declaration reads it: not a declaration, an import or an export of its name.
+ * Whether a reference to a declaration reads it: not a declaration, an import or an export of its name,
+ * nor a mention in a doc comment (`{@link NAME}`).
  *
  * @param {Node} reference - A reference the checker resolves to the declaration.
  * @returns {boolean} Whether it reads the declaration.
@@ -253,6 +255,7 @@ function isStaleFailingReference(reference: Node): boolean {
 function isReadReference(reference: Node): boolean {
   const { parent } = reference;
   return !(
+    within(reference, isJSDoc) ||
     (isVariableDeclaration(parent) && parent.name === reference) ||
     isImportSpecifier(parent) ||
     isImportClause(parent) ||
