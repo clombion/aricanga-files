@@ -13,6 +13,8 @@ interface ChainPlant {
   readonly loads?: readonly string[];
   readonly declares?: readonly string[];
   readonly refused?: true;
+  /** The one refusal the importer gets, where the plant states it. */
+  readonly refusedAs?: string;
   readonly passes?: true;
 }
 
@@ -53,6 +55,25 @@ const LOADED_FORMS: readonly (readonly [string, string, string, string])[] = [
   ['extensionless', "import 'SPECIFIER';\nexport const a = 1;\n", SCRIPT, '__chain_extensionless'],
 ];
 
+/**
+ * The arguments of an `import()` whose specifier is not a literal, by name (card D-P5-1): those Vite
+ * bundles (wrapped, asserted, folded, conditional literals), a substituted template, and the computed
+ * ones; each planted in a module of its own, refused by the argument's text.
+ */
+const COMPUTED_IMPORTS: readonly (readonly [string, string])[] = [
+  ['substituted_template_import', `\`./testing/\${name}.ts\``],
+  ['parenthesised_import', "('./testing/x.ts')"],
+  ['asserted_import', "'./testing/x.ts' as string"],
+  ['angle_asserted_import', "<string>'./testing/x.ts'"],
+  ['non_null_import', "'./testing/x.ts'!"],
+  ['satisfies_import', "'./testing/x.ts' satisfies string"],
+  ['folded_import', "'./testing/' + 'x.ts'"],
+  ['conditional_import', "name === 'x' ? './testing/x.ts' : './testing/y.ts'"],
+  ['concatenated_import', "'./testing/' + name + '.ts'"],
+  ['concat_call_import', "'./testing/'.concat(name, '.ts')"],
+  ['identifier_import', 'where'],
+];
+
 /** The texts of the forms the scan cannot read in a production module, by name (V3, js261126-A). */
 const UNREAD_FORMS: readonly (readonly [string, string])[] = [
   ...['raw', 'url', 'worker', 'inline', 'no-inline', 'sharedworker', 'init', 'worker&url'].map(
@@ -62,7 +83,6 @@ const UNREAD_FORMS: readonly (readonly [string, string])[] = [
   ['meta_glob', "export const a = import.meta.glob('./testing/x');\n"],
   ['new_url', "export const a = new URL('./testing/x.css', import.meta.url);\n"],
   ['new_worker_url', "export const a = new Worker(new URL('./testing/x.ts', import.meta.url));\n"],
-  ['substituted_template_import', `export const a = async (name: string): Promise<unknown> => import(\`./testing/\${name}.ts\`);\n`],
   ['meta_url', 'export const a = import.meta.url;\n'],
   ['meta_whole', 'export const a = import.meta;\n'],
   ['meta_hot', 'export const a = import.meta.hot;\n'],
@@ -101,6 +121,15 @@ function loadedForm([name, text, target, file]: readonly [string, string, string
 const FORM_PLANTS: readonly ChainPlant[] = [
   ...LOADED_FORMS.flatMap((form) => loadedForm(form)),
   ...UNREAD_FORMS.map(([name, text]) => ({ path: `${SANDBOX}src/__chain_${name}.ts`, refused: true, text }) as const),
+  ...COMPUTED_IMPORTS.map(
+    ([name, argument]) =>
+      ({
+        path: `${SANDBOX}src/__chain_${name}.ts`,
+        refused: true,
+        refusedAs: `an import() of a specifier that is not a literal: ${argument}`,
+        text: `const where = './testing/x.ts';\nexport const a = async (name: string): Promise<unknown> => import(${argument});\nexport const b = where;\n`,
+      }) as const,
+  ),
   { path: `${SANDBOX}src/__chain_query.ts`, text: MODULE },
   ...['env', 'dirname', 'filename'].map(
     (member) =>

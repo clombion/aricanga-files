@@ -12,7 +12,7 @@
  * `node_modules`) and, while the session is `declaring`, each file TypeScript does not load itself (a
  * stylesheet, a file with no extension, held or installed); an installed file passes because it is
  * installed. In a production module the scan refuses what it cannot read (V3): an `import.meta` member
- * outside the admitted set (`chain-forms.ts`), a specifier with a query, an `import()` of a template with substitutions, a
+ * outside the admitted set (`chain-forms.ts`), a specifier with a query, an `import()` whose specifier is not a literal, a
  * specifier only a pattern declaration answers, and a specifier no file answers. A use the production
  * project cannot resolve but the scan's whole program answers only by test-support declarations is
  * reported as an import of each (the user's decisions FD1 and the R1 addition), under whatever

@@ -19,8 +19,8 @@
  * production modules holds no held non-production module, so a production module reaches test
  * support or test infrastructure by no form and through no chain of imports, within a member or
  * across members, the harness's and the root configuration modules included; a form the scan cannot
- * read is refused in a production module, and a use only test support's declarations answer is
- * reported. The planted chain holds every form, importer kind and case of the relation, each importer
+ * read is refused in a production module (an `import()` whose specifier is not a literal named by its
+ * argument), and a use only test support's declarations answer is reported. The planted chain holds every form, importer kind and case of the relation, each importer
  * with what the chain finds there. It alone holds that relation.
  */
 
@@ -151,6 +151,15 @@ describe('the whole chain', () => {
     expect.hasAssertions();
     const refused = new Set(chainOf(chainScan()).refused.map((refusal) => refusal.from));
     expect([...refused].toSorted(byCodeUnit)).toStrictEqual(importers('refused'));
+  });
+
+  test('names the argument of each import() whose specifier is not a literal', () => {
+    expect.hasAssertions();
+    const { refused } = chainOf(chainScan());
+    const stated = CHAIN.filter((plant) => plant.refusedAs !== undefined);
+    expect(stated.map((plant) => refused.filter((refusal) => refusal.from === plant.path).map((refusal) => refusal.form))).toStrictEqual(
+      stated.map((plant) => [plant.refusedAs]),
+    );
   });
 
   test('passes what ships and every form in a non-production module', () => {

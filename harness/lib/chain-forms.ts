@@ -2,8 +2,11 @@
  * The whole chain's readings of a production module and of its project's files
  * (`production-imports.ts`): the forms it cannot read (V3, the user's answer on card A of audit
  * js261126), refused where they stand — an `import.meta` member outside `ADMITTED_META`, an `import()`
- * of a template with substitutions, a specifier with a query, a specifier only a pattern declaration
- * answers (F1b2-R1-V1) — and the held file a program's file stands for under the declaration rule.
+ * whose specifier is not a literal (card D-P5-1: a wrapped, asserted, folded or conditional literal
+ * included, which Vite bundles, and any computed one), a specifier with a query, a specifier only a
+ * pattern declaration answers (F1b2-R1-V1) — and the held file a program's file stands for under the
+ * declaration rule. Loading that is not `import` syntax stays unread: `createRequire(…)(path)`, a
+ * `Worker` by path, an installed loader handed a path (none in the repository).
  */
 
 import {
@@ -19,12 +22,15 @@ import {
   isNoSubstitutionTemplateLiteral,
   isPropertyAccessExpression,
   isStringLiteral,
-  isTemplateExpression,
 } from 'typescript/unstable/ast';
 import { Accepted } from '#lint-rules/exemptions.ts';
 import type { Checker } from 'typescript/unstable/sync';
 import type { Node } from 'typescript/unstable/ast';
 import { declaredFile } from './declaration-paths.ts';
+
+/** Where an `import()`'s specifier sits among its arguments, and how many it is: the first, one. */
+const FIRST = 0;
+const SPECIFIER_COUNT = 1;
 
 /** The `import.meta` members a production module may read: inert values no bundler turns into a file. */
 const ADMITTED_META: Accepted<string> = new Accepted<string>(['dirname', 'env', 'filename']);
@@ -87,8 +93,27 @@ function specifierForm(node: Node, checker: Readonly<Checker>): string | undefin
 }
 
 /**
+ * The `import()` a node writes whose specifier is not a literal (a string or a template with no
+ * substitution), if it is one, by the text of its argument.
+ *
+ * @param {Node} node - A node of a production module.
+ * @returns {string | undefined} The refused form, or none.
+ */
+function computedImport(node: Node): string | undefined {
+  if (!isCallExpression(node) || node.expression.kind !== SyntaxKind.ImportKeyword) {
+    return undefined;
+  }
+  const specifier = node.arguments.slice(FIRST, SPECIFIER_COUNT);
+  if (specifier.some((argument) => isStringLiteral(argument) || isNoSubstitutionTemplateLiteral(argument))) {
+    return undefined;
+  }
+  const file = node.getSourceFile();
+  return `an import() of a specifier that is not a literal: ${specifier.map((argument) => file.text.slice(argument.getStart(file), argument.end)).join('')}`;
+}
+
+/**
  * The form one node of a production module writes that the scan cannot read (V3), if it is one: an
- * `import.meta` member outside the admitted set, an `import()` of a template with substitutions, a
+ * `import.meta` member outside the admitted set, an `import()` whose specifier is not a literal, a
  * specifier with a query, a specifier only a pattern declaration answers.
  *
  * @param {Node} node - A node of the module, in the production project.
@@ -96,14 +121,7 @@ function specifierForm(node: Node, checker: Readonly<Checker>): string | undefin
  * @returns {string | undefined} The refused form, or none.
  */
 function unreadForm(node: Node, checker: Readonly<Checker>): string | undefined {
-  if (
-    isCallExpression(node) &&
-    node.expression.kind === SyntaxKind.ImportKeyword &&
-    node.arguments.some((argument) => isTemplateExpression(argument))
-  ) {
-    return 'import() of a template with substitutions';
-  }
-  return metaForm(node) ?? specifierForm(node, checker);
+  return computedImport(node) ?? metaForm(node) ?? specifierForm(node, checker);
 }
 
 /**
