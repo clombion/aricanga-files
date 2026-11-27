@@ -1,6 +1,6 @@
 /** The provided population: a worker of the gate's run reads it, and computes no population of the repository. */
 
-import { describe, expect, test, vi } from 'vitest';
+import { describe, expect, inject, test, vi } from 'vitest';
 import { REPO_ROOT } from '#lib/paths.ts';
 import { configOf } from '#lib/vitest-config.ts';
 import { plantedPopulation } from '#lib/planted-population.ts';
@@ -35,7 +35,9 @@ describe('a worker of the gate run', () => {
 
   test('is provided the population of the repository only', async () => {
     expect.hasAssertions();
-    await expect(Promise.all([providedFor(REPO_ROOT), providedFor('/elsewhere')])).resolves.toMatchObject([{ root: REPO_ROOT }, undefined]);
+    const run = inject('population');
+    const [repository, elsewhere] = await Promise.all([providedFor(REPO_ROOT), providedFor('/elsewhere')]);
+    expect([run?.root, repository, elsewhere]).toStrictEqual([REPO_ROOT, run, undefined]);
   });
 });
 
