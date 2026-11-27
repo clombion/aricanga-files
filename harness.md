@@ -50,7 +50,7 @@ list.
 - `generated-docs` (`harness/checks/generated-docs.test.ts`): Every generated block of the docs equals a fresh render, names a known generator, and every generator has a block.
 - `harness-paths` (`harness/checks/harness-paths.test.ts`): Every harness path in harness code is composed from its directory's one owner.
 - `history-narration` (`harness/checks/history-narration.test.ts`): Current text describes the project as it is: no comment or doc narrates how it got there.
-- `holders` (`harness/checks/holders.test.ts`): Every held module is one holder's code (`Population.holderOf`): its nearest member's, or else the
+- `holders` (`harness/checks/holders.test.ts`): Every held module is one holder's code (`Population.holderOf`), and every reader of whose code a module is gives that answer.
 - `isolation` (`harness/checks/isolation.test.ts`): A test that leaves a timer pending when it ends fails, and the next test starts clean.
 - `json-files` (`harness/checks/json-files.test.ts`): Every held JSON file is strict JSON a reader cannot misread, and no manifest lists a dependency twice.
 - `knip-config` (`harness/checks/knip-config.test.ts`): Knip's configuration gives each member a workspace of its own files, and knip reports an orphan under it.

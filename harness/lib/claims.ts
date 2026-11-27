@@ -17,7 +17,9 @@ const CLAIM = /\b(?:the (?:one|only) (?:owner|module|place|reader|writer)|nowher
 
 /**
  * A package's name rule, as only `harness/lib/workspace.ts` may write it: the refusal's words, or a
- * `typeof` narrowing of a variable named `name`, or of a `name` field read by key, to a string.
+ * `typeof` narrowing of a variable named `name`, or of a `name` field read by key, to a string. It
+ * lists spellings because no type holds the rule: a manifest is open fields read by key
+ * (`packageName`'s docstring says why that fact stands).
  */
 const NAME_RULE = /typeof [\w.]*(?:\bname|\[[']name[']\]) === [']string[']|is no string: a package[']s name is a string, or none/u;
 

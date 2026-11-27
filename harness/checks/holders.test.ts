@@ -1,8 +1,10 @@
 /**
- * Every held module is one holder's code (`Population.holderOf`): its nearest member's, or else the
- * harness's, which holds `harness/` and the root configuration modules; a member at `harness/` is
- * refused, since its files would have two holders. Each reader of whose code a
- * module is gives that answer, run as the reader runs: oxlint's harness code (`HARNESS_CODE`), knip's
+ * Every held module is one holder's code (`Population.holderOf`), and every reader of whose code a module is gives that answer.
+ *
+ * The holder is the module's nearest member, or else the harness, which holds `harness/` and the root
+ * configuration modules; a member at `harness/` is refused, since its files would have two holders,
+ * and a member under it is nested in the harness and holds its own files (#58 1c refuses nesting,
+ * under the harness's directory included). Each reader gives the holder's answer, run as the reader runs: oxlint's harness code (`HARNESS_CODE`), knip's
  * root project (the harness's directory; knip enters the root configuration modules itself, as its
  * config and its plugins' configs), the owner registry's roots (`rootOf`) and jscpd's roots
  * (`scanRoots`), which take each module once.
@@ -68,6 +70,16 @@ describe("a population's holders", () => {
     });
     const holders = HOLDER_PROBES.map((probe) => held.holderOf(probe));
     expect(holders).toStrictEqual([...held.members, 'harness', 'harness', undefined, undefined]);
+  });
+
+  test("gives a member under the harness's directory its own files, nested in the harness, and the harness the rest of its directory", async () => {
+    expect.hasAssertions();
+    const held = await populationOf({
+      listing: ['package.json', 'harness/tools/package.json'],
+      read: reader({ 'harness/tools/package.json': manifest('system'), 'package.json': '{}' }),
+      workspace: listing([''], ['harness/tools/', 'x']),
+    });
+    expect(['harness/tools/src/a.ts', 'harness/lib/a.ts'].map((path) => held.holderOf(path))).toStrictEqual([...held.members, 'harness']);
   });
 
   test("refuses a member at the harness's root, whose files would be its own and the harness's", async () => {

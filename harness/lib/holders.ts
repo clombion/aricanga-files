@@ -29,7 +29,8 @@ interface Directed {
  * Whose code each path is, over a population's members: the nearest member holding it, else the
  * harness for a path under its directory or a root configuration module. A member at the harness's
  * directory is refused, since its files would be its own and the harness's; a member nested in
- * another gives its files to the nearest one (#58 1c refuses nesting).
+ * another gives its files to the nearest one, and so does a member under the harness's directory,
+ * nested in the harness (#58 1c refuses nesting, the harness as the outer holder included).
  *
  * @param {readonly Member[]} members - The members.
  * @returns {(path: string) => Member | 'harness' | undefined} The holder of a path; none for a path no holder holds.

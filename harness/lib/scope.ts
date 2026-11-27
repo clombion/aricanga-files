@@ -68,10 +68,10 @@ interface Member {
   readonly manifest: Fields;
 }
 
-/** A package pnpm lists below the root, a member's or the POC's: its directory, and its name (none: it is imported by no name). */
 /** Whose code a held module is: its nearest member's, or the harness's. */
 type HeldBy = Member | 'harness';
 
+/** A package pnpm lists below the root, a member's or the POC's: its directory, and its name (none: it is imported by no name). */
 interface ListedPackage {
   readonly dir: MemberDir;
   readonly name: string | undefined;
