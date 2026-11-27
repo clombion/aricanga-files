@@ -2,6 +2,7 @@
 
 import type { Node, Rule } from '#lint-rules/ast.ts';
 import { child, children, componentRule, nameOf } from '#lint-rules/ast.ts';
+import { importBindings, importedCallee } from '#lint-rules/rules/imports.ts';
 import { Accepted } from '#lint-rules/exemptions.ts';
 import { EFFECTS } from '#lint-rules/solid.ts';
 
@@ -34,11 +35,17 @@ function mirroredSetter(call: Node): string | undefined {
   return setter !== undefined && SETTER.test(setter) ? setter : undefined;
 }
 
-export const mirrors: Rule = componentRule('No effect whose only work is calling a setter; derive the value.', (context) => ({
-  CallExpression(node) {
-    const setter = EFFECTS.has(nameOf(child(node, 'callee')) ?? '') ? mirroredSetter(node) : undefined;
-    if (setter !== undefined) {
-      context.report({ message: `an effect that only calls ${setter} mirrors a value: derive it instead`, node });
-    }
-  },
-}));
+export const mirrors: Rule = componentRule('No effect whose only work is calling a setter; derive the value.', (context) => {
+  let bindings: ReadonlyMap<string, string> = new Map();
+  return {
+    CallExpression(node) {
+      const setter = EFFECTS.has(importedCallee(node, bindings)) ? mirroredSetter(node) : undefined;
+      if (setter !== undefined) {
+        context.report({ message: `an effect that only calls ${setter} mirrors a value: derive it instead`, node });
+      }
+    },
+    Program(node) {
+      bindings = importBindings(node);
+    },
+  };
+});

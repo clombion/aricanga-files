@@ -1,0 +1,14 @@
+// path: packages/systems/chat/src/view/flags-alias.tsx
+import type { JSX } from '@solidjs/web';
+import { createSignal as make } from 'solid-js';
+
+export function Thread(props: { readonly vm: { readonly title: string } }): JSX.Element {
+  const [loading, setLoading] = make(true);
+  return (
+    <button type="button" onClick={() => {
+        setLoading(false);
+      }}>
+      {loading() ? '…' : props.vm.title}
+    </button>
+  );
+}
