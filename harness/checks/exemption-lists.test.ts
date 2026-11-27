@@ -217,13 +217,14 @@ describe('the fence', () => {
   });
 
   test.each([
-    ['a relative specifier', '../lib/planted.ts'],
-    ['a subpath specifier', '#lib/planted.ts'],
-  ])('a declaration consulted by a module importing it through %s is live', async (_name, specifier) => {
+    ['a relative specifier', '../lib/planted.ts', 'harness/lib/planted.ts'],
+    ['a subpath pattern', '#lib/planted.ts', 'harness/lib/planted.ts'],
+    ['an exact subpath key', '#root/knip.config.ts', 'knip.config.ts'],
+  ])('a declaration consulted by a module importing it through %s is live', async (_name, specifier, path) => {
     expect.hasAssertions();
     const owner = "export const EXEMPT = new Exemptions({ a: 'why' });\nexport const NAMES = new Accepted(['a']);\n";
     const user = `import { EXEMPT, NAMES } from '${specifier}';\nexport function check() { EXEMPT.unexempted(['a']); return NAMES.has('a'); }\n`;
-    await expect(findings({ [PLANT]: user, 'harness/lib/planted.ts': owner })).resolves.toStrictEqual([]);
+    await expect(findings({ [PLANT]: user, [path]: owner })).resolves.toStrictEqual([]);
   });
 
   test('a stale adopting entry fails', () => {

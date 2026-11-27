@@ -44,13 +44,18 @@ async function subpathPatterns(): Promise<readonly (readonly [string, string])[]
 }
 
 /**
- * The repository path a subpath import names, through the root `package.json` `imports`.
+ * The repository path a subpath import names, through the root `package.json` `imports`, as Node
+ * resolves it: a key equal to the specifier first, then a `*` pattern.
  *
  * @param {string} specifier - A `#…` specifier.
- * @param {readonly (readonly [string, string])[]} patterns - The `imports` patterns, each with its target.
- * @returns {string | undefined} The path it maps to, or `undefined` when no pattern maps it.
+ * @param {readonly (readonly [string, string])[]} patterns - The `imports` keys, each with its target.
+ * @returns {string | undefined} The path it maps to, or `undefined` when no key maps it.
  */
 function subpathTarget(specifier: string, patterns: readonly (readonly [string, string])[]): string | undefined {
+  const [, exact] = patterns.find(([pattern]) => pattern === specifier) ?? [];
+  if (exact !== undefined) {
+    return normalize(exact);
+  }
   for (const [pattern, target] of patterns) {
     const prefix = pattern.replace(/\*$/u, '');
     if (pattern.endsWith('*') && specifier.startsWith(prefix)) {
