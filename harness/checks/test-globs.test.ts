@@ -1,8 +1,9 @@
 /** The gate's Vitest globs: a shipping member's tests are collected, in its app's own project when it is a Vite app, and its sources covered. */
 
 import { HARNESS_CHECKS, VITEST_TESTS, coverageIncludes, isRunnerTest, testIncludes, viteApps } from '#lib/test-globs.ts';
-import { coverageOf, gateTest, globsOf, projectsOf } from './gate-config.ts';
+import { coverageOf, gateTest, globsOf, projectsOf, testOf } from './gate-config.ts';
 import { describe, expect, test } from 'vitest';
+import { list, object } from '#lib/config.ts';
 import type { Population } from '#lib/scope.ts';
 import { configOf } from '#lib/vitest-config.ts';
 import { matches } from '#lint-rules/globs.ts';
@@ -42,8 +43,30 @@ async function planted(): Promise<Population> {
   return held;
 }
 
+/** What a project of the gate config says of whose tests it runs and how they compile: what it extends, its name and its include. */
+interface ProjectShape {
+  readonly extends: unknown;
+  readonly include: unknown;
+  readonly name: unknown;
+}
+
+/**
+ * Each project of a config, as what it extends, its name and its include.
+ *
+ * @param {Population} held - The population the config is built over.
+ * @returns {readonly ProjectShape[]} The projects, in order.
+ */
+function projectShapes(held: Population): readonly ProjectShape[] {
+  const gate = testOf(object(configOf(held), 'the gate config'));
+  return list(gate['projects'], 'projects').map((entry) => {
+    const project = object(entry, 'a project');
+    const settings = object(project['test'], 'a project test');
+    return { extends: project['extends'], include: settings['include'], name: settings['name'] };
+  });
+}
+
 describe("the gate config's projects", () => {
-  test("give each shipping Vite app a project extending its own Vite config, with the gate's settings, and its tests to no other project", async () => {
+  test('give each shipping Vite app a project extending its own Vite config, and its tests to no other project', async () => {
     expect.hasAssertions();
     const held = await plantedPopulation(
       ['packages/app/vite.config.ts', 'packages/app/src/a.test.tsx', 'packages/probe/vite.config.ts', 'packages/core/test/a.test.ts'],
@@ -53,20 +76,12 @@ describe("the gate config's projects", () => {
         ['packages/probe/', 'test-infrastructure'],
       ],
     );
-    expect([viteApps(held).map((app) => app.dir), configOf(held).test?.projects]).toMatchObject([
+    expect([viteApps(held).map((app) => app.dir), projectShapes(held)]).toStrictEqual([
       ['packages/app/', 'packages/probe/'],
       [
-        {
-          extends: './packages/app/vite.config.ts',
-          test: {
-            expect: { requireAssertions: true },
-            include: ['packages/app/**/*.test.{ts,tsx}'],
-            name: 'packages/app/',
-            restoreMocks: true,
-          },
-        },
-        { extends: true, test: { include: ['packages/core/**/*.test.{ts,tsx}'], name: 'rebuild' } },
-        { extends: true, test: { name: 'harness' } },
+        { extends: './packages/app/vite.config.ts', include: ['packages/app/**/*.test.{ts,tsx}'], name: 'packages/app/' },
+        { extends: true, include: ['packages/core/**/*.test.{ts,tsx}'], name: 'rebuild' },
+        { extends: true, include: ['harness/checks/**/*.test.{ts,tsx}'], name: 'harness' },
       ],
     ]);
   });

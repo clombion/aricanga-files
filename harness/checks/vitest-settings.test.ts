@@ -1,28 +1,29 @@
 /**
- * Vitest, under this project's settings, fails each planted test a bare configuration would pass.
+ * Vitest, under this project's settings, fails each planted test a bare configuration would pass, in every project of the gate's config.
  *
  * Each plant runs in a planted project whose config is the gate's own (`configOf` of
- * `harness/lib/vitest-config.ts`) built over the planted project's population, a lone member no repository
- * glob names, and which holds a copy of the harness lib its setup files load, as a spec of the
- * `rebuild` project; every run reports the files it collected, so a plant that fails is told apart
- * from one nothing collected. A
- * plant must fail under the gate config and pass once only its setting is reverted (vitest's own
- * `mergeConfig` over the gate's config): `.only` under `allowOnly: false`, a test with
- * no assertion under `requireAssertions`, an unimported `test` under `globals: false`, a test
- * leaning on a spy, a global or an env variable a previous test left under `restoreMocks`,
- * `unstubGlobals` and `unstubEnvs`, and twenty order-dependent tests under `shuffle`. Plants that
- * lean on order run with shuffling off, so the failure is the setting's. A file with no test and an
- * unhandled rejection fail under the gate config (Vitest's defaults hold them), and the timeout is
- * bounded.
+ * `harness/lib/vitest-config.ts`) built over its population, a foundation member and a Vite app no
+ * repository glob names, beside a copy of the harness lib its setup files load. Each of the config's
+ * projects (the app's own, `rebuild` and `harness`) holds one copy of the plant, and every run reports
+ * how each copy ended. A plant must fail in every project under the gate config and pass in every
+ * project once only its setting is reverted (vitest's `mergeConfig` over the root's and each
+ * project's settings, since an app's project inherits nothing from the root): `.only` under
+ * `allowOnly: false`, a test with no assertion under `requireAssertions`, an unimported `test` under
+ * `globals: false`, a test leaning on a spy, a global or an env variable a previous test left under
+ * `restoreMocks`, `unstubGlobals` and `unstubEnvs` (run unshuffled, so the failure is the setting's),
+ * and twenty order-dependent tests under `shuffle`. A file with no test fails in every project and an
+ * unhandled rejection fails the run (Vitest's defaults hold them), and the timeout is bounded.
  */
 
 import { EXIT_CLEAN, EXIT_FINDINGS } from '#lib/exit-status.ts';
 import { describe, expect, test } from 'vitest';
-import { list, object, parsed } from '#lib/config.ts';
+import { gateTest, projectsOf, testOf } from './gate-config.ts';
+import { list, object, parsed, stringOf } from '#lib/config.ts';
 import { Project } from '#lib/tools.ts';
+import { configOf } from '#lib/vitest-config.ts';
 import { fromRoot } from '#lib/paths.ts';
-import { gateTest } from './gate-config.ts';
 import { pathToFileURL } from 'node:url';
+import { plantedPopulation } from '#lib/planted-population.ts';
 
 const HARNESS_ID = 'vitest-settings';
 
@@ -82,18 +83,29 @@ const PLANTS: readonly Plant[] = [
   },
 ];
 
-const DEFAULTS: readonly Plant[] = [
-  { name: 'empty', ordered: false, revert: {}, text: 'export const nothing = 1;\n' },
-  {
-    name: 'unhandled',
-    ordered: false,
-    revert: {},
-    text: `${IMPORTS}test('a', () => {\n  void Promise.reject(new Error('planted'));\n  expect(1).toBe(1);\n});\n`,
-  },
-];
+const EMPTY: Plant = { name: 'empty', ordered: false, revert: {}, text: 'export const nothing = 1;\n' };
+const REJECTING = `${IMPORTS}test('a', () => {\n  void Promise.reject(new Error('planted'));\n  expect(1).toBe(1);\n});\n`;
+const UNHANDLED: Plant = { name: 'unhandled', ordered: false, revert: {}, text: REJECTING };
 
 const SHUFFLE_OFF: Overrides = { sequence: { shuffle: false } };
-const SEEDED: Overrides = { sequence: { seed: 1, shuffle: true } };
+/** The order plant's seed: the gate's own shuffle, in a fixed order. */
+const SEEDED: Overrides = { sequence: { seed: 1 } };
+/** Each project of the planted config, by name in the config's order, and the directory its copy of a plant sits in. */
+const PROJECTS: ReadonlyMap<string, string> = new Map([
+  ['packages/app/', 'packages/app/test/'],
+  ['rebuild', 'packages/plant/test/'],
+  ['harness', 'harness/checks/'],
+]);
+/** The planted population's members: a foundation member and a Vite app. */
+const MEMBERS = [
+  ['packages/plant/', 'foundation'],
+  ['packages/app/', 'experience'],
+] as const;
+/** The planted app's Vite config: the app states nothing its tests need. */
+const APP_CONFIG = 'packages/app/vite.config.ts';
+/** How Vitest ended a file it failed, and one it passed. */
+const [FAILED, PASSED] = ['failed', 'passed'];
+
 /** The longest test timeout the gate may set. */
 const TIMEOUT_BOUND = 60_000;
 /** A timeout of zero is none. */
@@ -113,31 +125,63 @@ function merge(...layers: readonly Overrides[]): Overrides {
   return merged;
 }
 
-/** How one plant run ended: its exit status, and how many test files Vitest collected. */
-interface PlantRun {
-  readonly status: number;
-  readonly files: number;
-}
-
 /**
- * The planted config: the gate's own config built over the planted project's population, a lone
- * foundation member in a directory no repository glob names, with `overrides` merged.
+ * The planted config: the gate's own config over the planted population, `overrides` merged over the root's settings and each project's.
  *
- * @param {string} plantPath - The planted test's path.
+ * @param {readonly string[]} plantPaths - The planted tests' paths.
  * @param {Overrides} overrides - The overrides.
  * @returns {string} The config module's text.
  */
-function plantedConfig(plantPath: string, overrides: Overrides): string {
+function plantedConfig(plantPaths: readonly string[], overrides: Overrides): string {
   const gate = JSON.stringify(pathToFileURL(fromRoot('harness/lib/vitest-config.ts')).href);
   const scope = JSON.stringify(pathToFileURL(fromRoot('harness/lib/planted-population.ts')).href);
+  const files = JSON.stringify([APP_CONFIG, ...plantPaths]);
   return [
     "import { mergeConfig } from 'vitest/config';",
     `import { configOf } from ${gate};`,
     `import { plantedPopulation } from ${scope};`,
-    `const held = await plantedPopulation([${JSON.stringify(plantPath)}], [['packages/plant/', 'foundation']]);`,
-    `export default mergeConfig(configOf(held), ${JSON.stringify({ test: overrides })});`,
+    `const held = await plantedPopulation(${files}, ${JSON.stringify(MEMBERS)});`,
+    `const layer = ${JSON.stringify({ test: overrides })};`,
+    'const gate = configOf(held);',
+    'const projects = (gate.test?.projects ?? []).map((project) => mergeConfig(project, layer));',
+    'export default mergeConfig({ ...gate, test: { ...gate.test, projects } }, layer);',
     '',
   ].join('\n');
+}
+
+/** How one plant run ended: its exit status, and how each project's copy of the plant ended, by project. */
+interface PlantRun {
+  readonly status: number;
+  readonly files: Readonly<Record<string, string>>;
+}
+
+/**
+ * Each project's copy of a plant.
+ *
+ * @param {Plant} plant - The plant.
+ * @returns {ReadonlyMap<string, string>} The copy's path, by project.
+ */
+function copiesOf(plant: Plant): ReadonlyMap<string, string> {
+  return new Map([...PROJECTS].map(([name, directory]: readonly [string, string]) => [name, `${directory}${plant.name}.test.ts`]));
+}
+
+/**
+ * How each collected file ended, by the project whose copy it is.
+ *
+ * @param {unknown} report - Vitest's JSON report.
+ * @param {ReadonlyMap<string, string>} copies - Each project's copy, by project.
+ * @returns {Readonly<Record<string, string>>} How each file ended, by project.
+ */
+function endings(report: unknown, copies: ReadonlyMap<string, string>): Readonly<Record<string, string>> {
+  const results = list(object(report, 'the Vitest report')['testResults'], 'the test file results');
+  const byProject: Record<string, string> = {};
+  for (const result of results) {
+    const file = object(result, 'a test file result');
+    const name = stringOf(file['name'], 'a test file name');
+    const [project = name] = [...copies].find(([, path]: readonly [string, string]) => name.endsWith(`/${path}`)) ?? [];
+    byProject[project] = stringOf(file['status'], 'a test file status');
+  }
+  return byProject;
 }
 
 /**
@@ -150,37 +194,21 @@ function plantedConfig(plantPath: string, overrides: Overrides): string {
 async function run(plant: Plant, overrides: Overrides): Promise<PlantRun> {
   const project = await Project.create({ copies: ['harness/lib'] });
   try {
-    const path = `packages/plant/test/${plant.name}.test.ts`;
-    await project.write('vitest.planted.config.mts', plantedConfig(path, overrides));
-    await project.write(path, plant.text);
+    const copies = copiesOf(plant);
+    await project.write('vitest.planted.config.mts', plantedConfig([...copies.values()], overrides));
+    await project.writeAll([[APP_CONFIG, 'export default {};\n'], ...[...copies.values()].map((path) => [path, plant.text] as const)]);
     const done = await project.tool(
       'vitest',
       'run',
       '--config',
       'vitest.planted.config.mts',
-      '--project',
-      'rebuild',
       '--reporter=json',
       '--outputFile=report.json',
-      path,
     );
-    const report = object(parsed(await project.read('report.json'), 'the Vitest report'), 'the Vitest report');
-    return { files: list(report['testResults'], 'the test file results').length, status: done.status };
+    return { files: endings(parsed(await project.read('report.json'), 'the Vitest report'), copies), status: done.status };
   } finally {
     await project.remove();
   }
-}
-
-/**
- * The exit status of one plant run under the gate config with `overrides` merged over its `test`.
- *
- * @param {Plant} plant - The planted project.
- * @param {Overrides} overrides - The overrides.
- * @returns {Promise<number>} The exit status.
- */
-async function status(plant: Plant, overrides: Overrides): Promise<number> {
-  const ran = await run(plant, overrides);
-  return ran.status;
 }
 
 /**
@@ -197,16 +225,23 @@ function order(plant: Plant): Overrides {
 }
 
 /**
- * A plant's exit statuses under the gate config, then with its setting reverted.
+ * Every project's copy ending as `ending`.
  *
- * @param {Plant} plant - The plant.
- * @returns {Promise<readonly [number, number]>} The two exit statuses.
+ * @param {string} ending - How each copy ends.
+ * @returns {Readonly<Record<string, string>>} The ending, by project.
  */
-async function underGateAndReverted(plant: Plant): Promise<readonly [number, number]> {
-  const sequence = order(plant);
-  const gated = await status(plant, sequence);
-  const reverted = await status(plant, merge(sequence, plant.revert));
-  return [gated, reverted];
+const everyProject = (ending: string): Readonly<Record<string, string>> =>
+  Object.fromEntries([...PROJECTS.keys()].map((name) => [name, ending]));
+
+/**
+ * The names of the projects of the gate's config over the planted population, in order.
+ *
+ * @returns {Promise<readonly string[]>} The names.
+ */
+async function plantedProjects(): Promise<readonly string[]> {
+  const held = await plantedPopulation([APP_CONFIG, ...copiesOf(EMPTY).values()], MEMBERS);
+  const settings = testOf(object(configOf(held), 'the gate config'));
+  return projectsOf(settings).map((project) => stringOf(project['name'], 'a project name'));
 }
 
 /**
@@ -221,16 +256,23 @@ async function timeoutBounded(): Promise<boolean> {
 }
 
 describe('each setting', () => {
-  test.for(PLANTS)('fails the $name plant, and passes it once reverted', async (plant) => {
+  test.for(PLANTS)('fails the $name plant in every project, and passes it in every project once reverted', async (plant) => {
     expect.hasAssertions();
-    await expect(underGateAndReverted(plant)).resolves.toStrictEqual([EXIT_FINDINGS, EXIT_CLEAN]);
+    const sequence = order(plant);
+    const runs = await Promise.all([run(plant, sequence), run(plant, merge(sequence, plant.revert))]);
+    expect(runs.map((ran) => ran.files)).toStrictEqual([everyProject(FAILED), everyProject(PASSED)]);
   });
 });
 
 describe('the defaults the gate keeps', () => {
-  test.for(DEFAULTS)('fail the $name plant, collected', async (plant) => {
+  test('fail the empty plant in every project', async () => {
     expect.hasAssertions();
-    await expect(run(plant, {})).resolves.toStrictEqual({ files: 1, status: EXIT_FINDINGS });
+    await expect(run(EMPTY, {})).resolves.toStrictEqual({ files: everyProject(FAILED), status: EXIT_FINDINGS });
+  });
+
+  test('fail the run of an unhandled rejection, every project collected', async () => {
+    expect.hasAssertions();
+    await expect(run(UNHANDLED, {})).resolves.toStrictEqual({ files: everyProject(PASSED), status: EXIT_FINDINGS });
   });
 
   test('the test timeout is set and bounded', async () => {
@@ -240,10 +282,15 @@ describe('the defaults the gate keeps', () => {
 });
 
 describe('the plants', () => {
-  test('a clean spec passes under the gate config', async () => {
+  test('a clean spec passes in every project under the gate config', async () => {
     expect.hasAssertions();
     const clean = { name: 'clean', ordered: false, revert: {}, text: `${IMPORTS}test('a', () => {\n  expect(1).toBe(1);\n});\n` };
-    await expect(run(clean, {})).resolves.toStrictEqual({ files: 1, status: EXIT_CLEAN });
+    await expect(run(clean, {})).resolves.toStrictEqual({ files: everyProject(PASSED), status: EXIT_CLEAN });
+  });
+
+  test("are planted in every project of the gate's config over the planted population", async () => {
+    expect.hasAssertions();
+    await expect(plantedProjects()).resolves.toStrictEqual([...PROJECTS.keys()]);
   });
 });
 

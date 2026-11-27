@@ -5,8 +5,9 @@
  * app's own Vite config (`viteApps`), so they are compiled by the plugins, aliases and options the app
  * is built with, which the app states; the other shipping members' tests run in the `rebuild`
  * project, and the harness's checks in the `harness` project. Every test starts from a clean slate
- * (mocks restored, globals and env unstubbed), runs in a shuffled order, must assert, and is bounded:
- * an app's project inherits nothing from the root, so it carries those settings itself (`SHARED`).
+ * (mocks restored, globals and env unstubbed), runs in a shuffled order, must assert, may not be
+ * focused with `.only`, and is bounded: an app's project inherits nothing from the root, so it
+ * carries those settings itself (`SHARED`).
  * Coverage is written outside the checkout, so the gate writes no file. A config over a checkout's
  * population provides it to every worker (`provided.ts`), so no worker computes the repository's. A
  * planted run builds the config over its own population, which has no checkout: it computes none of
@@ -33,10 +34,12 @@ import { provision } from './provided.ts';
 
 /** The test settings every project of the run holds: the root's, and each app's project's, which extends no root. */
 const SHARED: NonNullable<ViteUserConfig['test']> = {
+  allowOnly: false,
   expect: { requireAssertions: true },
   globals: false,
   hookTimeout: 30_000,
   restoreMocks: true,
+  sequence: { shuffle: true },
   setupFiles: [`./${HARNESS_LIB}guards.ts`],
   testTimeout: 30_000,
   unstubEnvs: true,
@@ -79,7 +82,6 @@ function configOf(held: Population): ViteUserConfig {
   const apps = new Set(shippingApps(held));
   return defineConfig({
     test: {
-      allowOnly: false,
       coverage: {
         exclude: [...RUNNER_TESTS],
         include: [...coverageIncludes(held), `${HARNESS_LIB}**`, `${HARNESS_LINT_RULES}globs.ts`, `${HARNESS_SCRIPTS}**`, ...ROOT_MODULES],
@@ -112,7 +114,6 @@ function configOf(held: Population): ViteUserConfig {
         },
       ],
       provide: provision(held),
-      sequence: { shuffle: true },
     },
   });
 }
