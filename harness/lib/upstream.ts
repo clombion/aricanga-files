@@ -13,6 +13,7 @@ const UPSTREAM: ReadonlyMap<string, string> = new Map([
   ['@playwright/test', 'microsoft/playwright'],
   ['@solidjs/compiler', 'solidjs/solid'],
   ['@solidjs/vite-plugin', 'solidjs/vite-plugin-solid'],
+  ['@solidjs/web', 'solidjs/solid'],
   ['@types/iarna__toml', 'DefinitelyTyped/DefinitelyTyped'],
   ['@types/node', 'DefinitelyTyped/DefinitelyTyped'],
   ['@vitest/coverage-v8', 'vitest-dev/vitest'],

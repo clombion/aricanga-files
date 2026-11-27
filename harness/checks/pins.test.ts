@@ -59,6 +59,18 @@ describe('the pins of a population', () => {
   });
 });
 
+describe("the pins of a member's manifest", () => {
+  test('read its dependencies as well as its devDependencies', async () => {
+    expect.hasAssertions();
+    const held = await plantedPopulation([], [['packages/app/', 'view', { dependencies: { vite: '^8.0.0' } }]], {});
+    await expect(pinsOf(held, reader({ 'pnpm-lock.yaml': LOCK }))).resolves.toStrictEqual([
+      { tool: 'node', version: undefined, where: ['package.json engines'] },
+      { tool: 'pnpm', version: undefined, where: ['package.json packageManager'] },
+      { tool: 'vite', version: '8.3.8', where: ['pnpm-lock.yaml (packages/app)'] },
+    ]);
+  });
+});
+
 describe('the pins of one tool', () => {
   test('name every input that pins a tool at one version, a lockfile pin and a package.json field together', () => {
     expect.hasAssertions();

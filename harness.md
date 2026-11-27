@@ -168,6 +168,7 @@ the tool at that version: a `package.json` field, or `pnpm-lock.yaml` with the i
 | `@playwright/test` | [microsoft/playwright](https://github.com/microsoft/playwright) | `pnpm-lock.yaml (.)` | 1.65.1 |
 | `@solidjs/compiler` | [solidjs/solid](https://github.com/solidjs/solid) | `pnpm-lock.yaml (experiences/sandbox, packages/characterisation)` | 2.0.2 |
 | `@solidjs/vite-plugin` | [solidjs/vite-plugin-solid](https://github.com/solidjs/vite-plugin-solid) | `pnpm-lock.yaml (experiences/sandbox, packages/characterisation)` | 3.0.1 |
+| `@solidjs/web` | [solidjs/solid](https://github.com/solidjs/solid) | `pnpm-lock.yaml (experiences/sandbox, packages/characterisation)` | 2.0.3 |
 | `@types/iarna__toml` | [DefinitelyTyped/DefinitelyTyped](https://github.com/DefinitelyTyped/DefinitelyTyped) | `pnpm-lock.yaml (.)` | 2.0.5 |
 | `@types/node` | [DefinitelyTyped/DefinitelyTyped](https://github.com/DefinitelyTyped/DefinitelyTyped) | `pnpm-lock.yaml (.)` | 26.6.6 |
 | `@vitest/coverage-v8` | [vitest-dev/vitest](https://github.com/vitest-dev/vitest) | `pnpm-lock.yaml (.)` | 5.1.1 |
@@ -177,7 +178,7 @@ the tool at that version: a `package.json` field, or `pnpm-lock.yaml` with the i
 | `eslint-plugin-solid` | [solidjs-community/eslint-plugin-solid](https://github.com/solidjs-community/eslint-plugin-solid) | `pnpm-lock.yaml (.)` | 0.20.0 |
 | `fast-check` | [dubzzz/fast-check](https://github.com/dubzzz/fast-check) | `pnpm-lock.yaml (.)` | 4.10.3 |
 | `happy-dom` | [capricorn86/happy-dom](https://github.com/capricorn86/happy-dom) | `pnpm-lock.yaml (.)` | 21.0.4 |
-| `inkjs` | [y-lohse/inkjs](https://github.com/y-lohse/inkjs) | `pnpm-lock.yaml (., experiences/sandbox)` | 2.4.0 |
+| `inkjs` | [y-lohse/inkjs](https://github.com/y-lohse/inkjs) | `pnpm-lock.yaml (., experiences/sandbox, packages/foundation)` | 2.4.0 |
 | `jscpd` | [kucherenko/jscpd](https://github.com/kucherenko/jscpd) | `pnpm-lock.yaml (.)` | 5.4.2 |
 | `knip` | [webpro-nl/knip](https://github.com/webpro-nl/knip) | `pnpm-lock.yaml (.)` | 6.44.1 |
 | `lefthook` | [evilmartians/lefthook](https://github.com/evilmartians/lefthook) | `pnpm-lock.yaml (.)` | 2.2.2 |
@@ -189,7 +190,7 @@ the tool at that version: a `package.json` field, or `pnpm-lock.yaml` with the i
 | `pnpm` | [pnpm/pnpm](https://github.com/pnpm/pnpm) | `package.json packageManager` | 10.28.0 |
 | `remark-parse` | [remarkjs/remark](https://github.com/remarkjs/remark) | `pnpm-lock.yaml (.)` | 11.0.0 |
 | `sharp` | [lovell/sharp](https://github.com/lovell/sharp) | `pnpm-lock.yaml (.)` | 0.35.5 |
-| `solid-js` | [solidjs/solid](https://github.com/solidjs/solid) | `pnpm-lock.yaml (.)` | 2.0.3 |
+| `solid-js` | [solidjs/solid](https://github.com/solidjs/solid) | `pnpm-lock.yaml (., experiences/sandbox, packages/characterisation)` | 2.0.3 |
 | `stylelint` | [stylelint/stylelint](https://github.com/stylelint/stylelint) | `pnpm-lock.yaml (.)` | 17.16.0 |
 | `stylelint-config-standard` | [stylelint/stylelint-config-standard](https://github.com/stylelint/stylelint-config-standard) | `pnpm-lock.yaml (.)` | 40.0.0 |
 | `stylelint-declaration-strict-value` | [AndyOGo/stylelint-declaration-strict-value](https://github.com/AndyOGo/stylelint-declaration-strict-value) | `pnpm-lock.yaml (.)` | 1.12.1 |
@@ -199,7 +200,7 @@ the tool at that version: a `package.json` field, or `pnpm-lock.yaml` with the i
 | `typescript` | [microsoft/TypeScript](https://github.com/microsoft/TypeScript) | `pnpm-lock.yaml (.)` | 7.0.2 |
 | `unified` | [unifiedjs/unified](https://github.com/unifiedjs/unified) | `pnpm-lock.yaml (.)` | 11.0.5 |
 | `unist-util-visit` | [syntax-tree/unist-util-visit](https://github.com/syntax-tree/unist-util-visit) | `pnpm-lock.yaml (.)` | 5.2.0 |
-| `vite` | [vitejs/vite](https://github.com/vitejs/vite) | `pnpm-lock.yaml (.)` | 8.3.8 |
+| `vite` | [vitejs/vite](https://github.com/vitejs/vite) | `pnpm-lock.yaml (., experiences/sandbox, packages/characterisation)` | 8.3.8 |
 | `vitest` | [vitest-dev/vitest](https://github.com/vitest-dev/vitest) | `pnpm-lock.yaml (.)` | 5.1.1 |
 | `xstate` | [statelyai/xstate](https://github.com/statelyai/xstate) | `pnpm-lock.yaml (.)` | 5.33.4 |
 | `yaml` | [eemeli/yaml](https://github.com/eemeli/yaml) | `pnpm-lock.yaml (.)` | 2.9.1 |

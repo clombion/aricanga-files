@@ -1,7 +1,7 @@
 /**
  * Every pinned tool has its upstream repository named, and every named repository pins a tool.
  *
- * The pins come from the root `package.json`, the members' devDependencies and `pnpm-lock.yaml`
+ * The pins come from the root `package.json`, the members' dependencies and devDependencies, and `pnpm-lock.yaml`
  * (`harness/lib/pins.ts`). `harness.md`'s table of them is generated
  * (`harness/lib/generated.ts`), so a bump the fix task has not rendered fails the generated-docs check.
  */
@@ -73,6 +73,7 @@ describe('the pin reader', () => {
       { tool: 'oxlint', version: '1.94.0', where: ['pnpm-lock.yaml (.)'] },
       { tool: 'planted', version: '1.0.3', where: ['pnpm-lock.yaml (.)'] },
       { tool: 'pnpm', version: undefined, where: ['package.json packageManager'] },
+      { tool: 'solid', version: undefined, where: ['pnpm-lock.yaml (packages/app)'] },
       { tool: 'unlocked', version: undefined, where: ['pnpm-lock.yaml (.)'] },
       { tool: 'vite', version: '8.3.8', where: ['pnpm-lock.yaml (packages/app)'] },
     ]);

@@ -3,8 +3,8 @@
  * lockfile read once, by importer, for the pins and for the population's independent check
  * (`harness/checks/scope.test.ts`).
  *
- * The pins are the root `package.json`'s dependencies and devDependencies and each member's
- * devDependencies, each at the version `pnpm-lock.yaml` locks under that package's importer, plus
+ * The pins are the dependencies and devDependencies of the root `package.json` and of each member,
+ * each at the version `pnpm-lock.yaml` locks under that package's importer, plus
  * Node's `engines.node` floor and pnpm's `packageManager`. The manifests read are the population's,
  * as it read them at one moment: the root's and the members', never another listed `package.json`. A tool locked at two versions is
  * two pins. `UPSTREAM` names each tool's repository; the tool-upgrades check fails on a pin it does
@@ -58,6 +58,9 @@ const PNPM_PREFIX = /^pnpm@/u;
  * so a pin is looked up in every group, whatever group its manifest lists it in.
  */
 const LOCK_GROUPS: readonly string[] = ['optionalDependencies', 'dependencies', 'devDependencies'];
+
+/** The groups of a manifest whose packages are pins, the root's and each member's alike. */
+const PIN_GROUPS: readonly string[] = ['dependencies', 'devDependencies'];
 
 /** The peers pnpm appends to a resolved version: `1.0.3(peer@2.0.0)`. */
 const PEERS = /\(.*$/u;
@@ -168,9 +171,8 @@ function rootPins(manifest: Fields): readonly Found[] {
  */
 function manifestPins(entry: DirManifest, lock: Lock): readonly Found[] {
   const { dir, manifest: fields } = entry;
-  const groups = dir === '' ? ['dependencies', 'devDependencies'] : ['devDependencies'];
   const versions = lock.get(importerOf(dir));
-  const dependencies = groups.flatMap((group) =>
+  const dependencies = PIN_GROUPS.flatMap((group) =>
     Object.entries(stringRecord(absentAs(fields[group], {}), `${manifestOf(dir)} ${group}`))
       .filter(([, specifier]: readonly [string, string]) => !specifier.startsWith(WORKSPACE))
       .map(([tool]: readonly [string, string]): Found => ({
