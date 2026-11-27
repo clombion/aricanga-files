@@ -10,16 +10,16 @@
   "dependencies": {
     "@narratives/foundation": "workspace:*",
     "@narratives/system-chat": "workspace:*",
-    "@solidjs/web": "2.0.3",
-    "solid-js": "2.0.3",
-    "vite": "8.3.8"
+    "@solidjs/web": "catalog:",
+    "solid-js": "catalog:",
+    "vite": "catalog:"
   },
   "devDependencies": {
     "@narratives/characterisation": "workspace:*",
     "@narratives/system-cards": "workspace:*",
-    "@solidjs/compiler": "2.0.2",
-    "@solidjs/vite-plugin": "3.0.1",
-    "inkjs": "^2.4.0"
+    "@solidjs/compiler": "catalog:",
+    "@solidjs/vite-plugin": "catalog:",
+    "inkjs": "catalog:"
   },
   "aricanga": {
     "role": "experience"
