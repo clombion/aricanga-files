@@ -2,7 +2,8 @@
  * Every literal list a check consults is an exemption declaration, and every declaration is consulted.
  *
  * Over the harness's modules, as the population partitions them (`harnessModules`): its checks, its
- * library, its lint rules, its scripts and the root configuration modules. A module-level array, object, or pre-filled
+ * library, its lint rules, its scripts and the root configuration modules; a list planted in a
+ * module of each directory of them, chosen from git's listing, is refused there. A module-level array, object, or pre-filled
  * `Set` or `Map` literal (through `as const` and `satisfies`) that the module consults — with
  * `includes`, `has`, `indexOf`, `get`, `some`, `every`, `find`, `in`, `Object.hasOwn`, a computed lookup
  * `NAME[key]`, or by handing it to a module function that does one of these with its parameter —
@@ -18,10 +19,12 @@
 import { Exemptions, KINDS, StaleExemptionError, Vocabulary, site } from '#lint-rules/exemptions.ts';
 import { UNCONSULTED, UNDECLARED, findings } from './exemption-lists.fence.ts';
 import { describe, expect, test } from 'vitest';
+import { isTypeScript, textsOf, tracked } from '#lib/source-files.ts';
 import type { Finding } from './exemption-lists.fence.ts';
+import { ROOT_MODULES } from '#lib/config-modules.ts';
+import { byCodeUnit } from '#lib/lists.ts';
 import { harnessModules } from '#lib/holders.ts';
 import { population } from '#lib/scope.ts';
-import { textsOf } from '#lib/source-files.ts';
 
 const HARNESS_ID = 'exemption-lists';
 
@@ -101,11 +104,62 @@ async function fenced(): Promise<Readonly<Record<string, string>>> {
   return Object.fromEntries(texts);
 }
 
+/** An undeclared list, consulted: what the fence refuses wherever it is planted in the harness's code. */
+const PLANTED_LIST = "\nconst PLANTED = ['a', 'b'];\nexport const planted = (x: string): boolean => PLANTED.includes(x);\n";
+
+/** A directory directly under `harness/`, as a listed path starts. */
+const HARNESS_DIRECTORY = /^harness\/[^/]+\//u;
+
+/**
+ * A module of each directory of the harness's code, read from git's listing rather than the fence's
+ * population: the first TypeScript module of each directory under `harness/`, and each root
+ * configuration module. A population that leaves a directory out leaves its module out of the fence.
+ *
+ * @returns {Promise<readonly string[]>} The modules, by path.
+ */
+async function plantSites(): Promise<readonly string[]> {
+  const first = new Map<string, string>();
+  const listed = await tracked();
+  for (const file of listed.filter((path) => isTypeScript(path))) {
+    const [directory] = HARNESS_DIRECTORY.exec(file) ?? [];
+    if (directory !== undefined && !first.has(directory)) {
+      first.set(directory, file);
+    }
+  }
+  return [...first.values(), ...ROOT_MODULES].toSorted(byCodeUnit);
+}
+
+/**
+ * The modules with the planted list appended to each of `sites`.
+ *
+ * @param {Readonly<Record<string, string>>} modules - Each module's source, by path.
+ * @param {readonly string[]} sites - The modules to plant in.
+ * @returns {Readonly<Record<string, string>>} The planted modules' sources, by path.
+ */
+function withPlants(modules: Readonly<Record<string, string>>, sites: readonly string[]): Readonly<Record<string, string>> {
+  return Object.fromEntries(
+    Object.entries(modules).map(([path, text]: readonly [string, string]) => [
+      path,
+      sites.includes(path) ? `${text}${PLANTED_LIST}` : text,
+    ]),
+  );
+}
+
 describe('the repository', () => {
   test('every consulted list is declared and every declaration is consulted', async () => {
     expect.hasAssertions();
     const found = await findings(await fenced());
     expect(ADOPTING.unexemptedBy(found, keyOf)).toStrictEqual([]);
+  });
+
+  test("an undeclared list planted in a module of each directory of the harness's code is refused there", async () => {
+    expect.hasAssertions();
+    const [modules, sites] = await Promise.all([fenced(), plantSites()]);
+    expect(sites.filter((path) => !Object.hasOwn(modules, path))).toStrictEqual([]);
+    const found = ADOPTING.unexemptedBy(await findings(withPlants(modules, sites)), keyOf);
+    expect(found.toSorted((left, right) => byCodeUnit(left.path, right.path))).toStrictEqual(
+      sites.map((path) => ({ name: 'PLANTED', path, problem: UNDECLARED })),
+    );
   });
 });
 
