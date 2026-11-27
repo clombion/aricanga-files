@@ -266,12 +266,13 @@ class VirtualFiles {
     }
   }
 
-  /** Mark every declaration the rule answered as changed, as the rule turns on or off. */
+  /** Mark every declaration asked of the rule as changed as the rule turns on or off, forgetting it until asked again. */
   private toggled(): void {
     if (this.declaring === NONE) {
       for (const name of this.asked) {
         this.changed.add(name);
       }
+      this.asked.clear();
     }
   }
 

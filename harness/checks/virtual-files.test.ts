@@ -49,3 +49,17 @@ describe('an overlay of a path the disk holds', () => {
     expect(files.served(REAL)).toBeUndefined();
   });
 });
+
+describe('the declaration rule', () => {
+  test('tells each declaration asked of it once, as it turns off, and none again at its next run', () => {
+    expect.hasAssertions();
+    const files = new VirtualFiles();
+    const declaration = path.join(ABSENT, 'asked', 'sheet.d.css.ts');
+    const unmount = files.mount(new Map([[path.join(ABSENT, 'asked', 'sheet.css'), 'a {}\n']]));
+    const served = files.declaringWhile(() => files.served(declaration));
+    const toldAfter = files.takeChanged().includes(declaration);
+    const toldAgain = files.declaringWhile(() => files.takeChanged());
+    unmount();
+    expect([served, toldAfter, toldAgain]).toStrictEqual(['export {};\n', true, []]);
+  });
+});
