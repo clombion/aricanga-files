@@ -1,5 +1,5 @@
 // path: packages/systems/chat/src/view/controlled-options.tsx
-import type { JSX } from 'solid-js';
+import type { JSX } from '@solidjs/web';
 
 function Picker(props: { readonly vm: { readonly choice: string; readonly pick: (choice: string) => void } }): JSX.Element {
   return (

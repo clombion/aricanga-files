@@ -1,2 +1,2 @@
 // path: harness/scripts/env-fire.ts
-export const ci: string | undefined = process.env.CI;
+export const ci: string | undefined = process.env['CI'];

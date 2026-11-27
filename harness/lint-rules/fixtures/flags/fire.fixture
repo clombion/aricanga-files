@@ -1,5 +1,5 @@
 // path: packages/systems/chat/src/view/flags-fire.tsx
-import type { JSX } from 'solid-js';
+import type { JSX } from '@solidjs/web';
 import { createSignal } from 'solid-js';
 
 export function Thread(props: { readonly vm: { readonly title: string } }): JSX.Element {

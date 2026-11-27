@@ -1,5 +1,5 @@
 // path: packages/systems/chat/src/view/labels-htmlfor.tsx
-import type { JSX } from 'solid-js';
+import type { JSX } from '@solidjs/web';
 
 export function Field(): JSX.Element {
   return (

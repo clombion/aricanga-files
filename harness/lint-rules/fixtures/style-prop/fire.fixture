@@ -1,5 +1,5 @@
 // path: packages/systems/chat/src/view/style-prop-fire.tsx
-import type { JSX } from 'solid-js';
+import type { JSX } from '@solidjs/web';
 
 export function Bubble(props: { readonly vm: { readonly text: string } }): JSX.Element {
   return <p style={{ color: 'red' }}>{props.vm.text}</p>;

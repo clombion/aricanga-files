@@ -1,5 +1,5 @@
 // path: packages/systems/chat/src/view/autofocus-clean.tsx
-import type { JSX } from 'solid-js';
+import type { JSX } from '@solidjs/web';
 
 export function Search(): JSX.Element {
   return <input autocomplete="off" />;

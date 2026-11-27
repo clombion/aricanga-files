@@ -1,5 +1,5 @@
 // path: packages/systems/chat/src/view/controlled-clean.tsx
-import type { JSX } from 'solid-js';
+import type { JSX } from '@solidjs/web';
 
 function Draft(props: { readonly vm: { readonly text: string; readonly edit: (text: string) => void } }): JSX.Element {
   return (

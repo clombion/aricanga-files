@@ -1,5 +1,5 @@
 // path: packages/systems/chat/src/view/sync-parts-clean.tsx
-import type { JSX } from 'solid-js';
+import type { JSX } from '@solidjs/web';
 
 export function Bubble(props: { readonly vm: { readonly text: string } }): JSX.Element {
   return <p>{props.vm.text}</p>;

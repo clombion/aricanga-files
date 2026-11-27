@@ -1,5 +1,5 @@
 // path: packages/systems/chat/src/view/sync-parts-async.tsx
-import type { JSX } from 'solid-js';
+import type { JSX } from '@solidjs/web';
 
 export async function Bubble(props: { readonly vm: { readonly text: Readonly<Promise<string>> } }): Promise<JSX.Element> {
   const text = await props.vm.text;

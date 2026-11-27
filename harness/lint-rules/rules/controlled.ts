@@ -16,7 +16,7 @@ const CONTROLLED: ReadonlyMap<string, string> = new Map([
   ['selected', 'defaultSelected'],
   ['value', 'defaultValue'],
 ]);
-const HANDLERS = new Accepted<string>(['onInput', 'onChange', 'onClick', 'on:input', 'on:change', 'on:click']);
+const HANDLERS = new Accepted<string>(['onInput', 'onChange', 'onClick']);
 
 /**
  * Whether an element handles its own change.

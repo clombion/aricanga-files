@@ -1,5 +1,5 @@
 // path: packages/systems/chat/src/view/mirrors-clean.tsx
-import type { JSX } from 'solid-js';
+import type { JSX } from '@solidjs/web';
 
 export function Title(props: { readonly vm: { readonly title: string } }): JSX.Element {
   const shown = (): string => props.vm.title.toUpperCase();

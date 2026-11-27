@@ -1,4 +1,5 @@
 // path: snapshot-adapter.ts
+import type { Store, StoreSetter } from 'solid-js';
 import { createStore } from 'solid-js';
 
-export const thread = (): ReturnType<typeof createStore<{ title: string }>> => createStore({ title: '' });
+export const thread = (): readonly [Store<{ title: string }>, StoreSetter<{ title: string }>] => createStore({ title: '' });
