@@ -9,7 +9,6 @@
  */
 
 import type { CommentRange, Expression, Identifier, ImportDeclaration, Node, SourceFile } from 'typescript/unstable/ast';
-import { api, mount, nextName } from './ts-session.ts';
 import { getLeadingCommentRanges, getTrailingCommentRanges } from 'typescript/unstable/ast/scanner';
 import {
   isExportDeclaration,
@@ -26,6 +25,7 @@ import {
   isTypeAliasDeclaration,
   isTypeNode,
 } from 'typescript/unstable/ast/is';
+import { mount, nextName, snapshot } from './ts-session.ts';
 import { present } from './present.ts';
 
 /** A comment of a module: its text (delimiters included), its 1-based line and the code before it. */
@@ -64,9 +64,10 @@ function parse(path: string, text: string): SourceFile {
   const fileName = `${VIRTUAL_ROOT}/${nextName()}/${path}`;
   const unmount = mount(new Map([[fileName, text]]));
   try {
-    const snapshot = api().updateSnapshot({ openFiles: [fileName] });
-    const file = snapshot.getDefaultProjectForFile(fileName)?.program.getSourceFile(fileName);
-    api().updateSnapshot({ closeFiles: [fileName] });
+    const file = snapshot({ openFiles: [fileName] })
+      .getDefaultProjectForFile(fileName)
+      ?.program.getSourceFile(fileName);
+    snapshot({ closeFiles: [fileName] });
     return present(file, `the source file TypeScript parsed from ${path}`);
   } finally {
     unmount();

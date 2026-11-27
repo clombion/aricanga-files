@@ -1,8 +1,8 @@
 /**
- * The process's one TypeScript 7 API session, and the virtual file system it reads: a mounted path
- * need not exist on disk, nor its directories (a directory holding a mounted path exists, so an
- * import resolves into a planted member wherever it sits), and a mounted real path reads as its
- * mounted text. The session's child
+ * The process's one TypeScript 7 API session, over the virtual file system of `virtual-files.ts`:
+ * mounted paths and overlapping mounts. TypeScript's server caches what the file system answered, so every
+ * snapshot is taken through `snapshot`, which tells it each path whose answer may have changed since
+ * the last one. The session's child
  * process is released without this module: it ends when its standard input closes, which every ending
  * of this process does (an exit, a signal, a worker its pool kills). The TypeScript API's own `exit`
  * listener sends the child SIGTERM, which the child outlives by seconds; a release after it would ask a
@@ -13,6 +13,17 @@
 
 import { API } from 'typescript/unstable/sync';
 import { REPO_ROOT } from './paths.ts';
+import type { Snapshot } from 'typescript/unstable/sync';
+import { VirtualFiles } from './virtual-files.ts';
+import { isEmpty } from './lists.ts';
+
+/** The projects and files a snapshot opens or closes, by absolute path; `snapshot` adds the file changes itself. */
+type SnapshotRequest = Readonly<{
+  closeFiles?: readonly string[];
+  closeProjects?: readonly string[];
+  openFiles?: readonly string[];
+  openProjects?: readonly string[];
+}>;
 
 /** The step from one issued name to the next. */
 const NEXT = 1;
@@ -22,7 +33,7 @@ const NONE_ISSUED = 0;
 
 /** The session, opened on first use and forgotten when closed. */
 class Session {
-  private readonly virtual = new Map<string, string>();
+  public readonly files = new VirtualFiles();
 
   private open: readonly API[] = [];
 
@@ -39,20 +50,34 @@ class Session {
   }
 
   /**
-   * Serve `files` through the virtual file system until the returned function is called.
+   * A snapshot of the session, telling TypeScript's server each path whose answer may have changed.
    *
-   * @param {Readonly<ReadonlyMap<string, string>>} files - Each file's text, by absolute path.
-   * @returns {() => void} Unmounts the files.
+   * @param {SnapshotRequest} request - The projects and files to open or close.
+   * @returns {Snapshot} The snapshot.
    */
-  public mount(files: Readonly<ReadonlyMap<string, string>>): () => void {
-    for (const [name, text] of files) {
-      this.virtual.set(name, text);
-    }
-    return () => {
-      for (const name of files.keys()) {
-        this.virtual.delete(name);
-      }
+  public snapshot(request: SnapshotRequest): Snapshot {
+    const changed = this.files.takeChanged();
+    const asked = {
+      closeFiles: [...(request.closeFiles ?? [])],
+      closeProjects: [...(request.closeProjects ?? [])],
+      openFiles: [...(request.openFiles ?? [])],
+      openProjects: [...(request.openProjects ?? [])],
     };
+    return this.api().updateSnapshot(isEmpty(changed) ? asked : { ...asked, fileChanges: { changed: [...changed] } });
+  }
+
+  /**
+   * Close the open session, if there is one. Idempotent: the session is forgotten before it is closed,
+   * so a second call finds nothing to close, and a later snapshot starts a fresh session instead of
+   * asking a closed one.
+   */
+  public close(): void {
+    const closing = this.open;
+    this.open = [];
+    this.files.forgetChanged();
+    for (const session of closing) {
+      session.close();
+    }
   }
 
   /**
@@ -60,35 +85,22 @@ class Session {
    *
    * @returns {API} The open session.
    */
-  public api(): API {
+  private api(): API {
     const [current] = this.open;
     if (current !== undefined) {
       return current;
     }
+    const { files } = this;
     const opened = new API({
       cwd: REPO_ROOT,
       fs: {
-        directoryExists: (directoryName: string): boolean | undefined =>
-          [...this.virtual.keys()].some((name) => name.startsWith(`${directoryName}/`)) ? true : undefined,
-        fileExists: (fileName: string): boolean | undefined => (this.virtual.has(fileName) ? true : undefined),
-        readFile: (fileName: string): string | undefined => this.virtual.get(fileName),
+        directoryExists: (directoryName: string): boolean | undefined => (files.holdsServed(directoryName) ? true : undefined),
+        fileExists: (fileName: string): boolean | undefined => (files.served(fileName) === undefined ? undefined : true),
+        readFile: (fileName: string): string | undefined => files.served(fileName),
       },
     });
     this.open = [opened];
     return opened;
-  }
-
-  /**
-   * Close the open session, if there is one. Idempotent: the session is forgotten before it is closed,
-   * so a second call finds nothing to close, and a later `api()` starts a fresh session instead of
-   * handing out a closed one.
-   */
-  public close(): void {
-    const closing = this.open;
-    this.open = [];
-    for (const session of closing) {
-      session.close();
-    }
   }
 }
 
@@ -101,16 +113,18 @@ const SESSION = new Session();
  * @returns {() => void} Unmounts the files.
  */
 function mount(files: Readonly<ReadonlyMap<string, string>>): () => void {
-  return SESSION.mount(files);
+  return SESSION.files.mount(files);
 }
 
 /**
- * The process's one TypeScript API session; type-aware scans open their projects on it.
+ * A snapshot of the process's one TypeScript API session, telling its server each path whose answer
+ * changed; type-aware scans open and close their projects through it.
  *
- * @returns {API} The open session.
+ * @param {SnapshotRequest} request - The projects and files to open or close.
+ * @returns {Snapshot} The snapshot.
  */
-function api(): API {
-  return SESSION.api();
+function snapshot(request: SnapshotRequest): Snapshot {
+  return SESSION.snapshot(request);
 }
 
 /**
@@ -127,4 +141,4 @@ function closeSession(): void {
   SESSION.close();
 }
 
-export { api, closeSession, mount, nextName };
+export { closeSession, mount, nextName, snapshot };

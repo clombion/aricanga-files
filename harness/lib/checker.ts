@@ -13,8 +13,8 @@ import type { Checker, Program, Symbol as TsSymbol } from 'typescript/unstable/s
 import type { Node, SourceFile } from 'typescript/unstable/ast';
 import { REPO_ROOT, relative } from './paths.ts';
 import { TEST_DIRECTORIES, isRunnerConfig, isRunnerTest } from './test-globs.ts';
-import { api, mount, nextName } from './ts-session.ts';
 import { isIdentifier, isPrivateIdentifier, isStringLiteral } from 'typescript/unstable/ast';
+import { mount, nextName, snapshot } from './ts-session.ts';
 import type { Population } from './scope.ts';
 import { SymbolFlags } from 'typescript/unstable/sync';
 import { isEmpty } from './lists.ts';
@@ -179,14 +179,11 @@ function openScan(population: Population, sources: Readonly<Record<string, strin
   const config = path.join(REPO_ROOT, '.harness-scan', nextName(), 'tsconfig.json');
   return scanOver({
     mount: () => mount(mounted(config, paths, sources)),
-    open: () =>
-      api()
-        .updateSnapshot({ openProjects: [config] })
-        .getProject(config),
+    open: () => snapshot({ openProjects: [config] }).getProject(config),
     paths,
     population,
     release: () => {
-      api().updateSnapshot({ closeProjects: [config] });
+      snapshot({ closeProjects: [config] });
     },
   });
 }
