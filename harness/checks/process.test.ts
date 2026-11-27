@@ -69,8 +69,9 @@ describe('a bounded run', () => {
 
   test('whose child reads its input finishes with what it wrote', async () => {
     expect.hasAssertions();
-    const outcome = await run(['node', '-e', 'process.stdin.pipe(process.stdout)'], { ...OPTIONS, input: 'planted' });
-    expect(outcome).toMatchObject({ kind: 'finished', status: EXIT_CLEAN, stdout: 'planted' });
+    const argv = ['node', '-e', 'process.stdin.pipe(process.stdout)'];
+    const outcome = await run(argv, { ...OPTIONS, input: 'planted' });
+    expect(outcome).toStrictEqual({ argv, kind: 'finished', status: EXIT_CLEAN, stderr: '', stdout: 'planted' });
   });
 });
 
