@@ -14,6 +14,7 @@ import type { Member, Population } from './scope.ts';
 import type { Role, ShippingRole } from './roles.ts';
 import type { GateOverride } from './oxlint-shape.ts';
 import { HARNESS_CODE } from './oxlint-files.ts';
+import { HARNESS_LIB } from './test-globs.ts';
 import type { MemberDir } from './package-dirs.ts';
 import { Vocabulary } from './exemptions.ts';
 import { isEmpty } from './lists.ts';
@@ -104,7 +105,7 @@ function groupsOf(held: Population, importing: Readonly<Importing>): Group[] {
   const groups: readonly Group[] = [
     specifiers(
       namesOf(forbidden),
-      `${importer} modules import ${allowed(importer)} (the role matrix: MAY in harness/lib/import-boundaries.ts)`,
+      `${importer} modules import ${allowed(importer)} (the role matrix: MAY in ${HARNESS_LIB}import-boundaries.ts)`,
     ),
     specifiers(pocNames(held), 'nothing in the rebuild imports the POC (ADR-0006, "Scope")'),
     { group: [...CLIMBS], message: 'a module reaches another member only by its package name, never by a relative climb', names: [] },

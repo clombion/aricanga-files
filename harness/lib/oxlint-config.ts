@@ -104,8 +104,7 @@ const NODE_MODULES: readonly string[] = [...VITE_CONFIGS, ...RUNNER_CONFIGS];
  * are `unicorn/prefer-global-this`'s), `localeCompare` and every `toLocale*` method answer by the
  * process's locale and the runtime's ICU data. The message names the replacement.
  */
-const LOCALE =
-  "the harness compares and formats by code unit, never by the process's locale: compare with byCodeUnit (harness/lib/lists.ts) and format with String or toFixed";
+const LOCALE = `the harness compares and formats by code unit, never by the process's locale: compare with byCodeUnit (${HARNESS_LIB}lists.ts) and format with String or toFixed`;
 
 /** The methods that compare or format by the process's locale. */
 const LOCALE_METHODS: readonly string[] = [

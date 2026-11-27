@@ -16,6 +16,7 @@
 import { ConfigError, absentAs, object, parsed } from './config.ts';
 import type { ListedPackage, Member } from './scope.ts';
 import { ROLE_WORDS, isRole } from './roles.ts';
+import { HARNESS_LIB } from './test-globs.ts';
 import { PopulationError } from './workspace.ts';
 import { byKind } from './by-kind.ts';
 import { isEmpty } from './lists.ts';
@@ -192,7 +193,7 @@ function refuseAll(
 ): asserts root is Extract<RootRead, { kind: 'read' }> {
   const roles = isEmpty(lines)
     ? []
-    : [...lines, `a workspace package declares one of the roles of harness/lib/roles.ts (${ROLE_WORDS.join(', ')})`];
+    : [...lines, `a workspace package declares one of the roles of ${HARNESS_LIB}roles.ts (${ROLE_WORDS.join(', ')})`];
   const unread = [...rootRefused(root), ...refused.unread];
   const named = [...caseLine(unread, 'cannot be read'), ...caseLine(refused.undeclared, 'hold an aricanga that is no object')];
   if (!isEmpty(named)) {

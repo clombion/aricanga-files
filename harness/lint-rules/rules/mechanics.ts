@@ -25,7 +25,7 @@ export const mechanics: Rule = {
   create(context) {
     const [given] = context.options;
     if (given === undefined) {
-      throw new Error('aricanga/mechanics holds nothing without its files option (harness/lib/oxlint-config.ts fills it from the roles)');
+      throw new Error('aricanga/mechanics holds nothing without its files option (the harness oxlint config fills it from the roles)');
     }
     if (!optionMatches(context, 'files')) {
       return {};
