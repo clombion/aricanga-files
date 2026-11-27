@@ -63,12 +63,12 @@ const PATTERN: Reading = { path: /^.*(?:\/|\.\*)/su, wildcard: /[*+?[{(]|\\[dDsS
 
 /** Literals that restate a tool's own setting, not the held kinds, keyed `path: text`, each with the setting it restates. */
 const RESTATED = new Exemptions({
+  'harness/lib/declaration-paths.ts: /^(?<stem>.+)\\.d\\.(?<extension>[^./]+)\\.ts$/u':
+    "TypeScript's own name for the declaration it looks for beside a file it does not load itself (allowArbitraryExtensions): a compiler's rule, restated",
+  'harness/lib/declaration-paths.ts: /^(?<stem>[^.]+)\\.d\\.ts$/u':
+    "TypeScript's own name for the declaration of a file with no extension: a compiler's rule, restated",
   'harness/lib/test-globs.ts: **/*.spec.ts':
     "Playwright's own testMatch for the suites (packages/characterisation/browsers.ts), which runs .ts specs only: a member's setting, restated",
-  'harness/lib/virtual-files.ts: /^(?<stem>.+)\\.d\\.(?<extension>[^./]+)\\.ts$/u':
-    "TypeScript's own name for the declaration it looks for beside a file it does not load itself (allowArbitraryExtensions): a compiler's rule, restated",
-  'harness/lib/virtual-files.ts: /^(?<stem>[^.]+)\\.d\\.ts$/u':
-    "TypeScript's own name for the declaration of a file with no extension: a compiler's rule, restated",
 });
 
 /** A literal that is a kind alone: the kind's word, its dot or a tool's name before it, and nothing else. */

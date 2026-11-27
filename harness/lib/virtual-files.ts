@@ -4,6 +4,9 @@
  * planted member wherever it sits), a mounted real path reads as its mounted text, and a path reached
  * through a symlinked directory (a workspace package under `node_modules`) reads as the real path it
  * names. Mounts may overlap: a path is served while some mount holds it, as the latest of them gives it.
+ * A mount stands across turns, and every project opened while it stands reads it, any scan's, so a
+ * mount of a path the disk holds is refused: such a path is overlaid by `overlaying` alone, for one
+ * synchronous run, in which no other scan can open a project.
  * Every path whose answer may have changed is kept until the session tells TypeScript's server, which
  * caches what it read. While the declaration rule is on, each file TypeScript does not load itself (a
  * stylesheet, a file with no extension, mounted or on disk) is declared: the declaration it looks for
@@ -11,6 +14,7 @@
  * such declaration exists, so the file is in a project's list like any module.
  */
 
+import { declarationOf, declaredFile } from './declaration-paths.ts';
 import { realpathSync, statSync } from 'node:fs';
 import { isEmpty } from './lists.ts';
 import nodePath from 'node:path';
@@ -27,44 +31,10 @@ const LATEST = -1;
 /** The text a declared file reads as: an empty module. */
 const DECLARED = 'export {};\n';
 
-/** The declaration TypeScript looks for beside a file it does not load itself: x.css is declared by x.d.css.ts. */
-const DECLARATION = /^(?<stem>.+)\.d\.(?<extension>[^./]+)\.ts$/u;
-
-/** The declaration of a file with no extension: x is declared by x.d.ts. */
-const BARE_DECLARATION = /^(?<stem>[^.]+)\.d\.ts$/u;
-
 /** One mount's text for a path. */
 interface Layer {
   readonly mount: number;
   readonly text: string;
-}
-
-/**
- * The file a declaration path declares by the rule TypeScript reads it by (`allowArbitraryExtensions`):
- * x.css for x.d.css.ts, x for x.d.ts when x has no extension; none for any other path.
- *
- * @param {string} name - A path.
- * @returns {string | undefined} The file it declares, or none.
- */
-function declaredFile(name: string): string | undefined {
-  const base = nodePath.basename(name);
-  if (DECLARATION.test(base)) {
-    return nodePath.join(nodePath.dirname(name), base.replace(DECLARATION, '$<stem>.$<extension>'));
-  }
-  return BARE_DECLARATION.test(base) ? nodePath.join(nodePath.dirname(name), base.replace(BARE_DECLARATION, '$<stem>')) : undefined;
-}
-
-/**
- * The declaration path TypeScript looks for beside a file: the one rule `declaredFile` reads back.
- *
- * @param {string} file - A path.
- * @returns {string} The path that declares it.
- */
-function declarationOf(file: string): string {
-  const extension = nodePath.extname(file);
-  return extension === ''
-    ? `${file}.d.ts`
-    : nodePath.join(nodePath.dirname(file), `${nodePath.basename(file, extension)}.d${extension}.ts`);
 }
 
 /**
@@ -117,27 +87,42 @@ class VirtualFiles {
 
   /**
    * Serve `files` until the returned function is called. A path another live mount serves too reads as
-   * the later mount's text while both stand, and as the other's once this one is unmounted.
+   * the later mount's text while both stand, and as the other's once this one is unmounted. A path the
+   * disk holds is refused: overlay it with `overlaying`.
    *
-   * @param {Readonly<ReadonlyMap<string, string>>} files - Each file's text, by absolute path.
+   * @param {Readonly<ReadonlyMap<string, string>>} files - Each file's text, by absolute path; none the disk holds.
    * @returns {() => void} Unmounts the files; a second call does nothing.
    */
   public mount(files: Readonly<ReadonlyMap<string, string>>): () => void {
-    this.mounts += STEP;
-    const layer = this.mounts;
-    this.realDirs.clear();
-    for (const [name, text] of files) {
-      this.restack(name, [...(this.layers.get(name) ?? []), { mount: layer, text }]);
+    const real = [...files.keys()].find((name) => VirtualFiles.isOnDisk(name));
+    if (real !== undefined) {
+      throw new Error(
+        `the session mounts no path the disk holds (${real}): every project opened while the mount stands would read it; overlay it with \`overlaying\``,
+      );
     }
-    return () => {
-      this.realDirs.clear();
-      for (const name of files.keys()) {
-        this.restack(
-          name,
-          (this.layers.get(name) ?? []).filter((kept) => kept.mount !== layer),
-        );
+    return this.layer(files);
+  }
+
+  /**
+   * Run `run` with `files` served, paths the disk holds included, and unmount them as it returns. The
+   * run is synchronous, so no other scan opens a project while the overlay stands; a run that returns a
+   * promise is refused, the overlay already gone.
+   *
+   * @param {Readonly<ReadonlyMap<string, string>>} files - Each file's text, by absolute path.
+   * @param {() => Result} run - What reads the overlaid files.
+   * @returns {Result} What `run` returns.
+   */
+  public overlaying<Result>(files: Readonly<ReadonlyMap<string, string>>, run: () => Result): Result {
+    const unmount = this.layer(files);
+    try {
+      const result = run();
+      if (result instanceof Promise) {
+        throw new TypeError('an overlay is served for one synchronous run: a run that awaits would outlive it');
       }
-    };
+      return result;
+    } finally {
+      unmount();
+    }
   }
 
   /**
@@ -155,6 +140,16 @@ class VirtualFiles {
       this.declaring -= STEP;
       this.toggled();
     }
+  }
+
+  /**
+   * Whether the disk holds a path: a file or a directory, through symlinks.
+   *
+   * @param {string} name - An absolute path.
+   * @returns {boolean} Whether it does.
+   */
+  public static isOnDisk(name: string): boolean {
+    return onDisk(name) !== undefined;
   }
 
   /**
@@ -209,6 +204,30 @@ class VirtualFiles {
     const found = this.realDirs.get(dir) ?? onDisk(dir)?.real ?? this.real(dir);
     this.realDirs.set(dir, found);
     return nodePath.join(found, nodePath.basename(name));
+  }
+
+  /**
+   * Add one mount's layer for each of `files`, until the returned function is called.
+   *
+   * @param {Readonly<ReadonlyMap<string, string>>} files - Each file's text, by absolute path.
+   * @returns {() => void} Removes the layer; a second call does nothing.
+   */
+  private layer(files: Readonly<ReadonlyMap<string, string>>): () => void {
+    this.mounts += STEP;
+    const layer = this.mounts;
+    this.realDirs.clear();
+    for (const [name, text] of files) {
+      this.restack(name, [...(this.layers.get(name) ?? []), { mount: layer, text }]);
+    }
+    return () => {
+      this.realDirs.clear();
+      for (const name of files.keys()) {
+        this.restack(
+          name,
+          (this.layers.get(name) ?? []).filter((kept) => kept.mount !== layer),
+        );
+      }
+    };
   }
 
   /**
@@ -277,4 +296,4 @@ class VirtualFiles {
   }
 }
 
-export { VirtualFiles, declaredFile };
+export { VirtualFiles };

@@ -125,8 +125,8 @@ describe('the whole chain of the repository', () => {
 });
 
 /*
- * The planted chain overlays the root configuration modules: a mounted path is served to every project
- * opened while it stands, so its scan is open only for the tests below, never beside the repository's.
+ * The planted chain overlays the root configuration modules, paths the disk holds: the session serves
+ * them inside the planted scan's own runs alone (`overlaying`), so a scan beside it never reads them.
  */
 describe('the whole chain', () => {
   const chainScan = usePlanted(

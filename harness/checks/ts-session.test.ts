@@ -1,12 +1,13 @@
 /**
  * The one TypeScript session serves what is mounted now: a path while some live mount holds it, as
  * the latest of them gives it, a directory while it holds such a path, and a path mounted again or a
- * real file overlaid then released as it is now, though TypeScript's server caches what it read. The
+ * real file overlaid for one run (`overlaying`) then released as it is now, though TypeScript's server
+ * caches what it read. The
  * declaration rule holds while `declaring` runs, and for no project opened before or after.
  */
 
 import type { Diagnostic, Program } from 'typescript/unstable/sync';
-import { declaring, mount, nextName, snapshot } from '#lib/ts-session.ts';
+import { declaring, mount, nextName, overlaying, snapshot } from '#lib/ts-session.ts';
 import { describe, expect, test } from 'vitest';
 import { REPO_ROOT } from '#lib/paths.ts';
 import { byCodeUnit } from '#lib/lists.ts';
@@ -257,12 +258,8 @@ describe('the session after an unmount', () => {
     const real = path.join(REPO_ROOT, 'harness', 'lib', 'present.ts');
     const text = await readFile(real, 'utf8');
     const disk = text.split('\n').at(FIRST);
-    const { mountAs, unmountNth } = stepsOf(real);
-    expect([textAt(real), ...readsAfter(real, [mountAs('export const overlay = 1;'), unmountNth(FIRST)])]).toStrictEqual([
-      disk,
-      'export const overlay = 1;',
-      disk,
-    ]);
+    const overlaid = overlaying(new Map([[real, 'export const overlay = 1;']]), () => textAt(real));
+    expect([textAt(real), overlaid, textAt(real)]).toStrictEqual([disk, 'export const overlay = 1;', disk]);
   });
 });
 

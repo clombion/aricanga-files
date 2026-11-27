@@ -24,7 +24,7 @@ import {
 import { Accepted } from '#lint-rules/exemptions.ts';
 import type { Checker } from 'typescript/unstable/sync';
 import type { Node } from 'typescript/unstable/ast';
-import { declaredFile } from './virtual-files.ts';
+import { declaredFile } from './declaration-paths.ts';
 
 /** The `import.meta` members a production module may read: inert values no bundler turns into a file. */
 const ADMITTED_META: Accepted<string> = new Accepted<string>(['dirname', 'env', 'filename']);

@@ -29,8 +29,11 @@ function noProject(events: Readonly<Pick<string[], 'push'>>, held: Population): 
   return {
     mount: () => {
       events.push('mount');
-      return (): void => {
-        events.push('unmount');
+      return {
+        serving: <Result>(run: () => Result): Result => run(),
+        unmount: (): void => {
+          events.push('unmount');
+        },
       };
     },
     open: () => {

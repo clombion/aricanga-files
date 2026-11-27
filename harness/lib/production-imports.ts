@@ -24,7 +24,7 @@ import type { Checker, Diagnostic, Program } from 'typescript/unstable/sync';
 import type { Node, SourceFile } from 'typescript/unstable/ast';
 import { OPTIONS, isPlatformDeclaration, isProduction, nodes, resolved, scanOver, sourceOf } from './checker.ts';
 import { REPO_ROOT, relative } from './paths.ts';
-import { declaring, mount, nextName, snapshot } from './ts-session.ts';
+import { declaring, mountScan, nextName, snapshot } from './ts-session.ts';
 import { isIdentifier, isNoSubstitutionTemplateLiteral, isStringLiteral } from 'typescript/unstable/ast';
 import { standsFor, unreadForm } from './chain-forms.ts';
 import { Accepted } from '#lint-rules/exemptions.ts';
@@ -115,7 +115,7 @@ function openChain(scan: Scan, listed: ReadonlySet<string>, roots: readonly stri
   const config = path.join(REPO_ROOT, '.harness-scan', nextName(), 'tsconfig.json');
   const text = JSON.stringify({ compilerOptions: CHAIN_OPTIONS, files: roots.map((file) => path.join(REPO_ROOT, file)) });
   const opened = scanOver({
-    mount: () => mount(new Map([[config, text]])),
+    mount: () => mountScan(new Map([[config, text]])),
     open: () => snapshot({ openProjects: [config] }).getProject(config),
     paths: roots,
     population: scan.population,
@@ -223,27 +223,32 @@ function wholeChain(scan: Scan): Chain {
   const held = scan.population;
   const production = scan.paths.filter((from) => isProduction(held, from));
   const listed = new Set(held.listing);
-  return declaring(() => {
-    const whole = openChain(scan, listed, production);
-    try {
-      const reached = new Set(whole.files.filter((file) => held.holds(file) && !isProduction(held, file)));
-      const found = production.map((from) => moduleFindings(scan, whole, from));
-      const reaching =
-        reached.size === NONE
-          ? []
-          : production.flatMap((from) => {
-              const own = openChain(scan, listed, [from]);
-              try {
-                return own.files.filter((to) => reached.has(to)).map((to) => ({ from, to }));
-              } finally {
-                own.close();
-              }
-            });
-      return { edges: distinct([...reaching, ...found.flatMap((chain) => chain.edges)]), refused: found.flatMap((chain) => chain.refused) };
-    } finally {
-      whole.close();
-    }
-  });
+  return scan.serving(() =>
+    declaring(() => {
+      const whole = openChain(scan, listed, production);
+      try {
+        const reached = new Set(whole.files.filter((file) => held.holds(file) && !isProduction(held, file)));
+        const found = production.map((from) => moduleFindings(scan, whole, from));
+        const reaching =
+          reached.size === NONE
+            ? []
+            : production.flatMap((from) => {
+                const own = openChain(scan, listed, [from]);
+                try {
+                  return own.files.filter((to) => reached.has(to)).map((to) => ({ from, to }));
+                } finally {
+                  own.close();
+                }
+              });
+        return {
+          edges: distinct([...reaching, ...found.flatMap((chain) => chain.edges)]),
+          refused: found.flatMap((chain) => chain.refused),
+        };
+      } finally {
+        whole.close();
+      }
+    }),
+  );
 }
 
 export { wholeChain };

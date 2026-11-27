@@ -1,7 +1,7 @@
 /**
  * The process's one TypeScript 7 API session, over the virtual file system of `virtual-files.ts`:
- * mounted paths, overlapping mounts, real paths through symlinked directories, and, while `declaring`
- * runs, the declaration rule. TypeScript's server caches what the file system answered, so every
+ * mounted paths, overlapping mounts, real paths through symlinked directories, an overlay of a path the
+ * disk holds for one synchronous run (`overlaying`), and, while `declaring` runs, the declaration rule. TypeScript's server caches what the file system answered, so every
  * snapshot is taken through `snapshot`, which tells it each path whose answer may have changed since
  * the last one. The session's child
  * process is released without this module: it ends when its standard input closes, which every ending
@@ -25,6 +25,9 @@ type SnapshotRequest = Readonly<{
   openFiles?: readonly string[];
   openProjects?: readonly string[];
 }>;
+
+/** A scan's files: served while mounted, those the disk holds inside each run of `serving` alone. */
+type ScanFiles = Readonly<{ serving: <Result>(run: () => Result) => Result; unmount: () => void }>;
 
 /** The step from one issued name to the next. */
 const NEXT = 1;
@@ -119,6 +122,31 @@ function mount(files: Readonly<ReadonlyMap<string, string>>): () => void {
 }
 
 /**
+ * Run `run` with `files` served, paths the disk holds included, for that synchronous run alone: no other
+ * scan opens a project while the overlay stands.
+ *
+ * @param {Readonly<ReadonlyMap<string, string>>} files - Each file's text, by absolute path.
+ * @param {() => Result} run - What reads the overlaid files; it returns no promise.
+ * @returns {Result} What `run` returns.
+ */
+function overlaying<Result>(files: Readonly<ReadonlyMap<string, string>>, run: () => Result): Result {
+  return SESSION.files.overlaying(files, run);
+}
+
+/**
+ * A scan's files: those the disk does not hold, mounted until `unmount`; those it holds, served inside
+ * each run of `serving` alone.
+ *
+ * @param {Readonly<ReadonlyMap<string, string>>} files - Each file's text, by absolute path.
+ * @returns {ScanFiles} How to read them, and unmount them.
+ */
+function mountScan(files: Readonly<ReadonlyMap<string, string>>): ScanFiles {
+  const overlays = new Map([...files].filter(([name]: readonly [string, string]) => VirtualFiles.isOnDisk(name)));
+  const unmount = mount(new Map([...files].filter(([name]: readonly [string, string]) => !overlays.has(name))));
+  return { serving: <Result>(run: () => Result): Result => overlaying(overlays, run), unmount };
+}
+
+/**
  * Run `run` with the session declaring, by rule, each file TypeScript does not load itself.
  *
  * @param {() => Result} run - What reads the declared files.
@@ -153,4 +181,4 @@ function closeSession(): void {
   SESSION.close();
 }
 
-export { closeSession, declaring, mount, nextName, snapshot };
+export { closeSession, declaring, mount, mountScan, nextName, overlaying, snapshot };

@@ -120,7 +120,7 @@ async function findings(modules: Readonly<Record<string, string>>): Promise<read
   const paths = Object.keys(modules);
   const scan = openScan(await plantedPopulation(paths, []), modules);
   try {
-    return paths.flatMap((path) => moduleFindings(scan, path));
+    return scan.serving(() => paths.flatMap((path) => moduleFindings(scan, path)));
   } finally {
     scan.close();
   }

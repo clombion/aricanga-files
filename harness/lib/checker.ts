@@ -5,8 +5,8 @@
  * virtual project file listing the paths it covers. An alias, a destructured binding or a property
  * chain resolves to the declaration it stands for. A planted scan mounts in-memory sources at paths
  * under the repository root, so their imports, `lib` and `@types` resolve exactly as the repository's
- * do. Every held module is scanned: tests, scripts and configs are held to the rules production
- * code is.
+ * do; one at a path the disk holds is served inside the scan's `serving` alone. Every held module is
+ * scanned: tests, scripts and configs are held to the rules production code is.
  */
 
 import type { Checker, Program, Symbol as TsSymbol } from 'typescript/unstable/sync';
@@ -14,7 +14,7 @@ import type { Node, SourceFile } from 'typescript/unstable/ast';
 import { REPO_ROOT, relative } from './paths.ts';
 import { TEST_DIRECTORIES, isRunnerConfig, isRunnerTest } from './test-globs.ts';
 import { isIdentifier, isPrivateIdentifier, isStringLiteral } from 'typescript/unstable/ast';
-import { mount, nextName, snapshot } from './ts-session.ts';
+import { mountScan, nextName, snapshot } from './ts-session.ts';
 import type { Population } from './scope.ts';
 import { SymbolFlags } from 'typescript/unstable/sync';
 import { isEmpty } from './lists.ts';
@@ -45,21 +45,22 @@ const NO_FLAGS = 0;
 
 const MODULE_NAME = /^"(?:node:)?(?<name>[^"]+)"$/u;
 
-/** An open program and its checker over repository-relative paths. Close it when done. */
+/** An open program and its checker over repository-relative paths; `serving` runs a read with its overlays served. Close it when done. */
 interface Scan {
   readonly program: Readonly<Program>;
   readonly checker: Readonly<Checker>;
   readonly paths: readonly string[];
   /** The population the scan reads roles from. */
   readonly population: Population;
+  readonly serving: <Result>(run: () => Result) => Result;
   readonly close: () => void;
 }
 
-/** How a scan mounts its files, opens and releases its project, and the paths it covers. */
+/** How a scan mounts its files (`mountScan`), opens and releases its project, and the paths it covers. */
 interface ScanOpening {
   readonly paths: readonly string[];
   readonly population: Population;
-  readonly mount: () => () => void;
+  readonly mount: () => ReturnType<typeof mountScan>;
   readonly open: () => Readonly<{ checker: Readonly<Checker>; program: Readonly<Program> }> | undefined;
   readonly release: () => void;
 }
@@ -91,16 +92,15 @@ function belowMember(population: Population, file: string): string {
 
 /**
  * A module that ships: not a module a test runner runs (`isRunnerTest`) or a config it loads
- * (`RUNNER_CONFIGS`), test support under a
- * `test/`, `tests/` or `testing/` directory of its member (below the member's directory, so a member
- * that sits under a directory of that name is not test support for it), or a module of a test
- * infrastructure package. The
- * harness's check support (`harness/checks/`) is held as production is, so every check reads it. Whether coverage reads a module is the gate config's question,
- * not this one: a shipping member's `src/testing/` is test support and covered. Every rule holds both
- * kinds. The distinction decides who counts as a reader of a production module's exports
- * (`type-exports.ts`), which modules declare closed sets (`declared-sets.scan.ts`), which sheets and
- * readers the stylesheet check reads (`stylesheets.ts`), and, among the kernel members' modules, which
- * declare contracts (`contracts.ts`).
+ * (`RUNNER_CONFIGS`), test support under a `test/`, `tests/` or `testing/` directory of its member
+ * (below the member's directory, so a member that sits under a directory of that name is not test
+ * support for it), or a module of a test infrastructure package. The harness's check support
+ * (`harness/checks/`) is held as production is, so every check reads it. Whether coverage reads a module
+ * is the gate config's question, not this one: a shipping member's `src/testing/` is test support and
+ * covered. Every rule holds both kinds. The distinction decides who counts as a reader of a production
+ * module's exports (`type-exports.ts`), which modules declare closed sets (`declared-sets.scan.ts`),
+ * which sheets and readers the stylesheet check reads (`stylesheets.ts`), and, among the kernel members'
+ * modules, which declare contracts (`contracts.ts`).
  *
  * @param {Population} population - The population.
  * @param {string} file - A repository-relative path.
@@ -139,14 +139,17 @@ function mounted(config: string, paths: readonly string[], sources: Readonly<Rec
  * @returns {Scan} The open scan.
  */
 function scanOver(opening: Readonly<ScanOpening>): Scan {
-  const unmount = opening.mount();
+  const { serving, unmount } = opening.mount();
   try {
-    const project = present(opening.open(), 'the scan project');
+    const project = present(
+      serving(() => opening.open()),
+      'the scan project',
+    );
     const close = (): void => {
       opening.release();
       unmount();
     };
-    return { checker: project.checker, close, paths: opening.paths, population: opening.population, program: project.program };
+    return { checker: project.checker, close, paths: opening.paths, population: opening.population, program: project.program, serving };
   } catch (error) {
     opening.release();
     unmount();
@@ -156,9 +159,10 @@ function scanOver(opening: Readonly<ScanOpening>): Scan {
 
 /**
  * A scan over a population: it covers every TypeScript module the population holds (`typescriptOf`),
- * declaration files included (a declaration file imports as any module does: `typeof import('…')`),
- * and reads roles from it, so its files and its population come from one listing. `sources` overlay the real files:
- * a planted path need not exist on disk, and a real path in `sources` reads as the overlay's text.
+ * declaration files included (a declaration file imports as any module does: `typeof import('…')`), and
+ * reads roles from it, so its files and its population come from one listing. `sources` overlay the real
+ * files: a planted path need not exist on disk, and a real path in `sources` reads as the overlay's text
+ * inside the scan's `serving` alone.
  *
  * @param {Population} population - The population the scan covers and reads roles from.
  * @param {Readonly<Record<string, string>>} sources - Overlaid texts, by repository-relative path.
@@ -168,7 +172,7 @@ function openScan(population: Population, sources: Readonly<Record<string, strin
   const paths = typescriptOf(population);
   const config = path.join(REPO_ROOT, '.harness-scan', nextName(), 'tsconfig.json');
   return scanOver({
-    mount: () => mount(mounted(config, paths, sources)),
+    mount: () => mountScan(mounted(config, paths, sources)),
     open: () => snapshot({ openProjects: [config] }).getProject(config),
     paths,
     population,
@@ -222,10 +226,7 @@ function textOfNode(node: Node): string {
  * @returns {TsSymbol | undefined} The symbol it resolves to.
  */
 function resolved(checker: Readonly<Checker>, symbol: TsSymbol | undefined): TsSymbol | undefined {
-  if (symbol !== undefined && (symbol.flags & SymbolFlags.Alias) !== NO_FLAGS) {
-    return checker.getAliasedSymbol(symbol);
-  }
-  return symbol;
+  return symbol !== undefined && (symbol.flags & SymbolFlags.Alias) !== NO_FLAGS ? checker.getAliasedSymbol(symbol) : symbol;
 }
 
 /**
@@ -275,10 +276,7 @@ function isPlatform(checker: Readonly<Checker>, symbol: TsSymbol | undefined): b
  * @returns {string | undefined} Its text, or undefined for a computed one.
  */
 function nameText(name: Node | undefined): string | undefined {
-  if (name !== undefined && (isIdentifier(name) || isStringLiteral(name) || isPrivateIdentifier(name))) {
-    return name.text;
-  }
-  return undefined;
+  return name !== undefined && (isIdentifier(name) || isStringLiteral(name) || isPrivateIdentifier(name)) ? name.text : undefined;
 }
 
 export { nodes } from './ts-source.ts';
