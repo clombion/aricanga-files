@@ -43,7 +43,7 @@ const VITE_CONFIG = 'vite.config.ts';
 const VITE_CONFIGS: Accepted<string> = new Accepted<string>([`**/${VITE_CONFIG}`]);
 
 /** The configs a test runner loads to run a member's tests: run by the runner, shipped by no one. */
-const RUNNER_CONFIGS: Accepted<string> = new Accepted<string>(['**/playwright.*.config.ts']);
+const RUNNER_CONFIGS: Accepted<string> = new Accepted<string>([typescriptGlob('**/playwright.*.config')]);
 
 /** The directories whose modules are test support, at any depth below their member's directory (read by `checker.ts`' `isProduction`). */
 const TEST_DIRECTORIES: readonly string[] = ['test', 'tests', 'testing'];

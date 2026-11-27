@@ -100,7 +100,7 @@ describe('the oxlint configuration of a planted population', () => {
         '**/*.spec.ts',
         '**/*.test.{ts,tsx}',
         '**/vite.config.ts',
-        '**/playwright.*.config.ts',
+        '**/playwright.*.config.{ts,tsx}',
       ],
     ]);
   });
