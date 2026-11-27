@@ -2,7 +2,10 @@
  * The whole-chain half of the import boundaries (card C of audit js261125, the user's decision): a
  * production module imports no non-production module (`isProduction`), by any form, within its
  * member or across members, the harness's production modules included. By induction, nothing a
- * production module reaches is test support or test infrastructure.
+ * production module reaches through TypeScript modules is test support or test infrastructure; a file
+ * the session declares by rule (a stylesheet, a file with no extension) is an empty module there, so
+ * what it names in turn (a stylesheet's `@import`) is not read (verif-p5 P5-6, accepted by card A:
+ * the verdict is the TypeScript project's file list).
  *
  * The verdict comes from the file list of a TypeScript project rooted at the production modules (T1,
  * the user's answer on card A of audit js261126): a held non-production file in it is the finding,

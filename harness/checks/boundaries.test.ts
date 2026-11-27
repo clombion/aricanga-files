@@ -20,8 +20,10 @@
  * support or test infrastructure by no form and through no chain of imports, within a member or
  * across members, the harness's and the root configuration modules included; a form the scan cannot
  * read is refused in a production module (an `import()` whose specifier is not a literal named by its
- * argument), and a use only test support's declarations answer is reported. The planted chain holds every form, importer kind and case of the relation, each importer
- * with what the chain finds there. It alone holds that relation.
+ * argument), and a use only test support's declarations answer is reported. A file the session
+ * declares by rule (a stylesheet) is an empty module, so what it names in turn is not read. The planted
+ * chain holds every form, importer kind and case of the relation it reads, each importer with what the
+ * chain finds there. It alone holds that relation.
  */
 
 import { BOUNDED, FIXTURES, PLANTED } from './boundaries.plants.ts';
