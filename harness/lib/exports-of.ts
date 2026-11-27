@@ -1,10 +1,12 @@
 /**
  * What a module exports of its own declarations: a declaration written `export type X = …`, or one
  * named in a local export list, `export { a }` or `export type { X as Y }`. A re-export,
- * `export { a } from './b.ts'`, passes on another module's declaration and is that module's.
+ * `export { a } from './b.ts'`, passes on another module's declaration and is that module's. The
+ * names are the ones an importer writes: a listed export by the name after its `as`.
  */
 
 import type { InterfaceDeclaration, ModifierLike, NodeArray, SourceFile, Statement, TypeAliasDeclaration } from 'typescript/unstable/ast';
+import type { Member, Population } from './scope.ts';
 import {
   SyntaxKind,
   isClassDeclaration,
@@ -17,6 +19,8 @@ import {
   isTypeAliasDeclaration,
   isVariableStatement,
 } from 'typescript/unstable/ast';
+import { isTypeScript, textsOf } from './source-files.ts';
+import { isProduction } from './checker.ts';
 import { parse } from './ts-source.ts';
 
 /**
@@ -84,18 +88,32 @@ function exportedNames(statement: Readonly<Statement>): readonly string[] {
 }
 
 /**
- * The names of a module's own exported declarations: each one written with `export`, and each one
- * its local export lists name, by its local name.
+ * The names a module's own export lists give its declarations, after any `as`: what an importer
+ * names them.
+ *
+ * @param {SourceFile} file - The module.
+ * @returns {readonly string[]} The exported names.
+ */
+function listedExportNames(file: SourceFile): readonly string[] {
+  return file.statements.flatMap((statement) => {
+    const clause = isExportDeclaration(statement) && statement.moduleSpecifier === undefined ? statement.exportClause : undefined;
+    return clause !== undefined && isNamedExports(clause) ? clause.elements.map((element) => element.name.text) : [];
+  });
+}
+
+/**
+ * The names under which a module exports its own declarations: each one written with `export`, and
+ * each one its local export lists name, by the name it is exported as.
  *
  * @param {SourceFile} file - The module.
  * @returns {ReadonlySet<string>} The names.
  */
 function ownExports(file: SourceFile): ReadonlySet<string> {
-  return new Set([...listedExports(file), ...file.statements.flatMap((statement) => exportedNames(statement))]);
+  return new Set([...listedExportNames(file), ...file.statements.flatMap((statement) => exportedNames(statement))]);
 }
 
 /**
- * The names a set of modules export of their own declarations (`ownExports`), over all of them.
+ * The names under which a set of modules export their own declarations (`ownExports`), over all of them.
  *
  * @param {readonly (readonly [string, string])[]} modules - Each module's path and source.
  * @returns {ReadonlySet<string>} The names.
@@ -110,4 +128,17 @@ function ownExportsOf(modules: readonly (readonly [string, string])[]): Readonly
   return names;
 }
 
-export { isExportedType, listedExports, ownExportsOf };
+/**
+ * The names under which members' shipping modules (`isProduction`: no test or test support) export
+ * their own declarations: what a module outside them can import from them.
+ *
+ * @param {Population} held - The population.
+ * @param {readonly Member[]} members - The members.
+ * @returns {Promise<ReadonlySet<string>>} The names.
+ */
+async function shippedExportsOf(held: Population, members: readonly Member[]): Promise<ReadonlySet<string>> {
+  const modules = members.flatMap((member) => held.filesOf(member)).filter((file) => isTypeScript(file) && isProduction(held, file));
+  return ownExportsOf(await textsOf(modules));
+}
+
+export { isExportedType, listedExports, ownExportsOf, shippedExportsOf };

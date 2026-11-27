@@ -7,10 +7,11 @@ import type { Rule } from '#lint-rules/ast.ts';
 
 const VIEW = '/src/view/';
 /**
- * The kernel's declarations a view may not import, by name: each one a kernel member exports, held
- * live by the project lint rules check, since a rule loaded by oxlint cannot import the kernel.
+ * The kernel's declarations a view may not import, by name: each one a kernel member's shipping
+ * modules export under that name, held live by the project lint rules check, since a rule loaded by
+ * oxlint cannot import the kernel.
  */
-const KERNEL_NAMES: Accepted<string> = new Accepted<string>(['Effect', 'ReduceResult', 'ReduceContext']);
+const KERNEL_NAMES: Accepted<string> = new Accepted<string>(['Effect', 'ReduceResult', 'ReduceContext', 'reduceStep']);
 /** A kernel module, by its specifier with any extension taken off. */
 const KERNEL_MODULES = /(?:^|\/)(?:reduce|sim\/effect|sim\/context|model\/[^/]+)$/u;
 /** A specifier's extension, after its last segment's last dot. */

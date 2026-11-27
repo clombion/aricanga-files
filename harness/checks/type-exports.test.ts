@@ -78,7 +78,7 @@ describe('the scan', () => {
 });
 
 describe("a module's own exports", () => {
-  test('reads each declaration a module exports of its own, and no local or re-export', () => {
+  test('reads each declaration a module exports of its own, by its exported name, and no local or re-export', () => {
     expect.hasAssertions();
     const source = [
       'export const a = 1, { b } = { b: 2 };',
@@ -94,7 +94,7 @@ describe("a module's own exports", () => {
       'export { h as renamed };',
       "export { j } from './j.ts';",
     ].join('\n');
-    expect(ownExportsOf([['planted.ts', source]])).toStrictEqual(new Set(['D', 'E', 'F', 'G', 'a', 'c', 'h']));
+    expect(ownExportsOf([['planted.ts', source]])).toStrictEqual(new Set(['D', 'E', 'F', 'G', 'a', 'c', 'renamed']));
   });
 });
 

@@ -7,21 +7,20 @@
  * each rule on its must-fire fixtures and nothing at all on the must-stay-clean ones. The config turns
  * on exactly the plugin's rules, as errors, and the README's table lists exactly them with their
  * descriptions. A rule's list restating the kernel's names is held live here: each name in
- * `view-imports`' `KERNEL_NAMES` is exported by a kernel member's own declaration.
+ * `view-imports`' `KERNEL_NAMES` is exported, under that name, by a kernel member's shipping module's own declaration.
  */
 
 import { FixtureError, codesAt, fixtureFolders, fixtures, lintFixtures, parseFixture } from '#lib/lint-rules.ts';
 import { PLUGIN_NAME, RULES } from '#lint-rules/plugin.ts';
 import { describe, expect, test } from 'vitest';
-import { isTypeScript, textOf, textsOf } from '#lib/source-files.ts';
 import { Accepted } from '#lint-rules/exemptions.ts';
 import type { Fixture } from '#lib/lint-rules.ts';
 import type { GateOxlintConfig } from '#lib/oxlint-shape.ts';
 import { KERNEL_NAMES } from '#lint-rules/rules/view-imports.ts';
-import type { Population } from '#lib/scope.ts';
-import { ownExportsOf } from '#lib/exports-of.ts';
 import { oxlintConfig } from '#lib/config-modules.ts';
 import { population } from '#lib/scope.ts';
+import { shippedExportsOf } from '#lib/exports-of.ts';
+import { textOf } from '#lib/source-files.ts';
 
 const HARNESS_ID = 'project-lint-rules';
 
@@ -178,18 +177,6 @@ async function unheldFixtures(): Promise<readonly { readonly codes: readonly str
   });
 }
 
-/**
- * The names the kernel members' modules export of their own declarations.
- *
- * @param {Population} held - The population.
- * @returns {Promise<ReadonlySet<string>>} The names.
- */
-async function kernelExports(held: Population): Promise<ReadonlySet<string>> {
-  const modules = held.tiers.kernel.flatMap((member) => held.filesOf(member)).filter((file) => isTypeScript(file));
-  const texts = await textsOf(modules);
-  return ownExportsOf(texts);
-}
-
 describe('the repository', () => {
   test('the plugin holds exactly the declared rules', () => {
     expect.hasAssertions();
@@ -212,7 +199,8 @@ describe('the repository', () => {
 
   test("each kernel name view-imports refuses is a kernel member's export", async () => {
     expect.hasAssertions();
-    const exported = await kernelExports(await population());
+    const held = await population();
+    const exported = await shippedExportsOf(held, held.tiers.kernel);
     expect([...KERNEL_NAMES].filter((name) => !exported.has(name))).toStrictEqual([]);
   });
 

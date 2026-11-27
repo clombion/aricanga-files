@@ -1,0 +1,4 @@
+// path: packages/systems/chat/src/view/view-imports-reduce.ts
+import { reduceStep } from '@narratives/system-chat';
+
+export const fields: typeof reduceStep = reduceStep;
