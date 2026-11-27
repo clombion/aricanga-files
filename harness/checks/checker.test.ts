@@ -1,6 +1,7 @@
 /**
  * The scan's readers (a path it does not cover is refused, and a missing symbol has no name), the module
- * classifiers, and the one statement of whether a declaration is the platform's (`isPlatformDeclaration`).
+ * classifiers; the one statement of whether a declaration is the platform's is held by
+ * `checker-platform.test.ts`.
  */
 
 import { ROLE_WORDS, isRole, isTestInfrastructure } from '#lib/roles.ts';
@@ -8,11 +9,9 @@ import { describe, expect, test } from 'vitest';
 import { inTestInfrastructure, isProduction, qualifiedName, scanOver, sourceOf } from '#lib/checker.ts';
 import type { Population } from '#lib/scope.ts';
 import type { ScanOpening } from '#lib/checker.ts';
-import { harnessModules } from '#lib/holders.ts';
 import { plantedPopulation } from '#lib/planted-population.ts';
 import { population } from '#lib/scope.ts';
 import { present } from '#lib/present.ts';
-import { textsOf } from '#lib/source-files.ts';
 import { usePlanted } from '#lib/scan-hooks.ts';
 
 /** A session's projects, by project file: this one holds none. */
@@ -157,16 +156,5 @@ describe('a module below its member', () => {
       'harness/testing/e.ts',
     ];
     expect(modules.map((file) => isProduction(held, file))).toStrictEqual([true, false, false, false, false]);
-  });
-});
-
-/** A test of a path for the platform's directory, as a module would quote it. */
-const PLATFORM_TEST = `'${['', 'node_modules', ''].join('/')}'`;
-
-describe("the platform's declarations", () => {
-  test("are told in checker.ts alone: no other module of the harness's code quotes the platform's directory", async () => {
-    expect.hasAssertions();
-    const texts = await textsOf(harnessModules(await population()));
-    expect(texts.filter(([, text]) => text.includes(PLATFORM_TEST)).map(([path]) => path)).toStrictEqual(['harness/lib/checker.ts']);
   });
 });
