@@ -12,7 +12,8 @@
  * A declaration nothing consults is stale: an `Exemptions` or `CountedExemptions` is consulted by a
  * call that fails on a stale entry (`unexempted`, `unexemptedBy`, `mismatches`, `assertExact`) or
  * by being handed to a call, which is trusted to make one; an `Accepted`, `Prefixes` or `Vocabulary` by any read.
- * Reads in importing modules count, through a relative or a `#…` subpath specifier. The fence
+ * Reads in importing modules count, found by the checker's symbol through any import form: a named or
+ * namespace import, a literal or destructured `import()`, a re-export then an import. The fence
  * cannot see a collection built at run time, nor tolerance applied inside a helper of another module.
  */
 
@@ -231,6 +232,42 @@ describe('the fence', () => {
     expect.hasAssertions();
     const adopting = new Exemptions({ [site(PLANT, 'GONE')]: 'planted' });
     expect(() => adopting.unexemptedBy([], keyOf)).toThrow(StaleExemptionError);
+  });
+});
+
+describe('the fence across modules', () => {
+  test.each([
+    [
+      'a namespace import',
+      "import * as owner from '#lib/planted.ts';\nexport function check() { owner.EXEMPT.unexempted(['a']); return owner.NAMES.has('a'); }\n",
+    ],
+    [
+      'a literal import()',
+      "export async function check() { const owner = await import('#lib/planted.ts'); owner.EXEMPT.unexempted(['a']); return owner.NAMES.has('a'); }\n",
+    ],
+    [
+      'a destructured import()',
+      "export async function check() { const { EXEMPT, NAMES } = await import('#lib/planted.ts'); EXEMPT.unexempted(['a']); return NAMES.has('a'); }\n",
+    ],
+    [
+      'a re-export then an import',
+      "import { EXEMPT, NAMES } from '#lib/relay.ts';\nexport function check() { EXEMPT.unexempted(['a']); return NAMES.has('a'); }\n",
+    ],
+  ])('a declaration consulted through %s is live', async (_name, user) => {
+    expect.hasAssertions();
+    const owner = "export const EXEMPT = new Exemptions({ a: 'why' });\nexport const NAMES = new Accepted(['a']);\n";
+    const relay = "export { EXEMPT, NAMES } from './planted.ts';\n";
+    await expect(findings({ [PLANT]: user, 'harness/lib/planted.ts': owner, 'harness/lib/relay.ts': relay })).resolves.toStrictEqual([]);
+  });
+
+  test('a declaration only imported, re-exported or destructured, and never consulted, is stale', async () => {
+    expect.hasAssertions();
+    const owner = "export const EXEMPT = new Exemptions({ a: 'why' });\n";
+    const user =
+      "import * as owner from '#lib/planted.ts';\nexport { EXEMPT } from '#lib/planted.ts';\nexport async function check() { const { EXEMPT: local } = await import('#lib/planted.ts'); return [owner.EXEMPT.entries, local.entries]; }\n";
+    await expect(findings({ [PLANT]: user, 'harness/lib/planted.ts': owner })).resolves.toStrictEqual([
+      { name: 'EXEMPT', path: 'harness/lib/planted.ts', problem: UNCONSULTED },
+    ]);
   });
 });
 

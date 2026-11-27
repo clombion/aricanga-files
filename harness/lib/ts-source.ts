@@ -176,14 +176,13 @@ function namedImports(statement: ImportDeclaration): readonly (readonly [string,
  * The local names a module imports from `module`, mapped to the names they import.
  *
  * @param {SourceFile} file - The module.
- * @param {string | ((specifier: string) => boolean)} module - A specifier, or a test of the specifier as the module writes it.
+ * @param {string} module - The specifier, as the module writes it.
  * @returns {ReadonlyMap<string, string>} Each local name and the name it imports.
  */
-function importsFrom(file: SourceFile, module: string | ((specifier: string) => boolean)): ReadonlyMap<string, string> {
-  const named = typeof module === 'string' ? (specifier: string): boolean => specifier === module : module;
+function importsFrom(file: SourceFile, module: string): ReadonlyMap<string, string> {
   return new Map(
     file.statements.flatMap((statement) =>
-      isImportDeclaration(statement) && isStringLiteral(statement.moduleSpecifier) && named(statement.moduleSpecifier.text)
+      isImportDeclaration(statement) && isStringLiteral(statement.moduleSpecifier) && statement.moduleSpecifier.text === module
         ? namedImports(statement)
         : [],
     ),

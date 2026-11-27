@@ -8,17 +8,20 @@ import {
   isArrayLiteralExpression,
   isAsExpression,
   isBinaryExpression,
+  isBindingElement,
   isCallExpression,
   isElementAccessExpression,
+  isExportSpecifier,
   isFunctionDeclaration,
   isIdentifier,
+  isImportClause,
   isImportSpecifier,
+  isNamespaceImport,
   isNewExpression,
   isNumericLiteral,
   isObjectLiteralExpression,
   isParenthesizedExpression,
   isPropertyAccessExpression,
-  isPropertyAssignment,
   isSatisfiesExpression,
   isVariableDeclaration,
   isVariableStatement,
@@ -224,62 +227,62 @@ function consultingParameters(file: SourceFile): ReadonlyMap<string, ReadonlySet
 }
 
 /**
- * The names one call or construction hands to a call, or consults with a call that fails on a stale entry.
+ * Whether a reference to a declaration consults it by a call that fails on a stale entry, or hands
+ * it to a call: `NAME.unexempted(…)`, `owner.NAME.assertExact(…)`, `scan(NAME)`, `new X(owner.NAME)`.
  *
- * @param {Node} node - Any node.
- * @returns {readonly string[]} The receiving names.
+ * @param {Node} reference - A reference the checker resolves to the declaration: a name, or the name of a property access.
+ * @returns {boolean} Whether it is consulted so.
  */
-function receiversOf(node: Node): readonly string[] {
-  if (!isCallExpression(node) && !isNewExpression(node)) {
-    return [];
+function isStaleFailingReference(reference: Node): boolean {
+  const { parent } = reference;
+  const target = isPropertyAccessExpression(parent) && parent.name === reference ? parent : reference;
+  const user = target.parent;
+  if ((isCallExpression(user) || isNewExpression(user)) && (user.arguments ?? []).some((argument) => argument === target)) {
+    return true;
   }
-  const handed = (node.arguments ?? []).flatMap((argument) => identifierText(argument) ?? []);
-  if (!isPropertyAccessExpression(node.expression)) {
-    return handed;
-  }
-  const method = identifierText(node.expression.name);
-  const receiver = identifierText(node.expression.expression);
-  return method !== undefined && receiver !== undefined && STALE_FAILING_CALLS.has(method) ? [receiver, ...handed] : handed;
+  const method = isPropertyAccessExpression(user) && user.expression === target ? identifierText(user.name) : undefined;
+  return method !== undefined && STALE_FAILING_CALLS.has(method) && isCallExpression(user.parent) && user.parent.expression === user;
 }
 
 /**
- * The names a tree hands to a call, or consults with a call that fails on a stale entry.
+ * Whether a reference to a declaration reads it: not a declaration, an import or an export of its name.
  *
- * @param {Node} root - The tree to search.
- * @returns {ReadonlySet<string>} The receiving names.
+ * @param {Node} reference - A reference the checker resolves to the declaration.
+ * @returns {boolean} Whether it reads the declaration.
  */
-function staleFailingReceivers(root: Node): ReadonlySet<string> {
-  return new Set(nodes(root).flatMap((node) => receiversOf(node)));
-}
-
-/**
- * Whether an identifier is a read of a binding, not a declaration, an import or a property name.
- *
- * @param {Node} node - An identifier.
- * @returns {boolean} Whether the identifier reads a binding.
- */
-function isRead(node: Node): boolean {
-  const { parent } = node;
+function isReadReference(reference: Node): boolean {
+  const { parent } = reference;
   return !(
-    (isVariableDeclaration(parent) && parent.name === node) ||
+    (isVariableDeclaration(parent) && parent.name === reference) ||
     isImportSpecifier(parent) ||
-    (isPropertyAccessExpression(parent) && parent.name === node) ||
-    (isPropertyAssignment(parent) && parent.name === node)
+    isImportClause(parent) ||
+    isNamespaceImport(parent) ||
+    isExportSpecifier(parent) ||
+    isBindingElement(parent)
   );
 }
 
 /**
- * The names a tree reads.
+ * The binding a destructuring reference introduces, whose own references read the declaration too:
+ * `EXEMPT` in `const { EXEMPT } = await import('…')` (the shorthand name is both) and `local` in
+ * `const { EXEMPT: local } = …`.
  *
- * @param {Node} root - The tree to search.
- * @returns {ReadonlySet<string>} The names read.
+ * @param {Node} reference - A reference the checker resolves to the declaration.
+ * @returns {Node | undefined} The local binding's name, or none.
  */
-function reads(root: Node): ReadonlySet<string> {
-  return new Set(
-    nodes(root)
-      .filter((node) => isIdentifier(node) && isRead(node))
-      .map((node) => identifierText(node) ?? ''),
-  );
+function destructuredBinding(reference: Node): Node | undefined {
+  const { parent } = reference;
+  const name = isBindingElement(parent) ? parent.name : undefined;
+  return name !== undefined && isIdentifier(name) ? name : undefined;
 }
 
-export { consultedNames, consultingParameters, declaration, isLiteral, moduleBindings, reads, staleFailingReceivers };
+export {
+  consultedNames,
+  consultingParameters,
+  declaration,
+  destructuredBinding,
+  isLiteral,
+  isReadReference,
+  isStaleFailingReference,
+  moduleBindings,
+};
