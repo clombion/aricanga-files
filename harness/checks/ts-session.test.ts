@@ -1,12 +1,13 @@
 /**
  * The one TypeScript session serves what is mounted now: a path while some live mount holds it, as
  * the latest of them gives it, a directory while it holds such a path, and a path mounted again or a
- * real file overlaid then released as it is now, though TypeScript's server caches what it read.
+ * real file overlaid then released as it is now, though TypeScript's server caches what it read. The
+ * declaration rule holds while `declaring` runs, and for no project opened before or after.
  */
 
+import type { Diagnostic, Program } from 'typescript/unstable/sync';
+import { declaring, mount, nextName, snapshot } from '#lib/ts-session.ts';
 import { describe, expect, test } from 'vitest';
-import { mount, nextName, snapshot } from '#lib/ts-session.ts';
-import type { Program } from 'typescript/unstable/sync';
 import { REPO_ROOT } from '#lib/paths.ts';
 import { byCodeUnit } from '#lib/lists.ts';
 import path from 'node:path';
@@ -39,14 +40,13 @@ const PACKAGE = path.join(POOL_DIR, 'node_modules', 'pooled', 'index.ts');
 const POOL = [...LISTED, PACKAGE];
 const IMPORTER = path.join(POOL_DIR, 'importer.ts');
 
-/** The generator's steps, and its seeded linear congruential choice (the C library's constants). */
+/** The side-effect import of nothing TypeScript diagnoses (`noUncheckedSideEffectImports`); the generator's steps, its seeded linear congruential choice (the C library's constants), a choice between two; the first of a list, the second, the third, and the step to the next. */
+const NO_SIDE_EFFECT_MODULE = 2882;
 const STEPS = 30;
 const SEED = 58;
 const MULTIPLIER = 1_103_515_245;
 const INCREMENT = 12_345;
 const MODULUS = 2_147_483_648;
-
-/** A choice between two; the first of a list, the second, the third, and the step to the next. */
 const EITHER = 2;
 const FIRST = 0;
 const SECOND = 1;
@@ -263,5 +263,37 @@ describe('the session after an unmount', () => {
       'export const overlay = 1;',
       disk,
     ]);
+  });
+});
+
+describe('the declaration rule', () => {
+  test('declares a file TypeScript does not load itself inside declaring alone, nested or not, for no project opened before or after', () => {
+    expect.hasAssertions();
+    const sheet = path.join(BASE, 'declared', 'sheet.css');
+    const user = path.join(BASE, 'declared', 'user.ts');
+    const options = { ...OPTIONS, allowArbitraryExtensions: true, noUncheckedSideEffectImports: true };
+    const unmount = mount(
+      new Map([
+        [sheet, 'a {}\n'],
+        [user, "import './sheet.css';\nexport {};\n"],
+      ]),
+    );
+    const codes = (): readonly number[] =>
+      withProject(
+        [user],
+        (program) => program.getSemanticDiagnostics(user).map((diagnostic: Readonly<Diagnostic>) => diagnostic.code),
+        options,
+      );
+    try {
+      const nested = declaring(() => declaring(() => codes()));
+      expect([codes(), declaring(() => codes()), nested, codes()]).toStrictEqual([
+        [NO_SIDE_EFFECT_MODULE],
+        [],
+        [],
+        [NO_SIDE_EFFECT_MODULE],
+      ]);
+    } finally {
+      unmount();
+    }
   });
 });

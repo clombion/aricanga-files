@@ -14,20 +14,27 @@
  * population by role, one per member, and the planted population holds two members of each role, so
  * every cell has a witness.
  *
- * The whole chain (`harness/lib/production-imports.ts`, the user's decision on card C of audit
- * js261125): a scan of the TS program refuses every import of a non-production module by a
- * production one, by any form (every string the checker resolves to a module), within a member or
- * across members, the harness's included; so a production module reaches test support or test
- * infrastructure through no chain of imports. It alone holds that relation.
+ * The whole chain (`harness/lib/production-imports.ts`, the user's decisions on card C of audit
+ * js261125 and card A of audit js261126): the file list of a TypeScript project rooted at the
+ * production modules holds no held non-production module, so a production module reaches test
+ * support or test infrastructure by no form and through no chain of imports, within a member or
+ * across members, the harness's and the root configuration modules included; a form the scan cannot
+ * read is refused in a production module, and a use only test support's declarations answer is
+ * reported. The planted chain holds every form, importer kind and case of the relation, each importer
+ * with what the chain finds there. It alone holds that relation.
  */
 
-import { BOUNDED, CHAIN, FIXTURES, PLANTED } from './boundaries.plants.ts';
+import { BOUNDED, FIXTURES, PLANTED } from './boundaries.plants.ts';
+import { CHAIN, CHAIN_MEMBERS, CHAIN_MOUNTED } from './boundaries-cases.plants.ts';
 import { at, boundaryDiagnostics, bounded } from './boundaries.run.ts';
-import { describe, expect, test } from 'vitest';
+import { byCodeUnit, isEmpty } from '#lib/lists.ts';
+import { describe, expect, test, vi } from 'vitest';
 import { usePlanted, useScan } from '#lib/scan-hooks.ts';
-import { isEmpty } from '#lib/lists.ts';
+import { ADMITTED_META } from '#lib/chain-forms.ts';
+import type { Chain } from '#lib/production-imports.ts';
+import type { Scan } from '#lib/checker.ts';
 import { plantedPopulation } from '#lib/planted-population.ts';
-import { productionImports } from '#lib/production-imports.ts';
+import { wholeChain } from '#lib/production-imports.ts';
 
 const HARNESS_ID = 'boundaries';
 
@@ -58,51 +65,122 @@ describe('the boundary overrides of a planted population', () => {
   });
 });
 
-const repoScan = useScan();
+/** What the whole chain finds over each planted scan, run once for the tests that read it. */
+const FOUND = new WeakMap<Scan, Chain>();
 
-const chainScan = usePlanted(CHAIN, [
-  ['experiences/sandbox/', 'experience'],
-  ['packages/characterisation/', 'test-infrastructure'],
-  ['packages/foundation/', 'foundation'],
-  ['packages/systems/chat/', 'system'],
-]);
+/**
+ * The whole chain over a scan, run once.
+ *
+ * @param {Scan} scan - The open scan.
+ * @returns {Chain} What it finds.
+ */
+function chainOf(scan: Scan): Chain {
+  const found = FOUND.get(scan) ?? wholeChain(scan);
+  FOUND.set(scan, found);
+  return found;
+}
 
-const absentScan = usePlanted(
-  [
-    ['packages/plant/src/plant.ts', "export * from './testing/support.ts';\n"],
-    ['packages/plant/src/testing/support.ts', 'export const support = 1;\n'],
-  ],
-  [['packages/plant/', 'foundation']],
-);
+/**
+ * The edges the planted importers declare as loaded or as answered only by test support's declarations.
+ *
+ * @param {'declares' | 'loads'} key - Which.
+ * @returns {readonly Readonly<{ from: string; to: string }>[]} The edges, by importer then imported file.
+ */
+function plantedEdges(key: 'declares' | 'loads'): readonly Readonly<{ from: string; to: string }>[] {
+  const edges: readonly Readonly<{ from: string; to: string }>[] = CHAIN.flatMap(
+    (plant) => (key === 'loads' ? plant.loads : plant.declares)?.map((to) => ({ from: plant.path, to })) ?? [],
+  );
+  return edges.toSorted((left, right) => byCodeUnit(left.from, right.from) || byCodeUnit(left.to, right.to));
+}
 
+/**
+ * The planted importers that declare `key`.
+ *
+ * @param {keyof (typeof CHAIN)[number]} key - What the chain finds there.
+ * @returns {readonly string[]} Their paths, sorted.
+ */
+function importers(key: keyof (typeof CHAIN)[number]): readonly string[] {
+  return CHAIN.filter((plant) => plant[key] !== undefined)
+    .map((plant) => plant.path)
+    .toSorted(byCodeUnit);
+}
+
+/**
+ * The importers a chain names, by an edge or a refusal.
+ *
+ * @param {Chain} found - What the chain finds.
+ * @returns {ReadonlySet<string>} Their paths.
+ */
+function named(found: Chain): ReadonlySet<string> {
+  return new Set([...found.edges.map((edge) => edge.from), ...found.refused.map((refusal) => refusal.from)]);
+}
+
+describe('the whole chain of the repository', () => {
+  const repoScan = useScan();
+
+  test('no production module of the repository imports a non-production module, or writes a form the scan cannot read', () => {
+    expect.hasAssertions();
+    expect(wholeChain(repoScan())).toStrictEqual({ edges: [], refused: [] });
+  });
+});
+
+/*
+ * The planted chain overlays the root configuration modules: a mounted path is served to every project
+ * opened while it stands, so its scan is open only for the tests below, never beside the repository's.
+ */
 describe('the whole chain', () => {
-  test('no production module of the repository imports a non-production module', () => {
+  const chainScan = usePlanted(
+    CHAIN.map((plant) => [plant.path, plant.text] as const),
+    CHAIN_MEMBERS,
+    CHAIN_MOUNTED,
+  );
+
+  test('reports each held non-production file a production module loads, by every form TypeScript loads and every spelling, a stylesheet and a file with no extension included, from each production module reaching it', () => {
     expect.hasAssertions();
-    expect(productionImports(repoScan())).toStrictEqual([]);
+    const loading = new Set(importers('loads'));
+    expect(chainOf(chainScan()).edges.filter((edge) => loading.has(edge.from))).toStrictEqual(plantedEdges('loads'));
   });
 
-  test('refuses a production import of a non-production module by every form, an ambient module test support declares and the harness included, and lets test support import one and a string name a property', () => {
+  test("reports a production use only test support's declarations answer: an ambient module, a global, an augmentation, under any diagnostic", () => {
     expect.hasAssertions();
-    expect(productionImports(chainScan()).filter((edge) => edge.from.includes('__chain_'))).toStrictEqual([
-      { from: 'experiences/sandbox/src/__chain_infrastructure.ts', to: 'packages/characterisation/browsers.ts' },
-      { from: 'experiences/sandbox/src/__chain_member.ts', to: 'packages/foundation/src/testing/index.ts' },
-      { from: 'harness/lib/__chain_harness.ts', to: 'packages/characterisation/browsers.ts' },
-      { from: 'packages/foundation/src/__chain_ambient.ts', to: 'packages/foundation/test/__chain_declarations.ts' },
-      { from: 'packages/foundation/src/__chain_declared.d.ts', to: 'packages/foundation/src/testing/index.ts' },
-      { from: 'packages/foundation/src/__chain_dynamic.ts', to: 'packages/foundation/src/testing/index.ts' },
-      { from: 'packages/foundation/src/__chain_import_type.ts', to: 'packages/foundation/src/testing/index.ts' },
-      { from: 'packages/foundation/src/__chain_own.ts', to: 'packages/foundation/src/testing/index.ts' },
-      { from: 'packages/foundation/src/__chain_require.ts', to: 'packages/foundation/src/testing/index.ts' },
-      { from: 'packages/foundation/src/__chain_template.ts', to: 'packages/foundation/src/testing/index.ts' },
-      { from: 'packages/foundation/src/__chain_typeof.ts', to: 'packages/foundation/src/testing/index.ts' },
-      { from: 'packages/systems/chat/src/__chain_alias.ts', to: 'packages/systems/chat/src/testing/predicates.ts' },
-      { from: 'packages/systems/chat/src/__chain_type.ts', to: 'packages/foundation/src/testing/index.ts' },
-    ]);
+    const declaring = new Set(importers('declares'));
+    expect(chainOf(chainScan()).edges.filter((edge) => declaring.has(edge.from))).toStrictEqual(plantedEdges('declares'));
   });
 
-  test('refuses it in a member planted in a directory absent on disk, which the scan mounts', () => {
+  test('refuses each form it cannot read in a production module, and each specifier or use no file answers', () => {
     expect.hasAssertions();
-    expect(productionImports(absentScan())).toStrictEqual([
+    const refused = new Set(chainOf(chainScan()).refused.map((refusal) => refusal.from));
+    expect([...refused].toSorted(byCodeUnit)).toStrictEqual(importers('refused'));
+  });
+
+  test('passes what ships and every form in a non-production module', () => {
+    expect.hasAssertions();
+    const found = named(chainOf(chainScan()));
+    expect(importers('passes').filter((path) => found.has(path))).toStrictEqual([]);
+  });
+
+  test('admits the import.meta members its declared list holds, asking the list', () => {
+    expect.hasAssertions();
+    const asked = vi.spyOn(ADMITTED_META, 'has');
+    wholeChain(chainScan());
+    const members = new Set(asked.mock.calls.map(([member]: readonly unknown[]) => String(member)));
+    asked.mockRestore();
+    expect([...members].toSorted(byCodeUnit)).toStrictEqual(['dirname', 'env', 'filename', 'glob', 'hot', 'resolve', 'url']);
+  });
+});
+
+describe('the whole chain of a member absent on disk', () => {
+  const absentScan = usePlanted(
+    [
+      ['packages/plant/src/plant.ts', "export * from './testing/support.ts';\n"],
+      ['packages/plant/src/testing/support.ts', 'export const support = 1;\n'],
+    ],
+    [['packages/plant/', 'foundation']],
+  );
+
+  test('refuses its production import of its test support, the directory the scan mounts', () => {
+    expect.hasAssertions();
+    expect(wholeChain(absentScan()).edges).toStrictEqual([
       { from: 'packages/plant/src/plant.ts', to: 'packages/plant/src/testing/support.ts' },
     ]);
   });

@@ -1,4 +1,4 @@
-/** The planted modules and members of the `boundaries` check: the lint's fixtures, the planted population and its expected overrides, and the whole chain's planted states. */
+/** The planted modules and members of the `boundaries` check: the lint's fixtures, the planted population and its expected overrides (the whole chain's are in `boundaries-chain.plants.ts`). */
 
 import type { PlantedMember } from '#lib/planted-population.ts';
 
@@ -110,38 +110,5 @@ const BOUNDED: readonly unknown[] = [
   [['harness/**', './knip.config.ts', './oxlint.config.ts', './vitest.gate.config.ts'], []],
 ];
 
-/** The planted states of the whole chain: each production module imports a non-production one by another form; a test-support module imports one freely. */
-const CHAIN: readonly (readonly [string, string])[] = [
-  ['experiences/sandbox/src/__chain_infrastructure.ts', "export * from '@narratives/characterisation/browsers';\n"],
-  ['experiences/sandbox/src/__chain_member.ts', "export * from '@narratives/foundation/testing';\n"],
-  ['harness/lib/__chain_harness.ts', "export * from '../../packages/characterisation/browsers.ts';\n"],
-  ['packages/foundation/src/__chain_ambient.ts', "export { planted } from 'chain-ambient';\n"],
-  ['packages/foundation/src/__chain_global.ts', "export const read = (value: ChainGlobal): number => value['planted'];\n"],
-  ['packages/foundation/src/__chain_declared.d.ts', "export type Module = typeof import('./testing/index.ts');\n"],
-  ['packages/foundation/src/__chain_dynamic.ts', "export const later = async (): Promise<unknown> => import('./testing/index.ts');\n"],
-  ['packages/foundation/src/__chain_import_type.ts', "export type Run = import('./testing/index.ts').FixtureRun;\n"],
-  ['packages/foundation/src/__chain_own.ts', "export * from './testing/index.ts';\n"],
-  [
-    'packages/foundation/src/__chain_require.ts',
-    "import fixture = require('./testing/index.ts');\n\nexport type Fixture = typeof fixture;\n",
-  ],
-  [
-    'packages/foundation/src/__chain_strings.ts',
-    "const path = './testing/index.ts';\nconst keyed = { './testing/index.ts': 1 };\n\nexport const read = (): number => keyed['./testing/index.ts'] + path.length;\n",
-  ],
-  ['packages/foundation/src/__chain_template.ts', 'export const later = async (): Promise<unknown> => import(`./testing/index.ts`);\n'],
-  ['packages/foundation/src/__chain_typeof.ts', "export type Module = typeof import('./testing/index.ts');\n"],
-  [
-    'packages/foundation/test/__chain_declarations.ts',
-    "declare module 'chain-ambient' {\n  const planted: number;\n}\n\ninterface ChainGlobal {\n  planted: number;\n}\n",
-  ],
-  ['packages/foundation/test/__chain_support.ts', "export * from '../src/testing/index.ts';\n"],
-  ['packages/systems/chat/src/__chain_alias.ts', "export * from '#src/testing/predicates';\n"],
-  [
-    'packages/systems/chat/src/__chain_type.ts',
-    "import type { FixtureRun } from '@narratives/foundation/testing';\n\nexport type Run = FixtureRun;\n",
-  ],
-];
-
-export { BOUNDED, CHAIN, FIXTURES, PLANTED };
+export { BOUNDED, FIXTURES, PLANTED };
 export type { Fixture };

@@ -1,6 +1,7 @@
 /**
  * The process's one TypeScript 7 API session, over the virtual file system of `virtual-files.ts`:
- * mounted paths and overlapping mounts. TypeScript's server caches what the file system answered, so every
+ * mounted paths, overlapping mounts, real paths through symlinked directories, and, while `declaring`
+ * runs, the declaration rule. TypeScript's server caches what the file system answered, so every
  * snapshot is taken through `snapshot`, which tells it each path whose answer may have changed since
  * the last one. The session's child
  * process is released without this module: it ends when its standard input closes, which every ending
@@ -97,6 +98,7 @@ class Session {
         directoryExists: (directoryName: string): boolean | undefined => (files.holdsServed(directoryName) ? true : undefined),
         fileExists: (fileName: string): boolean | undefined => (files.served(fileName) === undefined ? undefined : true),
         readFile: (fileName: string): string | undefined => files.served(fileName),
+        realpath: (fileName: string): string | undefined => (files.served(fileName) === undefined ? undefined : files.real(fileName)),
       },
     });
     this.open = [opened];
@@ -114,6 +116,16 @@ const SESSION = new Session();
  */
 function mount(files: Readonly<ReadonlyMap<string, string>>): () => void {
   return SESSION.files.mount(files);
+}
+
+/**
+ * Run `run` with the session declaring, by rule, each file TypeScript does not load itself.
+ *
+ * @param {() => Result} run - What reads the declared files.
+ * @returns {Result} What `run` returns.
+ */
+function declaring<Result>(run: () => Result): Result {
+  return SESSION.files.declaringWhile(run);
 }
 
 /**
@@ -141,4 +153,4 @@ function closeSession(): void {
   SESSION.close();
 }
 
-export { closeSession, mount, nextName, snapshot };
+export { closeSession, declaring, mount, nextName, snapshot };

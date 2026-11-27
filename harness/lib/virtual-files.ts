@@ -1,11 +1,17 @@
 /**
  * The virtual file system the TypeScript session reads (`ts-session.ts`): a mounted path need not exist
  * on disk, nor its directories (a directory holding a mounted path exists, so an import resolves into a
- * planted member wherever it sits), and a mounted real path reads as its mounted text. Mounts may
- * overlap: a path is served while some mount holds it, as the latest of them gives it. Every path whose
- * answer may have changed is kept until the session tells TypeScript's server, which caches what it read.
+ * planted member wherever it sits), a mounted real path reads as its mounted text, and a path reached
+ * through a symlinked directory (a workspace package under `node_modules`) reads as the real path it
+ * names. Mounts may overlap: a path is served while some mount holds it, as the latest of them gives it.
+ * Every path whose answer may have changed is kept until the session tells TypeScript's server, which
+ * caches what it read. While the declaration rule is on, each file TypeScript does not load itself (a
+ * stylesheet, a file with no extension, mounted or on disk) is declared: the declaration it looks for
+ * beside the file (x.d.css.ts beside x.css, x.d.ts beside x) reads as an empty module while no
+ * such declaration exists, so the file is in a project's list like any module.
  */
 
+import { realpathSync, statSync } from 'node:fs';
 import { isEmpty } from './lists.ts';
 import nodePath from 'node:path';
 
@@ -18,10 +24,60 @@ const NONE = 0;
 /** The latest of a path's layers. */
 const LATEST = -1;
 
+/** The text a declared file reads as: an empty module. */
+const DECLARED = 'export {};\n';
+
+/** The declaration TypeScript looks for beside a file it does not load itself: x.css is declared by x.d.css.ts. */
+const DECLARATION = /^(?<stem>.+)\.d\.(?<extension>[^./]+)\.ts$/u;
+
+/** The declaration of a file with no extension: x is declared by x.d.ts. */
+const BARE_DECLARATION = /^(?<stem>[^.]+)\.d\.ts$/u;
+
 /** One mount's text for a path. */
 interface Layer {
   readonly mount: number;
   readonly text: string;
+}
+
+/**
+ * The file a declaration path declares by the rule TypeScript reads it by (`allowArbitraryExtensions`):
+ * x.css for x.d.css.ts, x for x.d.ts when x has no extension; none for any other path.
+ *
+ * @param {string} name - A path.
+ * @returns {string | undefined} The file it declares, or none.
+ */
+function declaredFile(name: string): string | undefined {
+  const base = nodePath.basename(name);
+  if (DECLARATION.test(base)) {
+    return nodePath.join(nodePath.dirname(name), base.replace(DECLARATION, '$<stem>.$<extension>'));
+  }
+  return BARE_DECLARATION.test(base) ? nodePath.join(nodePath.dirname(name), base.replace(BARE_DECLARATION, '$<stem>')) : undefined;
+}
+
+/**
+ * The declaration path TypeScript looks for beside a file: the one rule `declaredFile` reads back.
+ *
+ * @param {string} file - A path.
+ * @returns {string} The path that declares it.
+ */
+function declarationOf(file: string): string {
+  const extension = nodePath.extname(file);
+  return extension === ''
+    ? `${file}.d.ts`
+    : nodePath.join(nodePath.dirname(file), `${nodePath.basename(file, extension)}.d${extension}.ts`);
+}
+
+/**
+ * What the disk holds at a path: a file, a directory with its real path, or nothing.
+ *
+ * @param {string} name - An absolute path.
+ * @returns {Readonly<{ file: boolean; real: string }> | undefined} The entry, or none.
+ */
+function onDisk(name: string): Readonly<{ file: boolean; real: string }> | undefined {
+  // oxlint-disable-next-line node/no-sync -- TypeScript's file system callbacks are synchronous: its server waits on each answer
+  const entry = statSync(name, { throwIfNoEntry: false });
+  // oxlint-disable-next-line node/no-sync -- TypeScript's file system callbacks are synchronous: its server waits on each answer
+  return entry === undefined ? undefined : { file: entry.isFile(), real: entry.isFile() ? name : realpathSync(name) };
 }
 
 /**
@@ -46,10 +102,18 @@ class VirtualFiles {
   /** Each directory above a served path, with how many served paths it holds: kept with `layers`. */
   private readonly mountedDirs = new Map<string, number>();
 
+  /** Each directory's real path, read once a mount: a served path is found through a symlinked directory too. */
+  private readonly realDirs = new Map<string, string>();
+
   /** The paths whose answer may have changed since they were last taken. */
   private readonly changed = new Set<string>();
 
+  /** The declaration paths the rule would answer that TypeScript asked about: changed when the rule turns on or off. */
+  private readonly asked = new Set<string>();
+
   private mounts = NONE;
+
+  private declaring = NONE;
 
   /**
    * Serve `files` until the returned function is called. A path another live mount serves too reads as
@@ -61,10 +125,12 @@ class VirtualFiles {
   public mount(files: Readonly<ReadonlyMap<string, string>>): () => void {
     this.mounts += STEP;
     const layer = this.mounts;
+    this.realDirs.clear();
     for (const [name, text] of files) {
       this.restack(name, [...(this.layers.get(name) ?? []), { mount: layer, text }]);
     }
     return () => {
+      this.realDirs.clear();
       for (const name of files.keys()) {
         this.restack(
           name,
@@ -72,6 +138,23 @@ class VirtualFiles {
         );
       }
     };
+  }
+
+  /**
+   * Run `run` with the declaration rule on.
+   *
+   * @param {() => Result} run - What reads the declared files.
+   * @returns {Result} What `run` returns.
+   */
+  public declaringWhile<Result>(run: () => Result): Result {
+    this.toggled();
+    this.declaring += STEP;
+    try {
+      return run();
+    } finally {
+      this.declaring -= STEP;
+      this.toggled();
+    }
   }
 
   /**
@@ -91,23 +174,41 @@ class VirtualFiles {
   }
 
   /**
-   * The text a path reads as: a live mount's; none for a path the disk answers.
+   * The text a path reads as: a live mount's, through its real path too, or a declaration the rule
+   * answers; none for a path the disk answers.
    *
    * @param {string} name - An absolute path.
    * @returns {string | undefined} Its text, or none.
    */
   public served(name: string): string | undefined {
-    return this.layers.get(name)?.at(LATEST)?.text;
+    const text = this.layers.get(name)?.at(LATEST)?.text ?? this.layers.get(this.real(name))?.at(LATEST)?.text;
+    return text ?? (this.declares(name) ? DECLARED : undefined);
   }
 
   /**
-   * Whether a directory holds a served path.
+   * Whether a directory holds a served path, by its spelling or its real path.
    *
    * @param {string} name - An absolute path.
    * @returns {boolean} Whether it does.
    */
   public holdsServed(name: string): boolean {
-    return this.mountedDirs.has(name);
+    return this.mountedDirs.has(name) || this.mountedDirs.has(this.real(name));
+  }
+
+  /**
+   * A path with its directory resolved to its real path, through the nearest directory on disk.
+   *
+   * @param {string} name - An absolute path.
+   * @returns {string} The path through the real directory.
+   */
+  public real(name: string): string {
+    const dir = nodePath.dirname(name);
+    if (dir === name) {
+      return name;
+    }
+    const found = this.realDirs.get(dir) ?? onDisk(dir)?.real ?? this.real(dir);
+    this.realDirs.set(dir, found);
+    return nodePath.join(found, nodePath.basename(name));
   }
 
   /**
@@ -126,7 +227,7 @@ class VirtualFiles {
     if (served !== this.layers.has(name)) {
       this.count(name, served ? -STEP : STEP);
     }
-    this.changed.add(name);
+    this.changed.add(name).add(declarationOf(name));
   }
 
   /**
@@ -145,6 +246,35 @@ class VirtualFiles {
       }
     }
   }
+
+  /** Mark every declaration the rule answered as changed, as the rule turns on or off. */
+  private toggled(): void {
+    if (this.declaring === NONE) {
+      for (const name of this.asked) {
+        this.changed.add(name);
+      }
+    }
+  }
+
+  /**
+   * Whether the rule declares `name`: the declaration of a file a mount or the disk serves, while none
+   * is mounted or on disk. Asked with the rule off, it is remembered and answers no.
+   *
+   * @param {string} name - An absolute path.
+   * @returns {boolean} Whether the rule declares it now.
+   */
+  private declares(name: string): boolean {
+    const file = declaredFile(name);
+    if (
+      file === undefined ||
+      onDisk(name)?.file === true ||
+      !(this.layers.has(file) || this.layers.has(this.real(file)) || onDisk(file)?.file === true)
+    ) {
+      return false;
+    }
+    this.asked.add(name);
+    return this.declaring !== NONE;
+  }
 }
 
-export { VirtualFiles };
+export { VirtualFiles, declaredFile };

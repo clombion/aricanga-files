@@ -52,16 +52,24 @@ function useScan(): () => Scan {
  *
  * @param {readonly (readonly [string, string])[]} plants - Each planted file's path and text; a path given twice is refused.
  * @param {readonly PlantedMember[]} members - The members the plants sit in.
+ * @param {readonly (readonly [string, string])[]} mounted - Files the scan serves that the population does not hold (an installed package, a member's manifest), by path.
  * @returns {() => Scan} Reads the open scan.
  */
-function usePlanted(plants: readonly (readonly [string, string])[], members: readonly PlantedMember[]): () => Scan {
-  return scanFor(async () => {
-    const found = await plantedPopulation(
-      plants.map(([path]) => path),
-      members,
-    );
-    return found;
-  }, Object.fromEntries(plants));
+function usePlanted(
+  plants: readonly (readonly [string, string])[],
+  members: readonly PlantedMember[],
+  mounted: readonly (readonly [string, string])[] = [],
+): () => Scan {
+  return scanFor(
+    async () => {
+      const found = await plantedPopulation(
+        plants.map(([path]) => path),
+        members,
+      );
+      return found;
+    },
+    Object.fromEntries([...mounted, ...plants]),
+  );
 }
 
 export { usePlanted, useScan };

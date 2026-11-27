@@ -38,6 +38,10 @@ const SUPPRESSIONS = new CountedExemptions({
     count: 1,
     reason: 'replaceSync is CSSOM, not Node I/O: the async replace would let a shadow root paint unstyled first',
   },
+  [site('harness/lib/virtual-files.ts', 'oxlint:node/no-sync')]: {
+    count: 2,
+    reason: "TypeScript's file system callbacks are synchronous: its server waits on each answer",
+  },
   [site('packages/foundation/src/sim/system.ts', 'oxlint:typescript/no-unsafe-type-assertion')]: {
     count: 2,
     reason: 'stateOf and viewOf: the erasure owner reads a system value back after proving the owner id matches',

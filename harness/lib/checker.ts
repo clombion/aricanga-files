@@ -23,7 +23,7 @@ import path from 'node:path';
 import { present } from './present.ts';
 import { typescriptOf } from './scope.ts';
 
-/** The compiler options of a scan: the shared base's strictness, every lib a held module reads. */
+/** The compiler options of a scan: the shared base's strictness, every lib a held module reads; the whole chain's projects extend them. */
 const OPTIONS = {
   allowImportingTsExtensions: true,
   jsx: 'preserve',
@@ -283,6 +283,7 @@ function nameText(name: Node | undefined): string | undefined {
 
 export { nodes } from './ts-source.ts';
 export {
+  OPTIONS,
   isPlatform,
   isPlatformDeclaration,
   isProduction,
