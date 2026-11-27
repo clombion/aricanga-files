@@ -141,6 +141,21 @@ const CHAIN: readonly ChainPlant[] = [
   ].map(
     (text, index) => ({ path: `${SANDBOX}src/__chain_leftover_${index}.ts`, refused: true, text: `${text}export const b = 1;\n` }) as const,
   ),
+  // A query only an exact production declaration answers is refused by its query; `new.target` is no `import.meta`.
+  {
+    path: `${SANDBOX}src/__chain_query_declared.ts`,
+    refused: true,
+    text: "import t from '~testing/__chain_qx.txt?raw';\nexport const a = t;\n",
+  },
+  {
+    path: `${SANDBOX}src/__chain_query_declared.d.ts`,
+    text: "declare module '~testing/__chain_qx.txt?raw' {\n  const text: string;\n  export default text;\n}\n",
+  },
+  {
+    passes: true,
+    path: `${SANDBOX}src/__chain_new_target.ts`,
+    text: 'export class K {\n  public readonly n: unknown = new.target.name;\n}\n',
+  },
   // Test support imports test support freely; a string naming a module is no import.
   { path: `${FOUNDATION}test/__chain_support.ts`, text: "export * from '../src/testing/index.ts';\n" },
   {
