@@ -10,11 +10,11 @@
  * `view-imports`' `KERNEL_NAMES` is exported, under that name, by a kernel member's shipping module's own declaration.
  */
 
-import { FixtureError, codesAt, fixtureFolders, fixtures, lintFixtures, parseFixture } from '#lib/lint-rules.ts';
+import { FixtureError, codesAt, fixtureFolders, fixtures, lintFixtures, parseFixture } from '#lib/lint-fixtures.ts';
 import { PLUGIN_NAME, RULES } from '#lint-rules/plugin.ts';
 import { describe, expect, test } from 'vitest';
 import { Accepted } from '#lint-rules/exemptions.ts';
-import type { Fixture } from '#lib/lint-rules.ts';
+import type { Fixture } from '#lib/lint-fixtures.ts';
 import type { GateOxlintConfig } from '#lib/oxlint-shape.ts';
 import { KERNEL_NAMES } from '#lint-rules/rules/view-imports.ts';
 import { oxlintConfig } from '#lib/config-modules.ts';

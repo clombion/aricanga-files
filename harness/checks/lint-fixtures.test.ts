@@ -1,6 +1,6 @@
 /** Two fixtures planted at one path are refused before any lint runs. */
 
-import { FixtureError, lintFixtures } from '#lib/lint-rules.ts';
+import { FixtureError, lintFixtures } from '#lib/lint-fixtures.ts';
 import { describe, expect, test } from 'vitest';
 
 const FIXTURE = { file: 'planted/fire.fixture', kind: 'fire', path: 'src/planted.ts', rule: 'planted', source: '' } as const;
