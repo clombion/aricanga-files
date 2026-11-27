@@ -14,8 +14,8 @@
  * extension). Outside the tests, a literal holding the kind on its own is refused, but a restatement
  * of a tool's own setting, exempted with its reason (`RESTATED`). In a test or a test's plants, whose
  * expected values and planted paths are written out, a literal that is a kind alone, and a pattern
- * holding the kind on its own, are refused. Every held harness module is read but the owner and this
- * scan, whose plants spell the kinds.
+ * holding the kind on its own, are refused. Every module of the harness's code (`harnessModules`, its
+ * root configuration modules included) is read but the owner and this scan, whose plants spell the kinds.
  */
 
 import { Accepted, Exemptions } from '#lib/exemptions.ts';
@@ -32,7 +32,8 @@ import {
 import { mkdir, rm } from 'node:fs/promises';
 import { nodes, parse } from '#lib/ts-source.ts';
 import { fromRoot } from '#lib/paths.ts';
-import { typescriptFiles } from '#lib/scope.ts';
+import { harnessModules } from '#lib/holders.ts';
+import { population } from '#lib/scope.ts';
 
 /** The one statement of the held kinds, and the scan, whose plants spell them: the two modules it does not read. */
 const UNREAD = new Accepted(['harness/lib/source-files.ts', 'harness/checks/source-files.test.ts']);
@@ -127,13 +128,13 @@ function kindsWritten(path: string, text: string): readonly string[] {
 const SEPARATOR = 2;
 
 /**
- * Whether the scan reads a held module: the harness's, the owner and the scan apart.
+ * The modules the scan reads: the harness's (`harnessModules`), the owner and the scan apart.
  *
- * @param {string} path - The module's path.
- * @returns {boolean} Whether it is read.
+ * @returns {Promise<readonly string[]>} Their paths.
  */
-function isRead(path: string): boolean {
-  return path.startsWith('harness/') && !UNREAD.has(path);
+async function readModules(): Promise<readonly string[]> {
+  const held = await population();
+  return harnessModules(held).filter((path) => !UNREAD.has(path));
 }
 
 /**
@@ -149,8 +150,7 @@ function strip(found: readonly string[]): readonly string[] {
 describe('the held kinds', () => {
   test('are written on their own by no held harness module but their owner', async () => {
     expect.hasAssertions();
-    const held = await typescriptFiles();
-    const texts = await textsOf(held.filter((path) => isRead(path)));
+    const texts = await textsOf(await readModules());
     expect(RESTATED.unexempted(texts.flatMap(([path, text]: readonly [string, string]) => kindsWritten(path, text)))).toStrictEqual([]);
   });
 
