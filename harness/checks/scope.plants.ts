@@ -143,7 +143,8 @@ async function inWorkspaceFolder<Value>(prefix: string, rootManifest: string, us
       }),
     );
     await run(['git', 'init', '-q'], { cwd: folder, timeoutMs: GIT_TIMEOUT_MS });
-    return await use(folder);
+    const value = await use(folder);
+    return value;
   } finally {
     await rm(folder, { force: true, recursive: true });
   }
