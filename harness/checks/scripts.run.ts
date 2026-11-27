@@ -1,7 +1,5 @@
 /** Running an entry script in the test's own process, with its library function stood in for. */
 
-import { HARNESS_SCRIPTS } from '#lib/test-globs.ts';
-import { fromRoot } from '#lib/paths.ts';
 import { vi } from 'vitest';
 
 /** What a stood-in standard input holds: one updated ref with a known remote side. */
@@ -47,11 +45,11 @@ function withStoodIn<Module extends object>(module: Readonly<Module>, name: keyo
 /**
  * Run an entry script in this process and read the exit code it set, clearing it again.
  *
- * @param {string} script - The script's file name under `harness/scripts`.
+ * @param {Promise<unknown>} script - The script loading: its `import()`, written by the test.
  * @returns {Promise<number | string | undefined>} The exit code the script set.
  */
-async function exitOf(script: string): Promise<number | string | undefined> {
-  await import(fromRoot(HARNESS_SCRIPTS, script));
+async function exitOf(script: Promise<unknown>): Promise<number | string | undefined> {
+  await script;
   const code = process.exitCode ?? undefined;
   process.exitCode = undefined;
   return code;

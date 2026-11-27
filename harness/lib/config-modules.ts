@@ -11,29 +11,12 @@
 import type { GateOxlintConfig } from './oxlint-shape.ts';
 import type { KnipConfig } from './knip-config.ts';
 import type { ViteUserConfig } from 'vitest/config';
-import { fromRoot } from './paths.ts';
-import { object } from './config.ts';
-import { pathToFileURL } from 'node:url';
-
-/** A configuration's fields, as the module's default export holds them. */
-type Section = Readonly<Record<string, unknown>>;
 
 /** The root configuration modules, by the tool that loads each: the one list of them; the gate's tasks name each to its tool (`-c`, `--config`). */
 const ROOT_CONFIG_MODULES = { knip: 'knip.config.ts', oxlint: 'oxlint.config.ts', vitest: 'vitest.gate.config.ts' } as const;
 
 /** The root configuration modules. */
 const ROOT_MODULES: readonly string[] = Object.values(ROOT_CONFIG_MODULES);
-
-/**
- * A root configuration module's default export, as plain values.
- *
- * @param {string} file - The module, relative to the root.
- * @returns {Promise<Section>} Its default export's fields.
- */
-async function defaultExport(file: string): Promise<Section> {
-  const loaded: unknown = await import(pathToFileURL(fromRoot(file)).href);
-  return object(object(loaded, `${file} module`)['default'], file);
-}
 
 /**
  * The oxlint configuration the gate's lint run loads (`ROOT_CONFIG_MODULES.oxlint`).
@@ -65,4 +48,4 @@ async function vitestConfig(): Promise<ViteUserConfig> {
   return loaded.default;
 }
 
-export { defaultExport, knipConfig, oxlintConfig, ROOT_CONFIG_MODULES, ROOT_MODULES, vitestConfig };
+export { knipConfig, oxlintConfig, ROOT_CONFIG_MODULES, ROOT_MODULES, vitestConfig };

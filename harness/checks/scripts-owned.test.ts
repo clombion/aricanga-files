@@ -31,19 +31,19 @@ vi.mock(import('#lib/performance-baseline.ts'), async (original) => {
 describe('the owned entry scripts', () => {
   test('coverage-floor holds the debt against the gate run', async () => {
     expect.hasAssertions();
-    await expect(exitOf('coverage-floor.ts')).resolves.toBe(STOOD_IN);
+    await expect(exitOf(import('#scripts/coverage-floor.ts'))).resolves.toBe(STOOD_IN);
     expect(floorMain).toHaveBeenCalledWith(err, DEBT, COVERAGE_DIR);
   });
 
   test('dupes reports on both streams', async () => {
     expect.hasAssertions();
-    await expect(exitOf('dupes.ts')).resolves.toBe(STOOD_IN);
+    await expect(exitOf(import('#scripts/dupes.ts'))).resolves.toBe(STOOD_IN);
     expect(dupesMain).toHaveBeenCalledWith({ err, out });
   });
 
   test('performance-baseline runs the spec with the locked runner and writes through the one writer', async () => {
     expect.hasAssertions();
-    await expect(exitOf('performance-baseline.ts')).resolves.toBeUndefined();
+    await expect(exitOf(import('#scripts/performance-baseline.ts'))).resolves.toBeUndefined();
     const recording = lastArgument(vi.mocked(recordBaseline).mock.calls);
     expect([recording.run, recording.write, recording.out]).toStrictEqual([finished, writeText, out]);
     expect([recording.root, recording.results, recording.runs]).toStrictEqual([

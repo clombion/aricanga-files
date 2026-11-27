@@ -6,12 +6,12 @@
  * oxlint's globs) with the listed lintable files the population holds.
  */
 
-import { ROOT_CONFIG_MODULES, defaultExport, knipConfig, oxlintConfig } from '#lib/config-modules.ts';
+import { REPO_ROOT, fromRoot } from '#lib/paths.ts';
+import { ROOT_CONFIG_MODULES, knipConfig, oxlintConfig } from '#lib/config-modules.ts';
 import { describe, expect, test } from 'vitest';
 import { namedOverrides, oxlintConfigOf } from '#lib/oxlint-config.ts';
 import { EXIT_CLEAN } from '#lib/exit-status.ts';
 import type { Population } from '#lib/scope.ts';
-import { REPO_ROOT } from '#lib/paths.ts';
 import { fieldMatches } from '#lint-rules/globs.ts';
 import { isLintable } from '#lib/source-files.ts';
 import { lintedFiles } from '#lib/lint-rules.ts';
@@ -19,6 +19,17 @@ import { plantedPopulation } from '#lib/planted-population.ts';
 import { population } from '#lib/scope.ts';
 
 const HARNESS_ID = 'oxlint-config';
+
+/**
+ * A root configuration module's default export, loaded by the path the tasks name.
+ *
+ * @param {string} file - The module, relative to the root.
+ * @returns {Promise<unknown>} Its default export.
+ */
+async function defaultExport(file: string): Promise<unknown> {
+  const loaded: unknown = await import(fromRoot(file));
+  return typeof loaded === 'object' && loaded !== null && 'default' in loaded ? loaded.default : undefined;
+}
 
 /** The settings of a configuration that name members. */
 interface MemberSettings {
