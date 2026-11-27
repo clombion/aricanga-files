@@ -2,7 +2,7 @@ import type { Connect, Plugin, UserConfigFnPromise } from 'vite';
 import { Compiler } from 'inkjs/full';
 import type { ServerResponse } from 'node:http';
 import { defineConfig } from 'vite';
-import { fileURLToPath } from 'node:url';
+import path from 'node:path';
 import { readFile } from 'node:fs/promises';
 import solid from '@solidjs/vite-plugin';
 
@@ -14,11 +14,11 @@ type Server = Readonly<{ middlewares: Readonly<Pick<Connect.Server, 'use'>> }>;
 
 /**
  * A path beside this config.
- * @param {string} path The path, relative to this file.
+ * @param {string} file The path, relative to this file.
  * @returns {string} The absolute path.
  */
-function fromHere(path: string): string {
-  return fileURLToPath(new URL(path, import.meta.url));
+function fromHere(file: string): string {
+  return path.join(import.meta.dirname, file);
 }
 
 /**
