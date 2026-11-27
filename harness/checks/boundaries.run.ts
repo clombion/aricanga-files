@@ -2,7 +2,7 @@
 
 import { OXLINT_CONFIG_FILES, oxlintDiagnostics, plantedLintRun, writeOxlintConfig } from '#lib/lint-rules.ts';
 import { list, object, parsed } from '#lib/config.ts';
-import { Accepted } from '#lib/exemptions.ts';
+import { Accepted } from '#lint-rules/exemptions.ts';
 import type { Diagnostic } from '#lib/lint-rules.ts';
 import type { Fixture } from './boundaries.plants.ts';
 import type { Population } from '#lib/scope.ts';

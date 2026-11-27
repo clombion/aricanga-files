@@ -6,7 +6,7 @@
  */
 
 import { bin, isolatedEnv } from './tools.ts';
-import { Accepted } from './exemptions.ts';
+import { Accepted } from '#lint-rules/exemptions.ts';
 import type { Outcome } from './process.ts';
 import { REPO_ROOT } from './paths.ts';
 import { byKind } from './by-kind.ts';

@@ -11,7 +11,7 @@ import { EXIT_BROKEN, EXIT_CLEAN } from '#lib/exit-status.ts';
 import { EXIT_FAILURE, EXIT_SUCCESS } from '#lib/output.ts';
 import { afterEach, describe, expect, test } from 'vitest';
 import { cleanRunner, failingRunner, growTo, plant, plantedScanRoots, removePlants, runMain } from './clones.plants.ts';
-import { Exemptions } from '#lib/exemptions.ts';
+import { Exemptions } from '#lint-rules/exemptions.ts';
 import type { Outcome } from '#lib/process.ts';
 import { tmpdir } from 'node:os';
 import { tracked } from '#lib/source-files.ts';

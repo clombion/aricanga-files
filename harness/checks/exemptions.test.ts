@@ -3,7 +3,7 @@
  * and a vocabulary is closed: its words are fixed when it is built and its record has no open keys.
  */
 
-import { CountedExemptions, Exemptions, StaleExemptionError, Vocabulary } from '#lib/exemptions.ts';
+import { CountedExemptions, Exemptions, StaleExemptionError, Vocabulary } from '#lint-rules/exemptions.ts';
 import { describe, expect, test } from 'vitest';
 
 /** A count no entry may hold. */

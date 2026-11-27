@@ -11,7 +11,7 @@
  */
 
 import { ConfigError, parsed } from '#lib/config.ts';
-import { Exemptions, site } from '#lib/exemptions.ts';
+import { Exemptions, site } from '#lint-rules/exemptions.ts';
 import { describe, expect, test } from 'vitest';
 import { fieldMatches, matches } from '#lint-rules/globs.ts';
 import { oxfmtEntries, oxlintEntries, stylelintEntries, vitestEntries } from './tool-exemptions.readers.ts';

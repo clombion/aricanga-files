@@ -3,7 +3,7 @@
  * owner is the title of the test the skip belongs to, or `<module>`.
  */
 
-import { Accepted, site } from '#lib/exemptions.ts';
+import { Accepted, site } from '#lint-rules/exemptions.ts';
 import type { CallExpression, Expression, Node, SourceFile } from 'typescript/unstable/ast';
 import { chain, importsFrom, nodes, parse } from '#lib/ts-source.ts';
 import {

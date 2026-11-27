@@ -11,7 +11,7 @@
  * or `entry` glob of the workspace holding it in the configuration knip loads.
  */
 
-import { Accepted, Exemptions } from '#lib/exemptions.ts';
+import { Accepted, Exemptions } from '#lint-rules/exemptions.ts';
 import { FLOOR, ListingError, listing, tracked } from '#lib/source-files.ts';
 import { coverageReached, testsOutsideCoverage } from './gate-config.ts';
 import { describe, expect, test } from 'vitest';

@@ -6,7 +6,7 @@
  * so a root configuration module is under the harness's policy.
  */
 
-import { Accepted, Vocabulary } from './exemptions.ts';
+import { Accepted, Vocabulary } from '#lint-rules/exemptions.ts';
 import { HARNESS_LIB } from './test-globs.ts';
 import type { MemberDir } from './package-dirs.ts';
 import type { Population } from './scope.ts';

@@ -26,7 +26,7 @@ import { cloneKey, clones, scanned } from './dupes-report.ts';
 import { harnessModules, heldDir } from './holders.ts';
 import { population, typescriptOf } from './scope.ts';
 import { readFile, stat } from 'node:fs/promises';
-import { Exemptions } from './exemptions.ts';
+import { Exemptions } from '#lint-rules/exemptions.ts';
 import type { Population } from './scope.ts';
 import { REPO_ROOT } from './paths.ts';
 import { isEmpty } from './lists.ts';

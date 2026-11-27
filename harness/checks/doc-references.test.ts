@@ -19,7 +19,7 @@
  * A span holding `<`, `{`, `*`, `...` or a space is a placeholder or a pattern and is not resolved.
  */
 
-import { Accepted, Exemptions, site } from '#lib/exemptions.ts';
+import { Accepted, Exemptions, site } from '#lint-rules/exemptions.ts';
 import { Doc, currentSpans, currentText, markdownDocs } from '#lib/docs.ts';
 import { adrProblems, fenceProblems, key, linkProblems, spanProblems } from './doc-references.resolve.ts';
 import { describe, expect, test } from 'vitest';

@@ -12,7 +12,7 @@ import { isCallExpression, isExportDeclaration, isImportDeclaration, isStringLit
 import { isLintable, textOf, tracked } from '#lib/source-files.ts';
 import { nodes, parse } from '#lib/ts-source.ts';
 import { object, parsed } from '#lib/config.ts';
-import { Accepted } from '#lib/exemptions.ts';
+import { Accepted } from '#lint-rules/exemptions.ts';
 import type { Node } from '#lib/ts-source.ts';
 import { SyntaxKind } from 'typescript/unstable/ast';
 

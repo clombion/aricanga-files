@@ -19,6 +19,7 @@ import { EXIT_CLEAN, EXIT_FINDINGS } from '#lib/exit-status.ts';
 import { describe, expect, test } from 'vitest';
 import { gateTest, projectsOf, testOf } from './gate-config.ts';
 import { list, object, parsed, stringOf } from '#lib/config.ts';
+import { PLANTED_VITEST_COPIES } from '#lib/planted-vitest.ts';
 import { Project } from '#lib/tools.ts';
 import { configOf } from '#lib/vitest-config.ts';
 import { fromRoot } from '#lib/paths.ts';
@@ -192,7 +193,7 @@ function endings(report: unknown, copies: ReadonlyMap<string, string>): Readonly
  * @returns {Promise<PlantRun>} Its exit status and the test files Vitest collected.
  */
 async function run(plant: Plant, overrides: Overrides): Promise<PlantRun> {
-  const project = await Project.create({ copies: ['harness/lib'] });
+  const project = await Project.create({ copies: PLANTED_VITEST_COPIES });
   try {
     const copies = copiesOf(plant);
     await project.write('vitest.planted.config.mts', plantedConfig([...copies.values()], overrides));

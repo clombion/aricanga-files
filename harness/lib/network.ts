@@ -7,7 +7,7 @@
  * caught the error. A child process the test starts is not guarded.
  */
 
-import { Accepted } from './exemptions.ts';
+import { Accepted } from '#lint-rules/exemptions.ts';
 import dns from 'node:dns';
 import net from 'node:net';
 import { patch } from './patch.ts';

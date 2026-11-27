@@ -11,6 +11,11 @@ the repository's root manifest. `ast.ts` holds the node and context helpers and 
 ones, and `closed.ts` the readers the closed-set rules share; `rules/jsx-rules.ts`,
 `rules/module-rules.ts` and `rules/closed-rules.ts` collect the rules for `plugin.ts`.
 
+The folder also holds two owners the whole harness imports from here, because a rule loaded by
+oxlint resolves only `#lint-rules/…`: `globs.ts`, the one matcher of tool globs, and
+`exemptions.ts` with its `exemptions/` modules, the one exemption owner (ADR-0006, "Live
+exemptions").
+
 | Rule | Holds |
 |---|---|
 | `aricanga/autofocus` | No autofocus or autoFocus attribute; move focus on navigation instead. |

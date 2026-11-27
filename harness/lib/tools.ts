@@ -8,7 +8,7 @@ import type { Finished, Outcome } from './process.ts';
 import { REPO_ROOT, fromRoot } from './paths.ts';
 import { cp, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises';
 import { environment, run } from './process.ts';
-import { Prefixes } from './exemptions.ts';
+import { Prefixes } from '#lint-rules/exemptions.ts';
 import { ToolError } from './tool-error.ts';
 import { byKind } from './by-kind.ts';
 import path from 'node:path';

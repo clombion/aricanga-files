@@ -10,7 +10,7 @@
  * A phrase written inside a code span is a quotation, not a claim.
  */
 
-import { HARNESS_CHECKS, HARNESS_LIB, HARNESS_SCRIPTS } from './test-globs.ts';
+import { HARNESS_CHECKS, HARNESS_LIB, HARNESS_LINT_RULES, HARNESS_SCRIPTS } from './test-globs.ts';
 
 /** A claim of a single owner, up to the end of its clause. */
 const CLAIM = /\b(?:the (?:one|only) (?:owner|module|place|reader|writer)|nowhere else|stated once)\b[^.;:]*/giu;
@@ -110,8 +110,11 @@ const CLAIMS: readonly Claim[] = [
   },
   {
     clause: 'The one owner of exemption lists',
-    path: `${HARNESS_LIB}exemptions.ts`,
-    probe: probe(/^export \{[^}]*\b(?:Accepted|Exemptions|Prefixes)\b[^}]*\} from '\.\/exemptions\//mu, `${HARNESS_LIB}exemptions.ts`),
+    path: `${HARNESS_LINT_RULES}exemptions.ts`,
+    probe: probe(
+      /^export \{[^}]*\b(?:Accepted|Exemptions|Prefixes)\b[^}]*\} from '\.\/exemptions\//mu,
+      `${HARNESS_LINT_RULES}exemptions.ts`,
+    ),
   },
   {
     clause: 'nowhere else in the harness',

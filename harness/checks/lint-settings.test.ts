@@ -13,7 +13,7 @@
  * rule it contradicts, or the code it does not apply to.
  */
 
-import { Accepted, Exemptions } from '#lib/exemptions.ts';
+import { Accepted, Exemptions } from '#lint-rules/exemptions.ts';
 import type { AnyOxlintConfig, GateOxlintConfig } from '#lib/oxlint-shape.ts';
 import { ConfigError, object, parsed } from '#lib/config.ts';
 import { ESLINT_DIRECTIVE_TEXT, UNUSED_DIRECTIVE_TEXT, WARNING_PLANT, WARNING_TEXT } from './lint-settings.plants.ts';

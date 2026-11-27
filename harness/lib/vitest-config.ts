@@ -32,6 +32,12 @@ import type { ViteUserConfig } from 'vitest/config';
 import { defineConfig } from 'vitest/config';
 import { provision } from './provided.ts';
 
+/**
+ * The lint-rules package's modules the harness runs in its own process, which coverage reads: the
+ * glob matcher and the exemption owner. The package's rules run inside oxlint.
+ */
+const IN_PROCESS_LINT_RULES: readonly string[] = ['globs.ts', 'exemptions.ts', 'exemptions/**'];
+
 /** The test settings every project of the run holds: the root's, and each app's project's, which extends no root. */
 const SHARED: NonNullable<ViteUserConfig['test']> = {
   allowOnly: false,
@@ -84,7 +90,13 @@ function configOf(held: Population): ViteUserConfig {
     test: {
       coverage: {
         exclude: [...RUNNER_TESTS],
-        include: [...coverageIncludes(held), `${HARNESS_LIB}**`, `${HARNESS_LINT_RULES}globs.ts`, `${HARNESS_SCRIPTS}**`, ...ROOT_MODULES],
+        include: [
+          ...coverageIncludes(held),
+          `${HARNESS_LIB}**`,
+          ...IN_PROCESS_LINT_RULES.map((owner) => `${HARNESS_LINT_RULES}${owner}`),
+          `${HARNESS_SCRIPTS}**`,
+          ...ROOT_MODULES,
+        ],
         provider: 'v8',
         reporter: ['text-summary', 'json'],
         reportsDirectory: COVERAGE_DIR,

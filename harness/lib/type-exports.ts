@@ -21,7 +21,7 @@ import { isExportedType, listedExports } from './exports-of.ts';
 import { isProduction, nodes, resolved, sourceOf } from './checker.ts';
 import { HARNESS_CHECKS } from './test-globs.ts';
 import type { Population } from './scope.ts';
-import { Prefixes } from './exemptions.ts';
+import { Prefixes } from '#lint-rules/exemptions.ts';
 import type { Scan } from './checker.ts';
 import { isEmpty } from './lists.ts';
 import { within } from './ts-source.ts';

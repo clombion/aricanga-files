@@ -8,7 +8,7 @@
  * list of its own.
  */
 
-import { Accepted, Prefixes } from './exemptions.ts';
+import { Accepted, Prefixes } from '#lint-rules/exemptions.ts';
 import { PopulationError, workspacePackages } from './workspace.ts';
 import type { Role, Tier } from './roles.ts';
 import { TYPESCRIPT, isLintable, isTypeScript, perRoot, textOf, tracked } from './source-files.ts';

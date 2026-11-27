@@ -16,7 +16,7 @@ import type { GateOverride } from './oxlint-shape.ts';
 import { HARNESS_CODE } from './oxlint-files.ts';
 import { HARNESS_LIB } from './test-globs.ts';
 import type { MemberDir } from './package-dirs.ts';
-import { Vocabulary } from './exemptions.ts';
+import { Vocabulary } from '#lint-rules/exemptions.ts';
 import { isEmpty } from './lists.ts';
 import { pocNames } from './scope.ts';
 

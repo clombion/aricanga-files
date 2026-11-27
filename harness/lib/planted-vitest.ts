@@ -1,16 +1,24 @@
 /**
- * A planted Vitest run: a scratch project holding a copy of the harness library, a config that loads
- * the gate's guards, and planted spec files, run by the repository's locked Vitest in a fixed order.
+ * A planted Vitest run: a scratch project holding a copy of what the gate's guards load, a config
+ * that loads them, and planted spec files, run by the repository's locked Vitest in a fixed order.
  * A guard is proven by what this run reports for each planted test.
  */
 
+import { HARNESS_LIB, HARNESS_LINT_RULES } from './test-globs.ts';
 import { list, object, parsed, stringOf, strings } from './config.ts';
-import { HARNESS_LIB } from './test-globs.ts';
 import { Project } from './tools.ts';
 import { typescriptGlob } from './source-files.ts';
 
 /** The setup module the gate's Vitest config loads for every test. */
 const GUARDS = `${HARNESS_LIB}guards.ts`;
+
+/**
+ * What a planted Vitest project copies to load the guards: the harness library, the lint-rules
+ * package that holds the exemption owner it imports, and the root manifest whose `imports` map
+ * resolves the library's `#lint-rules/…` specifiers. Every planted run of the gate's guards copies
+ * exactly these.
+ */
+const PLANTED_VITEST_COPIES: readonly string[] = [HARNESS_LIB, HARNESS_LINT_RULES, 'package.json'];
 
 /** What a planted test ended as, and why it failed if it did. */
 interface Outcome {
@@ -59,7 +67,7 @@ function outcomesOf(reportText: string): ReadonlyMap<string, Outcome> {
  * @returns {Promise<ReadonlyMap<string, Outcome>>} Each test's outcome, by its full name.
  */
 async function runPlanted(specs: Readonly<Record<string, string>>): Promise<ReadonlyMap<string, Outcome>> {
-  const project = await Project.create({ copies: [HARNESS_LIB] });
+  const project = await Project.create({ copies: PLANTED_VITEST_COPIES });
   try {
     await project.write('vitest.config.ts', CONFIG);
     await project.writeAll(Object.entries(specs).map(([path, text]: readonly [string, string]) => [`planted/${path}`, text] as const));
@@ -71,4 +79,4 @@ async function runPlanted(specs: Readonly<Record<string, string>>): Promise<Read
   }
 }
 
-export { runPlanted };
+export { PLANTED_VITEST_COPIES, runPlanted };

@@ -28,7 +28,7 @@ import { textOf, textsOf } from '#lib/source-files.ts';
 import { basename } from 'node:path/posix';
 import { harnessModules } from '#lib/holders.ts';
 import { population } from '#lib/scope.ts';
-import { site } from '#lib/exemptions.ts';
+import { site } from '#lint-rules/exemptions.ts';
 
 const HARNESS_ID = 'harness-paths';
 

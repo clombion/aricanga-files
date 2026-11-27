@@ -17,7 +17,7 @@ import { heldFiles, population } from './scope.ts';
 import { spansOf, withoutSpans } from './markdown-text.ts';
 import { Doc } from './markdown-doc.ts';
 import type { Population } from './scope.ts';
-import { Prefixes } from './exemptions.ts';
+import { Prefixes } from '#lint-rules/exemptions.ts';
 
 /** A comment line: its number and its text. */
 type CommentLine = readonly [number, string];

@@ -7,7 +7,7 @@
  * left out, and a phrase in a code span is a quotation.
  */
 
-import { Exemptions, Prefixes, site } from '#lib/exemptions.ts';
+import { Exemptions, Prefixes, site } from '#lint-rules/exemptions.ts';
 import { describe, expect, test } from 'vitest';
 import type { Prose } from '#lib/docs.ts';
 import { currentText } from '#lib/docs.ts';

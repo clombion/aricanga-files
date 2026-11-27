@@ -37,7 +37,7 @@ import type { Scan } from './checker.ts';
 import type { Symbol as TsSymbol } from 'typescript/unstable/sync';
 import { byKind } from './by-kind.ts';
 import { holdsNoRuntimeValue } from './ts-source.ts';
-import { site } from './exemptions.ts';
+import { site } from '#lint-rules/exemptions.ts';
 
 /** One use of a guarded API outside its owner: the file it is in and the rule it breaks. */
 interface Site {

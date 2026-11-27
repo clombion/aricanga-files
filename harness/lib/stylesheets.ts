@@ -13,7 +13,7 @@ import { heldFiles, population, typescriptOf } from './scope.ts';
 import { isIdentifier, isNoSubstitutionTemplateLiteral, isTaggedTemplateExpression } from 'typescript/unstable/ast/is';
 import { nodes, parse as parseModule } from './ts-source.ts';
 import type { OtherSuffix } from './source-files.ts';
-import { Prefixes } from './exemptions.ts';
+import { Prefixes } from '#lint-rules/exemptions.ts';
 import { Slot } from './lists.ts';
 import { fromRoot } from './paths.ts';
 import { isProduction } from './checker.ts';

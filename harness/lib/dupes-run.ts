@@ -4,7 +4,7 @@ import { JSCPD_FORMATS, isFile } from './source-files.ts';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import type { Outcome } from './process.ts';
 import type { Run } from './dupes-report.ts';
-import { Vocabulary } from './exemptions.ts';
+import { Vocabulary } from '#lint-rules/exemptions.ts';
 import { byKind } from './by-kind.ts';
 import { fromRoot } from './paths.ts';
 import { noReport } from './dupes-report.ts';

@@ -15,7 +15,7 @@
 
 import type { Member, Population } from './scope.ts';
 import { NODE_SCRIPT, typescriptGlob } from './source-files.ts';
-import { Accepted } from './exemptions.ts';
+import { Accepted } from '#lint-rules/exemptions.ts';
 import { matches } from '#lint-rules/globs.ts';
 
 /** The harness's own test project: its checks and their support, which coverage does not read. */

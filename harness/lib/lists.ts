@@ -122,4 +122,4 @@ function groupedBy<Item, Key>(items: readonly Item[], keyOf: (item: Item) => Key
 }
 
 export { groupedBy, inSequence, isEmpty, partitioned, Slot };
-export { byCodeUnit } from './exemptions/order.ts';
+export { byCodeUnit } from '#lint-rules/exemptions/order.ts';

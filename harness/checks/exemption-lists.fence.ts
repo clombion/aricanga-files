@@ -16,8 +16,8 @@ import {
 } from './exemption-lists.consults.ts';
 import { dirname, join, normalize } from 'node:path/posix';
 import { importsFrom, parse } from '#lib/ts-source.ts';
-import { KINDS } from '#lib/exemptions.ts';
-import type { Kind } from '#lib/exemptions.ts';
+import { KINDS } from '#lint-rules/exemptions.ts';
+import type { Kind } from '#lint-rules/exemptions.ts';
 import { population } from '#lib/scope.ts';
 
 const UNDECLARED = 'a literal collection consulted as a list: declare it';

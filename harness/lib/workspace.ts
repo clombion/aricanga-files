@@ -12,7 +12,7 @@
 import { dirOf, manifestOf } from './package-dirs.ts';
 import { list, object, parsed, stringOf } from './config.ts';
 import type { Dir } from './package-dirs.ts';
-import { Vocabulary } from './exemptions.ts';
+import { Vocabulary } from '#lint-rules/exemptions.ts';
 import { listingOutput } from './source-files.ts';
 import { realpath } from 'node:fs/promises';
 import { relativeTo } from './relative.ts';

@@ -12,7 +12,7 @@
 import { FixtureError, codesAt, fixtureFolders, fixtures, lintFixtures, parseFixture } from '#lib/lint-rules.ts';
 import { PLUGIN_NAME, RULES } from '#lint-rules/plugin.ts';
 import { describe, expect, test } from 'vitest';
-import { Accepted } from '#lib/exemptions.ts';
+import { Accepted } from '#lint-rules/exemptions.ts';
 import type { Fixture } from '#lib/lint-rules.ts';
 import type { GateOxlintConfig } from '#lib/oxlint-shape.ts';
 import { oxlintConfig } from '#lib/config-modules.ts';

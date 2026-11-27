@@ -5,7 +5,7 @@
  * harness's modules it selects (`harnessModules`).
  */
 
-import { Accepted } from './exemptions.ts';
+import { Accepted } from '#lint-rules/exemptions.ts';
 import type { MemberDir } from './package-dirs.ts';
 import type { Population } from './scope.ts';
 import { PopulationError } from './workspace.ts';

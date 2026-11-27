@@ -5,7 +5,7 @@ import type { PlantedMember } from '#lib/planted-population.ts';
 import type { Population } from '#lib/scope.ts';
 import { byKind } from '#lib/by-kind.ts';
 import { present } from '#lib/present.ts';
-import { site } from '#lib/exemptions.ts';
+import { site } from '#lint-rules/exemptions.ts';
 
 /** A member is held by exactly this many roots of each rule. */
 const ONCE = 1;

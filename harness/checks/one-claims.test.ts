@@ -9,7 +9,7 @@
 import { CLAIMS, clauses } from '#lib/claims.ts';
 import type { Claim, Probe, ProbeScope } from '#lib/claims.ts';
 import { Doc, currentText } from '#lib/docs.ts';
-import { Exemptions, StaleExemptionError, site } from '#lib/exemptions.ts';
+import { Exemptions, StaleExemptionError, site } from '#lint-rules/exemptions.ts';
 import { describe, expect, test } from 'vitest';
 import { population, typescriptFiles } from '#lib/scope.ts';
 import type { DeepReadonly } from '#lib/readonly.ts';

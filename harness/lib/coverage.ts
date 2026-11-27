@@ -8,11 +8,11 @@
  * entry either way fails, so new gaps fail and a closed gap forces its entry down.
  */
 
-import { CountedExemptions, site } from './exemptions.ts';
+import { CountedExemptions, site } from '#lint-rules/exemptions.ts';
 import { EXIT_FAILURE, EXIT_SUCCESS } from './output.ts';
 import { byCodeUnit, isEmpty } from './lists.ts';
 import { object, parsed } from './config.ts';
-import type { Mismatch } from './exemptions.ts';
+import type { Mismatch } from '#lint-rules/exemptions.ts';
 import { REPO_ROOT } from './paths.ts';
 import path from 'node:path';
 import { relativeTo } from './relative.ts';

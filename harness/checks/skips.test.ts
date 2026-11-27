@@ -8,7 +8,7 @@
  * title of the test the skip belongs to, or `<module>`.
  */
 
-import { Exemptions, site } from '#lib/exemptions.ts';
+import { Exemptions, site } from '#lint-rules/exemptions.ts';
 import { describe, expect, test } from 'vitest';
 import { isRunnerTest } from '#lib/test-globs.ts';
 import { skips } from './skips.scan.ts';

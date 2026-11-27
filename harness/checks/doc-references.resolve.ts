@@ -4,7 +4,7 @@
  * locked tools of a shell fence.
  */
 
-import { Accepted, site } from '#lib/exemptions.ts';
+import { Accepted, site } from '#lint-rules/exemptions.ts';
 import type { Doc, Link, Prose, Span } from '#lib/docs.ts';
 import { basename, dirname, extname, join, normalize } from 'node:path/posix';
 import { TYPESCRIPT } from '#lib/source-files.ts';

@@ -22,7 +22,7 @@ import type { MemberRule } from './oxlint-rules.ts';
 import type { OxlintConfig } from 'oxlint';
 import { RULES } from './oxlint-rules.ts';
 import type { Role } from './roles.ts';
-import { Vocabulary } from './exemptions.ts';
+import { Vocabulary } from '#lint-rules/exemptions.ts';
 import { boundariesOf } from './import-boundaries.ts';
 import { isEmpty } from './lists.ts';
 

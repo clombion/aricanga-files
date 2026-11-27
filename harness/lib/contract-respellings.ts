@@ -25,7 +25,7 @@ import {
   isSwitchStatement,
 } from 'typescript/unstable/ast';
 import { nameText, nodes, pathOf, textOfNode } from './checker.ts';
-import { Accepted } from './exemptions.ts';
+import { Accepted } from '#lint-rules/exemptions.ts';
 import type { Scan } from './checker.ts';
 import { heldAsKey } from './contract-keys.ts';
 import { holdsNoRuntimeValue } from './ts-source.ts';

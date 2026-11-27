@@ -8,7 +8,7 @@
  */
 
 import { describe, expect, test } from 'vitest';
-import { Prefixes } from '#lib/exemptions.ts';
+import { Prefixes } from '#lint-rules/exemptions.ts';
 import { heldFiles } from '#lib/scope.ts';
 import { typescriptKind } from '#lib/source-files.ts';
 

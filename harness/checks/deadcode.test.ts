@@ -14,7 +14,7 @@ import { ROOT_CONFIG_MODULES, knipConfig } from '#lib/config-modules.ts';
 import { deadcodeRuns, ignoreEntries, issueTypes, knip, plantedKnipRuns, repoIgnoreEntries, strictnessProblems } from '#lib/deadcode.ts';
 import { describe, expect, test } from 'vitest';
 import { runsOf, substituted } from '#lib/repo-tasks.ts';
-import { Exemptions } from '#lib/exemptions.ts';
+import { Exemptions } from '#lint-rules/exemptions.ts';
 import { REPO_ROOT } from '#lib/paths.ts';
 import type { Run } from '#lib/deadcode.ts';
 import { inSequence } from '#lib/lists.ts';

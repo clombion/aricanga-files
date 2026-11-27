@@ -16,15 +16,14 @@
 import { PLANTS, SHAPES, TSC_DEFAULT } from './typecheck-settings.plants.ts';
 import { describe, expect, test } from 'vitest';
 import { isTypeScript, textsOf, tracked } from '#lib/source-files.ts';
+import { HARNESS_LINT_RULES } from '#lib/test-globs.ts';
 import { Project } from '#lib/tools.ts';
 import type { Setting } from './typecheck-settings.plants.ts';
 
 const HARNESS_ID = 'typecheck-settings';
 
-/** Where the harness library lives; the exemptions owner and its modules are copied from under it. */
-const LIB = 'harness/lib/';
-/** The exemptions owner and the modules it re-exports, by their paths up to their kind. */
-const EXEMPTIONS_MODULE = /^harness\/lib\/exemptions(?:\/[^/.]+)?\.[^/]+$/u;
+/** The exemptions owner and the modules it re-exports, by their paths under the lint-rules package up to their kind. */
+const EXEMPTIONS_MODULE = /^exemptions(?:\/[^/.]+)?\.[^/]+$/u;
 
 const SUPPORT: Readonly<Record<string, string>> = {
   'src/clean.ts': 'export function double(value: number): number {\n  return value * 2;\n}\n',
@@ -76,14 +75,21 @@ function plantedConfig(overrides: Readonly<Record<string, Setting>>): string {
  */
 async function plantAll(project: Project, overrides: Readonly<Record<string, Setting>>): Promise<void> {
   const listed = await tracked();
-  const libraries = await textsOf(listed.filter((candidate) => isTypeScript(candidate) && EXEMPTIONS_MODULE.test(candidate)));
+  const libraries = await textsOf(
+    listed.filter(
+      (candidate) =>
+        isTypeScript(candidate) &&
+        candidate.startsWith(HARNESS_LINT_RULES) &&
+        EXEMPTIONS_MODULE.test(candidate.slice(HARNESS_LINT_RULES.length)),
+    ),
+  );
   const files: readonly (readonly [string, string])[] = [
     [
       'node_modules/@typescript/lib-dom/package.json',
       JSON.stringify({ name: '@typescript/lib-dom', types: 'index.d.ts', version: '0.0.0' }),
     ],
     ['node_modules/@typescript/lib-dom/index.d.ts', 'declare const replacedLib: number;\n'],
-    ...libraries.map(([path, text]: readonly [string, string]) => [`src/${path.slice(LIB.length)}`, text] as const),
+    ...libraries.map(([path, text]: readonly [string, string]) => [`src/${path.slice(HARNESS_LINT_RULES.length)}`, text] as const),
     ...Object.entries(SUPPORT),
     ...[...PLANTS, ...SHAPES].map((plant) => [plant.path, plant.text] as const),
     ['tsconfig.json', plantedConfig(overrides)],

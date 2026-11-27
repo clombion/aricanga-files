@@ -5,7 +5,7 @@
  * `Set` or `Map` literal (through `as const` and `satisfies`) that the module consults — with
  * `includes`, `has`, `indexOf`, `get`, `some`, `every`, `find`, `in`, `Object.hasOwn`, a computed lookup
  * `NAME[key]`, or by handing it to a module function that does one of these with its parameter —
- * must be declared through `harness/lib/exemptions.ts`. Iterating a list is not consulting it.
+ * must be declared through `harness/lint-rules/exemptions.ts`. Iterating a list is not consulting it.
  *
  * A declaration nothing consults is stale: an `Exemptions` or `CountedExemptions` is consulted by a
  * call that fails on a stale entry (`unexempted`, `unexemptedBy`, `mismatches`, `assertExact`) or
@@ -14,7 +14,7 @@
  * cannot see a collection built at run time, nor tolerance applied inside a helper of another module.
  */
 
-import { Exemptions, KINDS, StaleExemptionError, Vocabulary, site } from '#lib/exemptions.ts';
+import { Exemptions, KINDS, StaleExemptionError, Vocabulary, site } from '#lint-rules/exemptions.ts';
 import { UNCONSULTED, UNDECLARED, findings } from './exemption-lists.fence.ts';
 import { describe, expect, test } from 'vitest';
 import type { Finding } from './exemption-lists.fence.ts';
@@ -181,7 +181,7 @@ describe('the fence', () => {
 describe('the declaration kinds', () => {
   test('knows every declaration kind the exemption owner exports, and no other class it exports', async () => {
     expect.hasAssertions();
-    const exemptions: Readonly<Record<string, unknown>> = await import('#lib/exemptions.ts');
+    const exemptions: Readonly<Record<string, unknown>> = await import('#lint-rules/exemptions.ts');
     const classes = Object.entries(exemptions)
       .filter(([, value]: readonly [string, unknown]) => isDeclarationClass(value))
       .map(([name]: readonly [string, unknown]) => name)

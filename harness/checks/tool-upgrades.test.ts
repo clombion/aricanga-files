@@ -9,7 +9,7 @@
 import { describe, expect, test } from 'vitest';
 import { pinned, pins } from '#lib/pins.ts';
 import { ConfigError } from '#lib/config.ts';
-import { Exemptions } from '#lib/exemptions.ts';
+import { Exemptions } from '#lint-rules/exemptions.ts';
 import { LOCK } from './scope.plants.ts';
 import type { Pin } from '#lib/pins.ts';
 import { UPSTREAM } from '#lib/upstream.ts';

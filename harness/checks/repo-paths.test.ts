@@ -7,7 +7,7 @@
  * path asks `paths.ts` (`REPO_ROOT`, `fromRoot`, `relative`).
  */
 
-import { Accepted, site } from '#lib/exemptions.ts';
+import { Accepted, site } from '#lint-rules/exemptions.ts';
 import { describe, expect, test } from 'vitest';
 import { importsFrom, isPropertyName, nodes, parse } from '#lib/ts-source.ts';
 import { isIdentifier, isMetaProperty, isPropertyAccessExpression } from 'typescript/unstable/ast/is';

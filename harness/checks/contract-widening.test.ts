@@ -13,7 +13,7 @@ import type { Contract, ContractSite } from '#lib/contracts.ts';
 import { contracts, respellings, widenings } from '#lib/contracts.ts';
 import { describe, expect, test } from 'vitest';
 import { usePlanted, useScan } from '#lib/scan-hooks.ts';
-import { Accepted } from '#lib/exemptions.ts';
+import { Accepted } from '#lint-rules/exemptions.ts';
 import type { Scan } from '#lib/checker.ts';
 import { sourceOf } from '#lib/checker.ts';
 

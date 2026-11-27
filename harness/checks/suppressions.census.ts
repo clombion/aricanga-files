@@ -3,7 +3,7 @@
  * under `site(path, tool:rule)`.
  */
 
-import { Accepted, site } from '#lib/exemptions.ts';
+import { Accepted, site } from '#lint-rules/exemptions.ts';
 import { body, comments, parse } from '#lib/ts-source.ts';
 import { TYPESCRIPT } from '#lib/source-files.ts';
 

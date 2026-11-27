@@ -61,9 +61,12 @@ change meets:
 - An async function forwarding a promise is written `const value = await …; return value;`.
 - A record read by a key the story supplies goes through `Object.hasOwn` (`aricanga/own-keys`):
   a chat or a stat may be named `toString`.
-- Imports use package subpath maps (`#src/…`, `#test/…`, `#lib/…`), never a parent path; inside
-  `harness/lib` and `harness/lint-rules` imports are relative, because the planted projects copy
-  those folders without the root `package.json`.
+- Imports use package subpath maps (`#src/…`, `#test/…`, `#lib/…`), never a parent path. A planted
+  project resolves them through the manifests it copies: a planted oxlint run copies
+  `harness/lint-rules`, whose own `package.json` maps `#lint-rules/…`, the only prefix a rule may
+  import; a planted Vitest run copies `harness/lib`, `harness/lint-rules` and the root
+  `package.json` (`harness/lib/planted-vitest.ts`). The exemption owner's modules import each other
+  by relative path, since a check copies them alone.
 - Tests live under each package's `test/` with its own `tsconfig.json`: the type-aware linter
   types a file by its nearest config.
 - oxfmt formats every held TypeScript, CSS and JSON file at a print width of 140. stylelint

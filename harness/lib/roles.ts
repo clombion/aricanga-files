@@ -5,7 +5,7 @@
  * their tier's `ships`; each tier's members, for a reader total over the tiers), never a path.
  */
 
-import { Vocabulary } from './exemptions.ts';
+import { Vocabulary } from '#lint-rules/exemptions.ts';
 
 /**
  * What a role decides, as one of three tiers:

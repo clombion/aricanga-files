@@ -20,7 +20,7 @@
  * root configuration modules included) is read but the owner and this scan, whose plants spell the kinds.
  */
 
-import { Accepted, Exemptions } from '#lib/exemptions.ts';
+import { Accepted, Exemptions } from '#lint-rules/exemptions.ts';
 import { TYPESCRIPT, textOf, textsOf, typescriptGlob, typescriptKind, writeText } from '#lib/source-files.ts';
 import { describe, expect, test } from 'vitest';
 import {

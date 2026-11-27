@@ -7,7 +7,7 @@
  * term that replaced it.
  */
 
-import { Exemptions, Prefixes, site } from '#lib/exemptions.ts';
+import { Exemptions, Prefixes, site } from '#lint-rules/exemptions.ts';
 import type { Prose, Span } from '#lib/docs.ts';
 import { currentSpans, currentText } from '#lib/docs.ts';
 import { describe, expect, test } from 'vitest';

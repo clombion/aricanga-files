@@ -9,7 +9,7 @@
  */
 
 import { COVERAGE_DIR, DEBT, fileCoverage, floorProblems, gateReport, main, shortfalls } from '#lib/coverage.ts';
-import { CountedExemptions, site } from '#lib/exemptions.ts';
+import { CountedExemptions, site } from '#lint-rules/exemptions.ts';
 import { EXIT_FAILURE, EXIT_SUCCESS } from '#lib/output.ts';
 import { describe, expect, test } from 'vitest';
 import { EXIT_CLEAN } from '#lib/exit-status.ts';

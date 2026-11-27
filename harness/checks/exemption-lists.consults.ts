@@ -2,7 +2,7 @@
  * What a harness module declares and consults, read off its syntax tree for the `exemption-lists` fence.
  */
 
-import { Accepted, KINDS } from '#lib/exemptions.ts';
+import { Accepted, KINDS } from '#lint-rules/exemptions.ts';
 import type { Expression, Node, SourceFile } from '#lib/ts-source.ts';
 import {
   isArrayLiteralExpression,
@@ -24,7 +24,7 @@ import {
   isVariableStatement,
 } from 'typescript/unstable/ast/is';
 import type { CallExpression } from 'typescript/unstable/ast';
-import type { Kind } from '#lib/exemptions.ts';
+import type { Kind } from '#lint-rules/exemptions.ts';
 import { SyntaxKind } from 'typescript/unstable/ast';
 import { nodes } from '#lib/ts-source.ts';
 

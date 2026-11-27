@@ -10,7 +10,7 @@ import type { Block, Doc } from './docs.ts';
 import { checkList, pinTable, taskTable } from './generated-render.ts';
 import { markdown, markdownDocs, markdownPaths } from './docs.ts';
 import { textsOf, tracked, writeText } from './source-files.ts';
-import { Accepted } from './exemptions.ts';
+import { Accepted } from '#lint-rules/exemptions.ts';
 import { HARNESS_TESTS } from './test-globs.ts';
 import { UPSTREAM } from './upstream.ts';
 import { checkModules } from './checks.ts';

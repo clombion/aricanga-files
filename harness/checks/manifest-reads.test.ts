@@ -13,7 +13,7 @@
  * entry fails as stale once its module reads no manifest.
  */
 
-import { Accepted, Exemptions, site } from '#lib/exemptions.ts';
+import { Accepted, Exemptions, site } from '#lint-rules/exemptions.ts';
 import type { ArrowFunction, CallExpression, FunctionDeclaration, FunctionExpression, Identifier } from 'typescript/unstable/ast';
 import { chain, holdsNoRuntimeValue, isPropertyName, nodes, parse } from '#lib/ts-source.ts';
 import { describe, expect, test } from 'vitest';

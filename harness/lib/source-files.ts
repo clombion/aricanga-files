@@ -6,7 +6,7 @@
  * new file before it is committed. A listing below `FLOOR` files is an error, never an empty scan.
  */
 
-import { Accepted, Vocabulary } from './exemptions.ts';
+import { Accepted, Vocabulary } from '#lint-rules/exemptions.ts';
 import { readFile, stat, writeFile } from 'node:fs/promises';
 import { REPO_ROOT } from './paths.ts';
 import { byKind } from './by-kind.ts';

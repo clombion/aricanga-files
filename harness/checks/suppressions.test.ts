@@ -18,7 +18,7 @@
  * session, and a process that exits with its session open exits cleanly.
  */
 
-import { CountedExemptions, Exemptions, StaleExemptionError, site } from '#lib/exemptions.ts';
+import { CountedExemptions, Exemptions, StaleExemptionError, site } from '#lint-rules/exemptions.ts';
 import { census, isCensused } from './suppressions.census.ts';
 import { closeSession, parse } from '#lib/ts-source.ts';
 import { describe, expect, test } from 'vitest';
