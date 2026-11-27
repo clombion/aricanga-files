@@ -116,17 +116,6 @@ function isProduction(population: Population, file: string): boolean {
 }
 
 /**
- * Every TypeScript module a population holds, declaration files included (a declaration file imports as
- * any module does: `typeof import('…')`): what a scan over it covers.
- *
- * @param {Population} held - The population.
- * @returns {readonly string[]} The scanned modules.
- */
-function scannedOf(held: Population): readonly string[] {
-  return typescriptOf(held);
-}
-
-/**
  * The files a scan mounts: its overlaid sources and its virtual project file.
  *
  * @param {string} config - The virtual project file's path.
@@ -166,8 +155,9 @@ function scanOver(opening: Readonly<ScanOpening>): Scan {
 }
 
 /**
- * A scan over a population: it covers the modules the population holds (`scannedOf`) and reads roles
- * from it, so its files and its population come from one listing. `sources` overlay the real files:
+ * A scan over a population: it covers every TypeScript module the population holds (`typescriptOf`),
+ * declaration files included (a declaration file imports as any module does: `typeof import('…')`),
+ * and reads roles from it, so its files and its population come from one listing. `sources` overlay the real files:
  * a planted path need not exist on disk, and a real path in `sources` reads as the overlay's text.
  *
  * @param {Population} population - The population the scan covers and reads roles from.
@@ -175,7 +165,7 @@ function scanOver(opening: Readonly<ScanOpening>): Scan {
  * @returns {Scan} The open scan.
  */
 function openScan(population: Population, sources: Readonly<Record<string, string>>): Scan {
-  const paths = scannedOf(population);
+  const paths = typescriptOf(population);
   const config = path.join(REPO_ROOT, '.harness-scan', nextName(), 'tsconfig.json');
   return scanOver({
     mount: () => mount(mounted(config, paths, sources)),
@@ -256,15 +246,26 @@ function qualifiedName(checker: Readonly<Checker>, symbol: TsSymbol | undefined)
 }
 
 /**
+ * Whether a declaration's file is the platform's (a `lib` file, an installed package's file), under
+ * `node_modules`: the one statement every reader of a declaration's or a program file's owner asks.
+ *
+ * @param {string} file - The declaration's file, by absolute path.
+ * @returns {boolean} Whether it is under `node_modules`.
+ */
+function isPlatformDeclaration(file: string): boolean {
+  return file.includes('/node_modules/');
+}
+
+/**
  * Whether a symbol is declared by the platform (a `lib` file, an installed package's types), held redeclarations merged in.
  *
  * @param {Readonly<Checker>} checker - The scan's checker.
  * @param {TsSymbol | undefined} symbol - The name's symbol.
- * @returns {boolean} Whether some declaration of it is under `node_modules`.
+ * @returns {boolean} Whether some declaration of it is the platform's (`isPlatformDeclaration`).
  */
 function isPlatform(checker: Readonly<Checker>, symbol: TsSymbol | undefined): boolean {
   const declarations = resolved(checker, symbol)?.declarations ?? [];
-  return !isEmpty(declarations) && declarations.some((declaration) => declaration.path.includes('/node_modules/'));
+  return !isEmpty(declarations) && declarations.some((declaration) => isPlatformDeclaration(declaration.path));
 }
 
 /**
@@ -283,6 +284,7 @@ function nameText(name: Node | undefined): string | undefined {
 export { nodes } from './ts-source.ts';
 export {
   isPlatform,
+  isPlatformDeclaration,
   isProduction,
   inTestInfrastructure,
   nameText,
