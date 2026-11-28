@@ -50,7 +50,8 @@ function messageTexts(root: Readonly<Pick<ParentNode, 'querySelectorAll'>>): rea
   return texts;
 }
 
-describe('the sandbox boot', () => {
+// Each test stands in for the platform's one fetch and counts its requests: the tests run one at a time.
+describe('the sandbox boot', { concurrent: false }, () => {
   test('fetches the story and renders a message per line that carries text', async ({ expect }) => {
     expect.hasAssertions();
     const requested = stubFetch(async () => {

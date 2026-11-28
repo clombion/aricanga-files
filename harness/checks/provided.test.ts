@@ -19,7 +19,8 @@ const UNPROVIDED = [
   '',
 ].join('\n');
 
-describe('a worker of the gate run', () => {
+// The first test empties the process's PATH and resets its modules: these tests run one at a time, beside no other.
+describe('a worker of the gate run', { concurrent: false }, () => {
   test("answers the repository's population and listing with pnpm and git off the PATH: it computes neither", async ({ expect }) => {
     expect.hasAssertions();
     vi.stubEnv('PATH', '');

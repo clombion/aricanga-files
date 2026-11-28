@@ -28,7 +28,8 @@ vi.mock(import('#lib/performance-baseline.ts'), async (original) => {
   return stand.withStoodIn(await original(), 'recordBaseline');
 });
 
-describe('the owned entry scripts', () => {
+// Each script sets the process's one exit code, which `exitOf` reads and clears: the tests run one at a time.
+describe('the owned entry scripts', { concurrent: false }, () => {
   test('coverage-floor holds the debt against the gate run', async ({ expect }) => {
     expect.hasAssertions();
     await expect(exitOf(import('#scripts/coverage-floor.ts'))).resolves.toBe(STOOD_IN);

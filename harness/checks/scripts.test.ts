@@ -33,7 +33,8 @@ vi.mock(import('#lib/output.ts'), async (original) => {
   return { ...output, standardInput: vi.fn<typeof output.standardInput>(stoodInput) };
 });
 
-describe('the entry scripts', () => {
+// Each script sets the process's one exit code, which `exitOf` reads and clears: the tests run one at a time.
+describe('the entry scripts', { concurrent: false }, () => {
   test('build-check builds the held apps with the real builder', async ({ expect }) => {
     expect.hasAssertions();
     await expect(exitOf(import('#scripts/build-check.ts'))).resolves.toBe(STOOD_IN);
