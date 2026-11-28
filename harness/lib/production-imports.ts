@@ -23,6 +23,8 @@
  * `typescript/unstable/*`, and tracks it across 7.x.
  */
 
+import { Accepted, Vocabulary } from '#lint-rules/exemptions.ts';
+import type { Cause, Unread } from './chain-forms.ts';
 import type { Checker, Diagnostic, Program } from 'typescript/unstable/sync';
 import { NO_FILE, standsFor, unreadForm } from './chain-forms.ts';
 import type { Node, SourceFile } from 'typescript/unstable/ast';
@@ -30,7 +32,6 @@ import { OPTIONS, isPlatformDeclaration, isProduction, nodes, resolved, scanOver
 import { REPO_ROOT, relative } from './paths.ts';
 import { declaring, mountScan, nextName, snapshot } from './ts-session.ts';
 import { isIdentifier, isNoSubstitutionTemplateLiteral, isStringLiteral } from 'typescript/unstable/ast';
-import { Accepted } from '#lint-rules/exemptions.ts';
 import type { Scan } from './checker.ts';
 import { isEmpty } from './lists.ts';
 import path from 'node:path';
@@ -42,10 +43,11 @@ interface Edge {
   readonly to: string;
 }
 
-/** A production module's form the scan cannot read, refused where it stands. */
+/** A production module's form the scan refuses where it stands, and why. */
 interface Refusal {
   readonly from: string;
   readonly form: string;
+  readonly cause: Cause;
 }
 
 /** What the whole chain finds: the imports it reports and the forms it refuses. */
@@ -89,6 +91,17 @@ const UNRESOLVED: Accepted<number> = new Accepted<number>([NO_NAME, NO_MODULE, N
 
 /** The diagnostics of a specifier no file answers: a module, a side-effect import. */
 const UNANSWERED_SPECIFIER: Accepted<number> = new Accepted<number>([NO_MODULE, NO_SIDE_EFFECT_MODULE]);
+
+/**
+ * What the report says of a refusal, by its cause: why the chain refuses the form, and what to do
+ * about it. A form the chain cannot read is respelt or moved out of production; a specifier or a
+ * use no file answers names what a file or an installed package declares, or goes.
+ */
+const TOLD: Vocabulary<Readonly<Record<Cause, string>>> = new Vocabulary<Readonly<Record<Cause, string>>>({
+  unanswered: 'no file the production project lists answers it, so name what a file or an installed package declares, or remove it',
+  unread:
+    'the whole chain cannot read it in a production module, so respell it as a form the chain reads, or move it into a non-production module',
+});
 
 /** The compiler options of the whole chain's projects: a scan's, listing every file a module can name. */
 const CHAIN_OPTIONS = {
@@ -178,12 +191,15 @@ function distinct(edges: readonly Edge[]): readonly Edge[] {
  * the production project cannot resolve.
  *
  * @param {Readonly<Diagnostic>} diagnostic - Its diagnostic in the production project.
- * @returns {string} The refused form.
+ * @returns {Unread} The refused form, unanswered.
  */
-function unresolvedForm(diagnostic: Readonly<Diagnostic>): string {
-  return UNANSWERED_SPECIFIER.has(diagnostic.code)
-    ? `${NO_FILE}: ${diagnostic.text}`
-    : `a use the production project cannot resolve (TS${diagnostic.code}): ${diagnostic.text}`;
+function unresolvedForm(diagnostic: Readonly<Diagnostic>): Unread {
+  return {
+    cause: 'unanswered',
+    form: UNANSWERED_SPECIFIER.has(diagnostic.code)
+      ? `${NO_FILE}: ${diagnostic.text}`
+      : `a use the production project cannot resolve (TS${diagnostic.code}): ${diagnostic.text}`,
+  };
 }
 
 /**
@@ -205,7 +221,11 @@ function moduleFindings(scan: Scan, whole: ChainProject, from: string): Chain {
   const unresolved = diagnosed.filter((found: Diagnosed) => isEmpty(found.owners) && UNRESOLVED.has(found.diagnostic.code));
   return {
     edges: diagnosed.flatMap((found: Diagnosed) => found.owners.map((to) => ({ from, to }))),
-    refused: [...forms, ...unresolved.map((found: Diagnosed) => unresolvedForm(found.diagnostic))].map((form) => ({ form, from })),
+    refused: [...forms, ...unresolved.map((found: Diagnosed) => unresolvedForm(found.diagnostic))].map(({ cause, form }) => ({
+      cause,
+      form,
+      from,
+    })),
   };
 }
 
@@ -252,7 +272,7 @@ function wholeChain(scan: Scan): Chain {
 
 /**
  * What the whole chain tells its reader: each finding on one line, naming its files, why it is
- * refused and what to do.
+ * refused and what to do, as its cause words them.
  *
  * @param {Chain} found - What the chain finds.
  * @returns {readonly string[]} One line per edge, then one per refusal.
@@ -263,10 +283,7 @@ function chainReport(found: Chain): readonly string[] {
       (edge) =>
         `${edge.from} reaches ${edge.to}, a non-production module, by an import or a name only its declarations answer: a production module reaches no test support or test infrastructure, so move what it uses into a production module, or use it from a non-production one`,
     ),
-    ...found.refused.map(
-      (refusal) =>
-        `${refusal.from} is refused (${refusal.form}): the whole chain cannot read it in a production module, so respell it as a form the chain reads, or move it into a non-production module`,
-    ),
+    ...found.refused.map((refusal) => `${refusal.from} is refused (${refusal.form}): ${TOLD.of(refusal.cause)}`),
   ];
 }
 

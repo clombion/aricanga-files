@@ -28,6 +28,18 @@ import type { Checker } from 'typescript/unstable/sync';
 import type { Node } from 'typescript/unstable/ast';
 import { declaredFile } from './declaration-paths.ts';
 
+/**
+ * Why the whole chain refuses a production module's form: it cannot read it (`unread`), or it reads
+ * a specifier or a use no file answers (`unanswered`).
+ */
+type Cause = 'unanswered' | 'unread';
+
+/** A form the whole chain refuses in a production module, and why. */
+interface Unread {
+  readonly cause: Cause;
+  readonly form: string;
+}
+
 /** Where an `import()`'s specifier sits among its arguments, and how many it is: the first, one. */
 const FIRST = 0;
 const SPECIFIER_COUNT = 1;
@@ -82,22 +94,24 @@ const NO_FILE =
   'a specifier no file answers (an absent package, a file its package does not export, a file offered only under a condition TypeScript does not apply, a route only the bundler knows)';
 
 /**
- * The specifier form a node writes that the scan cannot read, if it is one: a query, or a specifier
- * only a pattern declaration answers in the production project.
+ * The specifier form a node writes that the scan refuses, if it is one: a query, which it cannot
+ * read, or a specifier only a pattern declaration answers in the production project, which no file does.
  *
  * @param {Node} node - A node of a production module.
  * @param {Readonly<Checker>} checker - The production project's checker.
- * @returns {string | undefined} The refused form, or none.
+ * @returns {Unread | undefined} The refused form, or none.
  */
-function specifierForm(node: Node, checker: Readonly<Checker>): string | undefined {
+function specifierForm(node: Node, checker: Readonly<Checker>): Unread | undefined {
   if (!isSpecifier(node) || !(isStringLiteral(node) || isNoSubstitutionTemplateLiteral(node))) {
     return undefined;
   }
   if (node.text.includes('?')) {
-    return `a specifier with a query: ${node.text}`;
+    return { cause: 'unread', form: `a specifier with a query: ${node.text}` };
   }
   const symbol = checker.getSymbolAtLocation(node);
-  return symbol?.name.includes('*') === true ? `${NO_FILE}; only a pattern declaration answers it: ${node.text}` : undefined;
+  return symbol?.name.includes('*') === true
+    ? { cause: 'unanswered', form: `${NO_FILE}; only a pattern declaration answers it: ${node.text}` }
+    : undefined;
 }
 
 /**
@@ -120,16 +134,18 @@ function computedImport(node: Node): string | undefined {
 }
 
 /**
- * The form one node of a production module writes that the scan cannot read (V3), if it is one: an
- * `import.meta` member outside the admitted set, an `import()` whose specifier is not a literal, a
- * specifier with a query, a specifier only a pattern declaration answers.
+ * The form one node of a production module writes that the scan refuses (V3), if it is one, with its
+ * cause: an `import.meta` member outside the admitted set, an `import()` whose specifier is not a
+ * literal, a specifier with a query (each unread), a specifier only a pattern declaration answers
+ * (unanswered).
  *
  * @param {Node} node - A node of the module, in the production project.
  * @param {Readonly<Checker>} checker - The production project's checker.
- * @returns {string | undefined} The refused form, or none.
+ * @returns {Unread | undefined} The refused form, or none.
  */
-function unreadForm(node: Node, checker: Readonly<Checker>): string | undefined {
-  return computedImport(node) ?? metaForm(node) ?? specifierForm(node, checker);
+function unreadForm(node: Node, checker: Readonly<Checker>): Unread | undefined {
+  const form = computedImport(node) ?? metaForm(node);
+  return form === undefined ? specifierForm(node, checker) : { cause: 'unread', form };
 }
 
 /**
@@ -146,3 +162,4 @@ function standsFor(listed: ReadonlySet<string>, file: string): string {
 }
 
 export { ADMITTED_META, NO_FILE, standsFor, unreadForm };
+export type { Cause, Unread };

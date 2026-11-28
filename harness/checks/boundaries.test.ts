@@ -25,14 +25,15 @@
  * across members, the harness's and the root configuration modules included; a form the scan cannot
  * read is refused in a production module (an `import()` whose specifier is not a literal named by its
  * argument), and a use only test support's declarations answer is reported. Each finding is told
- * with its files, its reason and its remedy, and a specifier no file answers with the four ways none
+ * with its files, its reason and its remedy, a refusal's as its cause words them (a form the chain
+ * cannot read, or one no file answers), and a specifier no file answers with the four ways none
  * does. A file the session declares by rule (a stylesheet) is an empty module, so what it names in
  * turn is not read. The planted chain holds every form, importer kind and case of the relation it
  * reads, each importer with what the chain finds there. It alone holds that relation.
  */
 
 import { BOUNDED, CLIMB_FORMS, FIXTURES, PLANTED } from './boundaries.plants.ts';
-import { CHAIN, CHAIN_MEMBERS, CHAIN_MOUNTED } from './boundaries-cases.plants.ts';
+import { CHAIN, CHAIN_MEMBERS, CHAIN_MOUNTED, FOUR_WAYS, TOLD } from './boundaries-cases.plants.ts';
 import { at, boundaryDiagnostics, bounded, climbsAlone, reasonMessages, repositoryReasonMessages } from './boundaries.run.ts';
 import { byCodeUnit, isEmpty } from '#lib/lists.ts';
 import { chainReport, wholeChain } from '#lib/production-imports.ts';
@@ -47,22 +48,6 @@ const HARNESS_ID = 'boundaries';
 
 /** The distinct messages of the reasons over every importer: the matrix rows of the four shipping roles, the POC, a climb. */
 const REASON_COUNT = 6;
-
-/** How the refusal of a specifier no file answers begins: the four ways none does (the user's decision F1b2-C3). */
-const FOUR_WAYS =
-  'a specifier no file answers (an absent package, a file its package does not export, a file offered only under a condition TypeScript does not apply, a route only the bundler knows)';
-
-/** What the report tells of two planted production modules: one reaching test support, one writing a form the chain cannot read. */
-const TOLD: readonly (readonly [string, string])[] = [
-  [
-    'packages/foundation/src/__chain_via.ts',
-    'packages/foundation/src/__chain_via.ts reaches packages/foundation/src/testing/__chain_via.ts, a non-production module, by an import or a name only its declarations answer: a production module reaches no test support or test infrastructure, so move what it uses into a production module, or use it from a non-production one',
-  ],
-  [
-    'oxlint.config.ts',
-    'oxlint.config.ts is refused (import.meta.glob): the whole chain cannot read it in a production module, so respell it as a form the chain reads, or move it into a non-production module',
-  ],
-];
 
 /** The planted chain's files, each at its path. */
 const CHAIN_PLANTS: readonly (readonly [string, string])[] = CHAIN.map((plant) => [plant.path, plant.text] as const);

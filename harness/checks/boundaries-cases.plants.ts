@@ -146,6 +146,8 @@ const CHAIN: readonly ChainPlant[] = [
         unanswered: true,
       }) as const,
   ),
+  // A name nothing declares: no file answers it.
+  { path: `${SANDBOX}src/__chain_leftover_9.ts`, refused: true, text: 'export const a = chainNothing;\n' },
   // A member an untyped package lacks: no file is missing.
   {
     path: `${SANDBOX}src/__chain_leftover_8.ts`,
@@ -174,6 +176,47 @@ const CHAIN: readonly ChainPlant[] = [
     path: `${FOUNDATION}src/__chain_strings.ts`,
     text: "const path = './testing/index.ts';\nconst keyed = { './testing/index.ts': 1 };\n\nexport const read = (): number => keyed['./testing/index.ts'] + path.length;\n",
   },
+];
+
+/** How the refusal of a specifier no file answers begins: the four ways none does (the user's decision F1b2-C3). */
+const FOUR_WAYS =
+  'a specifier no file answers (an absent package, a file its package does not export, a file offered only under a condition TypeScript does not apply, a route only the bundler knows)';
+
+/** What the report says of a refusal the chain cannot read, after its form. */
+const UNREAD_TOLD =
+  'the whole chain cannot read it in a production module, so respell it as a form the chain reads, or move it into a non-production module';
+
+/** What the report says of a refusal no file answers, after its form. */
+const UNANSWERED_TOLD =
+  'no file the production project lists answers it, so name what a file or an installed package declares, or remove it';
+
+/**
+ * What the report tells of planted production modules, by importer: one reaching test support, and a
+ * refusal of each cause, the chain unable to read the form (a bundler form, a query) or no file
+ * answering it (a specifier only a pattern declaration answers, an absent package, a name nothing declares).
+ */
+const TOLD: readonly (readonly [string, string])[] = [
+  [
+    `${FOUNDATION}src/__chain_via.ts`,
+    `${FOUNDATION}src/__chain_via.ts reaches ${FOUNDATION}src/testing/__chain_via.ts, a non-production module, by an import or a name only its declarations answer: a production module reaches no test support or test infrastructure, so move what it uses into a production module, or use it from a non-production one`,
+  ],
+  ['oxlint.config.ts', `oxlint.config.ts is refused (import.meta.glob): ${UNREAD_TOLD}`],
+  [
+    `${SANDBOX}src/__chain_query_raw.ts`,
+    `${SANDBOX}src/__chain_query_raw.ts is refused (a specifier with a query: ./__chain_query.ts?raw): ${UNREAD_TOLD}`,
+  ],
+  [
+    `${SANDBOX}src/__chain_leftover_0.ts`,
+    `${SANDBOX}src/__chain_leftover_0.ts is refused (${FOUR_WAYS}; only a pattern declaration answers it: chain-styled/gone.css): ${UNANSWERED_TOLD}`,
+  ],
+  [
+    `${SANDBOX}src/__chain_leftover_2.ts`,
+    `${SANDBOX}src/__chain_leftover_2.ts is refused (${FOUR_WAYS}: Cannot find module or type declarations for side-effect import of 'chain-absent'.): ${UNANSWERED_TOLD}`,
+  ],
+  [
+    `${SANDBOX}src/__chain_leftover_9.ts`,
+    `${SANDBOX}src/__chain_leftover_9.ts is refused (a use the production project cannot resolve (TS2304): Cannot find name 'chainNothing'.): ${UNANSWERED_TOLD}`,
+  ],
 ];
 
 /** The files the whole chain's scan serves that its population does not hold: installed packages, and foundation's manifest exporting the planted subpaths. */
@@ -216,4 +259,4 @@ const CHAIN_MEMBERS: readonly PlantedMember[] = [
   ['packages/foundation/', 'foundation'],
 ];
 
-export { CHAIN, CHAIN_MEMBERS, CHAIN_MOUNTED };
+export { CHAIN, CHAIN_MEMBERS, CHAIN_MOUNTED, FOUR_WAYS, TOLD };
