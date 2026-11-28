@@ -137,10 +137,21 @@ const CHAIN: readonly ChainPlant[] = [
     "import '~testing/setup';\n",
     "import './__chain_nothing_here';\n",
     "import '#src/__chain_nothing_here.css';\n",
-    "import * as u from 'chain-untyped';\nexport const a = u.zzz;\n",
   ].map(
-    (text, index) => ({ path: `${SANDBOX}src/__chain_leftover_${index}.ts`, refused: true, text: `${text}export const b = 1;\n` }) as const,
+    (text, index) =>
+      ({
+        path: `${SANDBOX}src/__chain_leftover_${index}.ts`,
+        refused: true,
+        text: `${text}export const b = 1;\n`,
+        unanswered: true,
+      }) as const,
   ),
+  // A member an untyped package lacks: no file is missing.
+  {
+    path: `${SANDBOX}src/__chain_leftover_8.ts`,
+    refused: true,
+    text: "import * as u from 'chain-untyped';\nexport const a = u.zzz;\nexport const b = 1;\n",
+  },
   // A query only an exact production declaration answers is refused by its query; `new.target` is no `import.meta`.
   {
     path: `${SANDBOX}src/__chain_query_declared.ts`,

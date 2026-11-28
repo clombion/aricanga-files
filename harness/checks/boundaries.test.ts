@@ -21,28 +21,45 @@
  * support or test infrastructure by no form and through no chain of imports, within a member or
  * across members, the harness's and the root configuration modules included; a form the scan cannot
  * read is refused in a production module (an `import()` whose specifier is not a literal named by its
- * argument), and a use only test support's declarations answer is reported. A file the session
- * declares by rule (a stylesheet) is an empty module, so what it names in turn is not read. The planted
- * chain holds every form, importer kind and case of the relation it reads, each importer with what the
- * chain finds there. It alone holds that relation.
+ * argument), and a use only test support's declarations answer is reported. Each finding is told
+ * with its files, its reason and its remedy, and a specifier no file answers with the four ways none
+ * does. A file the session declares by rule (a stylesheet) is an empty module, so what it names in
+ * turn is not read. The planted chain holds every form, importer kind and case of the relation it
+ * reads, each importer with what the chain finds there. It alone holds that relation.
  */
 
 import { BOUNDED, FIXTURES, PLANTED } from './boundaries.plants.ts';
 import { CHAIN, CHAIN_MEMBERS, CHAIN_MOUNTED } from './boundaries-cases.plants.ts';
 import { at, boundaryDiagnostics, bounded, reasonMessages, repositoryReasonMessages } from './boundaries.run.ts';
 import { byCodeUnit, isEmpty } from '#lib/lists.ts';
+import { chainReport, wholeChain } from '#lib/production-imports.ts';
 import { describe, test, vi } from 'vitest';
 import { usePlanted, useScan } from '#lib/scan-hooks.ts';
 import { ADMITTED_META } from '#lib/chain-forms.ts';
 import type { Chain } from '#lib/production-imports.ts';
 import type { Scan } from '#lib/checker.ts';
 import { plantedPopulation } from '#lib/planted-population.ts';
-import { wholeChain } from '#lib/production-imports.ts';
 
 const HARNESS_ID = 'boundaries';
 
 /** The distinct messages of the reasons over every importer: the matrix rows of the four shipping roles, the POC, a climb. */
 const REASON_COUNT = 6;
+
+/** How the refusal of a specifier no file answers begins: the four ways none does (the user's decision F1b2-C3). */
+const FOUR_WAYS =
+  'a specifier no file answers (an absent package, a file its package does not export, a file offered only under a condition TypeScript does not apply, a route only the bundler knows)';
+
+/** What the report tells of two planted production modules: one reaching test support, one writing a form the chain cannot read. */
+const TOLD: readonly (readonly [string, string])[] = [
+  [
+    'packages/foundation/src/__chain_via.ts',
+    'packages/foundation/src/__chain_via.ts reaches packages/foundation/src/testing/__chain_via.ts, a non-production module, by an import or a name only its declarations answer: a production module reaches no test support or test infrastructure, so move what it uses into a production module, or use it from a non-production one',
+  ],
+  [
+    'oxlint.config.ts',
+    'oxlint.config.ts is refused (import.meta.glob): the whole chain cannot read it in a production module, so respell it as a form the chain reads, or move it into a non-production module',
+  ],
+];
 
 /** The planted chain's files, each at its path. */
 const CHAIN_PLANTS: readonly (readonly [string, string])[] = CHAIN.map((plant) => [plant.path, plant.text] as const);
@@ -92,10 +109,11 @@ const FOUND = new WeakMap<Scan, Chain>();
 /**
  * The whole chain over a scan, run once.
  *
- * @param {Scan} scan - The open scan.
+ * @param {() => Scan} open - The open scan's getter.
  * @returns {Chain} What it finds.
  */
-function chainOf(scan: Scan): Chain {
+function chainOf(open: () => Scan): Chain {
+  const scan = open();
   const found = FOUND.get(scan) ?? wholeChain(scan);
   FOUND.set(scan, found);
   return found;
@@ -127,6 +145,29 @@ function importers(key: keyof (typeof CHAIN)[number]): readonly string[] {
 }
 
 /**
+ * The edges a chain finds from the planted importers that declare `key`.
+ *
+ * @param {Chain} found - What the chain finds.
+ * @param {'declares' | 'loads'} key - Which importers.
+ * @returns {readonly Readonly<{ from: string; to: string }>[]} Their edges.
+ */
+function edgesFrom(found: Chain, key: 'declares' | 'loads'): readonly Readonly<{ from: string; to: string }>[] {
+  const from = new Set(importers(key));
+  return found.edges.filter((edge) => from.has(edge.from));
+}
+
+/**
+ * The forms a chain refuses in one module.
+ *
+ * @param {Chain} found - What the chain finds.
+ * @param {string} path - The module.
+ * @returns {readonly string[]} Its refused forms.
+ */
+function formsOf(found: Chain, path: string): readonly string[] {
+  return found.refused.filter((refusal) => refusal.from === path).map((refusal) => refusal.form);
+}
+
+/**
  * The importers a chain names, by an edge or a refusal.
  *
  * @param {Chain} found - What the chain finds.
@@ -141,7 +182,8 @@ describe('the whole chain of the repository', () => {
 
   test('no production module of the repository imports a non-production module, or writes a form the scan cannot read', ({ expect }) => {
     expect.hasAssertions();
-    expect(wholeChain(repoScan())).toStrictEqual({ edges: [], refused: [] });
+    const found = wholeChain(repoScan());
+    expect(chainReport(found)).toStrictEqual([]);
   });
 });
 
@@ -156,36 +198,31 @@ describe('the whole chain', () => {
     expect,
   }) => {
     expect.hasAssertions();
-    const loading = new Set(importers('loads'));
-    expect(chainOf(chainScan()).edges.filter((edge) => loading.has(edge.from))).toStrictEqual(plantedEdges('loads'));
+    expect(edgesFrom(chainOf(chainScan), 'loads')).toStrictEqual(plantedEdges('loads'));
   });
 
   test("reports a production use only test support's declarations answer: an ambient module, a global, an augmentation, under any diagnostic", ({
     expect,
   }) => {
     expect.hasAssertions();
-    const declaring = new Set(importers('declares'));
-    expect(chainOf(chainScan()).edges.filter((edge) => declaring.has(edge.from))).toStrictEqual(plantedEdges('declares'));
+    expect(edgesFrom(chainOf(chainScan), 'declares')).toStrictEqual(plantedEdges('declares'));
   });
 
   test('refuses each form it cannot read in a production module, and each specifier or use no file answers', ({ expect }) => {
     expect.hasAssertions();
-    const refused = new Set(chainOf(chainScan()).refused.map((refusal) => refusal.from));
+    const refused = new Set(chainOf(chainScan).refused.map((refusal) => refusal.from));
     expect([...refused].toSorted(byCodeUnit)).toStrictEqual(importers('refused'));
   });
 
   test('names the argument of each import() whose specifier is not a literal', ({ expect }) => {
     expect.hasAssertions();
-    const { refused } = chainOf(chainScan());
     const stated = CHAIN.filter((plant) => plant.refusedAs !== undefined);
-    expect(stated.map((plant) => refused.filter((refusal) => refusal.from === plant.path).map((refusal) => refusal.form))).toStrictEqual(
-      stated.map((plant) => [plant.refusedAs]),
-    );
+    expect(stated.map((plant) => formsOf(chainOf(chainScan), plant.path))).toStrictEqual(stated.map((plant) => [plant.refusedAs]));
   });
 
   test('passes what ships and every form in a non-production module', ({ expect }) => {
     expect.hasAssertions();
-    const found = named(chainOf(chainScan()));
+    const found = named(chainOf(chainScan));
     expect(importers('passes').filter((path) => found.has(path))).toStrictEqual([]);
   });
 
@@ -196,6 +233,24 @@ describe('the whole chain', () => {
     const members = new Set(asked.mock.calls.map(([member]: readonly unknown[]) => String(member)));
     asked.mockRestore();
     expect([...members].toSorted(byCodeUnit)).toStrictEqual(['dirname', 'env', 'filename', 'glob', 'hot', 'resolve', 'url']);
+  });
+});
+
+describe('the whole chain told', () => {
+  const chainScan = usePlanted(CHAIN_PLANTS, CHAIN_MEMBERS, CHAIN_MOUNTED);
+
+  test('names the four ways no file answers a specifier, for each way none does', ({ expect }) => {
+    expect.hasAssertions();
+    const unanswered = CHAIN.filter((plant) => plant.unanswered !== undefined);
+    expect(unanswered.map((plant) => formsOf(chainOf(chainScan), plant.path).map((form) => form.startsWith(FOUR_WAYS)))).toStrictEqual(
+      unanswered.map(() => [true]),
+    );
+  });
+
+  test('tells its reader each finding with its files, its reason and its remedy', ({ expect }) => {
+    expect.hasAssertions();
+    const report = chainReport(chainOf(chainScan));
+    expect(TOLD.map(([from]) => report.filter((line) => line.startsWith(`${from} `)))).toStrictEqual(TOLD.map(([, line]) => [line]));
   });
 });
 

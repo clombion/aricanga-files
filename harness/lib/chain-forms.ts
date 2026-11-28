@@ -74,6 +74,14 @@ function metaForm(node: Node): string | undefined {
 }
 
 /**
+ * What the refusal of a specifier no file answers says: the four ways none does (the user's decision
+ * F1b2-C3). A specifier only a pattern declaration answers is one: the session declares every file a
+ * module can name.
+ */
+const NO_FILE =
+  'a specifier no file answers (an absent package, a file its package does not export, a file offered only under a condition TypeScript does not apply, a route only the bundler knows)';
+
+/**
  * The specifier form a node writes that the scan cannot read, if it is one: a query, or a specifier
  * only a pattern declaration answers in the production project.
  *
@@ -89,7 +97,7 @@ function specifierForm(node: Node, checker: Readonly<Checker>): string | undefin
     return `a specifier with a query: ${node.text}`;
   }
   const symbol = checker.getSymbolAtLocation(node);
-  return symbol?.name.includes('*') === true ? `a specifier only a pattern declaration answers: ${node.text}` : undefined;
+  return symbol?.name.includes('*') === true ? `${NO_FILE}; only a pattern declaration answers it: ${node.text}` : undefined;
 }
 
 /**
@@ -137,4 +145,4 @@ function standsFor(listed: ReadonlySet<string>, file: string): string {
   return declared !== undefined && !listed.has(file) && listed.has(declared) ? declared : file;
 }
 
-export { ADMITTED_META, standsFor, unreadForm };
+export { ADMITTED_META, NO_FILE, standsFor, unreadForm };

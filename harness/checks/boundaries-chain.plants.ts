@@ -15,6 +15,8 @@ interface ChainPlant {
   readonly refused?: true;
   /** The one refusal the importer gets, where the plant states it. */
   readonly refusedAs?: string;
+  /** A specifier no file answers: its refusal names the four ways none does. */
+  readonly unanswered?: true;
   readonly passes?: true;
 }
 

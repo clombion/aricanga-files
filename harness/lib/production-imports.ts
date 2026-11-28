@@ -24,12 +24,12 @@
  */
 
 import type { Checker, Diagnostic, Program } from 'typescript/unstable/sync';
+import { NO_FILE, standsFor, unreadForm } from './chain-forms.ts';
 import type { Node, SourceFile } from 'typescript/unstable/ast';
 import { OPTIONS, isPlatformDeclaration, isProduction, nodes, resolved, scanOver, sourceOf } from './checker.ts';
 import { REPO_ROOT, relative } from './paths.ts';
 import { declaring, mountScan, nextName, snapshot } from './ts-session.ts';
 import { isIdentifier, isNoSubstitutionTemplateLiteral, isStringLiteral } from 'typescript/unstable/ast';
-import { standsFor, unreadForm } from './chain-forms.ts';
 import { Accepted } from '#lint-rules/exemptions.ts';
 import type { Scan } from './checker.ts';
 import { isEmpty } from './lists.ts';
@@ -101,10 +101,6 @@ const CHAIN_OPTIONS = {
 
 /** The size of an empty set. */
 const NONE = 0;
-
-/** What the refusal of a specifier no file answers says: the four ways none does. */
-const NO_FILE =
-  'a specifier no file answers (an absent package, a file its package does not export, a file offered only under a condition TypeScript does not apply, a route only the bundler knows)';
 
 /**
  * Open a project of the whole chain over `roots`, as a scan opens its project (`scanOver`).
@@ -254,5 +250,25 @@ function wholeChain(scan: Scan): Chain {
   );
 }
 
-export { wholeChain };
+/**
+ * What the whole chain tells its reader: each finding on one line, naming its files, why it is
+ * refused and what to do.
+ *
+ * @param {Chain} found - What the chain finds.
+ * @returns {readonly string[]} One line per edge, then one per refusal.
+ */
+function chainReport(found: Chain): readonly string[] {
+  return [
+    ...found.edges.map(
+      (edge) =>
+        `${edge.from} reaches ${edge.to}, a non-production module, by an import or a name only its declarations answer: a production module reaches no test support or test infrastructure, so move what it uses into a production module, or use it from a non-production one`,
+    ),
+    ...found.refused.map(
+      (refusal) =>
+        `${refusal.from} is refused (${refusal.form}): the whole chain cannot read it in a production module, so respell it as a form the chain reads, or move it into a non-production module`,
+    ),
+  ];
+}
+
+export { chainReport, wholeChain };
 export type { Chain };
