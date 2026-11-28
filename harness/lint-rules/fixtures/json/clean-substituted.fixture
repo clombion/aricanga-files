@@ -1,0 +1,8 @@
+// path: json-clean-substituted.ts
+// A template with a substitution names no one module, so no rule reads it as a JSON module's name; the template itself is
+// the specifier rule's, refused on its own fixture.
+export const later = async (suffix: string): Promise<unknown> => {
+  // oxlint-disable-next-line aricanga/specifier -- the JSON rule's case; fixtures/specifier plants the template
+  const loaded: unknown = await import(`./tsconfig.json${suffix}`);
+  return loaded;
+};

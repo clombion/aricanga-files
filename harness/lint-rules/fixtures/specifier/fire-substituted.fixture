@@ -1,0 +1,2 @@
+// path: specifier-fire-substituted.ts
+export const later = async (name: string): Promise<unknown> => await import(`./specifier-${name}`);

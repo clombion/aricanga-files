@@ -70,6 +70,11 @@ const FIXTURES: readonly Fixture[] = [
   },
   {
     fails: true,
+    path: 'packages/foundation/src/template-substituted.ts',
+    text: `export const later = async (name: string): Promise<unknown> => import(\`@narratives/system-\${name}\`);\n`,
+  },
+  {
+    fails: true,
     path: 'packages/foundation/src/import-type.ts',
     text: "export type View = import('@narratives/system-chat').ChatViewModel;\n",
   },
