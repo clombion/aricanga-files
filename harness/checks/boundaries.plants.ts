@@ -22,7 +22,7 @@ const FIXTURES: readonly Fixture[] = [
   {
     fails: true,
     path: 'packages/foundation/src/plant.ts',
-    reason: `foundation modules import no member but the test infrastructure ${MATRIX}`,
+    reason: `foundation modules import no other member, and the test infrastructure by name only from a non-production module ${MATRIX}`,
     text: "export { chatSystem } from '@narratives/system-chat';\n",
   },
   { fails: false, path: 'packages/foundation/src/near.ts', text: "export { Story } from 'inkjs';\n" },
@@ -61,6 +61,12 @@ const FIXTURES: readonly Fixture[] = [
   },
   { fails: false, path: 'experiences/sandbox/src/infrastructure.ts', text: "export * from '@narratives/characterisation/browsers';\n" },
   { fails: false, path: 'experiences/sandbox/test/infrastructure.ts', text: "export * from '@narratives/characterisation/browsers';\n" },
+  {
+    fails: true,
+    path: 'packages/foundation/test/plant.ts',
+    reason: `foundation modules import no other member, and the test infrastructure by name only from a non-production module ${MATRIX}`,
+    text: "export { chatSystem } from '@narratives/system-chat';\n",
+  },
   { fails: false, path: 'packages/foundation/test/infrastructure.ts', text: "export * from '@narratives/characterisation/browsers';\n" },
   {
     fails: false,
@@ -71,7 +77,7 @@ const FIXTURES: readonly Fixture[] = [
   {
     fails: true,
     path: 'packages/systems/cards/src/peer.ts',
-    reason: `system modules import only foundation members and the test infrastructure, by name ${MATRIX}`,
+    reason: `system modules import only foundation members by name, and the test infrastructure by name only from a non-production module ${MATRIX}`,
     text: "export { chatSystem } from '@narratives/system-chat';\n",
   },
   { fails: true, path: 'packages/foundation/src/deep.ts', text: "export * from '@narratives/system-chat/testing/predicates';\n" },

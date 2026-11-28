@@ -27,9 +27,10 @@ type Importer = Role | 'harness';
  * The shipping roles each importer's modules may import, a member's own package aside: foundation
  * nothing; a system foundation; a view foundation (a system reaches it by injection, never by
  * import); an experience foundation, systems and views; the harness and the test infrastructure any
- * shipping member. No role imports its own role's other members. The test infrastructure is no
- * cell (a cell is a `ShippingRole`, so `tsc` refuses it there): every importer may import it by
- * name, and the scan refuses it to a production module. Every importer's row is read by one builder.
+ * shipping member. No shipping role imports its own role's other members. The test infrastructure
+ * is no cell (a cell is a `ShippingRole`, so `tsc` refuses it there): every importer may import it
+ * by name, and the scan refuses it to a production module, so a refusal says the test infrastructure
+ * is a non-production module's import. Every importer's row is read by one builder.
  */
 const MAY: Vocabulary<Readonly<Record<Importer, readonly ShippingRole[]>>> = new Vocabulary<
   Readonly<Record<Importer, readonly ShippingRole[]>>
@@ -86,14 +87,16 @@ function namesOf(members: readonly Member[]): string[] {
 }
 
 /**
- * What an importer's row allows, as its message words it.
+ * What an importer's row allows, as its message words it: the shipping roles, then the test
+ * infrastructure, which only a non-production module may import (the scan refuses it to a production one).
  *
  * @param {Importer} importer - The importer.
  * @returns {string} The allowed roles, or none.
  */
 function allowed(importer: Importer): string {
   const roles = MAY.of(importer);
-  return isEmpty(roles) ? 'no member but the test infrastructure' : `only ${roles.join(', ')} members and the test infrastructure, by name`;
+  const shipping = isEmpty(roles) ? 'no other member' : `only ${roles.join(', ')} members by name`;
+  return `${shipping}, and the test infrastructure by name only from a non-production module`;
 }
 
 /**
