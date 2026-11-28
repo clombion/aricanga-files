@@ -9,7 +9,7 @@
  * rules the test counts, `BOUNDARY_RULES`); every module may import the test
  * infrastructure by name (the whole chain below refuses it to a production module); nothing in the
  * rebuild imports the POC, by name or any subpath, and no relative specifier holds a `..` segment,
- * wherever its climb lands. A
+ * a query or fragment after it included, wherever its climb lands. A
  * package's name is refused exactly, so a relative path, another package's segment or another case
  * that spells it passes. Each climb glob, linted alone, refuses a climb no other does. Each refusal
  * names its reason. The reducer-purity rule (ADR-0007) refuses `Date` and `Math.random` in a

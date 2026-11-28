@@ -44,12 +44,13 @@ const MAY: Vocabulary<Readonly<Record<Importer, readonly ShippingRole[]>>> = new
 });
 
 /**
- * Every relative climb, wherever it sits in a specifier, as two globs: one for a specifier ending in
+ * Every relative climb, wherever it sits in a specifier, as three globs: one for a specifier ending in
  * `..` (the parent alone, a climb after a path), one for a `..` before a further segment (a climb
- * before a path, inside one). Under oxlint's matcher the bare `..` and `../**` refuse nothing these
- * two do not, so they are not listed.
+ * before a path, inside one), and one for a `..` its query or fragment follows (`..?raw`,
+ * `./a/..#x`), which neither of the others reads as a segment. Under oxlint's matcher the bare `..`
+ * and `../**` refuse nothing these do not, so they are not listed.
  */
-const CLIMBS: readonly string[] = ['**/..', '**/../**'];
+const CLIMBS: readonly string[] = ['**/..', '**/../**', '**/..[?#]*'];
 
 /**
  * Why an import is refused, one word per reason, each with its message's fixed words: a member the

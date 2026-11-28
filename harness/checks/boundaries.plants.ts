@@ -120,6 +120,10 @@ const FIXTURES: readonly Fixture[] = [
   { fails: true, path: 'packages/foundation/src/dot-up.ts', reason: CLIMB, text: "export * from './..';\n" },
   { fails: true, path: 'packages/foundation/src/path-up.ts', reason: CLIMB, text: "export * from './model/..';\n" },
   { fails: true, path: 'packages/foundation/src/up-inside.ts', reason: CLIMB, text: "export * from './model/../index';\n" },
+  { fails: true, path: 'packages/foundation/src/up-query.ts', reason: CLIMB, text: "export * from '..?raw';\n" },
+  { fails: true, path: 'packages/foundation/src/path-up-query.ts', reason: CLIMB, text: "export * from './model/..?raw';\n" },
+  { fails: true, path: 'packages/foundation/src/up-fragment.ts', reason: CLIMB, text: "export * from '..#x';\n" },
+  { fails: false, path: 'packages/foundation/src/dots-name.ts', text: "export * from './..x';\n" },
   { fails: true, path: 'harness/checks/climb-within.ts', reason: CLIMB, text: "export * from '../lib/near';\n" },
   { fails: true, path: 'packages/foundation/src/climb-harness.ts', reason: CLIMB, text: "export * from '../../../harness/lib/paths';\n" },
   { fails: true, path: 'packages/foundation/src/climb-unheld.ts', reason: CLIMB, text: "export * from '../../../docs/roadmap/x';\n" },
@@ -131,8 +135,21 @@ const FIXTURES: readonly Fixture[] = [
   { fails: false, path: 'harness/lib/bare-scope.ts', text: "export * from '@x/aricanga';\n" },
 ];
 
-/** Relative climbs, one of each form the climb globs read: the parent alone, before a path, after one, inside one. */
-const CLIMB_FORMS: readonly string[] = ['..', './..', '../', '../x', '../../y/z', './a/..', './a/../', './a/../b', './b/../../c'];
+/** Relative climbs, one of each form the climb globs read: the parent alone, before a path, after one, inside one, a query or fragment after it. */
+const CLIMB_FORMS: readonly string[] = [
+  '..',
+  './..',
+  '../',
+  '../x',
+  '../../y/z',
+  './a/..',
+  './a/../',
+  './a/../b',
+  './b/../../c',
+  '..?raw',
+  './a/..?raw',
+  '..#x',
+];
 
 /** The planted members: two of each role, each a named package, so every cell of the matrix, a role with itself included, has a member on both sides. */
 const PLANTED: readonly PlantedMember[] = [
