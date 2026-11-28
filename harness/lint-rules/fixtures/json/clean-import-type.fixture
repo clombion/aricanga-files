@@ -1,0 +1,4 @@
+// path: json-clean-import-type.ts
+import type config from './tsconfig.json';
+
+export type Planted = typeof config;

@@ -1,0 +1,2 @@
+// path: json-clean-export-type.ts
+export type { default as Planted } from './tsconfig.json';
