@@ -9,6 +9,7 @@ import type { Population } from '#lib/scope.ts';
 import { Project } from '#lib/tools.ts';
 import { isEmpty } from '#lib/lists.ts';
 import { oxlintConfigOf } from '#lib/oxlint-config.ts';
+import { population } from '#lib/scope.ts';
 
 /** A rule setting's options, after its severity. */
 const OPTIONS = 1;
@@ -60,8 +61,29 @@ function at(found: readonly Diagnostic[], fixture: Readonly<Fixture>): readonly 
 }
 
 /**
+ * The messages of each import-boundary override's refusals over a population, one per reason.
+ *
+ * @param {Population} held - The population.
+ * @returns {readonly (readonly unknown[])[]} Each override's messages, in order.
+ */
+function reasonMessages(held: Population): readonly (readonly unknown[])[] {
+  return oxlintConfigOf(held).overrides.flatMap(({ rules }) => {
+    const setting = rules['no-restricted-imports'];
+    return setting === undefined
+      ? []
+      : [
+          list(object(list(setting, 'the setting').at(OPTIONS), 'its options')['patterns'], 'its patterns').map(
+            (pattern: unknown) => object(pattern, 'its pattern')['message'],
+          ),
+        ];
+  });
+}
+
+/**
  * Each import-boundary override of the configuration over a population: its files, and the member
- * packages each of its reasons refuses by name (the POC's and the climbs aside), reason by reason.
+ * packages each of its reasons refuses by name (the POC's and the climbs aside), reason by reason. A
+ * reason's names are its paths with its pattern's message: an override's messages are distinct
+ * (`reasonMessages`, held by the boundary test).
  *
  * @param {Population} held - The population.
  * @returns {readonly unknown[]} Each override's files and each reason's refused members.
@@ -87,4 +109,13 @@ function bounded(held: Population): readonly unknown[] {
   });
 }
 
-export { at, boundaryDiagnostics, bounded };
+/**
+ * The messages of each import-boundary override over the repository's population.
+ *
+ * @returns {Promise<readonly (readonly unknown[])[]>} Each override's messages, in order.
+ */
+async function repositoryReasonMessages(): Promise<readonly (readonly unknown[])[]> {
+  return reasonMessages(await population());
+}
+
+export { at, boundaryDiagnostics, bounded, reasonMessages, repositoryReasonMessages };

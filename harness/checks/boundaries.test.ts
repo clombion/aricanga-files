@@ -29,7 +29,7 @@
 
 import { BOUNDED, FIXTURES, PLANTED } from './boundaries.plants.ts';
 import { CHAIN, CHAIN_MEMBERS, CHAIN_MOUNTED } from './boundaries-cases.plants.ts';
-import { at, boundaryDiagnostics, bounded } from './boundaries.run.ts';
+import { at, boundaryDiagnostics, bounded, reasonMessages, repositoryReasonMessages } from './boundaries.run.ts';
 import { byCodeUnit, isEmpty } from '#lib/lists.ts';
 import { describe, test, vi } from 'vitest';
 import { usePlanted, useScan } from '#lib/scan-hooks.ts';
@@ -40,6 +40,9 @@ import { plantedPopulation } from '#lib/planted-population.ts';
 import { wholeChain } from '#lib/production-imports.ts';
 
 const HARNESS_ID = 'boundaries';
+
+/** The distinct messages of the reasons over every importer: the matrix rows of the four shipping roles, the POC, a climb. */
+const REASON_COUNT = 6;
 
 /** The planted chain's files, each at its path. */
 const CHAIN_PLANTS: readonly (readonly [string, string])[] = CHAIN.map((plant) => [plant.path, plant.text] as const);
@@ -70,6 +73,16 @@ describe('the boundary overrides of a planted population', () => {
     expect.hasAssertions();
     const held = await plantedPopulation(['lib/sys/test/a.ts', 'apps/app/src/a.test.ts'], PLANTED);
     expect(bounded(held)).toStrictEqual(BOUNDED);
+  });
+});
+
+describe('the reasons of the boundary overrides', () => {
+  test("every reason's message is distinct over every importer, the repository's with the POC included", async ({ expect }) => {
+    expect.hasAssertions();
+    const [planted, repository] = await Promise.all([plantedPopulation(['lib/sys/test/a.ts'], PLANTED), repositoryReasonMessages()]);
+    const overrides = [...reasonMessages(planted), ...repository];
+    const reasons = new Set(overrides.flat());
+    expect([reasons.size, overrides.filter((messages) => new Set(messages).size !== messages.length)]).toStrictEqual([REASON_COUNT, []]);
   });
 });
 

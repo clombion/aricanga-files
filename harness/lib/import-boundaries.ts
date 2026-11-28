@@ -51,6 +51,21 @@ const MAY: Vocabulary<Readonly<Record<Importer, readonly ShippingRole[]>>> = new
  */
 const CLIMBS: readonly string[] = ['**/..', '**/../**'];
 
+/**
+ * Why an import is refused, one word per reason, each with its message's fixed words: a member the
+ * role matrix does not allow (after the importer's row), the POC, a relative climb. Each reason is
+ * its own group, and the boundary test reads a group back by its message (`bounded`), so the
+ * messages an override shows are distinct, held by the boundary test over every importer.
+ */
+const REASONS: Vocabulary<Readonly<Record<'climb' | 'matrix' | 'poc', string>>> = new Vocabulary<
+  Readonly<Record<'climb' | 'matrix' | 'poc', string>>
+>({
+  climb:
+    "no relative specifier climbs through a `..` segment: a module outside its importer's directory is named by its package or an import alias, where the importer may import it",
+  matrix: `(the role matrix: MAY in ${HARNESS_LIB}import-boundaries.ts)`,
+  poc: 'nothing in the rebuild imports the POC (ADR-0006, "Scope")',
+});
+
 /** One reason's refusal in `no-restricted-imports`: the package names it refuses exactly, the patterns it refuses (their subpaths, the climbs), and why. */
 interface Group {
   readonly names: readonly string[];
@@ -109,17 +124,9 @@ function groupsOf(held: Population, importing: Readonly<Importing>): Group[] {
   const own = importing.importer === 'harness' ? undefined : importing.own;
   const forbidden = held.shipping.filter((other) => other.dir !== own && !MAY.of(importer).some((role) => role === other.role));
   const groups: readonly Group[] = [
-    specifiers(
-      namesOf(forbidden),
-      `${importer} modules import ${allowed(importer)} (the role matrix: MAY in ${HARNESS_LIB}import-boundaries.ts)`,
-    ),
-    specifiers(pocNames(held), 'nothing in the rebuild imports the POC (ADR-0006, "Scope")'),
-    {
-      group: [...CLIMBS],
-      message:
-        "no relative specifier climbs through a `..` segment: a module outside its importer's directory is named by its package or an import alias, where the importer may import it",
-      names: [],
-    },
+    specifiers(namesOf(forbidden), `${importer} modules import ${allowed(importer)} ${REASONS.of('matrix')}`),
+    specifiers(pocNames(held), REASONS.of('poc')),
+    { group: [...CLIMBS], message: REASONS.of('climb'), names: [] },
   ];
   return groups.filter((entry) => !isEmpty(entry.group));
 }
