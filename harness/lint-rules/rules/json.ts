@@ -1,11 +1,12 @@
-/** A JSON module is imported with `with { type: 'json' }`, the form the platform requires. */
+/** A JSON module is imported with `with { type: 'json' }`, the form the platform requires, however a module names it: an import, a re-export or an `import()`. */
 
 import type { Node, Rule } from '#lint-rules/ast.ts';
-import { child, children, moduleSource, nameOf, problemMeta, text } from '#lint-rules/ast.ts';
+import { child, children, nameOf, problemMeta, text } from '#lint-rules/ast.ts';
+import { onImports, refuse } from '#lint-rules/rules/imports.ts';
 
 /**
- * Whether an import declares `type: 'json'` among its attributes.
- * @param {Node} node - An `ImportDeclaration`.
+ * Whether a declaration's attributes hold `type: 'json'`.
+ * @param {Node} node - An import or re-export declaration.
  * @returns {boolean} Whether one attribute is `type: 'json'`.
  */
 function declaresJson(node: Node): boolean {
@@ -16,18 +17,18 @@ function declaresJson(node: Node): boolean {
 
 export const json: Rule = {
   create(context) {
-    return {
-      ImportDeclaration(node) {
-        if (moduleSource(node)?.endsWith('.json') === true && !declaresJson(node)) {
-          context.report({ message: "import JSON with { type: 'json' }", node });
+    return onImports((imported) => {
+      if (!imported.source.endsWith('.json')) {
+        return;
+      }
+      if (imported.node.type === 'ImportExpression') {
+        if (child(imported.node, 'options') === undefined) {
+          refuse(context, imported, "import JSON with { with: { type: 'json' } }");
         }
-      },
-      ImportExpression(node) {
-        if (moduleSource(node)?.endsWith('.json') === true && child(node, 'options') === undefined) {
-          context.report({ message: "import JSON with { with: { type: 'json' } }", node });
-        }
-      },
-    };
+      } else if (!declaresJson(imported.node)) {
+        refuse(context, imported, "import JSON with { type: 'json' }");
+      }
+    });
   },
   meta: problemMeta("Import JSON with { type: 'json' }."),
 };

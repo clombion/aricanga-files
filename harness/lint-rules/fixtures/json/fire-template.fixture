@@ -1,0 +1,2 @@
+// path: json-fire-template.ts
+export const later = async (): Promise<unknown> => await import(`./tsconfig.json`);
