@@ -11,8 +11,9 @@
  * rebuild imports the POC, by name or any subpath, and no relative specifier holds a `..` segment,
  * wherever its climb lands. A
  * package's name is refused exactly, so a relative path, another package's segment or another case
- * that spells it passes. Each refusal names its reason. The reducer-purity rule (ADR-0007) refuses
- * `Date` and `Math.random` in a system's reducer surface. Each fixture is written at its real path in
+ * that spells it passes. Each climb glob, linted alone, refuses a climb no other does. Each refusal
+ * names its reason. The reducer-purity rule (ADR-0007) refuses `Date` and `Math.random` in a
+ * system's reducer surface. Each fixture is written at its real path in
  * a planted project holding the repository's oxlint configuration; the overrides are read from the
  * population by role, one per member, and the planted population holds two members of each role, so
  * every cell has a witness.
@@ -30,9 +31,9 @@
  * reads, each importer with what the chain finds there. It alone holds that relation.
  */
 
-import { BOUNDED, FIXTURES, PLANTED } from './boundaries.plants.ts';
+import { BOUNDED, CLIMB_FORMS, FIXTURES, PLANTED } from './boundaries.plants.ts';
 import { CHAIN, CHAIN_MEMBERS, CHAIN_MOUNTED } from './boundaries-cases.plants.ts';
-import { at, boundaryDiagnostics, bounded, reasonMessages, repositoryReasonMessages } from './boundaries.run.ts';
+import { at, boundaryDiagnostics, bounded, climbsAlone, reasonMessages, repositoryReasonMessages } from './boundaries.run.ts';
 import { byCodeUnit, isEmpty } from '#lib/lists.ts';
 import { chainReport, wholeChain } from '#lib/production-imports.ts';
 import { describe, test, vi } from 'vitest';
@@ -82,6 +83,13 @@ describe('the boundary lint', () => {
     expect(reasoned.map((fixture) => [fixture.path, [...new Set(at(found, fixture).map((diagnostic) => diagnostic.help))]])).toStrictEqual(
       reasoned.map((fixture) => [fixture.path, [fixture.reason]]),
     );
+  });
+});
+
+describe('the climb globs', () => {
+  test('each, linted alone, refuses a climb no other refuses, and every climb form is refused by one', async ({ expect }) => {
+    expect.hasAssertions();
+    await expect(climbsAlone(CLIMB_FORMS)).resolves.toStrictEqual({ redundant: [], unrefused: [] });
   });
 });
 

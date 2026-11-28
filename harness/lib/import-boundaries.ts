@@ -167,4 +167,4 @@ function boundariesOf(held: Population): GateOverride[] {
   ];
 }
 
-export { boundariesOf };
+export { CLIMBS, boundariesOf };

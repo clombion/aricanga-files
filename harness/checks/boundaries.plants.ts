@@ -131,6 +131,9 @@ const FIXTURES: readonly Fixture[] = [
   { fails: false, path: 'harness/lib/bare-scope.ts', text: "export * from '@x/aricanga';\n" },
 ];
 
+/** Relative climbs, one of each form the climb globs read: the parent alone, before a path, after one, inside one. */
+const CLIMB_FORMS: readonly string[] = ['..', './..', '../', '../x', '../../y/z', './a/..', './a/../', './a/../b', './b/../../c'];
+
 /** The planted members: two of each role, each a named package, so every cell of the matrix, a role with itself included, has a member on both sides. */
 const PLANTED: readonly PlantedMember[] = [
   ['apps/app/', 'experience', { name: '@p/app' }],
@@ -160,5 +163,5 @@ const BOUNDED: readonly unknown[] = [
   [['harness/**', './knip.config.ts', './oxlint.config.ts', './vitest.gate.config.ts'], []],
 ];
 
-export { BOUNDED, FIXTURES, PLANTED };
+export { BOUNDED, CLIMB_FORMS, FIXTURES, PLANTED };
 export type { Fixture };
