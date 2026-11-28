@@ -3,8 +3,9 @@
  * its directory and one for the harness's code: by package name (`paths`, compared by equality) and
  * every subpath (`name/**`, a case-sensitive pattern holding a slash, so it never matches another
  * package or a relative path), the members its role may not import (`MAY`, the role matrix), the
- * POC's packages, and every relative climb, so a module reaches another member only by name. Each
- * reason is its own refusal with its own message. The lint grants every module the test
+ * POC's packages, and every relative climb, so a module outside its importer's directory, another
+ * member's or not, is named by its package or an import alias. Each reason is its own refusal with
+ * its own message. The lint grants every module the test
  * infrastructure by name: the `boundaries` check's scan alone holds that a production module
  * imports no non-production module, the test infrastructure included, by any form and through any
  * chain (`production-imports.ts`).
