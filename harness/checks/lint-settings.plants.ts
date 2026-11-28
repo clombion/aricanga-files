@@ -12,14 +12,15 @@ const ESLINT_DIRECTIVE_TEXT = "export function say(): void {\n  // eslint-disabl
  * A test module whose one test is declared with `declare` (`test.skip`, `test.only`), clean but for that.
  *
  * @param {string} declare - The test function's form.
+ * @param {boolean} exported - Whether the test asserts with the `expect` vitest exports, not its context's.
  * @returns {string} The module's text.
  */
-function plantedTest(declare: string): string {
+function plantedTest(declare: string, exported = false): string {
   return [
-    "import { describe, expect, test } from 'vitest';",
+    exported ? "import { describe, expect, test } from 'vitest';" : "import { describe, test } from 'vitest';",
     '',
     "describe('a', () => {",
-    `  ${declare}('b', () => {`,
+    exported ? `  ${declare}('b', () => {` : `  ${declare}('b', ({ expect }) => {`,
     '    expect.hasAssertions();',
     "    expect('c').toBe('c');",
     '  });',
@@ -77,6 +78,7 @@ const PLANTS: Readonly<Record<string, readonly [string, readonly string[]]>> = {
   'src/eslint-directive.ts': [ESLINT_DIRECTIVE_TEXT, ['eslint(no-console)']],
   'src/expect-described.ts': ['// @ts-expect-error: the planted mismatch this check needs\nexport const value: string = true;\n', []],
   'src/explicit-any.ts': ["export const value: any = 'a';\n", ['typescript(no-explicit-any)']],
+  'src/exported-expect.test.ts': [plantedTest('test', true), ['aricanga(test-expect)']],
   'src/floating.ts': [
     'async function work(): Promise<void> {\n  await Promise.resolve();\n}\nexport function start(): void {\n  work();\n}\n',
     ['typescript(no-floating-promises)'],

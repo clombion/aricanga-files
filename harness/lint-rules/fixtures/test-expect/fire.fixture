@@ -1,0 +1,9 @@
+// path: harness/checks/test-expect-fire.test.ts
+import { describe, expect, test } from 'vitest';
+
+describe('a planted test', () => {
+  test('asserts with the expect vitest exports', () => {
+    expect.hasAssertions();
+    expect('a').toBe('a');
+  });
+});

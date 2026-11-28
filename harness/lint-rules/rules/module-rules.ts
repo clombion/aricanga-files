@@ -7,6 +7,7 @@ import { mechanics } from '#lint-rules/rules/mechanics.ts';
 import { specifier } from '#lint-rules/rules/specifier.ts';
 import { statics } from '#lint-rules/rules/statics.ts';
 import { storeOwner } from '#lint-rules/rules/store-owner.ts';
+import { testExpect } from '#lint-rules/rules/test-expect.ts';
 import { viewImports } from '#lint-rules/rules/view-imports.ts';
 
 export const MODULE_RULES: Readonly<Record<string, Rule>> = {
@@ -16,5 +17,6 @@ export const MODULE_RULES: Readonly<Record<string, Rule>> = {
   specifier,
   statics,
   'store-owner': storeOwner,
+  'test-expect': testExpect,
   'view-imports': viewImports,
 };

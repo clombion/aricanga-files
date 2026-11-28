@@ -30,6 +30,7 @@ const RULES: NonNullable<OxlintConfig['rules']> & Readonly<Partial<Record<Member
   'aricanga/specifier': 'error',
   'aricanga/statics': 'error',
   'aricanga/style-prop': 'error',
+  'aricanga/test-expect': 'error',
   'aricanga/total-reads': 'error',
   'aricanga/view-imports': 'error',
   'eslint/capitalized-comments': [

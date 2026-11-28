@@ -36,6 +36,7 @@ exemptions"), through which every list a rule consults is declared.
 | `aricanga/store-owner` | createStore and reconcile only in the snapshot adapter (the `owners` globs). |
 | `aricanga/style-prop` | No style prop in JSX; set dynamic values with a class or a ref. |
 | `aricanga/sync-parts` | No async, await, promise, .then or <Loading> in a component module. |
+| `aricanga/test-expect` | A test asserts with its context's expect, never the one vitest exports. |
 | `aricanga/total-reads` | A closed set is read through a total table or an exhaustive switch, not a chain or an inline list. |
 | `aricanga/view-imports` | A view module imports no reduce, no effect type and no model module. |
 | `aricanga/vm-prop` | A component takes a single undestructured props with exactly one prop, vm. |

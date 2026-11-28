@@ -1,0 +1,9 @@
+// path: harness/checks/test-expect-clean.test.ts
+import { describe, test } from 'vitest';
+
+describe('a planted test', () => {
+  test('asserts with its context expect', ({ expect }) => {
+    expect.hasAssertions();
+    expect('a').toBe('a');
+  });
+});

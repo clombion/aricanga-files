@@ -42,6 +42,7 @@ const DECLARED = new Accepted([
   'store-owner',
   'style-prop',
   'sync-parts',
+  'test-expect',
   'total-reads',
   'view-imports',
   'vm-prop',

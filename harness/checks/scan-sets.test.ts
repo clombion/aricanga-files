@@ -52,6 +52,7 @@ const UNREACHED = Exemptions.grouped({
       'harness/lint-rules/rules/store-owner.ts: coverage',
       'harness/lint-rules/rules/style-prop.ts: coverage',
       'harness/lint-rules/rules/sync-parts.ts: coverage',
+      'harness/lint-rules/rules/test-expect.ts: coverage',
       'harness/lint-rules/rules/total-reads.ts: coverage',
       'harness/lint-rules/rules/view-imports.ts: coverage',
       'harness/lint-rules/rules/vm-prop.ts: coverage',
