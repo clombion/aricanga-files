@@ -6,7 +6,7 @@
  * exported; a type a package offers to modules not yet written is marked `@public`.
  */
 
-import { describe, expect, test } from 'vitest';
+import { describe, test } from 'vitest';
 import { usePlanted, useScan } from '#lib/scan-hooks.ts';
 import { ownExportsOf } from '#lib/exports-of.ts';
 import { unread } from '#lib/type-exports.ts';
@@ -60,14 +60,16 @@ const plantedScan = usePlanted(PLANTS, [
 const repoScan = useScan();
 
 describe('the repository', () => {
-  test('every exported type is read by another module or marked @public', () => {
+  test('every exported type is read by another module or marked @public', ({ expect }) => {
     expect.hasAssertions();
     expect(unread(repoScan())).toStrictEqual([]);
   });
 });
 
 describe('the scan', () => {
-  test('fails a type only its own module, a re-export or a test names, exported by modifier or by list, and passes a read, a check read and @public', () => {
+  test('fails a type only its own module, a re-export or a test names, exported by modifier or by list, and passes a read, a check read and @public', ({
+    expect,
+  }) => {
     expect.hasAssertions();
     expect(
       unread(plantedScan())
@@ -78,7 +80,7 @@ describe('the scan', () => {
 });
 
 describe("a module's own exports", () => {
-  test('reads each declaration a module exports of its own, by its exported name, and no local or re-export', () => {
+  test('reads each declaration a module exports of its own, by its exported name, and no local or re-export', ({ expect }) => {
     expect.hasAssertions();
     const source = [
       'export const a = 1, { b } = { b: 2 };',

@@ -1,5 +1,5 @@
 import { EffectPayloadError, fx, parseDataRequest, parseDriveInkOp } from '#src/sim/effect';
-import { describe, expect, test } from 'vitest';
+import { describe, test } from 'vitest';
 import type { DriveInkOp } from '#src/sim/effect';
 import type { EffectTarget } from '#src/host/effects';
 import type { Snapshot } from '#src/sim/snapshot';
@@ -47,7 +47,7 @@ function target(): EffectTarget {
 }
 
 describe('the drive-ink executor', () => {
-  test('saves the story and loads it back, undoing a choice taken since', () => {
+  test('saves the story and loads it back, undoing a choice taken since', ({ expect }) => {
     expect.hasAssertions();
     const reached = target();
     const atChoice = reached.ink.toJson();
@@ -60,7 +60,7 @@ describe('the drive-ink executor', () => {
     expect(reached.ink.canContinue()).toBe(false);
   });
 
-  test('loads nothing when nothing was saved, leaving the story where it is', () => {
+  test('loads nothing when nothing was saved, leaving the story where it is', ({ expect }) => {
     expect.hasAssertions();
     const reached = target();
     const before = reached.ink.toJson();
@@ -68,7 +68,7 @@ describe('the drive-ink executor', () => {
     expect(reached.ink.toJson()).toBe(before);
   });
 
-  test('leaves the story where it is on a goto', () => {
+  test('leaves the story where it is on a goto', ({ expect }) => {
     expect.hasAssertions();
     const reached = target();
     const before = reached.ink.toJson();
@@ -78,14 +78,14 @@ describe('the drive-ink executor', () => {
 });
 
 describe('the effect payload parsers', () => {
-  test('read each drive-ink op back from its payload', () => {
+  test('read each drive-ink op back from its payload', ({ expect }) => {
     expect.hasAssertions();
     for (const op of [GOTO, SAVE, LOAD]) {
       expect(parseDriveInkOp(op)).toStrictEqual(op);
     }
   });
 
-  test('refuse an unknown op, a missing field, a field of the wrong type, and a payload that is no object', () => {
+  test('refuse an unknown op, a missing field, a field of the wrong type, and a payload that is no object', ({ expect }) => {
     expect.hasAssertions();
     expect(() => parseDriveInkOp({ op: 'jump' })).toThrow(new EffectPayloadError('unknown drive-ink op jump'));
     expect(() => parseDriveInkOp({ op: GOTO.op })).toThrow(new EffectPayloadError(`effect payload has no knot: {"op":"${GOTO.op}"}`));
@@ -94,7 +94,7 @@ describe('the effect payload parsers', () => {
     expect(() => parseDriveInkOp(GOTO.op)).toThrow(new EffectPayloadError(`effect payload has no op: "${GOTO.op}"`));
   });
 
-  test('read a data request with its params and without', () => {
+  test('read a data request with its params and without', ({ expect }) => {
     expect.hasAssertions();
     expect(parseDataRequest({ params: 'all', query: 'q', source: 's' })).toStrictEqual({ params: 'all', query: 'q', source: 's' });
     expect(parseDataRequest({ query: 'q', source: 's' })).toStrictEqual({ query: 'q', source: 's' });

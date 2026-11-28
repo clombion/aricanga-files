@@ -14,7 +14,7 @@
 
 import { FixtureError, codesAt, compileProblems, fixtureFolders, fixtures, parseFixture, runFixtures } from '#lib/lint-fixtures.ts';
 import { PLUGIN_NAME, RULES } from '#lint-rules/plugin.ts';
-import { describe, expect, test } from 'vitest';
+import { describe, test } from 'vitest';
 import { Accepted } from '#lint-rules/exemptions.ts';
 import type { Fixture } from '#lib/lint-fixtures.ts';
 import type { GateOxlintConfig } from '#lib/oxlint-shape.ts';
@@ -184,40 +184,42 @@ async function unheldFixtures(): Promise<{
 }
 
 describe('the repository', () => {
-  test('the plugin holds exactly the declared rules', () => {
+  test('the plugin holds exactly the declared rules', ({ expect }) => {
     expect.hasAssertions();
     expect(ruleNames()).toStrictEqual([...DECLARED]);
   });
 
-  test('every rule has must-fire and must-stay-clean fixtures, and every fixture folder a rule', async () => {
+  test('every rule has must-fire and must-stay-clean fixtures, and every fixture folder a rule', async ({ expect }) => {
     expect.hasAssertions();
     const [folders, planted] = await Promise.all([fixtureFolders(), fixtures()]);
     const problems = fixtureProblems(ruleNames(), folders, planted);
     expect(problems).toStrictEqual([]);
   });
 
-  test('the config turns on exactly the plugin rules, and the README lists them', async () => {
+  test('the config turns on exactly the plugin rules, and the README lists them', async ({ expect }) => {
     expect.hasAssertions();
     const [config, readme] = await Promise.all([oxlintConfig(), textOf(README)]);
     expect(configProblems(config, ruleNames())).toStrictEqual([]);
     expect(readmeProblems(readme, descriptions())).toStrictEqual([]);
   });
 
-  test("each kernel name view-imports refuses is a kernel member's export", async () => {
+  test("each kernel name view-imports refuses is a kernel member's export", async ({ expect }) => {
     expect.hasAssertions();
     const held = await population();
     const exported = await shippedExportsOf(held, held.tiers.kernel);
     expect([...KERNEL_NAMES].filter((name) => !exported.has(name))).toStrictEqual([]);
   });
 
-  test('each must-fire fixture fails on its rule, each must-stay-clean fixture passes, and each compiles to the errors it declares', async () => {
+  test('each must-fire fixture fails on its rule, each must-stay-clean fixture passes, and each compiles to the errors it declares', async ({
+    expect,
+  }) => {
     expect.hasAssertions();
     await expect(unheldFixtures()).resolves.toStrictEqual({ compile: [], lint: [] });
   });
 });
 
 describe('the fixture reader', () => {
-  test('reads a fixture and the path it is planted at', () => {
+  test('reads a fixture and the path it is planted at', ({ expect }) => {
     expect.hasAssertions();
     const fixture = parseFixture('harness/lint-rules/fixtures/env/fire-import.fixture', '// path: a/b.ts\nexport {};\n');
     expect(fixture).toStrictEqual({
@@ -230,11 +232,11 @@ describe('the fixture reader', () => {
     });
   });
 
-  test.each([
+  test.for([
     ['harness/lint-rules/fixtures/env/broken.fixture', '// path: a.ts\n'],
     ['harness/lint-rules/fixtures/env/fire.ts', '// path: a.ts\n'],
     ['harness/lint-rules/fixtures/env/fire.fixture', 'export {};\n'],
-  ])('refuses the malformed fixture %s', (file, text) => {
+  ] as const)('refuses the malformed fixture %s', ([file, text], { expect }) => {
     expect.hasAssertions();
     expect(() => parseFixture(file, text)).toThrow(FixtureError);
   });
@@ -245,7 +247,7 @@ function plantedFixture(rule: string, kind: 'fire' | 'clean'): Fixture {
 }
 
 describe('the check', () => {
-  test('sees a rule without a fixture of each kind, and a folder without a rule', () => {
+  test('sees a rule without a fixture of each kind, and a folder without a rule', ({ expect }) => {
     expect.hasAssertions();
     expect(
       fixtureProblems(['env', 'json'], ['env', 'json', 'gone'], [plantedFixture('env', 'fire'), plantedFixture('json', 'clean')]),
@@ -253,7 +255,7 @@ describe('the check', () => {
     expect(fixtureProblems(['env'], ['env'], [plantedFixture('env', 'fire'), plantedFixture('env', 'clean')])).toStrictEqual([]);
   });
 
-  test('sees a rule the config leaves off, one it adds, one it only warns on, and a missing plugin', () => {
+  test('sees a rule the config leaves off, one it adds, one it only warns on, and a missing plugin', ({ expect }) => {
     expect.hasAssertions();
     const config: Pick<GateOxlintConfig, 'jsPlugins' | 'rules'> = {
       jsPlugins: ['eslint-plugin-solid'],
@@ -272,7 +274,7 @@ describe('the check', () => {
     expect(configProblems(near, ['env', 'json'])).toStrictEqual([]);
   });
 
-  test('sees a README row missing, extra or out of date', () => {
+  test('sees a README row missing, extra or out of date', ({ expect }) => {
     expect.hasAssertions();
     const described = new Map([
       ['env', 'one'],

@@ -8,7 +8,7 @@
 
 import type { Diagnostic, Program } from 'typescript/unstable/sync';
 import { declaring, mount, nextName, overlaying, snapshot } from '#lib/ts-session.ts';
-import { describe, expect, test } from 'vitest';
+import { describe, test } from 'vitest';
 import { REPO_ROOT } from '#lib/paths.ts';
 import { byCodeUnit } from '#lib/lists.ts';
 import path from 'node:path';
@@ -195,7 +195,7 @@ function stepsOf(file: string): Readonly<{ mountAs: (text: string) => () => void
 }
 
 describe('the session', () => {
-  test('serves a path while some mount holds it, as the latest gives it, whichever unmounts first', () => {
+  test('serves a path while some mount holds it, as the latest gives it, whichever unmounts first', ({ expect }) => {
     expect.hasAssertions();
     const file = path.join(BASE, 'overlap', 'x.ts');
     const { mountAs, unmountNth } = stepsOf(file);
@@ -217,7 +217,7 @@ describe('the session', () => {
     ]);
   });
 
-  test('serves the files and directories of interleaved, overlapping mounts exactly while a live mount holds them', () => {
+  test('serves the files and directories of interleaved, overlapping mounts exactly while a live mount holds them', ({ expect }) => {
     expect.hasAssertions();
     const unmountImporter = mount(new Map([[IMPORTER, "import 'pooled';\nexport {};\n"]]));
     const mounts = new Mounts();
@@ -231,7 +231,7 @@ describe('the session', () => {
 });
 
 describe('the session after an unmount', () => {
-  test('a path mounted again reads its new text, an unmount called twice doing nothing the second time', () => {
+  test('a path mounted again reads its new text, an unmount called twice doing nothing the second time', ({ expect }) => {
     expect.hasAssertions();
     const file = path.join(BASE, 'again', 'x.ts');
     const { mountAs, unmountNth } = stepsOf(file);
@@ -253,7 +253,7 @@ describe('the session after an unmount', () => {
     ]);
   });
 
-  test('a real file read, overlaid, then released reads as on disk again', async () => {
+  test('a real file read, overlaid, then released reads as on disk again', async ({ expect }) => {
     expect.hasAssertions();
     const real = path.join(REPO_ROOT, 'harness', 'lib', 'present.ts');
     const text = await readFile(real, 'utf8');
@@ -264,7 +264,9 @@ describe('the session after an unmount', () => {
 });
 
 describe('the declaration rule', () => {
-  test('declares a file TypeScript does not load itself inside declaring alone, nested or not, for no project opened before or after', () => {
+  test('declares a file TypeScript does not load itself inside declaring alone, nested or not, for no project opened before or after', ({
+    expect,
+  }) => {
     expect.hasAssertions();
     const sheet = path.join(BASE, 'declared', 'sheet.css');
     const user = path.join(BASE, 'declared', 'user.ts');

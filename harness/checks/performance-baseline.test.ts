@@ -2,7 +2,7 @@
 
 import { BASELINE, RUN_ARGUMENTS, recordBaseline, timingOf } from '#lib/performance-baseline.ts';
 import { Project, finished } from '#lib/tools.ts';
-import { afterEach, describe, expect, test } from 'vitest';
+import { afterEach, describe, test } from 'vitest';
 import { object, parsed, stringOf } from '#lib/config.ts';
 import { EXIT_CLEAN } from '#lib/exit-status.ts';
 import type { Finished } from '#lib/process.ts';
@@ -87,7 +87,7 @@ describe('a recorded baseline', () => {
     );
   });
 
-  test("keeps each project's slowest render and updates across runs, sorted by project", async () => {
+  test("keeps each project's slowest render and updates across runs, sorted by project", async ({ expect }) => {
     expect.hasAssertions();
     const directory = await results();
     const written = new Map<string, string>();
@@ -113,7 +113,7 @@ describe('a recorded baseline', () => {
     expect(runs.calls).toStrictEqual(['run 0', 'run 1']);
   });
 
-  test('runs the performance spec alone on one worker', () => {
+  test('runs the performance spec alone on one worker', ({ expect }) => {
     expect.hasAssertions();
     expect(RUN_ARGUMENTS.slice(AFTER_BINARY)).toStrictEqual([
       'test',
@@ -127,7 +127,7 @@ describe('a recorded baseline', () => {
 });
 
 describe('the committed baseline', () => {
-  test('names exactly the projects the performance spec runs in', async () => {
+  test('names exactly the projects the performance spec runs in', async ({ expect }) => {
     expect.hasAssertions();
     const recorded = object(parsed(await textOf(BASELINE), BASELINE), BASELINE);
     const baseline = Object.keys(recorded).toSorted();
@@ -136,12 +136,12 @@ describe('the committed baseline', () => {
 });
 
 describe('a performance report', () => {
-  test('gives its project and timing', () => {
+  test('gives its project and timing', ({ expect }) => {
     expect.hasAssertions();
     expect(timingOf('{"project":"firefox","render":5,"updates":6}')).toStrictEqual(['firefox', { render: 5, updates: 6 }]);
   });
 
-  test.each([
+  test.for([
     ['a number', '3'],
     ['null', 'null'],
     ['an object missing its project', '{"render":1,"updates":2}'],
@@ -150,7 +150,7 @@ describe('a performance report', () => {
     ['a project that is no text', '{"project":1,"render":1,"updates":2}'],
     ['a render that is no number', '{"project":"x","render":"1","updates":2}'],
     ['updates that are no number', '{"project":"x","render":1,"updates":"2"}'],
-  ])('of another shape, %s, is no timing', (_shape, text) => {
+  ] as const)('of another shape, %s, is no timing', ([_shape, text], { expect }) => {
     expect.hasAssertions();
     expect(timingOf(text)).toBeUndefined();
   });

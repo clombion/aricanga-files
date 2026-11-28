@@ -7,7 +7,7 @@
  * run and fail the hunt, and an independent spec passes both.
  */
 
-import { describe, expect, test } from 'vitest';
+import { describe, test } from 'vitest';
 import { hunt, huntOf } from '#lib/stress.ts';
 import { EXIT_CLEAN } from '#lib/exit-status.ts';
 import type { Hunt } from '#lib/stress.ts';
@@ -73,21 +73,21 @@ async function plainAndHunted(file: string): Promise<readonly [number, readonly 
 }
 
 describe('the flake hunter, on planted specs', () => {
-  test('fails an order-dependent spec that a plain run passes', async () => {
+  test('fails an order-dependent spec that a plain run passes', async ({ expect }) => {
     expect.hasAssertions();
     const [plain, hunted] = await plainAndHunted('order.test.ts');
     expect(plain).toBe(EXIT_CLEAN);
     expect(hunted.some((status) => status !== EXIT_CLEAN)).toBe(true);
   });
 
-  test('fails a timing-dependent spec that a plain run passes', async () => {
+  test('fails a timing-dependent spec that a plain run passes', async ({ expect }) => {
     expect.hasAssertions();
     const [plain, hunted] = await plainAndHunted('timing.test.ts');
     expect(plain).toBe(EXIT_CLEAN);
     expect(hunted.some((status) => status !== EXIT_CLEAN)).toBe(true);
   });
 
-  test('passes an independent spec in both', async () => {
+  test('passes an independent spec in both', async ({ expect }) => {
     expect.hasAssertions();
     const cleanCopies = Array.from({ length: COPIES }, () => EXIT_CLEAN);
     await expect(plainAndHunted('independent.test.ts')).resolves.toStrictEqual([EXIT_CLEAN, cleanCopies]);
@@ -95,7 +95,7 @@ describe('the flake hunter, on planted specs', () => {
 });
 
 describe('the hunt options', () => {
-  test('read the seed, copies and repeats, keep the rest as filters, and give each copy its own seed', () => {
+  test('read the seed, copies and repeats, keep the rest as filters, and give each copy its own seed', ({ expect }) => {
     expect.hasAssertions();
     const options = huntOf([
       '--seed',
@@ -114,11 +114,11 @@ describe('the hunt options', () => {
     ]);
   });
 
-  test.each([
+  test.for([
     ['--seed', '0'],
     ['--copies', 'x'],
     ['--repeats', '-1'],
-  ])('refuses %s %s', (name, value) => {
+  ] as const)('refuses %s %s', ([name, value], { expect }) => {
     expect.hasAssertions();
     expect(() => huntOf([name, value])).toThrow(`${name} must be a positive integer`);
   });

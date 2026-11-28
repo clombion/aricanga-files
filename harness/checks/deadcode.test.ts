@@ -12,7 +12,7 @@ import { EXIT_CLEAN, EXIT_FINDINGS } from '#lib/exit-status.ts';
 import type { KnipConfig, PlantedKnipConfig } from '#lib/knip-config.ts';
 import { ROOT_CONFIG_MODULES, knipConfig } from '#lib/config-modules.ts';
 import { deadcodeRuns, ignoreEntries, issueTypes, knip, plantedKnipRuns, repoIgnoreEntries, strictnessProblems } from '#lib/deadcode.ts';
-import { describe, expect, test } from 'vitest';
+import { describe, test } from 'vitest';
 import { runsOf, substituted } from '#lib/repo-tasks.ts';
 import { Exemptions } from '#lint-rules/exemptions.ts';
 import { REPO_ROOT } from '#lib/paths.ts';
@@ -106,7 +106,9 @@ const CLEAN = {
 };
 
 describe('the repository', () => {
-  test('the deadcode task runs knip on its configuration module in production mode and in default mode, treating hints as errors', async () => {
+  test('the deadcode task runs knip on its configuration module in production mode and in default mode, treating hints as errors', async ({
+    expect,
+  }) => {
     expect.hasAssertions();
     await expect(deadcodeRuns()).resolves.toStrictEqual([
       ['--config', ROOT_CONFIG_MODULES.knip, '--production', '--treat-config-hints-as-errors'],
@@ -114,18 +116,18 @@ describe('the repository', () => {
     ]);
   });
 
-  test('knip finds nothing unused in either mode', async () => {
+  test('knip finds nothing unused in either mode', async ({ expect }) => {
     expect.hasAssertions();
     await expect(failedRepoRuns()).resolves.toStrictEqual([]);
   });
 
-  test("every ignore entry of knip's configuration carries its reason", async () => {
+  test("every ignore entry of knip's configuration carries its reason", async ({ expect }) => {
     expect.hasAssertions();
     const entries = await repoIgnoreEntries();
     expect(KNIP_IGNORES.unexempted(entries)).toStrictEqual([]);
   });
 
-  test("knip's configuration is at the strictest: every issue type an error, no file excused", async () => {
+  test("knip's configuration is at the strictest: every issue type an error, no file excused", async ({ expect }) => {
     expect.hasAssertions();
     const [types, config] = await Promise.all([issueTypes(), knipConfig()]);
     expect(types).toContain('exports');
@@ -134,7 +136,7 @@ describe('the repository', () => {
 });
 
 describe('the deadcode check, on a planted package', () => {
-  test('passes a package whose every export is read by production code', async () => {
+  test('passes a package whose every export is read by production code', async ({ expect }) => {
     expect.hasAssertions();
     const runs = await plantedRuns(CLEAN);
     expect(statusAndNamed(runs, 'unread')).toStrictEqual([
@@ -143,7 +145,7 @@ describe('the deadcode check, on a planted package', () => {
     ]);
   });
 
-  test('fails an export nothing reads, in both modes', async () => {
+  test('fails an export nothing reads, in both modes', async ({ expect }) => {
     expect.hasAssertions();
     const runs = await plantedRuns({ ...CLEAN, 'src/lib.ts': 'export const a = 1;\nexport const unread = 2;\n' });
     expect(statusAndNamed(runs, 'unread')).toStrictEqual([
@@ -152,7 +154,7 @@ describe('the deadcode check, on a planted package', () => {
     ]);
   });
 
-  test('fails an export only a test reads, in production mode only', async () => {
+  test('fails an export only a test reads, in production mode only', async ({ expect }) => {
     expect.hasAssertions();
     const runs = await plantedRuns({
       ...CLEAN,
@@ -165,7 +167,7 @@ describe('the deadcode check, on a planted package', () => {
     ]);
   });
 
-  test('fails a stale dependency ignore, which knip hints in default mode', async () => {
+  test('fails a stale dependency ignore, which knip hints in default mode', async ({ expect }) => {
     expect.hasAssertions();
     const runs = await plantedRuns(CLEAN, { ...PLANT_CONFIG, ignoreDependencies: ['no-such-package'] });
     expect(statusAndNamed(runs, 'no-such-package')).toStrictEqual([
@@ -176,7 +178,7 @@ describe('the deadcode check, on a planted package', () => {
 });
 
 describe('the deadcode check, on planted configs', () => {
-  test('refuses an issue type whose rule is not set, and keys each ignore entry', () => {
+  test('refuses an issue type whose rule is not set, and keys each ignore entry', ({ expect }) => {
     expect.hasAssertions();
     const ignores: Pick<KnipConfig, 'ignoreDependencies' | 'ignoreWorkspaces'> = { ignoreDependencies: ['d'], ignoreWorkspaces: ['w'] };
     expect([strictnessProblems({ exports: 'error' }, ['exports', 'types']), ignoreEntries(ignores)]).toStrictEqual([
@@ -185,7 +187,7 @@ describe('the deadcode check, on planted configs', () => {
     ]);
   });
 
-  test("reads a tool's invocations by its binary, the first word exactly, and replaces only the config flag's value", () => {
+  test("reads a tool's invocations by its binary, the first word exactly, and replaces only the config flag's value", ({ expect }) => {
     expect.hasAssertions();
     expect(runsOf(['knipx --config x.ts', 'knip --config knip.config.ts --production', 'pnpm run knip', 'knip'], 'knip')).toStrictEqual([
       ['--config', 'knip.config.ts', '--production'],

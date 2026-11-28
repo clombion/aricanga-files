@@ -19,7 +19,7 @@
 
 import { Exemptions, KINDS, StaleExemptionError, Vocabulary, site } from '#lint-rules/exemptions.ts';
 import { UNCONSULTED, UNDECLARED, findings } from './exemption-lists.fence.ts';
-import { describe, expect, test } from 'vitest';
+import { describe, test } from 'vitest';
 import { isTypeScript, textsOf, tracked } from '#lib/source-files.ts';
 import type { Finding } from './exemption-lists.fence.ts';
 import { ROOT_MODULES } from '#lib/config-modules.ts';
@@ -147,13 +147,13 @@ function withPlants(modules: Readonly<Record<string, string>>, sites: readonly s
 }
 
 describe('the repository', () => {
-  test('every consulted list is declared and every declaration is consulted', async () => {
+  test('every consulted list is declared and every declaration is consulted', async ({ expect }) => {
     expect.hasAssertions();
     const found = await findings(await fenced());
     expect(ADOPTING.unexemptedBy(found, keyOf)).toStrictEqual([]);
   });
 
-  test("an undeclared list planted in a module of each directory of the harness's code is refused there", async () => {
+  test("an undeclared list planted in a module of each directory of the harness's code is refused there", async ({ expect }) => {
     expect.hasAssertions();
     const [modules, sites] = await Promise.all([fenced(), plantSites()]);
     expect(sites.filter((path) => !Object.hasOwn(modules, path))).toStrictEqual([]);
@@ -168,18 +168,18 @@ describe('the repository', () => {
 const RAW_WORDS = "type Word = 'a' | 'b';\nconst WORDS: Readonly<Record<Word, { x: boolean }>> = { a: { x: true }, b: { x: false } };\n";
 
 describe('a vocabulary', () => {
-  test('declared as a Vocabulary and read, passes', async () => {
+  test('declared as a Vocabulary and read, passes', async ({ expect }) => {
     expect.hasAssertions();
     const source =
       'const WORDS = new Vocabulary({ a: { x: true }, b: { x: false } });\nexport const facts = (word: string) => (WORDS.has(word) ? WORDS.of(word) : undefined);';
     await expect(findings({ [PLANT]: source })).resolves.toStrictEqual([]);
   });
 
-  test.each([
+  test.for([
     ['in', 'export const has = (word: string) => word in WORDS;'],
     ['an index', "export const facts = (word: 'a' | 'b') => WORDS[word].x;"],
     ['Object.hasOwn', 'export const has = (word: string) => Object.hasOwn(WORDS, word);'],
-  ])('kept as a raw record and consulted by %s, is refused', async (_name, consult) => {
+  ] as const)('kept as a raw record and consulted by %s, is refused', async ([_name, consult], { expect }) => {
     expect.hasAssertions();
     await expect(findings({ [PLANT]: `${RAW_WORDS}${consult}` })).resolves.toStrictEqual([
       { name: 'WORDS', path: PLANT, problem: UNDECLARED },
@@ -188,12 +188,12 @@ describe('a vocabulary', () => {
 });
 
 describe('the fence', () => {
-  test.each(CONSULTED_LITERALS)('sees %s', async (_name, source) => {
+  test.for(CONSULTED_LITERALS)('sees %s', async ([_name, source], { expect }) => {
     expect.hasAssertions();
     await expect(findings({ [PLANT]: source })).resolves.toStrictEqual([{ name: 'NAMES', path: PLANT, problem: UNDECLARED }]);
   });
 
-  test.each([
+  test.for([
     "const NAMES = ['a', 'b'];\nexport function check() { for (const name of NAMES) { void name; } }",
     "const NAMES = ['a'];\nexport const upper = NAMES.map((name) => name.toUpperCase());",
     "const NAMES = new Accepted(['a']);\nexport const has = NAMES.has('a');",
@@ -204,31 +204,31 @@ describe('the fence', () => {
     "const NAMES = ['a'];\nfunction helper(values: readonly string[]) { return values.length; }\nexport const n = helper(NAMES);",
     "const cache = new Map<string, number>();\nexport const hit = cache.get('a');",
     "const FIRST = ['a', 'b'];\nexport const first = FIRST[0];",
-  ])('lets a declared, iterated or run-time list through: %j', async (source) => {
+  ])('lets a declared, iterated or run-time list through: %j', async (source, { expect }) => {
     expect.hasAssertions();
     await expect(findings({ [PLANT]: source })).resolves.toStrictEqual([]);
   });
 
-  test.each([
+  test.for([
     ...KINDS.words.map((kind) => UNCONSULTED_PLANTS.of(kind)),
     "const NAME = Exemptions.grouped({ why: ['a'] });\nexport const size = NAME.entries.size;",
-  ])('sees a declaration nothing consults: %j', async (source) => {
+  ])('sees a declaration nothing consults: %j', async (source, { expect }) => {
     expect.hasAssertions();
     await expect(findings({ [PLANT]: source })).resolves.toStrictEqual([{ name: 'NAME', path: PLANT, problem: UNCONSULTED }]);
   });
 
-  test.each([
+  test.for([
     ['a relative specifier', '../lib/planted.ts', 'harness/lib/planted.ts'],
     ['a subpath pattern', '#lib/planted.ts', 'harness/lib/planted.ts'],
     ['an exact subpath key', '#root/knip.config.ts', 'knip.config.ts'],
-  ])('a declaration consulted by a module importing it through %s is live', async (_name, specifier, path) => {
+  ] as const)('a declaration consulted by a module importing it through %s is live', async ([_name, specifier, path], { expect }) => {
     expect.hasAssertions();
     const owner = "export const EXEMPT = new Exemptions({ a: 'why' });\nexport const NAMES = new Accepted(['a']);\n";
     const user = `import { EXEMPT, NAMES } from '${specifier}';\nexport function check() { EXEMPT.unexempted(['a']); return NAMES.has('a'); }\n`;
     await expect(findings({ [PLANT]: user, [path]: owner })).resolves.toStrictEqual([]);
   });
 
-  test('a stale adopting entry fails', () => {
+  test('a stale adopting entry fails', ({ expect }) => {
     expect.hasAssertions();
     const adopting = new Exemptions({ [site(PLANT, 'GONE')]: 'planted' });
     expect(() => adopting.unexemptedBy([], keyOf)).toThrow(StaleExemptionError);
@@ -236,7 +236,7 @@ describe('the fence', () => {
 });
 
 describe('the fence across modules', () => {
-  test.each([
+  test.for([
     [
       'a namespace import',
       "import * as owner from '#lib/planted.ts';\nexport function check() { owner.EXEMPT.unexempted(['a']); return owner.NAMES.has('a'); }\n",
@@ -253,14 +253,14 @@ describe('the fence across modules', () => {
       'a re-export then an import',
       "import { EXEMPT, NAMES } from '#lib/relay.ts';\nexport function check() { EXEMPT.unexempted(['a']); return NAMES.has('a'); }\n",
     ],
-  ])('a declaration consulted through %s is live', async (_name, user) => {
+  ] as const)('a declaration consulted through %s is live', async ([_name, user], { expect }) => {
     expect.hasAssertions();
     const owner = "export const EXEMPT = new Exemptions({ a: 'why' });\nexport const NAMES = new Accepted(['a']);\n";
     const relay = "export { EXEMPT, NAMES } from './planted.ts';\n";
     await expect(findings({ [PLANT]: user, 'harness/lib/planted.ts': owner, 'harness/lib/relay.ts': relay })).resolves.toStrictEqual([]);
   });
 
-  test('a declaration only imported, re-exported or destructured, and never consulted, is stale', async () => {
+  test('a declaration only imported, re-exported or destructured, and never consulted, is stale', async ({ expect }) => {
     expect.hasAssertions();
     const owner = "export const EXEMPT = new Exemptions({ a: 'why' });\n";
     const user =
@@ -272,7 +272,7 @@ describe('the fence across modules', () => {
 });
 
 describe('the declaration kinds', () => {
-  test('knows every declaration kind the exemption owner exports, and no other class it exports', async () => {
+  test('knows every declaration kind the exemption owner exports, and no other class it exports', async ({ expect }) => {
     expect.hasAssertions();
     const exemptions: Readonly<Record<string, unknown>> = await import('#lint-rules/exemptions.ts');
     const classes = Object.entries(exemptions)

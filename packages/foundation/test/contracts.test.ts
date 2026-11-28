@@ -1,5 +1,5 @@
 import { decodeSnapshot, encodeSnapshot, fx, parseTag } from '@narratives/foundation';
-import { describe, expect, test } from 'vitest';
+import { describe, test } from 'vitest';
 import type { Snapshot } from '@narratives/foundation';
 
 /** A snapshot whose every field differs from a default, so a dropped field is seen. */
@@ -14,28 +14,28 @@ const SNAPSHOT: Snapshot<{ chat: { count: number } }> = {
 const COMMIT = { delayMs: 10, token: 2 } as const;
 
 describe('the kernel contracts', () => {
-  test('parseTag splits key/value and preserves raw', () => {
+  test('parseTag splits key/value and preserves raw', ({ expect }) => {
     expect.hasAssertions();
     expect(parseTag('speaker: Pat')).toStrictEqual({ key: 'speaker', raw: 'speaker: Pat', value: 'Pat' });
     expect(parseTag('immediate')).toStrictEqual({ key: 'immediate', raw: 'immediate' });
   });
 
-  test('parseTag keeps every separator after the first in the value', () => {
+  test('parseTag keeps every separator after the first in the value', ({ expect }) => {
     expect.hasAssertions();
     expect(parseTag('at: 10:30')).toStrictEqual({ key: 'at', raw: 'at: 10:30', value: '10:30' });
   });
 
-  test('parseTag keeps a value that runs over a line break whole', () => {
+  test('parseTag keeps a value that runs over a line break whole', ({ expect }) => {
     expect.hasAssertions();
     expect(parseTag('note: first\nsecond')).toStrictEqual({ key: 'note', raw: 'note: first\nsecond', value: 'first\nsecond' });
   });
 
-  test('a snapshot round-trips through the codec to deep-equal', () => {
+  test('a snapshot round-trips through the codec to deep-equal', ({ expect }) => {
     expect.hasAssertions();
     expect(decodeSnapshot(encodeSnapshot(SNAPSHOT))).toStrictEqual(SNAPSHOT);
   });
 
-  test('effect constructors tag the family and keep an open kind', () => {
+  test('effect constructors tag the family and keep an open kind', ({ expect }) => {
     expect.hasAssertions();
     expect(fx.schedule(COMMIT)).toStrictEqual({ family: 'schedule', kind: 'commit', payload: COMMIT });
     expect(fx.present('chat/showNotification', { chatId: 'main' })).toStrictEqual({

@@ -11,7 +11,7 @@
 import { COVERAGE_DIR, DEBT, fileCoverage, floorProblems, gateReport, main, shortfalls } from '#lib/coverage.ts';
 import { CountedExemptions, site } from '#lint-rules/exemptions.ts';
 import { EXIT_FAILURE, EXIT_SUCCESS } from '#lib/output.ts';
-import { describe, expect, test } from 'vitest';
+import { describe, test } from 'vitest';
 import { EXIT_CLEAN } from '#lib/exit-status.ts';
 import type { FileCoverage } from '#lib/coverage.ts';
 import { Project } from '#lib/tools.ts';
@@ -54,7 +54,9 @@ async function planted(tests: string): Promise<readonly FileCoverage[]> {
       ['tests/plant.test.ts', tests],
     ]);
     const done = await project.tool('vitest', 'run', '--coverage');
-    expect(done.status, done.stdout + done.stderr).toBe(EXIT_CLEAN);
+    if (done.status !== EXIT_CLEAN) {
+      throw new Error(`the planted project's tests failed: ${done.stdout}${done.stderr}`);
+    }
     const report = await gateReport(join(project.root, 'coverage'));
     return fileCoverage(report, project.root);
   } finally {
@@ -137,14 +139,14 @@ async function unlisted(debt: CountedExemptions): Promise<readonly string[]> {
 }
 
 describe('the floor', () => {
-  test('passes every line, branch and function taken', async () => {
+  test('passes every line, branch and function taken', async ({ expect }) => {
     expect.hasAssertions();
     const files = await planted(FULL);
     expect(files.map((file) => file.path)).toStrictEqual(['src/branchy.ts', 'src/uncalled.ts']);
     expect(floorProblems(files, NONE)).toStrictEqual([]);
   });
 
-  test('fails an untaken branch on its statements, branches and lines', async () => {
+  test('fails an untaken branch on its statements, branches and lines', async ({ expect }) => {
     expect.hasAssertions();
     const files = await planted(FULL.replace('sign(-1), ', '').replace("'negative', ", ''));
     expect(floorProblems(files, NONE)).toStrictEqual([
@@ -154,7 +156,7 @@ describe('the floor', () => {
     ]);
   });
 
-  test('fails an uncalled function on its functions, statements and lines', async () => {
+  test('fails an uncalled function on its functions, statements and lines', async ({ expect }) => {
     expect.hasAssertions();
     const files = await planted(FULL.replace(', unused()]', ']').replace(', 2]', ']'));
     expect(floorProblems(files, NONE)).toStrictEqual([
@@ -172,12 +174,12 @@ describe('the debt', () => {
     total: { branches: 2, functions: 1, lines: 4, statements: 4 },
   };
 
-  test('passes its exact shortfall', () => {
+  test('passes its exact shortfall', ({ expect }) => {
     expect.hasAssertions();
     expect(floorProblems([file], DEBT_OF_A)).toStrictEqual([]);
   });
 
-  test('fails once the gap closes, and once it grows', () => {
+  test('fails once the gap closes, and once it grows', ({ expect }) => {
     expect.hasAssertions();
     const closed = { ...file, covered: { ...file.covered, statements: 3 } };
     expect(floorProblems([closed], DEBT_OF_A)).toStrictEqual([
@@ -187,32 +189,32 @@ describe('the debt', () => {
     expect(floorProblems([grown], DEBT_OF_A)).toStrictEqual(['src/a.ts :: branches: 1 items under the 100 % floor, 0 registered']);
   });
 
-  test('a lower floor is a fraction of the items', () => {
+  test('a lower floor is a fraction of the items', ({ expect }) => {
     expect.hasAssertions();
     expect(shortfalls([file], HALF_FLOOR)).toStrictEqual([]);
     expect(shortfalls([file], THREE_QUARTER_FLOOR)).toStrictEqual([site('src/a.ts', 'statements')]);
   });
 
-  test('names only files the listing holds', async () => {
+  test('names only files the listing holds', async ({ expect }) => {
     expect.hasAssertions();
     await expect(unlisted(DEBT)).resolves.toStrictEqual([]);
   });
 });
 
 describe('the gate', () => {
-  test('writes the Istanbul JSON report the script reads, outside the checkout', async () => {
+  test('writes the Istanbul JSON report the script reads, outside the checkout', async ({ expect }) => {
     expect.hasAssertions();
     const coverage = await gateCoverage();
     expect(coverage['reportsDirectory']).toBe(COVERAGE_DIR);
     expect(coverage['reporter']).toContain('json');
   });
 
-  test('the script exits 0 on a report with no shortfall', async () => {
+  test('the script exits 0 on a report with no shortfall', async ({ expect }) => {
     expect.hasAssertions();
     await expect(runScript(() => ({}))).resolves.toStrictEqual([EXIT_SUCCESS, []]);
   });
 
-  test('the script exits 1 on a report with a shortfall and writes each problem', async () => {
+  test('the script exits 1 on a report with a shortfall and writes each problem', async ({ expect }) => {
     expect.hasAssertions();
     const [status, errors] = await runScript(unrunStatement);
     expect([status, errors.length]).toStrictEqual([EXIT_FAILURE, PLANTED_PROBLEMS]);

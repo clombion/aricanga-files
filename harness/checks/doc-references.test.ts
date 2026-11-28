@@ -22,7 +22,7 @@
 import { Accepted, Exemptions, site } from '#lint-rules/exemptions.ts';
 import { Doc, currentSpans, currentText, markdownDocs } from '#lib/docs.ts';
 import { adrProblems, fenceProblems, key, linkProblems, spanProblems } from './doc-references.resolve.ts';
-import { describe, expect, test } from 'vitest';
+import { describe, test } from 'vitest';
 import { installedPaths, oxlintRuleIds, quotedValues } from './doc-references.installed.ts';
 import { PopulationError } from '#lib/workspace.ts';
 import type { Resolver } from './doc-references.resolve.ts';
@@ -59,7 +59,7 @@ async function repoResolver(): Promise<Resolver> {
 }
 
 describe('the repository', () => {
-  test('every link resolves', async () => {
+  test('every link resolves', async ({ expect }) => {
     expect.hasAssertions();
     const [files, parsed] = await Promise.all([tracked(), markdownDocs()]);
     const docs = new Map(parsed.map((doc) => [doc.path, doc] as const));
@@ -67,7 +67,7 @@ describe('the repository', () => {
     expect(LINKS_EXEMPT.unexemptedBy(found, key)).toStrictEqual([]);
   });
 
-  test('every backticked path and task resolves', async () => {
+  test('every backticked path and task resolves', async ({ expect }) => {
     expect.hasAssertions();
     const resolver = await repoResolver();
     const spans = await currentSpans();
@@ -75,14 +75,14 @@ describe('the repository', () => {
     expect(SPANS_EXEMPT.unexemptedBy(found, key)).toStrictEqual([]);
   });
 
-  test('every ADR named has its record', async () => {
+  test('every ADR named has its record', async ({ expect }) => {
     expect.hasAssertions();
     const [files, lines] = await Promise.all([tracked(), currentText()]);
     const found = lines.flatMap((line) => adrProblems(line, files));
     expect(ADRS_EXEMPT.unexemptedBy(found, key)).toStrictEqual([]);
   });
 
-  test('every locked tool in a shell fence runs through pnpm', async () => {
+  test('every locked tool in a shell fence runs through pnpm', async ({ expect }) => {
     expect.hasAssertions();
     const docs = await markdownDocs();
     const found = docs.flatMap((doc) => fenceProblems(doc));
@@ -99,7 +99,7 @@ See [nothing](missing.md), [no anchor](#nowhere) and [a bad anchor](other.md#now
 `;
 
 describe('the link check', () => {
-  test('sees each planted link and lets the resolving ones through', () => {
+  test('sees each planted link and lets the resolving ones through', ({ expect }) => {
     expect.hasAssertions();
     const docs = new Map([
       ['docs/planted.md', new Doc('docs/planted.md', PLANTED_DOC)],
@@ -133,7 +133,7 @@ const PLANTED_RESOLVER: Resolver = {
 };
 
 describe('the span check', () => {
-  test.each([
+  test.for([
     ['src/missing.ts', 'the path is not listed'],
     ['missing.toml', 'the path is not listed'],
     ['node_modules/nothing/here', 'the path is not installed'],
@@ -143,13 +143,13 @@ describe('the span check', () => {
     ['pnpm run no-such-task', 'no task is named "no-such-task"'],
     ['chat/noSuchEffect', 'the path is not listed'],
     ['missing/rule.ts', 'the path is not listed'],
-  ])('sees the planted span %s', (text, problem) => {
+  ] as const)('sees the planted span %s', ([text, problem], { expect }) => {
     expect.hasAssertions();
     const found = spanProblems({ line: 1, path: 'docs/planted.md', text }, PLANTED_RESOLVER);
     expect(found.map((unresolved) => unresolved.problem)).toStrictEqual([problem]);
   });
 
-  test.each([
+  test.for([
     'src/a.ts',
     'src',
     'src/',
@@ -173,21 +173,21 @@ describe('the span check', () => {
     'typescript/unstable/ast',
     'chat/showNotification',
     'aricanga/autofocus',
-  ])('lets the resolving span or placeholder %s through', (text) => {
+  ])('lets the resolving span or placeholder %s through', (text, { expect }) => {
     expect.hasAssertions();
     expect(spanProblems({ line: 1, path: 'docs/planted.md', text }, PLANTED_RESOLVER)).toStrictEqual([]);
   });
 });
 
 describe('the ADR check', () => {
-  test('sees an ADR with no record and lets a recorded one through', () => {
+  test('sees an ADR with no record and lets a recorded one through', ({ expect }) => {
     expect.hasAssertions();
     const files = ['docs/roadmap/decisions/0007-system-io-algebra.md'];
     const line = { line: 1, path: 'docs/planted.md', text: 'See ADR-0007 and ADR-0042.' };
     expect(adrProblems(line, files).map((problem) => problem.reference)).toStrictEqual(['ADR-0042']);
   });
 
-  test('passes an exempted reference and fails a stale exemption', () => {
+  test('passes an exempted reference and fails a stale exemption', ({ expect }) => {
     expect.hasAssertions();
     const planted = { line: 1, path: 'docs/planted.md', problem: 'no decision record has this number', reference: 'ADR-0042' };
     const exempt = new Exemptions({ [site('docs/planted.md', 'ADR-0042')]: 'planted: written next' });
@@ -197,7 +197,7 @@ describe('the ADR check', () => {
 });
 
 describe('the fence check', () => {
-  test('sees each bare or unlocked tool and lets pnpm and other fences through', () => {
+  test('sees each bare or unlocked tool and lets pnpm and other fences through', ({ expect }) => {
     expect.hasAssertions();
     const doc = new Doc(
       'docs/planted.md',
@@ -208,7 +208,7 @@ describe('the fence check', () => {
 });
 
 describe('the packages a reference may name', () => {
-  test("read each manifest's name by the population's one rule, refusing a name that is no string as the population does", () => {
+  test("read each manifest's name by the population's one rule, refusing a name that is no string as the population does", ({ expect }) => {
     expect.hasAssertions();
     expect(
       packagesNamed([

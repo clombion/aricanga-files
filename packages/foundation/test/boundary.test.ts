@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'vitest';
+import { describe, test } from 'vitest';
 import { fixtureSystem, fixtureSystemErased } from '#src/testing/fixture-system';
 import type { FixtureCommand } from '#src/testing/fixture-system';
 import type { Host } from '#src/host/runtime';
@@ -68,14 +68,14 @@ function runtime(): Runtime {
 }
 
 describe('the runtime boundary', () => {
-  test('refuses a command the addressed system does not take, naming the system and the value', () => {
+  test('refuses a command the addressed system does not take, naming the system and the value', ({ expect }) => {
     expect.hasAssertions();
     expect(() => {
       runtime().send({ command: { kind: 'detonate', payload: undefined }, source: 'player' }, 'fixture');
     }).toThrow('system "fixture" refuses a command: {"kind":"detonate"}');
   });
 
-  test('refuses a snapshot whose state for a system is not that system’s state', () => {
+  test('refuses a snapshot whose state for a system is not that system’s state', ({ expect }) => {
     expect.hasAssertions();
     const live = runtime();
     expect(() => {
@@ -83,14 +83,14 @@ describe('the runtime boundary', () => {
     }).toThrow('system "fixture" refuses busy: undefined');
   });
 
-  test('refuses a restored resume whose state is not the system’s state', () => {
+  test('refuses a restored resume whose state is not the system’s state', ({ expect }) => {
     expect.hasAssertions();
     expect(() => {
       runtime().send({ resume: { kind: 'restored', state: { busy: 'no' } }, source: 'resume' }, 'fixture');
     }).toThrow('system "fixture" refuses busy: "no"');
   });
 
-  test('restores a state read back from saved text as the system parses it, keeping none of a field it does not hold', () => {
+  test('restores a state read back from saved text as the system parses it, keeping none of a field it does not hold', ({ expect }) => {
     expect.hasAssertions();
     const live = runtime();
     live.send({ command: PRESENT, source: 'player' }, 'fixture');
@@ -102,17 +102,17 @@ describe('the runtime boundary', () => {
 });
 
 describe('the fixture system’s parsers', () => {
-  test('read every command back from saved text as the command it is', () => {
+  test('read every command back from saved text as the command it is', ({ expect }) => {
     expect.hasAssertions();
     expect(EVERY_COMMAND.map((command) => fixtureSystem.parseCommand(throughSave(command)))).toStrictEqual(EVERY_COMMAND);
   });
 
-  test('refuse a choose whose index is not a number', () => {
+  test('refuse a choose whose index is not a number', ({ expect }) => {
     expect.hasAssertions();
     expect(() => fixtureSystem.parseCommand({ ...CHOOSE, payload: { index: '1' } })).toThrow('system "fixture" refuses index: "1"');
   });
 
-  test('read a state back from saved text as the state it is', () => {
+  test('read a state back from saved text as the state it is', ({ expect }) => {
     expect.hasAssertions();
     const state = { ...fixtureSystem.init(SEED), lines: ['Start'], saved: true };
     expect(fixtureSystem.parseState(throughSave(state))).toStrictEqual(state);

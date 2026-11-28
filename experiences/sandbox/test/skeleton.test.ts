@@ -1,7 +1,7 @@
 // End-to-end smoke for the walking skeleton: ink compiles, flows through the stub reduce, and
 // renders as the Solid message part in the DOM.
 
-import { describe, expect, test } from 'vitest';
+import { describe, test } from 'vitest';
 import { SkMessage } from '#parts/sk-message';
 import { compileInk } from '@narratives/foundation/testing';
 import { flush } from 'solid-js';
@@ -23,7 +23,7 @@ function firstMessage(host: Readonly<Pick<ParentNode, 'querySelector'>>): SkMess
 }
 
 describe('the walking skeleton', () => {
-  test('ink → reduce → Solid render', async () => {
+  test('ink → reduce → Solid render', async ({ expect }) => {
     expect.hasAssertions();
     // Read via a cwd-relative path (happy-dom makes import.meta.url non-file).
     const json = compileInk(await readFile('experiences/sandbox/story.ink', 'utf8'));

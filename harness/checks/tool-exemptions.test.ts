@@ -12,7 +12,7 @@
 
 import { ConfigError, parsed } from '#lib/config.ts';
 import { Exemptions, site } from '#lint-rules/exemptions.ts';
-import { describe, expect, test } from 'vitest';
+import { describe, test } from 'vitest';
 import { fieldMatches, matches } from '#lint-rules/globs.ts';
 import { oxfmtEntries, oxlintEntries, stylelintEntries, vitestEntries } from './tool-exemptions.readers.ts';
 import { textOf, tracked } from '#lib/source-files.ts';
@@ -68,7 +68,7 @@ async function repoEntries(): Promise<Entry[]> {
 }
 
 describe('the repository', () => {
-  test('every tool glob matches a listed file, or is a declared policy', async () => {
+  test('every tool glob matches a listed file, or is a declared policy', async ({ expect }) => {
     expect.hasAssertions();
     const [entries, listed] = await Promise.all([repoEntries(), tracked()]);
     const unmatched = deadEntries(entries, listed);
@@ -77,7 +77,7 @@ describe('the repository', () => {
 });
 
 describe('the matcher', () => {
-  test('a glob matches through directories, a trailing /** matches a directory, and a harness glob has no anchor', () => {
+  test('a glob matches through directories, a trailing /** matches a directory, and a harness glob has no anchor', ({ expect }) => {
     expect.hasAssertions();
     const cases = [
       ['packages/*/src/**', 'packages/plant/src/a.ts'],
@@ -128,14 +128,17 @@ async function oxlintMatched(field: OxlintField, glob: string): Promise<readonly
 }
 
 describe("oxlint's fields", () => {
-  test.each(['files', 'ignorePatterns'] as const)('the matcher reads a glob in %s as oxlint does, each anchor and depth', async (field) => {
-    expect.hasAssertions();
-    const read = FIELD_GLOBS.map((glob) => [glob, FIELD_FILES.filter((file) => fieldMatches(field, glob, file))] as const);
-    const found = await Promise.all(FIELD_GLOBS.map(async (glob) => [glob, await oxlintMatched(field, glob)] as const));
-    expect(read).toStrictEqual(found);
-  });
+  test.for(['files', 'ignorePatterns'] as const)(
+    'the matcher reads a glob in %s as oxlint does, each anchor and depth',
+    async (field, { expect }) => {
+      expect.hasAssertions();
+      const read = FIELD_GLOBS.map((glob) => [glob, FIELD_FILES.filter((file) => fieldMatches(field, glob, file))] as const);
+      const found = await Promise.all(FIELD_GLOBS.map(async (glob) => [glob, await oxlintMatched(field, glob)] as const));
+      expect(read).toStrictEqual(found);
+    },
+  );
 
-  test("the census reads a glob with the other field's anchor as dead", () => {
+  test("the census reads a glob with the other field's anchor as dead", ({ expect }) => {
     expect.hasAssertions();
     const entries = oxlintEntries({
       ignorePatterns: ['./docs/**', '/docs/**'],
@@ -151,7 +154,7 @@ describe("oxlint's fields", () => {
 describe('the readers', () => {
   const LISTED = ['packages/plant/src/a.ts', 'packages/plant/src/a.test.ts', 'packages/plant/src/b.css', 'docs/x.md'];
 
-  test('sees a dead oxlint ignore and a dead override, and lets live ones through', () => {
+  test('sees a dead oxlint ignore and a dead override, and lets live ones through', ({ expect }) => {
     expect.hasAssertions();
     const entries = oxlintEntries({
       ignorePatterns: ['docs/**', 'gone/**'],
@@ -166,7 +169,7 @@ describe('the readers', () => {
     ]);
   });
 
-  test('sees a dead coverage include, coverage exclude and project include', () => {
+  test('sees a dead coverage include, coverage exclude and project include', ({ expect }) => {
     expect.hasAssertions();
     const entries = vitestEntries({
       test: {
@@ -181,7 +184,7 @@ describe('the readers', () => {
     ]);
   });
 
-  test("refuses a gate config with no projects, as every reader of the gate's config does", () => {
+  test("refuses a gate config with no projects, as every reader of the gate's config does", ({ expect }) => {
     expect.hasAssertions();
     expect(() => vitestEntries({ test: { coverage: { exclude: [], include: [] } } })).toThrow(
       new ConfigError('projects is not a list: undefined'),
@@ -192,7 +195,7 @@ describe('the readers', () => {
 describe('the readers of the other tools', () => {
   const LISTED = ['packages/plant/src/a.ts', 'packages/plant/src/a.test.ts', 'packages/plant/src/b.css', 'docs/x.md'];
 
-  test('reads oxfmt and stylelint ignores', () => {
+  test('reads oxfmt and stylelint ignores', ({ expect }) => {
     expect.hasAssertions();
     expect(oxfmtEntries({ ignorePatterns: ['docs/**'] })).toStrictEqual([
       { glob: 'docs/**', reading: 'root', tool: 'oxfmt ignorePatterns' },
@@ -203,7 +206,7 @@ describe('the readers of the other tools', () => {
     ]);
   });
 
-  test('a declared policy passes while it matches nothing, and fails as stale once it matches', () => {
+  test('a declared policy passes while it matches nothing, and fails as stale once it matches', ({ expect }) => {
     expect.hasAssertions();
     const policies = new Exemptions({ [site('oxlint ignorePatterns', '**/dist/**')]: 'planted: build output' });
     const unmatched = deadEntries([{ glob: '**/dist/**', reading: 'ignorePatterns', tool: 'oxlint ignorePatterns' }], LISTED);
@@ -214,7 +217,7 @@ describe('the readers of the other tools', () => {
 });
 
 describe('a tool config', () => {
-  test('refuses a field written as JSON null where a list is read: null is not an absent field', () => {
+  test('refuses a field written as JSON null where a list is read: null is not an absent field', ({ expect }) => {
     expect.hasAssertions();
     expect(() => oxfmtEntries(parsed('{"ignorePatterns":null}', 'a planted config'))).toThrow(
       new ConfigError('ignorePatterns is not a list: null'),

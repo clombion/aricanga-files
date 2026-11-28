@@ -3,7 +3,7 @@
 // sandbox's Playwright spec, `experiences/sandbox/test/sk-message.spec.ts`.
 
 import { SkMessage, defineSkMessage } from '#parts/sk-message';
-import { describe, expect, test } from 'vitest';
+import { describe, test } from 'vitest';
 import { flush } from 'solid-js';
 
 /**
@@ -30,7 +30,7 @@ function bubbleText(root: Readonly<Pick<ParentNode, 'querySelector'>> | null): s
 }
 
 describe('sk-message', () => {
-  test('registers once and renders its part into its shadow root', () => {
+  test('registers once and renders its part into its shadow root', ({ expect }) => {
     expect.hasAssertions();
     const element = connected('hello');
     defineSkMessage();
@@ -38,7 +38,7 @@ describe('sk-message', () => {
     expect(bubbleText(element.shadowRoot)).toBe('hello');
   });
 
-  test('a new view-model updates the text', () => {
+  test('a new view-model updates the text', ({ expect }) => {
     expect.hasAssertions();
     const element = connected('hello');
     element.show({ text: 'world' });
@@ -46,7 +46,7 @@ describe('sk-message', () => {
     expect(bubbleText(element.shadowRoot)).toBe('world');
   });
 
-  test('disconnecting disposes the root, and reconnecting renders it afresh', () => {
+  test('disconnecting disposes the root, and reconnecting renders it afresh', ({ expect }) => {
     expect.hasAssertions();
     const element = connected('hello');
     element.remove();

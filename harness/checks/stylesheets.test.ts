@@ -11,7 +11,7 @@
  */
 
 import { customPropertyProblems, duplicateRules, unusedClasses } from '#lib/sheet-scans.ts';
-import { describe, expect, test } from 'vitest';
+import { describe, test } from 'vitest';
 import { lintSheet, readers, sheets, sheetsOf, withoutSheets } from '#lib/stylesheets.ts';
 import { object, parsed } from '#lib/config.ts';
 import { rawSizes, rawTokenValues } from '#lib/design-tokens.ts';
@@ -77,7 +77,7 @@ async function textsOf(found: Promise<readonly { readonly text: string }[]>): Pr
 }
 
 describe('the repository', () => {
-  test('every sheet passes the lint', async () => {
+  test('every sheet passes the lint', async ({ expect }) => {
     expect.hasAssertions();
     const all = await sheets();
     const findings = await Promise.all(
@@ -89,7 +89,7 @@ describe('the repository', () => {
     expect(findings.flat()).toStrictEqual([]);
   });
 
-  test('every custom property is defined and read, every class is used, no selector repeats', async () => {
+  test('every custom property is defined and read, every class is used, no selector repeats', async ({ expect }) => {
     expect.hasAssertions();
     const [all, modules] = await Promise.all([sheets(), readers()]);
     const properties = await customPropertyProblems(all, modules);
@@ -105,19 +105,19 @@ describe('the repository', () => {
 });
 
 describe('the lint, on planted sheets', () => {
-  test('every rule the configuration turns on has a plant', async () => {
+  test('every rule the configuration turns on has a plant', async ({ expect }) => {
     expect.hasAssertions();
     const configured = await configuredRules();
     expect([...new Set(PLANTS.map(([rule]) => rule))].toSorted()).toStrictEqual(configured.toSorted());
   });
 
-  test.each(PLANTS)('%s fails its plant and passes its near miss', async (rule, failing, passing) => {
+  test.for(PLANTS)('%s fails its plant and passes its near miss', async ([rule, failing, passing], { expect }) => {
     expect.hasAssertions();
     await expect(lintText('plant/theme.css', failing)).resolves.toContain(rule);
     await expect(lintText('plant/theme.css', passing)).resolves.toStrictEqual([]);
   });
 
-  test('a token file defines raw values; a custom property anywhere else may not', async () => {
+  test('a token file defines raw values; a custom property anywhere else may not', async ({ expect }) => {
     expect.hasAssertions();
     const tokens = ':root {\n  --gap: 0.5rem;\n  --ink: rgb(17 17 17);\n  --quick: 150ms;\n  --layer-top: 10;\n}\n';
     await expect(lintText('plant/tokens.css', tokens)).resolves.toStrictEqual([]);
@@ -129,14 +129,14 @@ describe('the lint, on planted sheets', () => {
     ]);
   });
 
-  test('reads a stylesheet written in a module', async () => {
+  test('reads a stylesheet written in a module', async ({ expect }) => {
     expect.hasAssertions();
     const module = "import { css } from '#src/sheet';\nexport const styles = css`\n  .a {\n    color: #fff;\n  }\n`;\n";
     expect(sheetsOf('plant/part.ts', module).map((sheet) => sheet.line)).toStrictEqual([CSS_TEMPLATE_LINE]);
     await expect(lintText('plant/part.ts', module)).resolves.toContain('scale-unlimited/declaration-strict-value');
   });
 
-  test('the token rule lets zero, unitless numbers and var() through', () => {
+  test('the token rule lets zero, unitless numbers and var() through', ({ expect }) => {
     expect.hasAssertions();
     expect(rawSizes('0 var(--gap)')).toStrictEqual([]);
     expect(rawSizes('1.5')).toStrictEqual([]);
@@ -158,7 +158,7 @@ function plantedSheet(path: string, text: string): Sheet {
 }
 
 describe('the custom-property scan, on planted sheets', () => {
-  test('sees a custom property defined but never read, and one read but never defined', async () => {
+  test('sees a custom property defined but never read, and one read but never defined', async ({ expect }) => {
     expect.hasAssertions();
     const tokens = plantedSheet('plant/tokens.css', ':root {\n  --gap: 8px;\n  --unread: 1px;\n}\n');
     const theme = plantedSheet('plant/theme.css', '.a {\n  padding: var(--gap) var(--undefined);\n}\n');
@@ -168,7 +168,7 @@ describe('the custom-property scan, on planted sheets', () => {
     ]);
   });
 
-  test('counts a property a module sets or reads', async () => {
+  test('counts a property a module sets or reads', async ({ expect }) => {
     expect.hasAssertions();
     const theme = plantedSheet('plant/theme.css', '.a {\n  color: var(--from-module);\n}\n');
     const module = new Map([['plant/a.ts', "el.style.setProperty('--from-module', value);\nconst x = 'var(--theme)';"]]);
@@ -178,14 +178,14 @@ describe('the custom-property scan, on planted sheets', () => {
 });
 
 describe('the class and duplicate scans, on planted sheets', () => {
-  test('sees a class no module names, and lets a named class through', async () => {
+  test('sees a class no module names, and lets a named class through', async ({ expect }) => {
     expect.hasAssertions();
     const theme = plantedSheet('plant/theme.css', '.used, .card-unused {\n  color: var(--ink);\n}\n');
     const modules = new Map([['plant/a.tsx', 'return <p class="used">hi</p>;']]);
     await expect(textsOf(unusedClasses([theme], modules))).resolves.toStrictEqual(['card-unused']);
   });
 
-  test('a class named only inside its own sheet is unused, and one its module names is used', async () => {
+  test('a class named only inside its own sheet is unused, and one its module names is used', async ({ expect }) => {
     expect.hasAssertions();
     const own = 'export const styles = css`.lonely { color: var(--ink); }`;\n';
     const lonely = new Map([['plant/part.ts', withoutSheets('plant/part.ts', own)]]);
@@ -196,13 +196,13 @@ describe('the class and duplicate scans, on planted sheets', () => {
     await expect(unusedClasses(sheetsOf('plant/part.ts', named), used)).resolves.toStrictEqual([]);
   });
 
-  test('reads a substitution in a sheet as a value, and a css string in a string literal as no sheet', () => {
+  test('reads a substitution in a sheet as a value, and a css string in a string literal as no sheet', ({ expect }) => {
     expect.hasAssertions();
     const module = ["const gap = 'var(--gap)';\nexport const s = css`.a { padding: $", "{gap}; }`;\nconst note = 'css`.b {}`';\n"].join('');
     expect(sheetsOf('plant/part.ts', module).map((sheet) => sheet.text)).toStrictEqual(['.a { padding: 0; }']);
   });
 
-  test('sees a selector written twice in one media context, and lets one per context through', async () => {
+  test('sees a selector written twice in one media context, and lets one per context through', async ({ expect }) => {
     expect.hasAssertions();
     const twice = plantedSheet('plant/theme.css', '.a {\n  color: var(--x);\n}\n\n.a {\n  margin: 0;\n}\n');
     const found = await duplicateRules(twice);

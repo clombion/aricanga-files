@@ -10,7 +10,7 @@ import { CLAIMS, clauses } from '#lib/claims.ts';
 import type { Claim, Probe, ProbeScope } from '#lib/claims.ts';
 import { Doc, currentText } from '#lib/docs.ts';
 import { Exemptions, StaleExemptionError, site } from '#lint-rules/exemptions.ts';
-import { describe, expect, test } from 'vitest';
+import { describe, test } from 'vitest';
 import { population, typescriptFiles } from '#lib/scope.ts';
 import type { DeepReadonly } from '#lib/readonly.ts';
 import type { Population } from '#lib/scope.ts';
@@ -103,15 +103,15 @@ async function sources(): Promise<ReadonlyMap<string, string>> {
 }
 
 describe('the repository', () => {
-  test('every claim is registered and every entry is live', async () => {
+  test('every claim is registered and every entry is live', async ({ expect }) => {
     expect.hasAssertions();
     const found = foundClaims(await currentText());
     expect(registry(CLAIMS).unexempted(found)).toStrictEqual([]);
   });
 
-  test.each(CLAIMS.map((claim: DeepReadonly<Claim>) => [`${claim.path}: ${claim.clause}`, claim] as const))(
+  test.for(CLAIMS.map((claim: DeepReadonly<Claim>) => [`${claim.path}: ${claim.clause}`, claim] as const))(
     'the claim %s holds',
-    async (_label: string, claim: DeepReadonly<Claim>) => {
+    async ([_label, claim]: readonly [string, DeepReadonly<Claim>], { expect }) => {
       expect.hasAssertions();
       const [texts, held] = await Promise.all([sources(), population()]);
       expect(probeProblems(claim.probe, texts, held)).toStrictEqual([]);
@@ -120,13 +120,13 @@ describe('the repository', () => {
 });
 
 describe('the claims check', () => {
-  test('sees an unregistered claim', () => {
+  test('sees an unregistered claim', ({ expect }) => {
     expect.hasAssertions();
     const planted = [{ line: 1, path: 'src/planted.ts', text: 'This module is the only reader of the cache.' }];
     expect(registry([]).unexempted(foundClaims(planted))).toStrictEqual([site('src/planted.ts', 'the only reader of the cache')]);
   });
 
-  test('fails an entry whose claim is gone', () => {
+  test('fails an entry whose claim is gone', ({ expect }) => {
     expect.hasAssertions();
     const gone: Claim[] = [
       {
@@ -138,7 +138,7 @@ describe('the claims check', () => {
     expect(() => registry(gone).unexempted([])).toThrow(StaleExemptionError);
   });
 
-  test('fails a probe that matches outside its owner or not in it', async () => {
+  test('fails a probe that matches outside its owner or not in it', async ({ expect }) => {
     expect.hasAssertions();
     const held = await plantedPopulation([], []);
     const texts = new Map([
@@ -157,7 +157,9 @@ describe('the claims check', () => {
 });
 
 describe("the claims check's scope", () => {
-  test("reads a probe over the harness's modules by holder: a root configuration module is in it, a member's module is not", async () => {
+  test("reads a probe over the harness's modules by holder: a root configuration module is in it, a member's module is not", async ({
+    expect,
+  }) => {
     expect.hasAssertions();
     const held = await plantedPopulation(
       ['harness/lib/owner.ts', 'vitest.gate.config.ts', 'packages/a/src/x.ts'],
@@ -171,7 +173,7 @@ describe("the claims check's scope", () => {
     ]);
   });
 
-  test('takes a phrase in a code span as a quotation, not a claim', () => {
+  test('takes a phrase in a code span as a quotation, not a claim', ({ expect }) => {
     expect.hasAssertions();
     expect(foundClaims(new Doc('docs/planted.md', 'The check looks for `the only reader`.\n').prose())).toStrictEqual([]);
     expect(clauses('It is stated once, here; the rest follows.')).toStrictEqual(['stated once, here']);

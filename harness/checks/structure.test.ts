@@ -7,7 +7,7 @@
  * and git must not hold.
  */
 
-import { describe, expect, test } from 'vitest';
+import { describe, test } from 'vitest';
 import { Prefixes } from '#lint-rules/exemptions.ts';
 import { heldFiles } from '#lib/scope.ts';
 import { typescriptKind } from '#lib/source-files.ts';
@@ -53,19 +53,19 @@ function buildOutput(paths: readonly string[]): string[] {
 }
 
 describe('the repository', () => {
-  test('no module is both .ts and .tsx', async () => {
+  test('no module is both .ts and .tsx', async ({ expect }) => {
     expect.hasAssertions();
     expect(doubleModules(await heldFiles())).toStrictEqual([]);
   });
 
-  test('no build output is listed', async () => {
+  test('no build output is listed', async ({ expect }) => {
     expect.hasAssertions();
     expect(buildOutput(await heldFiles())).toStrictEqual([]);
   });
 });
 
 describe('the structure checks', () => {
-  test('see a module written both ways, and let a test beside its module through', () => {
+  test('see a module written both ways, and let a test beside its module through', ({ expect }) => {
     expect.hasAssertions();
     expect(
       doubleModules([
@@ -78,21 +78,21 @@ describe('the structure checks', () => {
     ).toStrictEqual(['packages/plant/src/view']);
   });
 
-  test.each([
+  test.for([
     'packages/plant/dist/index.js',
     'experiences/plant/dist/assets/a.js',
     'packages/plant/coverage/index.html',
     'packages/characterisation/.output/report/index.html',
     'packages/plant/node_modules/x/index.js',
     'packages/plant/tsconfig.tsbuildinfo',
-  ])('sees the planted build output %s', (path) => {
+  ])('sees the planted build output %s', (path, { expect }) => {
     expect.hasAssertions();
     expect(buildOutput([path, 'packages/plant/src/index.ts'])).toStrictEqual([path]);
   });
 
-  test.each(['packages/plant/src/distance.ts', 'packages/plant/src/coverage-floor.ts', 'docs/output.md'])(
+  test.for(['packages/plant/src/distance.ts', 'packages/plant/src/coverage-floor.ts', 'docs/output.md'])(
     'lets a near miss through: %s',
-    (path) => {
+    (path, { expect }) => {
       expect.hasAssertions();
       expect(buildOutput([path])).toStrictEqual([]);
     },

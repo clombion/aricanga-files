@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'vitest';
+import { describe, test } from 'vitest';
 import { chatSystem } from '#src/system';
 import { erase } from '@narratives/foundation';
 import { inputsOf } from '#test/support';
@@ -25,7 +25,7 @@ async function ink(name: string): Promise<string> {
 }
 
 describe('the chat ink fixtures', () => {
-  test('single-chat drives a Present-only trace', async () => {
+  test('single-chat drives a Present-only trace', async ({ expect }) => {
     expect.hasAssertions();
     const run = await runFixture({ story: await ink('single-chat'), systems: [erase(chatSystem)] });
     expect(run.trace).toHaveLength(SINGLE_CHAT_MESSAGES);
@@ -33,7 +33,7 @@ describe('the chat ink fixtures', () => {
     expect(run.effects.map((effect) => effect.kind)).toStrictEqual(run.effects.map(() => 'chat/showNotification'));
   });
 
-  test('cross-chat routes a targetChat message', async () => {
+  test('cross-chat routes a targetChat message', async ({ expect }) => {
     expect.hasAssertions();
     const run = await runFixture({ story: await ink('cross-chat'), systems: [erase(chatSystem)] });
     const chatIds = run.effects.map((effect) => notificationOf(effect)?.chatId);
@@ -41,7 +41,7 @@ describe('the chat ink fixtures', () => {
     expect(chatIds).toContain('side');
   });
 
-  test('choices captures the pre-choice trace and suspends cleanly', async () => {
+  test('choices captures the pre-choice trace and suspends cleanly', async ({ expect }) => {
     expect.hasAssertions();
     // The chat stub does not handle choices yet (physics, 020–026); the harness
     // must still drive the pre-choice line and return without hanging.

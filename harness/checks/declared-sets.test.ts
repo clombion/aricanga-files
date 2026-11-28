@@ -7,7 +7,7 @@
  * `erasableSyntaxOnly` refuses every one (the `typecheck-settings` check plants it).
  */
 
-import { describe, expect, test } from 'vitest';
+import { describe, test } from 'vitest';
 import { usePlanted, useScan } from '#lib/scan-hooks.ts';
 import { twiceDeclared } from './declared-sets.scan.ts';
 
@@ -40,12 +40,14 @@ describe('closed sets of words', () => {
   ]);
   const repository = useScan();
 
-  test('a set restated in another module is found in any order; a derived alias, a derived subset, a single word and a wider set pass', () => {
+  test('a set restated in another module is found in any order; a derived alias, a derived subset, a single word and a wider set pass', ({
+    expect,
+  }) => {
     expect.hasAssertions();
     expect(twiceDeclared(planted())).toStrictEqual(RESTATED);
   });
 
-  test('the repository declares each one once', () => {
+  test('the repository declares each one once', ({ expect }) => {
     expect.hasAssertions();
     expect(twiceDeclared(repository())).toStrictEqual([]);
   });

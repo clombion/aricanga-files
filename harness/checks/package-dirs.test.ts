@@ -1,7 +1,7 @@
 /** A package's spelling: one directory, its manifest and importer derived from it, and the nearest root of a path. */
 
 import type { Dir, MemberDir } from '#lib/package-dirs.ts';
-import { describe, expect, test } from 'vitest';
+import { describe, test } from 'vitest';
 import { dirOfImporter, importerOf, manifestOf, nearestOf } from '#lib/package-dirs.ts';
 import { QUOTED_KEYS } from './scope.plants.ts';
 import { lockOf } from '#lib/pins.ts';
@@ -17,7 +17,7 @@ function rootOf(item: Readonly<{ root: MemberDir }>): MemberDir {
 }
 
 describe('a package', () => {
-  test('is one directory: its manifest and its importer derive from it, and an importer leads back to it', () => {
+  test('is one directory: its manifest and its importer derive from it, and an importer leads back to it', ({ expect }) => {
     expect.hasAssertions();
     const dirs: readonly Dir[] = ['', 'packages/a/', "a/q'uote/", 'a/x:y/', '1.0/'];
     const derived = dirs.map((dir) => {
@@ -38,7 +38,7 @@ describe('a package', () => {
     ]);
   });
 
-  test('is held by the nearest root whatever order the roots come in', () => {
+  test('is held by the nearest root whatever order the roots come in', ({ expect }) => {
     expect.hasAssertions();
     const outer: Readonly<{ root: MemberDir }> = { root: 'packages/a/' };
     const inner: Readonly<{ root: MemberDir }> = { root: 'packages/a/b/' };

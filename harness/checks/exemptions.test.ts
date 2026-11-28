@@ -4,7 +4,7 @@
  */
 
 import { CountedExemptions, Exemptions, StaleExemptionError, Vocabulary } from '#lint-rules/exemptions.ts';
-import { describe, expect, test } from 'vitest';
+import { describe, test } from 'vitest';
 
 /** A count no entry may hold. */
 const BELOW_ONE = 0;
@@ -13,33 +13,33 @@ const BELOW_ONE = 0;
 const ONCE = 1;
 
 describe('an exemption list', () => {
-  test('refuses an entry without a reason, naming it', () => {
+  test('refuses an entry without a reason, naming it', ({ expect }) => {
     expect.hasAssertions();
     expect(() => new Exemptions({ planted: '  ' })).toThrow('exemptions without a reason: ["planted"]');
   });
 
-  test('names, with a stale entry, the findings no entry covers', () => {
+  test('names, with a stale entry, the findings no entry covers', ({ expect }) => {
     expect.hasAssertions();
     expect(() => new Exemptions({ gone: 'planted' }).unexempted(['new'])).toThrow(
       new StaleExemptionError('stale exemptions, delete them: ["gone"]; findings no entry covers: ["new"]'),
     );
   });
 
-  test('refuses a key grouped under two reasons, naming it', () => {
+  test('refuses a key grouped under two reasons, naming it', ({ expect }) => {
     expect.hasAssertions();
     expect(() => Exemptions.grouped({ first: ['planted'], second: ['planted'] })).toThrow('"planted" is exempted twice');
   });
 });
 
 describe('a counted exemption list', () => {
-  test('refuses a count below one, naming the key', () => {
+  test('refuses a count below one, naming the key', ({ expect }) => {
     expect.hasAssertions();
     expect(() => new CountedExemptions({ planted: { count: BELOW_ONE, reason: 'planted' } })).toThrow(
       'counted exemptions below one: ["planted"]',
     );
   });
 
-  test('passes the exact count and fails one more or one fewer', () => {
+  test('passes the exact count and fails one more or one fewer', ({ expect }) => {
     expect.hasAssertions();
     const counted = new CountedExemptions({ planted: { count: ONCE, reason: 'planted' } });
     expect(() => {
@@ -105,7 +105,7 @@ function deepChain(last: Readonly<Link>): Readonly<Link> {
 }
 
 describe('a vocabulary', () => {
-  test('freezes the record it was given, so a later write to that record changes nothing here', () => {
+  test('freezes the record it was given, so a later write to that record changes nothing here', ({ expect }) => {
     expect.hasAssertions();
     const facts = { kept: { note: 'as built' } };
     const vocabulary = new Vocabulary(facts);
@@ -116,7 +116,7 @@ describe('a vocabulary', () => {
     ]);
   });
 
-  test('hands out its words, and each fact through every object in it, frozen', () => {
+  test('hands out its words, and each fact through every object in it, frozen', ({ expect }) => {
     expect.hasAssertions();
     const vocabulary = new Vocabulary({ word: { flags: ['a'] } });
     const { flags } = vocabulary.of('word');
@@ -128,7 +128,7 @@ describe('a vocabulary', () => {
     ]).toStrictEqual([true, true, false, ['a']]);
   });
 
-  test('lists words that read as array indices first, ascending, then the others as declared', () => {
+  test('lists words that read as array indices first, ascending, then the others as declared', ({ expect }) => {
     expect.hasAssertions();
     expect(new Vocabulary({ '10': 'ten', '2': 'two', first: 'first', second: 'second' }).words).toStrictEqual([
       '2',
@@ -140,7 +140,9 @@ describe('a vocabulary', () => {
 });
 
 describe("a vocabulary's facts", () => {
-  test('refuses a fact its freeze cannot reach, naming where it is: a class instance over a list the caller keeps, a getter, a function typed as an object', () => {
+  test('refuses a fact its freeze cannot reach, naming where it is: a class instance over a list the caller keeps, a getter, a function typed as an object', ({
+    expect,
+  }) => {
     expect.hasAssertions();
     const held = ['a'];
     const view = new HeldView(held);
@@ -155,7 +157,7 @@ describe("a vocabulary's facts", () => {
     expect(() => new Vocabulary({ word: { call } })).toThrow(`${NO_PLAIN_DATA}: a function at the facts.word.call`);
   });
 
-  test('reads and freezes the same parts: every own key, a symbol or a non-enumerable one included', () => {
+  test('reads and freezes the same parts: every own key, a symbol or a non-enumerable one included', ({ expect }) => {
     expect.hasAssertions();
     const hidden = ['a'];
     const keyed = ['b'];
@@ -171,14 +173,14 @@ describe("a vocabulary's facts", () => {
     expect([vocabulary.words, Object.isFrozen(hidden), Object.isFrozen(keyed)]).toStrictEqual([['word'], true, true]);
   });
 
-  test('freezes a chain deeper than the call stack goes', () => {
+  test('freezes a chain deeper than the call stack goes', ({ expect }) => {
     expect.hasAssertions();
     const last: Link = { name: 'last', next: {} };
     const vocabulary = new Vocabulary({ word: deepChain(last) });
     expect([vocabulary.words, Object.isFrozen(last)]).toStrictEqual([['word'], true]);
   });
 
-  test('freezes a cyclic record through, and ends', () => {
+  test('freezes a cyclic record through, and ends', ({ expect }) => {
     expect.hasAssertions();
     const link: Link = { name: 'a', next: {} };
     link.next = link;

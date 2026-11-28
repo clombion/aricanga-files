@@ -1,6 +1,6 @@
 import { chatSystem, openedChat } from '#src/system';
 import { close, open, run, story } from '#test/support';
-import { describe, expect, test } from 'vitest';
+import { describe, test } from 'vitest';
 import type { ChatCommand } from '#src/system';
 import type { FixtureCommand } from '@narratives/foundation/testing';
 import { throughSave } from '@narratives/foundation/testing';
@@ -48,12 +48,12 @@ async function playedState(): Promise<unknown> {
 }
 
 describe('the chat command parser', () => {
-  test('reads every command back from saved text as the command it is', () => {
+  test('reads every command back from saved text as the command it is', ({ expect }) => {
     expect.hasAssertions();
     expect(EVERY_COMMAND.map((command) => chatSystem.parseCommand(throughSave(command)))).toStrictEqual(EVERY_COMMAND);
   });
 
-  test('refuses a command chat does not take, an open with no chat id, and a close that carries a payload', () => {
+  test('refuses a command chat does not take, an open with no chat id, and a close that carries a payload', ({ expect }) => {
     expect.hasAssertions();
     expect(() => chatSystem.parseCommand(FOREIGN)).toThrow('system "chat" refuses a command: {"kind":"choose","payload":{"index":0}}');
     expect(() => chatSystem.parseCommand({ ...OPEN_PAT, payload: {} })).toThrow('system "chat" refuses chatId: undefined');
@@ -61,7 +61,7 @@ describe('the chat command parser', () => {
     expect(() => chatSystem.parseCommand({ ...CLOSE, payload: 'pat' })).toThrow('system "chat" refuses the close payload: "pat"');
   });
 
-  test('a recorded command that is not chat’s is refused, not read as opening nothing', () => {
+  test('a recorded command that is not chat’s is refused, not read as opening nothing', ({ expect }) => {
     expect.hasAssertions();
     expect(openedChat(OPEN_PAT)).toBe('pat');
     expect(openedChat(CLOSE)).toBeUndefined();
@@ -70,7 +70,7 @@ describe('the chat command parser', () => {
 });
 
 describe('the chat state parser', () => {
-  test('reads a played slice back from saved text as the slice it is, every field included', async () => {
+  test('reads a played slice back from saved text as the slice it is, every field included', async ({ expect }) => {
     expect.hasAssertions();
     const state = await playedState();
     expect(fieldsOf(state)).toStrictEqual([
@@ -85,7 +85,7 @@ describe('the chat state parser', () => {
     expect(chatSystem.parseState(throughSave(state))).toStrictEqual(state);
   });
 
-  test('refuses a slice with a field of the wrong shape, naming the field', () => {
+  test('refuses a slice with a field of the wrong shape, naming the field', ({ expect }) => {
     expect.hasAssertions();
     const fresh = chatSystem.init(SEED);
     expect(() => chatSystem.parseState({ ...fresh, currentView: { type: 'lobby' } })).toThrow(

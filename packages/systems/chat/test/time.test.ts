@@ -1,5 +1,5 @@
 import { array, constantFrom } from 'fast-check';
-import { describe, expect, test } from 'vitest';
+import { describe, test } from 'vitest';
 import { messagesOf, run, story } from '#test/support';
 import type { ChatRun } from '#test/support';
 import type { FixtureInput } from '@narratives/foundation/testing';
@@ -39,7 +39,7 @@ function times(result: ChatRun): readonly (number | undefined)[] {
 }
 
 describe('the first # time: tag', () => {
-  test.each([
+  test.for([
     ['12:00 AM', minutesAt('00:00')],
     ['12:30 PM', minutesAt('12:30')],
     ['11:30 PM', minutesAt('23:30')],
@@ -50,7 +50,7 @@ describe('the first # time: tag', () => {
     // AM and PM take an hour from 1 to 12.
     ['13:00 PM', undefined],
     ['9:99 AM', undefined],
-  ])('%s anchors the clock at %s (undefined: unparseable, stays unanchored)', async (raw, expected) => {
+  ] as const)('%s anchors the clock at %s (undefined: unparseable, stays unanchored)', async ([raw, expected], { expect }) => {
     expect.hasAssertions();
     const result = await run([story('m', [`time: ${raw}`])]);
     expect(times(result)).toStrictEqual([expected]);
@@ -58,7 +58,7 @@ describe('the first # time: tag', () => {
 });
 
 describe('the clock', () => {
-  test('# time snaps forward; a backward snap is rejected (#1, #2)', async () => {
+  test('# time snaps forward; a backward snap is rejected (#1, #2)', async ({ expect }) => {
     expect.hasAssertions();
     const result = await run([
       // Establishes the anchor.
@@ -71,21 +71,21 @@ describe('the clock', () => {
     expect(times(result)).toStrictEqual([minutesAt('08:35'), minutesAt('08:39'), minutesAt('08:39')]);
   });
 
-  test('drifts a minute per message, only once anchored (#1, #3-adjacent)', async () => {
+  test('drifts a minute per message, only once anchored (#1, #3-adjacent)', async ({ expect }) => {
     expect.hasAssertions();
     const nine = minutesAt('09:00');
     const result = await run([story('a'), story('b'), story('c', ['time: 9:00 AM']), story('d'), story('e')]);
     expect(times(result)).toStrictEqual([undefined, undefined, nine, nine + DRIFT, nine + DRIFT + DRIFT]);
   });
 
-  test('# duration:N jumps N minutes; a malformed one drifts (#1)', async () => {
+  test('# duration:N jumps N minutes; a malformed one drifts (#1)', async ({ expect }) => {
     expect.hasAssertions();
     const nine = minutesAt('09:00');
     const result = await run([story('a', ['time: 9:00 AM']), story('b', [`duration: ${JUMP}`]), story('c', ['duration: nope'])]);
     expect(times(result)).toStrictEqual([nine, nine + JUMP, nine + JUMP + DRIFT]);
   });
 
-  test('advance_day resets to the next day at 09:00 first, then the message drifts (#1)', async () => {
+  test('advance_day resets to the next day at 09:00 first, then the message drifts (#1)', async ({ expect }) => {
     expect.hasAssertions();
     const result = await run([
       // 22:00 on day 0.
@@ -96,7 +96,7 @@ describe('the clock', () => {
     expect(times(result)).toStrictEqual([minutesAt('22:00'), MINUTES_PER_DAY + minutesAt('09:00') + DRIFT]);
   });
 
-  test('advance_day on an unanchored clock anchors it at the first day, 09:00', async () => {
+  test('advance_day on an unanchored clock anchors it at the first day, 09:00', async ({ expect }) => {
     expect.hasAssertions();
     const result = await run([story('a'), story('b', [], { advanceDay: true })]);
     expect(times(result)).toStrictEqual([undefined, MINUTES_PER_DAY + minutesAt('09:00') + DRIFT]);
@@ -104,7 +104,7 @@ describe('the clock', () => {
 });
 
 describe('forward-only time', () => {
-  test('forwardOnlyTime holds over generated time-tag streams (#4, #5)', async () => {
+  test('forwardOnlyTime holds over generated time-tag streams (#4, #5)', async ({ expect }) => {
     expect.hasAssertions();
     // The stream mixes parseable snaps (establish, forward, backward-reject) with unparseable ones
     // (drift), so the clock is anchored and the invariant is not vacuous.

@@ -30,7 +30,7 @@ import { BOUNDED, FIXTURES, PLANTED } from './boundaries.plants.ts';
 import { CHAIN, CHAIN_MEMBERS, CHAIN_MOUNTED } from './boundaries-cases.plants.ts';
 import { at, boundaryDiagnostics, bounded } from './boundaries.run.ts';
 import { byCodeUnit, isEmpty } from '#lib/lists.ts';
-import { describe, expect, test, vi } from 'vitest';
+import { describe, test, vi } from 'vitest';
 import { usePlanted, useScan } from '#lib/scan-hooks.ts';
 import { ADMITTED_META } from '#lib/chain-forms.ts';
 import type { Chain } from '#lib/production-imports.ts';
@@ -40,8 +40,11 @@ import { wholeChain } from '#lib/production-imports.ts';
 
 const HARNESS_ID = 'boundaries';
 
+/** The planted chain's files, each at its path. */
+const CHAIN_PLANTS: readonly (readonly [string, string])[] = CHAIN.map((plant) => [plant.path, plant.text] as const);
+
 describe('the boundary lint', () => {
-  test('fails each must-fail fixture and passes each must-pass fixture', async () => {
+  test('fails each must-fail fixture and passes each must-pass fixture', async ({ expect }) => {
     expect.hasAssertions();
     const found = await boundaryDiagnostics(FIXTURES);
     expect(FIXTURES.map((fixture) => [fixture.path, !isEmpty(at(found, fixture))])).toStrictEqual(
@@ -49,7 +52,7 @@ describe('the boundary lint', () => {
     );
   });
 
-  test('names its reason in each refusal: the role matrix, the POC, a climb', async () => {
+  test('names its reason in each refusal: the role matrix, the POC, a climb', async ({ expect }) => {
     expect.hasAssertions();
     const reasoned = FIXTURES.filter((fixture) => fixture.reason !== undefined);
     const found = await boundaryDiagnostics(reasoned);
@@ -60,7 +63,9 @@ describe('the boundary lint', () => {
 });
 
 describe('the boundary overrides of a planted population', () => {
-  test("refuses each member the shipping packages its role may not import, its own role's other members included, no importer the test infrastructure, and the harness nothing", async () => {
+  test("refuses each member the shipping packages its role may not import, its own role's other members included, no importer the test infrastructure, and the harness nothing", async ({
+    expect,
+  }) => {
     expect.hasAssertions();
     const held = await plantedPopulation(['lib/sys/test/a.ts', 'apps/app/src/a.test.ts'], PLANTED);
     expect(bounded(held)).toStrictEqual(BOUNDED);
@@ -120,7 +125,7 @@ function named(found: Chain): ReadonlySet<string> {
 describe('the whole chain of the repository', () => {
   const repoScan = useScan();
 
-  test('no production module of the repository imports a non-production module, or writes a form the scan cannot read', () => {
+  test('no production module of the repository imports a non-production module, or writes a form the scan cannot read', ({ expect }) => {
     expect.hasAssertions();
     expect(wholeChain(repoScan())).toStrictEqual({ edges: [], refused: [] });
   });
@@ -131,31 +136,31 @@ describe('the whole chain of the repository', () => {
  * them inside the planted scan's own runs alone (`overlaying`), so a scan beside it never reads them.
  */
 describe('the whole chain', () => {
-  const chainScan = usePlanted(
-    CHAIN.map((plant) => [plant.path, plant.text] as const),
-    CHAIN_MEMBERS,
-    CHAIN_MOUNTED,
-  );
+  const chainScan = usePlanted(CHAIN_PLANTS, CHAIN_MEMBERS, CHAIN_MOUNTED);
 
-  test('reports each held non-production file a production module loads, by every form TypeScript loads and every spelling, a stylesheet and a file with no extension included, from each production module reaching it', () => {
+  test('reports each held non-production file a production module loads, by every form TypeScript loads and every spelling, a stylesheet and a file with no extension included, from each production module reaching it', ({
+    expect,
+  }) => {
     expect.hasAssertions();
     const loading = new Set(importers('loads'));
     expect(chainOf(chainScan()).edges.filter((edge) => loading.has(edge.from))).toStrictEqual(plantedEdges('loads'));
   });
 
-  test("reports a production use only test support's declarations answer: an ambient module, a global, an augmentation, under any diagnostic", () => {
+  test("reports a production use only test support's declarations answer: an ambient module, a global, an augmentation, under any diagnostic", ({
+    expect,
+  }) => {
     expect.hasAssertions();
     const declaring = new Set(importers('declares'));
     expect(chainOf(chainScan()).edges.filter((edge) => declaring.has(edge.from))).toStrictEqual(plantedEdges('declares'));
   });
 
-  test('refuses each form it cannot read in a production module, and each specifier or use no file answers', () => {
+  test('refuses each form it cannot read in a production module, and each specifier or use no file answers', ({ expect }) => {
     expect.hasAssertions();
     const refused = new Set(chainOf(chainScan()).refused.map((refusal) => refusal.from));
     expect([...refused].toSorted(byCodeUnit)).toStrictEqual(importers('refused'));
   });
 
-  test('names the argument of each import() whose specifier is not a literal', () => {
+  test('names the argument of each import() whose specifier is not a literal', ({ expect }) => {
     expect.hasAssertions();
     const { refused } = chainOf(chainScan());
     const stated = CHAIN.filter((plant) => plant.refusedAs !== undefined);
@@ -164,13 +169,13 @@ describe('the whole chain', () => {
     );
   });
 
-  test('passes what ships and every form in a non-production module', () => {
+  test('passes what ships and every form in a non-production module', ({ expect }) => {
     expect.hasAssertions();
     const found = named(chainOf(chainScan()));
     expect(importers('passes').filter((path) => found.has(path))).toStrictEqual([]);
   });
 
-  test('admits the import.meta members its declared list holds, asking the list', () => {
+  test('admits the import.meta members its declared list holds, asking the list', ({ expect }) => {
     expect.hasAssertions();
     const asked = vi.spyOn(ADMITTED_META, 'has');
     wholeChain(chainScan());
@@ -189,7 +194,7 @@ describe('the whole chain of a member absent on disk', () => {
     [['packages/plant/', 'foundation']],
   );
 
-  test('refuses its production import of its test support, the directory the scan mounts', () => {
+  test('refuses its production import of its test support, the directory the scan mounts', ({ expect }) => {
     expect.hasAssertions();
     expect(wholeChain(absentScan()).edges).toStrictEqual([
       { from: 'packages/plant/src/plant.ts', to: 'packages/plant/src/testing/support.ts' },

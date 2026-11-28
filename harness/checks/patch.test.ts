@@ -1,6 +1,6 @@
 /** A patched function runs its replacement until restored, and only a function can be patched. */
 
-import { describe, expect, test } from 'vitest';
+import { describe, test } from 'vitest';
 import { patch } from '#lib/patch.ts';
 
 /** What the planted function adds. */
@@ -13,7 +13,7 @@ const EXTRA = 10;
 const INPUT = 2;
 
 describe('a patch', () => {
-  test('runs the replacement, which may call the real function, until it is restored', () => {
+  test('runs the replacement, which may call the real function, until it is restored', ({ expect }) => {
     expect.hasAssertions();
     const target = {
       add(value: number): number {
@@ -32,7 +32,7 @@ describe('a patch', () => {
     expect(target.add(INPUT)).toBe(INPUT + STEP);
   });
 
-  test('refuses a key that is not a function, naming it', () => {
+  test('refuses a key that is not a function, naming it', ({ expect }) => {
     expect.hasAssertions();
     expect(() => patch({ planted: 1 }, 'planted', (real) => real)).toThrow(new TypeError('planted is not a function'));
   });

@@ -2,7 +2,7 @@
 
 import { EXIT_BROKEN, EXIT_CLEAN, EXIT_FINDINGS } from '#lib/exit-status.ts';
 import { compileErrorsOf, plantedTsconfig } from '#lib/fixture-project.ts';
-import { describe, expect, test } from 'vitest';
+import { describe, test } from 'vitest';
 import { object, parsed } from '#lib/config.ts';
 import { FixtureError } from '#lib/fixture-error.ts';
 import { fromRoot } from '#lib/paths.ts';
@@ -22,7 +22,7 @@ function plantedPaths(tsconfig: string): Readonly<Record<string, unknown>> {
 }
 
 describe('the planted tsconfig', () => {
-  test("maps each named member's `.` export, written as a path or as the map's `.` entry, and nothing else", async () => {
+  test("maps each named member's `.` export, written as a path or as the map's `.` entry, and nothing else", async ({ expect }) => {
     expect.hasAssertions();
     const held = await plantedPopulation(
       [],
@@ -42,7 +42,7 @@ describe('the planted tsconfig', () => {
 });
 
 describe("tsc's errors", () => {
-  test('read each error line, one on no file with an empty file', () => {
+  test('read each error line, one on no file with an empty file', ({ expect }) => {
     expect.hasAssertions();
     const stdout = "a.ts(1,2): error TS2322: Type 'string'.\nerror TS5058: The specified path does not exist.\n";
     expect(compileErrorsOf(EXIT_FINDINGS, stdout, '')).toStrictEqual([
@@ -52,7 +52,7 @@ describe("tsc's errors", () => {
     expect(compileErrorsOf(EXIT_CLEAN, '', '')).toStrictEqual([]);
   });
 
-  test('refuse a failed run with no error line read, naming what it wrote', () => {
+  test('refuse a failed run with no error line read, naming what it wrote', ({ expect }) => {
     expect.hasAssertions();
     expect(() => compileErrorsOf(EXIT_BROKEN, 'Aborted', 'core dumped')).toThrow(
       new FixtureError('tsc exited 2 with no error read: Abortedcore dumped'),

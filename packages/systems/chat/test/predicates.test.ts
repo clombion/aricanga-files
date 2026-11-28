@@ -1,5 +1,5 @@
 import type { Effect, Input, ReduceRecord } from '@narratives/foundation';
-import { describe, expect, test } from 'vitest';
+import { describe, test } from 'vitest';
 import {
   effectsCarryChatId,
   forwardOnlyTime,
@@ -65,7 +65,7 @@ function receipt(messageId: string, word: string): Effect {
 }
 
 describe('routing ownership', () => {
-  test('fails a targeted line held by no chat, and passes an untargeted or empty one', () => {
+  test('fails a targeted line held by no chat, and passes an untargeted or empty one', ({ expect }) => {
     expect.hasAssertions();
     const emptyTargeted = record(line('', ['targetChat: pat']));
     const untargeted = record(line('hi'));
@@ -80,7 +80,7 @@ describe('routing ownership', () => {
 });
 
 describe('notify once', () => {
-  test('fails a second notification in one epoch, and passes one after the chat was opened', () => {
+  test('fails a second notification in one epoch, and passes one after the chat was opened', ({ expect }) => {
     expect.hasAssertions();
     const twice = [record(line('a'), START, [NOTIFY_PAT, fx.present('chat/other', {})]), record(line('b'), START, [NOTIFY_PAT])];
     expect(notifyOnce({ effects: [], trace: twice })).toStrictEqual({
@@ -94,7 +94,7 @@ describe('notify once', () => {
 });
 
 describe('seed exclusion', () => {
-  test('fails a notification from the seed init, and passes one from a reset', () => {
+  test('fails a notification from the seed init, and passes one from a reset', ({ expect }) => {
     expect.hasAssertions();
     const seeded = record({ lifecycle: { kind: 'init', seed: 0 }, source: 'lifecycle' }, START, [NOTIFY_PAT]);
     expect(seedExclusion({ effects: [], trace: [seeded] })).toStrictEqual({
@@ -109,7 +109,7 @@ describe('seed exclusion', () => {
 });
 
 describe('the read high-water mark', () => {
-  test('fails a cursor that returns to the top after a read, and passes one never read', () => {
+  test('fails a cursor that returns to the top after a read, and passes one never read', ({ expect }) => {
     expect.hasAssertions();
     const read: ChatState = { ...START, lastReadMessageId: { pat: { at: 'after', messageId: 'm1' } } };
     const top: ChatState = { ...START, lastReadMessageId: { pat: { at: 'top' }, sam: { at: 'top' } } };
@@ -125,7 +125,7 @@ describe('the read high-water mark', () => {
 });
 
 describe('forward-only time', () => {
-  test('fails a clock that goes back, and passes an unanchored one', () => {
+  test('fails a clock that goes back, and passes an unanchored one', ({ expect }) => {
     expect.hasAssertions();
     const later = record(line('a'), { ...START, clock: LATER });
     const earlier = record(line('b'), { ...START, clock: EARLIER });
@@ -140,7 +140,7 @@ describe('forward-only time', () => {
 });
 
 describe('chat effects carry a chat id', () => {
-  test('fails an empty chat id, and passes a chat effect with none declared and any other effect', () => {
+  test('fails an empty chat id, and passes a chat effect with none declared and any other effect', ({ expect }) => {
     expect.hasAssertions();
     const passing = [NOTIFY_PAT, fx.present('chat/quiet', {}), fx.present('other/kind', { chatId: '' })];
     expect(effectsCarryChatId({ effects: passing, trace: [] })).toBeUndefined();
@@ -152,7 +152,7 @@ describe('chat effects carry a chat id', () => {
 });
 
 describe('receipt monotonic', () => {
-  test('passes receipts that advance, and fails one that regresses', () => {
+  test('passes receipts that advance, and fails one that regresses', ({ expect }) => {
     expect.hasAssertions();
     const advancing = [receipt('m1', 'sent'), NOTIFY_PAT, receipt('m1', 'delivered'), receipt('m1', 'read'), receipt('m2', 'sent')];
     expect(receiptMonotonic({ effects: advancing, trace: [] })).toBeUndefined();
@@ -162,7 +162,7 @@ describe('receipt monotonic', () => {
     });
   });
 
-  test('ranks a receipt word it does not know below sent, Object.prototype members included', () => {
+  test('ranks a receipt word it does not know below sent, Object.prototype members included', ({ expect }) => {
     expect.hasAssertions();
     expect(receiptMonotonic({ effects: [receipt('m1', 'sent'), receipt('m1', 'toString')], trace: [] })).toStrictEqual({
       detail: 'receipt for "m1" regressed to "toString"',

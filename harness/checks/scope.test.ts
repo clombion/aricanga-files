@@ -14,7 +14,7 @@ import {
 } from './scope.plants.ts';
 import { LOCKFILE, lockOf } from '#lib/pins.ts';
 import { POC, population, populationOf } from '#lib/scope.ts';
-import { describe, expect, test } from 'vitest';
+import { describe, test } from 'vitest';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { perRoot, textOf } from '#lib/source-files.ts';
 import { PopulationError } from '#lib/workspace.ts';
@@ -26,7 +26,6 @@ const HARNESS_ID = 'population';
 
 /**
  * The refusal of a one-member population whose manifest is `text`, with its first cause's head.
- *
  * @param {string} text - The manifest's text.
  * @returns {Promise<readonly string[]>} The refusal, and its cause's class, source and first words.
  */
@@ -41,7 +40,7 @@ async function refusalHead(text: string): Promise<readonly string[]> {
 }
 
 describe('a population', () => {
-  test('holds a listed workspace package with a role, and leaves out the root, an unlisted one and the POC', async () => {
+  test('holds a listed workspace package with a role, and leaves out the root, an unlisted one and the POC', async ({ expect }) => {
     expect.hasAssertions();
     const held = await populationOf({
       listing: ['package.json', 'packages/view/package.json', 'packages/view/src/a.ts', 'packages/framework/package.json'],
@@ -56,7 +55,7 @@ describe('a population', () => {
     );
   });
 
-  test('refuses a member with no role or an unknown one, naming its manifest, the roles and their module', async () => {
+  test('refuses a member with no role or an unknown one, naming its manifest, the roles and their module', async ({ expect }) => {
     expect.hasAssertions();
     const refusals = await Promise.all(
       [JSON.stringify({ name: 'x' }), manifest('widget')].map(async (text) => {
@@ -78,7 +77,7 @@ describe('a population', () => {
 });
 
 describe('a nested population', () => {
-  test('answers the nearest member of a nested path', async () => {
+  test('answers the nearest member of a nested path', async ({ expect }) => {
     expect.hasAssertions();
     const held = await populationOf({
       listing: ['packages/a/package.json', 'packages/a/b/package.json'],
@@ -94,7 +93,7 @@ describe('a nested population', () => {
 });
 
 describe("a population's root manifest", () => {
-  test("reads the root's manifest for its fields and not its aricanga, which declares no role", async () => {
+  test("reads the root's manifest for its fields and not its aricanga, which declares no role", async ({ expect }) => {
     expect.hasAssertions();
     const roots = await Promise.all(
       ['{"aricanga":null}', '{"aricanga":"system"}'].map(async (text) => {
@@ -111,7 +110,9 @@ describe("a population's root manifest", () => {
 });
 
 describe('a population refused', () => {
-  test('refuses every member with a bad role at once, and a manifest pnpm reads that starts with a byte-order mark or whose aricanga is no object, null included, by its path', async () => {
+  test('refuses every member with a bad role at once, and a manifest pnpm reads that starts with a byte-order mark or whose aricanga is no object, null included, by its path', async ({
+    expect,
+  }) => {
     expect.hasAssertions();
     const roles = reader({
       'package.json': '{}',
@@ -152,7 +153,9 @@ describe('a population refused', () => {
 });
 
 describe('a population whose manifests cannot be read', () => {
-  test("names every manifest it cannot read, the root's and one gone since pnpm listed it, apart from one whose aricanga is no object, and every role refused in one refusal, each kept as its cause", async () => {
+  test("names every manifest it cannot read, the root's and one gone since pnpm listed it, apart from one whose aricanga is no object, and every role refused in one refusal, each kept as its cause", async ({
+    expect,
+  }) => {
     expect.hasAssertions();
     const computing = populationOf({
       listing: ['packages/a/package.json', 'packages/b/package.json', 'packages/c/package.json', 'packages/d/package.json'],
@@ -178,7 +181,9 @@ describe('a population whose manifests cannot be read', () => {
 });
 
 describe("a population's modules", () => {
-  test('refuses every held module that is not TypeScript, by each kind, and holds a declaration file, data and an unheld script', async () => {
+  test('refuses every held module that is not TypeScript, by each kind, and holds a declaration file, data and an unheld script', async ({
+    expect,
+  }) => {
     expect.hasAssertions();
     const others = ['a.cjs', 'a.cts', 'a.js', 'a.jsx', 'a.mjs', 'a.mts'].map((file) => `packages/a/src/${file}`);
     const refusal = await refusalOf(plantedPopulation([...others, 'packages/a/src/b.ts'], [['packages/a/', 'foundation']]));
@@ -196,7 +201,7 @@ describe("a population's modules", () => {
 });
 
 describe('a population by tier', () => {
-  test("selects each tier's members, and parts the members into those that ship and the test infrastructure", async () => {
+  test("selects each tier's members, and parts the members into those that ship and the test infrastructure", async ({ expect }) => {
     expect.hasAssertions();
     const held = await plantedPopulation(
       [],
@@ -222,14 +227,16 @@ describe('a population by tier', () => {
 });
 
 describe('the records', () => {
-  test('subtracts each POC entry as a directory, not as a prefix of a name', () => {
+  test('subtracts each POC entry as a directory, not as a prefix of a name', ({ expect }) => {
     expect.hasAssertions();
     expect([POC.starts('utils/x.js'), POC.starts('utils2/x.js'), POC.starts('packages/tests/a.ts')]).toStrictEqual([true, false, true]);
   });
 });
 
 describe('a checkout', () => {
-  test("computes a checkout's population from pnpm's workspace, each member named as pnpm lists it, git's listing and each member's manifest", async () => {
+  test("computes a checkout's population from pnpm's workspace, each member named as pnpm lists it, git's listing and each member's manifest", async ({
+    expect,
+  }) => {
     expect.hasAssertions();
     await inWorkspaceFolder('computed-', '{}', async (folder) => {
       await mkdir(path.join(folder, 'a', 'x'), { recursive: true });
@@ -241,13 +248,13 @@ describe('a checkout', () => {
 });
 
 describe('the memo', () => {
-  test('answers one population to two calls', async () => {
+  test('answers one population to two calls', async ({ expect }) => {
     expect.hasAssertions();
     const first = await population();
     await expect(population()).resolves.toBe(first);
   });
 
-  test('shares one computation between concurrent first calls', async () => {
+  test('shares one computation between concurrent first calls', async ({ expect }) => {
     expect.hasAssertions();
     const calls: string[] = [];
     const remembered = perRoot(async (root: string): Promise<{ root: string }> => {
@@ -259,7 +266,7 @@ describe('the memo', () => {
     expect([first === second, calls]).toStrictEqual([true, ['r']]);
   });
 
-  test('computes again after a computation that throws before it returns', async () => {
+  test('computes again after a computation that throws before it returns', async ({ expect }) => {
     expect.hasAssertions();
     const calls: string[] = [];
     const thrown = (root: string): never => {
@@ -272,7 +279,7 @@ describe('the memo', () => {
     expect(calls).toStrictEqual(['r', 'r']);
   });
 
-  test('computes again after a failure', async () => {
+  test('computes again after a failure', async ({ expect }) => {
     expect.hasAssertions();
     await inWorkspaceFolder('recovering-', '{', async (folder) => {
       await expect(population(folder)).rejects.toThrow(PopulationError);
@@ -283,7 +290,7 @@ describe('the memo', () => {
 });
 
 describe('the repository', () => {
-  test('holds every package the lockfile records, but the root and the POC', async () => {
+  test('holds every package the lockfile records, but the root and the POC', async ({ expect }) => {
     expect.hasAssertions();
     const [held, lockText] = await Promise.all([population(), textOf(LOCKFILE)]);
     expect([lockOf(lockText).has('.'), missedImporters(held, lockText)]).toStrictEqual([true, []]);

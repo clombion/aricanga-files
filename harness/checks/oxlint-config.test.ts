@@ -8,7 +8,7 @@
 
 import { REPO_ROOT, fromRoot } from '#lib/paths.ts';
 import { ROOT_CONFIG_MODULES, knipConfig, oxlintConfig } from '#lib/config-modules.ts';
-import { describe, expect, test } from 'vitest';
+import { describe, test } from 'vitest';
 import { namedOverrides, oxlintConfigOf } from '#lib/oxlint-config.ts';
 import { EXIT_CLEAN } from '#lib/exit-status.ts';
 import type { Population } from '#lib/scope.ts';
@@ -70,7 +70,7 @@ function nodeFiles(held: Population): readonly string[] {
 }
 
 describe('the oxlint configuration of a planted population', () => {
-  test("names each member by its role's modules, wherever the member sits", async () => {
+  test("names each member by its role's modules, wherever the member sits", async ({ expect }) => {
     expect.hasAssertions();
     const held = await plantedPopulation(
       ['lib/sys/src/model/a.ts', 'lib/sys/src/system.ts', 'lib/sys/tests/a.ts', 'probe/tests/a.spec.ts', 'tools/core/src/a.ts'],
@@ -90,7 +90,7 @@ describe('the oxlint configuration of a planted population', () => {
     expect([node?.includes('probe/tests/**'), node?.includes('lib/sys/tests/**')]).toStrictEqual([true, false]);
   });
 
-  test('has no reducer override without a system model, and no glob the listing leaves empty', async () => {
+  test('has no reducer override without a system model, and no glob the listing leaves empty', async ({ expect }) => {
     expect.hasAssertions();
     const held = await plantedPopulation(
       ['packages/core/src/a.ts'],
@@ -118,7 +118,7 @@ describe('the oxlint configuration of a planted population', () => {
 });
 
 describe('the Node env of test support', () => {
-  test("reaches a member's test directory at any depth below it, and not a member that sits under a test directory", async () => {
+  test("reaches a member's test directory at any depth below it, and not a member that sits under a test directory", async ({ expect }) => {
     expect.hasAssertions();
     const held = await plantedPopulation(
       ['packages/test/kit/src/a.ts', 'packages/ok/test/b.ts', 'packages/ok/src/test/c.ts', 'packages/ok/src/d.ts'],
@@ -138,7 +138,7 @@ describe('the Node env of test support', () => {
 });
 
 describe('the oxlint configuration of a population with no mechanics', () => {
-  test('turns the Solid ban off where no member has a mechanics module, since its files may not be empty', async () => {
+  test('turns the Solid ban off where no member has a mechanics module, since its files may not be empty', async ({ expect }) => {
     expect.hasAssertions();
     const held = await plantedPopulation(['ui/view/src/a.tsx'], [['ui/view/', 'view']]);
     expect(oxlintConfigOf(held).rules['aricanga/mechanics']).toBe('off');
@@ -146,7 +146,7 @@ describe('the oxlint configuration of a population with no mechanics', () => {
 });
 
 describe('the repository', () => {
-  test("loads oxlint's and knip's configurations, typed, from the root modules the tasks name", async () => {
+  test("loads oxlint's and knip's configurations, typed, from the root modules the tasks name", async ({ expect }) => {
     expect.hasAssertions();
     const [oxlint, knip] = await Promise.all([oxlintConfig(), knipConfig()]);
     const [oxlintModule, knipModule] = await Promise.all([
@@ -156,7 +156,7 @@ describe('the repository', () => {
     expect([JSON.stringify(oxlint), JSON.stringify(knip)]).toStrictEqual([JSON.stringify(oxlintModule), JSON.stringify(knipModule)]);
   });
 
-  test('oxlint, as the lint task runs it, lints exactly the listed lintable files the population holds', async () => {
+  test('oxlint, as the lint task runs it, lints exactly the listed lintable files the population holds', async ({ expect }) => {
     expect.hasAssertions();
     const [linted, held] = await Promise.all([lintedFiles(REPO_ROOT), population()]);
     const listed = new Set(held.listing);

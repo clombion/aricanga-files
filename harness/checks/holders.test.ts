@@ -10,7 +10,7 @@
  * (`scanRoots`), which take each module once.
  */
 
-import { describe, expect, test } from 'vitest';
+import { describe, test } from 'vitest';
 import { fieldMatches, matches } from '#lint-rules/globs.ts';
 import { harnessModules, heldDir } from '#lib/holders.ts';
 import { listing, manifest, reader, refusalOf } from './scope.plants.ts';
@@ -61,7 +61,9 @@ const HOLDER_PROBES: readonly string[] = [
 ];
 
 describe("a population's holders", () => {
-  test("gives a path to its member, the harness's directory and the root configuration modules to the harness, and others to none", async () => {
+  test("gives a path to its member, the harness's directory and the root configuration modules to the harness, and others to none", async ({
+    expect,
+  }) => {
     expect.hasAssertions();
     const held = await populationOf({
       listing: ['package.json', 'packages/view/package.json', 'packages/framework/package.json'],
@@ -72,7 +74,9 @@ describe("a population's holders", () => {
     expect(holders).toStrictEqual([...held.members, 'harness', 'harness', undefined, undefined]);
   });
 
-  test("gives a member under the harness's directory its own files, nested in the harness, and the harness the rest of its directory", async () => {
+  test("gives a member under the harness's directory its own files, nested in the harness, and the harness the rest of its directory", async ({
+    expect,
+  }) => {
     expect.hasAssertions();
     const held = await populationOf({
       listing: ['package.json', 'harness/tools/package.json'],
@@ -82,7 +86,7 @@ describe("a population's holders", () => {
     expect(['harness/tools/src/a.ts', 'harness/lib/a.ts'].map((path) => held.holderOf(path))).toStrictEqual([...held.members, 'harness']);
   });
 
-  test("refuses a member at the harness's root, whose files would be its own and the harness's", async () => {
+  test("refuses a member at the harness's root, whose files would be its own and the harness's", async ({ expect }) => {
     expect.hasAssertions();
     const building = populationOf({
       listing: ['package.json', 'harness/package.json'],
@@ -96,7 +100,7 @@ describe("a population's holders", () => {
 });
 
 describe('the repository', () => {
-  test("every reader of whose code a held module is gives its holder's answer", async () => {
+  test("every reader of whose code a held module is gives its holder's answer", async ({ expect }) => {
     expect.hasAssertions();
     const held = await population();
     const files = typescriptOf(held);

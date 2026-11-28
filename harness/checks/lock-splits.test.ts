@@ -1,6 +1,6 @@
 /** The packages a lockfile locks at two versions: read over every importer, a workspace link and a peer suffix aside. */
 
-import { describe, expect, test } from 'vitest';
+import { describe, test } from 'vitest';
 import { lockSplits } from '#lib/lock-splits.ts';
 
 /** A lockfile whose importers lock `solid-js` at two versions, `vite` at one under two peer suffixes, and link one workspace package two ways. */
@@ -37,12 +37,12 @@ const SPLIT = [
 ].join('\n');
 
 describe('the split packages of a lockfile', () => {
-  test('name a package locked at two versions with the importers of each, and no link or peer suffix', () => {
+  test('name a package locked at two versions with the importers of each, and no link or peer suffix', ({ expect }) => {
     expect.hasAssertions();
     expect(lockSplits(SPLIT)).toStrictEqual(['solid-js: 2.0.3 (., packages/app), 2.0.4 (experiences/sandbox)']);
   });
 
-  test('name each split package once, ordered by name', () => {
+  test('name each split package once, ordered by name', ({ expect }) => {
     expect.hasAssertions();
     const two = SPLIT.replace('version: 8.3.8(peer@2.0.0)', 'version: 8.4.0')
       .replace('  .:\n', "  .:\n    devDependencies:\n      ab:\n        specifier: '1'\n        version: 1.0.0\n")
@@ -57,7 +57,7 @@ describe('the split packages of a lockfile', () => {
     ]);
   });
 
-  test('find none where every importer locks a package at one version', () => {
+  test('find none where every importer locks a package at one version', ({ expect }) => {
     expect.hasAssertions();
     expect(
       lockSplits(SPLIT.replace('specifier: 2.0.4\n        version: 2.0.4', "specifier: 'catalog:'\n        version: 2.0.3")),

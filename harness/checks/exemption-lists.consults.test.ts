@@ -5,7 +5,7 @@
  */
 
 import { UNCONSULTED, findings } from './exemption-lists.fence.ts';
-import { describe, expect, test } from 'vitest';
+import { describe, test } from 'vitest';
 
 const PLANT = 'harness/checks/plant.test.ts';
 const OWNER = 'harness/lib/planted.ts';
@@ -27,15 +27,18 @@ const IMPORTS_ONLY = [
 ].join('\n');
 
 describe('a read of a read-kind declaration', () => {
-  test.each(READ_KINDS)('is none for %s only imported, re-exported, bound by an import clause or destructured', async (_kind, value) => {
-    expect.hasAssertions();
-    const owner = `export const NAME = ${value};\nexport { NAME as default };\n`;
-    await expect(findings({ [OWNER]: owner, [PLANT]: IMPORTS_ONLY })).resolves.toStrictEqual([
-      { name: 'NAME', path: OWNER, problem: UNCONSULTED },
-    ]);
-  });
+  test.for(READ_KINDS)(
+    'is none for %s only imported, re-exported, bound by an import clause or destructured',
+    async ([_kind, value], { expect }) => {
+      expect.hasAssertions();
+      const owner = `export const NAME = ${value};\nexport { NAME as default };\n`;
+      await expect(findings({ [OWNER]: owner, [PLANT]: IMPORTS_ONLY })).resolves.toStrictEqual([
+        { name: 'NAME', path: OWNER, problem: UNCONSULTED },
+      ]);
+    },
+  );
 
-  test.each([
+  test.for([
     [
       'in an importer',
       "export const NAMES = new Accepted(['a']);\n",
@@ -46,14 +49,14 @@ describe('a read of a read-kind declaration', () => {
       "export const NAMES = new Accepted(['a']);\n/** See {@link NAMES}. */\nexport const x = 1;\n",
       'export const n = 1;\n',
     ],
-  ])('is none for a mention in a doc comment, %s', async (_where, owner, user) => {
+  ] as const)('is none for a mention in a doc comment, %s', async ([_where, owner, user], { expect }) => {
     expect.hasAssertions();
     await expect(findings({ [OWNER]: owner, [PLANT]: user })).resolves.toStrictEqual([
       { name: 'NAMES', path: OWNER, problem: UNCONSULTED },
     ]);
   });
 
-  test('is a read two destructurings away: a relay destructures and re-exports it, the user destructures the relay', async () => {
+  test('is a read two destructurings away: a relay destructures and re-exports it, the user destructures the relay', async ({ expect }) => {
     expect.hasAssertions();
     const modules = {
       [OWNER]: "export const NAMES = new Accepted(['a']);\n",

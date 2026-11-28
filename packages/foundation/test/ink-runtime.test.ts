@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'vitest';
+import { describe, test } from 'vitest';
 import { InkRuntime } from '#src/ink/ink-runtime';
 import { compileInk } from '#src/testing/compile';
 
@@ -43,7 +43,7 @@ Colour {name(red)}.
 `;
 
 describe('the ink runtime', () => {
-  test('resolves names and data through the lookups it is given', () => {
+  test('resolves names and data through the lookups it is given', ({ expect }) => {
     expect.hasAssertions();
     const ink = InkRuntime.fromJson(compileInk(EXTERNALS), {
       data: (key): string => `data:${key}`,
@@ -52,13 +52,13 @@ describe('the ink runtime', () => {
     expect(ink.continue().text).toBe('Hello name:pat and data:weather.');
   });
 
-  test('passes a name or a data key through as itself without a lookup', () => {
+  test('passes a name or a data key through as itself without a lookup', ({ expect }) => {
     expect.hasAssertions();
     const ink = InkRuntime.fromJson(compileInk(EXTERNALS));
     expect(ink.continue().text).toBe('Hello pat and weather.');
   });
 
-  test('drains the externals a line calls into its step, and waits for requested data', () => {
+  test('drains the externals a line calls into its step, and waits for requested data', ({ expect }) => {
     expect.hasAssertions();
     const ink = InkRuntime.fromJson(compileInk(EXTERNALS));
     ink.continue();
@@ -72,20 +72,20 @@ describe('the ink runtime', () => {
     expect(step.status).toBe('await-data');
   });
 
-  test('reads a number or a boolean ink passes an external as its text, and a numeric text as a number', () => {
+  test('reads a number or a boolean ink passes an external as its text, and a numeric text as a number', ({ expect }) => {
     expect.hasAssertions();
     const ink = InkRuntime.fromJson(compileInk(PRIMITIVES));
     expect(ink.continue().text).toBe('Number 7 and truth true.');
     expect(ink.continue().externalCalls).toStrictEqual([{ fn: 'delay_next', seconds: THREE }]);
   });
 
-  test('drains a data request with no parameters without inventing them', () => {
+  test('drains a data request with no parameters without inventing them', ({ expect }) => {
     expect.hasAssertions();
     const ink = InkRuntime.fromJson(compileInk(NO_PARAMS));
     expect(ink.continue().externalCalls).toStrictEqual([{ fn: 'request_data', query: 'units', source: 'gem' }]);
   });
 
-  test('refuses a value ink passes an external that is no primitive', () => {
+  test('refuses a value ink passes an external that is no primitive', ({ expect }) => {
     expect.hasAssertions();
     const ink = InkRuntime.fromJson(compileInk(LIST_ARGUMENT));
     expect(() => ink.continue()).toThrow('ink passed an external a object, not a primitive');

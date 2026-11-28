@@ -1,6 +1,6 @@
 /** How a bounded run ends: an empty command, a missing binary, a child a signal ends, a bound, and input the child leaves unread. */
 
-import { describe, expect, test } from 'vitest';
+import { describe, test } from 'vitest';
 import { environment, run } from '#lib/process.ts';
 import { EXIT_CLEAN } from '#lib/exit-status.ts';
 import type { Outcome } from '#lib/process.ts';
@@ -34,18 +34,18 @@ function notStartedBecause(outcome: Outcome): string {
 }
 
 describe('a bounded run', () => {
-  test('of no command does not start', async () => {
+  test('of no command does not start', async ({ expect }) => {
     expect.hasAssertions();
     await expect(run([], OPTIONS)).resolves.toStrictEqual({ argv: [], kind: 'not-started', reason: 'empty argv' });
   });
 
-  test('of a binary that does not exist does not start, naming the failure', async () => {
+  test('of a binary that does not exist does not start, naming the failure', async ({ expect }) => {
     expect.hasAssertions();
     const outcome = await run(['planted-binary-that-does-not-exist'], OPTIONS);
     expect(notStartedBecause(outcome)).toContain('ENOENT');
   });
 
-  test('of a child a signal ends counts as outliving its bound', async () => {
+  test('of a child a signal ends counts as outliving its bound', async ({ expect }) => {
     expect.hasAssertions();
     const outcome = await run(['node', '-e', "process.kill(process.pid, 'SIGKILL')"], OPTIONS);
     expect(outcome).toStrictEqual({
@@ -55,19 +55,19 @@ describe('a bounded run', () => {
     });
   });
 
-  test('past its bound is killed and reported as timed out', async () => {
+  test('past its bound is killed and reported as timed out', async ({ expect }) => {
     expect.hasAssertions();
     const outcome = await run(['sleep', '5'], { cwd: REPO_ROOT, timeoutMs: SHORT_MS });
     expect(outcome).toStrictEqual({ argv: ['sleep', '5'], kind: 'timed-out', timeoutMs: SHORT_MS });
   });
 
-  test('whose child leaves its input unread does not start', async () => {
+  test('whose child leaves its input unread does not start', async ({ expect }) => {
     expect.hasAssertions();
     const outcome = await run(['node', '-e', ''], { ...OPTIONS, input: UNREAD });
     expect(notStartedBecause(outcome)).toContain('EPIPE');
   });
 
-  test('whose child reads its input finishes with what it wrote', async () => {
+  test('whose child reads its input finishes with what it wrote', async ({ expect }) => {
     expect.hasAssertions();
     const argv = ['node', '-e', 'process.stdin.pipe(process.stdout)'];
     const outcome = await run(argv, { ...OPTIONS, input: 'planted' });
@@ -76,7 +76,7 @@ describe('a bounded run', () => {
 });
 
 describe("this process's environment", () => {
-  test('holds only set variables, each a string', () => {
+  test('holds only set variables, each a string', ({ expect }) => {
     expect.hasAssertions();
     expect(Object.values(environment()).every((value) => typeof value === 'string')).toBe(true);
   });

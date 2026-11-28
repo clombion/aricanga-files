@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'vitest';
+import { describe, test } from 'vitest';
 import type { Lifecycle } from '#src/sim/input';
 
 /** The seed of the `init` lifecycle the tests describe. */
@@ -37,13 +37,13 @@ function describeBy<TKind extends Lifecycle['kind']>(
 }
 
 describe('a dispatch table over a closed union', () => {
-  test('handles every kind it is typed by', () => {
+  test('handles every kind it is typed by', ({ expect }) => {
     expect.hasAssertions();
     expect(describeBy(DESCRIBERS, { kind: 'init', seed: SEED })).toBe(`init:${SEED}`);
     expect(describeBy(DESCRIBERS, RESET)).toBe(RESET.kind);
   });
 
-  test('missing a kind fails to compile (proven by @ts-expect-error), and that kind has no handler', () => {
+  test('missing a kind fails to compile (proven by @ts-expect-error), and that kind has no handler', ({ expect }) => {
     expect.hasAssertions();
     expect(Object.hasOwn(MISSING, RESET.kind)).toBe(false);
   });

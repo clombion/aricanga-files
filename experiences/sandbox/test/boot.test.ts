@@ -1,6 +1,6 @@
 // The sandbox's boot: it fetches the compiled story into the page's #app, and shows a failure there.
 
-import { describe, expect, test, vi } from 'vitest';
+import { describe, test, vi } from 'vitest';
 import type { MockInstance } from 'vitest';
 import { SkMessage } from '#parts/sk-message';
 import { compileInk } from '@narratives/foundation/testing';
@@ -51,7 +51,7 @@ function messageTexts(root: Readonly<Pick<ParentNode, 'querySelectorAll'>>): rea
 }
 
 describe('the sandbox boot', () => {
-  test('fetches the story and renders a message per line that carries text', async () => {
+  test('fetches the story and renders a message per line that carries text', async ({ expect }) => {
     expect.hasAssertions();
     const requested = stubFetch(async () => {
       const response = await Promise.resolve(new Response(compileInk(STORY)));
@@ -67,7 +67,7 @@ describe('the sandbox boot', () => {
     expect(texts).toStrictEqual(['Narrated.', 'Pat: Spoken.']);
   });
 
-  test('shows the failure in #app when the story cannot be fetched', async () => {
+  test('shows the failure in #app when the story cannot be fetched', async ({ expect }) => {
     expect.hasAssertions();
     stubFetch(async () => {
       await Promise.reject(new Error('offline'));
@@ -78,7 +78,7 @@ describe('the sandbox boot', () => {
     expect(root.textContent).toBe('walking skeleton failed: Error: offline');
   });
 
-  test('does nothing on a page without #app', async () => {
+  test('does nothing on a page without #app', async ({ expect }) => {
     expect.hasAssertions();
     const requested = stubFetch(async () => {
       const response = await Promise.resolve(new Response(''));

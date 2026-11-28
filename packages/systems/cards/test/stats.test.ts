@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'vitest';
+import { describe, test } from 'vitest';
 import type { CardsState } from '#src/system';
 import { cardsSystem } from '#src/system';
 import { parseTag } from '@narratives/foundation';
@@ -34,19 +34,19 @@ function play(state: CardsState, tagValue: string): CardsState {
 }
 
 describe('a stat a card moves', () => {
-  test('starts from zero whatever its name, Object.prototype members included', () => {
+  test('starts from zero whatever its name, Object.prototype members included', ({ expect }) => {
     expect.hasAssertions();
     const played = play(play(cardsSystem.init(SEED), `toString:+${String(COURAGE)}`), `constructor:+${String(COURAGE)}`);
     expect(played.stats).toStrictEqual({ constructor: COURAGE, toString: COURAGE });
   });
 
-  test('adds each card to the stat it names', () => {
+  test('adds each card to the stat it names', ({ expect }) => {
     expect.hasAssertions();
     const played = play(play(cardsSystem.init(SEED), `courage:+${String(COURAGE)}`), `courage:+${String(COURAGE)}`);
     expect(cardsSystem.view(played, RENDER)).toStrictEqual({ cursor: TWO_CARDS, stats: { courage: COURAGE + COURAGE } });
   });
 
-  test('moves nothing for a delta that is missing or not a number, yet still plays the card', () => {
+  test('moves nothing for a delta that is missing or not a number, yet still plays the card', ({ expect }) => {
     expect.hasAssertions();
     const played = play(play(cardsSystem.init(SEED), 'courage'), 'courage:lots');
     expect(cardsSystem.view(played, RENDER)).toStrictEqual({ cursor: TWO_CARDS, stats: { courage: NO_MOVE } });
@@ -54,7 +54,7 @@ describe('a stat a card moves', () => {
 });
 
 describe('the cards system', () => {
-  test('ignores a stat tag with no value, a step without one, and any input that is no story step', () => {
+  test('ignores a stat tag with no value, a step without one, and any input that is no story step', ({ expect }) => {
     expect.hasAssertions();
     const deck = cardsSystem.init(SEED);
     const step = (tags: readonly string[]): CardsState =>

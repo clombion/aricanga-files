@@ -2,7 +2,7 @@
 
 import { HARNESS_CHECKS, VITEST_TESTS, coverageIncludes, isRunnerTest, testIncludes, viteApps } from '#lib/test-globs.ts';
 import { coverageOf, gateTest, globsOf, projectsOf, testOf } from './gate-config.ts';
-import { describe, expect, test } from 'vitest';
+import { describe, test } from 'vitest';
 import { list, object } from '#lib/config.ts';
 import type { Population } from '#lib/scope.ts';
 import { configOf } from '#lib/vitest-config.ts';
@@ -66,7 +66,7 @@ function projectShapes(held: Population): readonly ProjectShape[] {
 }
 
 describe("the gate config's projects", () => {
-  test('give each shipping Vite app a project extending its own Vite config, and its tests to no other project', async () => {
+  test('give each shipping Vite app a project extending its own Vite config, and its tests to no other project', async ({ expect }) => {
     expect.hasAssertions();
     const held = await plantedPopulation(
       ['packages/app/vite.config.ts', 'packages/app/src/a.test.tsx', 'packages/probe/vite.config.ts', 'packages/core/test/a.test.ts'],
@@ -88,7 +88,7 @@ describe("the gate config's projects", () => {
 });
 
 describe('the gate globs', () => {
-  test("collect each shipping member's listed tests, a .test.tsx included, and no test-infrastructure member's", async () => {
+  test("collect each shipping member's listed tests, a .test.tsx included, and no test-infrastructure member's", async ({ expect }) => {
     expect.hasAssertions();
     expect(testIncludes(await planted())).toStrictEqual([
       'packages/core/**/*.test.{ts,tsx}',
@@ -97,7 +97,7 @@ describe('the gate globs', () => {
     ]);
   });
 
-  test("keep no glob of a member whose only matching files are a nested member's", async () => {
+  test("keep no glob of a member whose only matching files are a nested member's", async ({ expect }) => {
     expect.hasAssertions();
     const nested = await plantedPopulation(
       ['packages/a/b/test/t.test.ts'],
@@ -109,7 +109,7 @@ describe('the gate globs', () => {
     expect(testIncludes(nested)).toStrictEqual([]);
   });
 
-  test("cover each shipping member's listed sources, and no test-infrastructure member's", async () => {
+  test("cover each shipping member's listed sources, and no test-infrastructure member's", async ({ expect }) => {
     expect.hasAssertions();
     expect(coverageIncludes(await planted())).toStrictEqual(['packages/core/src/**', 'packages/lib/src/**', 'packages/view/src/**']);
   });
@@ -141,7 +141,9 @@ function unmatched(paths: readonly string[], globs: readonly string[]): readonly
 const PLANTED_TESTS: readonly string[] = ['packages/foundation/src/a.spec.ts', 'harness/checks/a.test.tsx'];
 
 describe('the repository', () => {
-  test('excludes from coverage every module a runner runs, and collects every harness check, planted forms included', async () => {
+  test('excludes from coverage every module a runner runs, and collects every harness check, planted forms included', async ({
+    expect,
+  }) => {
     expect.hasAssertions();
     const [files, settings] = await Promise.all([typescriptFiles(), gateTest()]);
     const excluded = globsOf(coverageOf(settings), 'exclude');
@@ -151,7 +153,7 @@ describe('the repository', () => {
     expect([unmatched(tests, excluded), unmatched(checks, includes)]).toStrictEqual([[], []]);
   });
 
-  test('collects every held Vitest test in a project of the gate config', async () => {
+  test('collects every held Vitest test in a project of the gate config', async ({ expect }) => {
     expect.hasAssertions();
     const [files, settings] = await Promise.all([typescriptFiles(), gateTest()]);
     const includes = projectsOf(settings).flatMap((project) => globsOf(project, 'include'));
@@ -160,7 +162,9 @@ describe('the repository', () => {
 });
 
 describe("a population's member files", () => {
-  test("gives each member its own files, a nested member's apart, and none to a member it does not hold, at another directory or at one of its own", async () => {
+  test("gives each member its own files, a nested member's apart, and none to a member it does not hold, at another directory or at one of its own", async ({
+    expect,
+  }) => {
     expect.hasAssertions();
     const held = await plantedPopulation(
       ['packages/a/x.ts', 'packages/a/b/y.ts'],

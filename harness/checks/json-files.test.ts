@@ -9,7 +9,7 @@
  * list.
  */
 
-import { describe, expect, test } from 'vitest';
+import { describe, test } from 'vitest';
 import { duplicateDependencies } from './json-files.manifests.ts';
 import { heldFiles } from '#lib/scope.ts';
 import { jsonProblems } from '#lib/json-strict.ts';
@@ -48,7 +48,7 @@ const NEAR_MISSES: readonly string[] = [
 ];
 
 describe('the repository', () => {
-  test('every held JSON file is strict JSON a reader cannot misread', async () => {
+  test('every held JSON file is strict JSON a reader cannot misread', async ({ expect }) => {
     expect.hasAssertions();
     const files = await heldFiles('.json', '.jsonc');
     const found = await Promise.all(
@@ -60,7 +60,7 @@ describe('the repository', () => {
     expect(found.flat()).toStrictEqual([]);
   });
 
-  test('no held manifest lists a dependency twice', async () => {
+  test('no held manifest lists a dependency twice', async ({ expect }) => {
     expect.hasAssertions();
     const manifests = await heldFiles('package.json');
     const found = await Promise.all(
@@ -74,31 +74,31 @@ describe('the repository', () => {
 });
 
 describe('the reader, on planted texts', () => {
-  test.each(PLANTS)('finds the problem in %j', (text, problems) => {
+  test.for(PLANTS)('finds the problem in %j', ([text, problems], { expect }) => {
     expect.hasAssertions();
     expect(jsonProblems(text).map((found) => `${found.path}: ${found.problem}`)).toStrictEqual(problems);
   });
 
-  test('lets an overflow of the call stack through rather than calling the text invalid', () => {
+  test('lets an overflow of the call stack through rather than calling the text invalid', ({ expect }) => {
     expect.hasAssertions();
     expect(() => jsonProblems('['.repeat(PAST_THE_STACK))).toThrow(RangeError);
   });
 
-  test.each(NEAR_MISSES)('passes %j', (text) => {
+  test.for(NEAR_MISSES)('passes %j', (text, { expect }) => {
     expect.hasAssertions();
     expect(jsonProblems(text)).toStrictEqual([]);
   });
 });
 
 describe('the manifest reading, on planted manifests', () => {
-  test('reads a bundled group of true as every dependency and of false as none, none of them twice', () => {
+  test('reads a bundled group of true as every dependency and of false as none, none of them twice', ({ expect }) => {
     expect.hasAssertions();
     expect(
       [true, false].map((bundled) => duplicateDependencies({ bundleDependencies: bundled, dependencies: { alpha: '1' } })),
     ).toStrictEqual([[], []]);
   });
 
-  test('finds a package in two conflicting groups, and one bundled twice', () => {
+  test('finds a package in two conflicting groups, and one bundled twice', ({ expect }) => {
     expect.hasAssertions();
     const manifest = {
       bundleDependencies: ['beta', 'beta'],
@@ -114,7 +114,7 @@ describe('the manifest reading, on planted manifests', () => {
     ]);
   });
 
-  test('lets a development dependency also be a peer or optional one', () => {
+  test('lets a development dependency also be a peer or optional one', ({ expect }) => {
     expect.hasAssertions();
     expect(
       duplicateDependencies({

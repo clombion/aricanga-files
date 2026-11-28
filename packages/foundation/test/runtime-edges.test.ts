@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'vitest';
+import { describe, test } from 'vitest';
 import type { AnySystem } from '#src/sim/system';
 import { InkRuntime } from '#src/ink/ink-runtime';
 import { Runtime } from '#src/host/runtime';
@@ -32,7 +32,7 @@ function runtimeOf(systems: readonly AnySystem[], observe?: (reduced: string) =>
 }
 
 describe('the runtime at its start', () => {
-  test('delivers a lifecycle input to every registered system', () => {
+  test('delivers a lifecycle input to every registered system', ({ expect }) => {
     expect.hasAssertions();
     const reduced: string[] = [];
     const runtime = runtimeOf([erase(hSystem), fixtureSystemErased], (record) => {
@@ -42,12 +42,12 @@ describe('the runtime at its start', () => {
     expect(reduced.filter((record) => record.endsWith(':lifecycle'))).toStrictEqual(['h:lifecycle', 'fixture:lifecycle']);
   });
 
-  test('refuses to start with no system to put in the foreground', () => {
+  test('refuses to start with no system to put in the foreground', ({ expect }) => {
     expect.hasAssertions();
     expect(() => runtimeOf([])).toThrow('Runtime requires at least one system');
   });
 
-  test('refuses a named foreground system it does not hold', () => {
+  test('refuses a named foreground system it does not hold', ({ expect }) => {
     expect.hasAssertions();
     expect(
       () =>
@@ -62,7 +62,7 @@ describe('the runtime at its start', () => {
 });
 
 describe('the runtime once running', () => {
-  test('refuses a player input that names no target system', () => {
+  test('refuses a player input that names no target system', ({ expect }) => {
     expect.hasAssertions();
     const runtime = runtimeOf([erase(hSystem)]);
     expect(() => {
@@ -70,7 +70,7 @@ describe('the runtime once running', () => {
     }).toThrow('player/resume input has no known target system (got "<none>")');
   });
 
-  test('restores only the systems it holds, leaving a saved state of another out', () => {
+  test('restores only the systems it holds, leaving a saved state of another out', ({ expect }) => {
     expect.hasAssertions();
     const runtime = runtimeOf([erase(hSystem)]);
     const saved = runtime.snapshot();
@@ -78,7 +78,7 @@ describe('the runtime once running', () => {
     expect(Object.keys(runtime.snapshot().state)).toStrictEqual(['h']);
   });
 
-  test('refuses to render the view of a system it does not hold', () => {
+  test('refuses to render the view of a system it does not hold', ({ expect }) => {
     expect.hasAssertions();
     const runtime = runtimeOf([erase(hSystem)]);
     expect(() => runtime.view('ghost', RENDER)).toThrow('unknown system "ghost"');

@@ -1,5 +1,5 @@
 import { InputRefusedError, commandOf, readerOf, unitCommands } from '#src/sim/parse';
-import { describe, expect, test } from 'vitest';
+import { describe, test } from 'vitest';
 
 /** The readers the tests parse with, refusing in the name of a system called `probe`. */
 const READ = readerOf('probe');
@@ -14,7 +14,7 @@ const SECOND = 2;
 const parseUnit = unitCommands('probe', ['start', 'stop']);
 
 describe('a reader', () => {
-  test('refuses a value of the wrong type, naming the system, what it expected and the value', () => {
+  test('refuses a value of the wrong type, naming the system, what it expected and the value', ({ expect }) => {
     expect.hasAssertions();
     expect(() => READ.string(COUNT, 'a name')).toThrow(new InputRefusedError('system "probe" refuses a name: 1'));
     expect(() => READ.number('1', 'a count')).toThrow(new InputRefusedError('system "probe" refuses a count: "1"'));
@@ -23,13 +23,13 @@ describe('a reader', () => {
     expect(() => READ.object(undefined, 'a state')).toThrow(new InputRefusedError('system "probe" refuses a state: undefined'));
   });
 
-  test('refuses a number that is not finite', () => {
+  test('refuses a number that is not finite', ({ expect }) => {
     expect.hasAssertions();
     expect(() => READ.number(Number.NaN, 'a count')).toThrow(InputRefusedError);
     expect(() => READ.number(Number.POSITIVE_INFINITY, 'a count')).toThrow(InputRefusedError);
   });
 
-  test('reads a list and a record entry by entry, naming where a refused entry sits', () => {
+  test('reads a list and a record entry by entry, naming where a refused entry sits', ({ expect }) => {
     expect.hasAssertions();
     expect(READ.list(['a', 'b'], 'names', READ.string)).toStrictEqual(['a', 'b']);
     expect(READ.record({ courage: COUNT }, 'counts', READ.number)).toStrictEqual({ courage: COUNT });
@@ -40,7 +40,7 @@ describe('a reader', () => {
     expect(() => READ.list({}, 'names', READ.string)).toThrow(new InputRefusedError('system "probe" refuses names: {}'));
   });
 
-  test('refuses a value present where nothing belongs, and passes an absent one', () => {
+  test('refuses a value present where nothing belongs, and passes an absent one', ({ expect }) => {
     expect.hasAssertions();
     expect(() => {
       READ.absent({}, 'a payload');
@@ -52,13 +52,13 @@ describe('a reader', () => {
 });
 
 describe('a command parser', () => {
-  test('reads each of its kinds back as the command it is', () => {
+  test('reads each of its kinds back as the command it is', ({ expect }) => {
     expect.hasAssertions();
     expect(parseUnit({ kind: 'start', payload: undefined })).toStrictEqual({ kind: 'start', payload: undefined });
     expect(parseUnit({ kind: 'stop' })).toStrictEqual({ kind: 'stop', payload: undefined });
   });
 
-  test('refuses a kind it does not take, a payload a unit command carries none of, and a value that is no command', () => {
+  test('refuses a kind it does not take, a payload a unit command carries none of, and a value that is no command', ({ expect }) => {
     expect.hasAssertions();
     expect(() => parseUnit({ kind: 'pause', payload: undefined })).toThrow(
       new InputRefusedError('system "probe" refuses a command: {"kind":"pause"}'),
@@ -69,7 +69,7 @@ describe('a command parser', () => {
     expect(() => parseUnit('start')).toThrow(new InputRefusedError('system "probe" refuses a command: "start"'));
   });
 
-  test('leaves the payload of a kind it takes for the system to read', () => {
+  test('leaves the payload of a kind it takes for the system to read', ({ expect }) => {
     expect.hasAssertions();
     expect(commandOf(READ, { kind: 'start', payload: { at: COUNT } }, ['start'])).toStrictEqual({ kind: 'start', payload: { at: COUNT } });
   });

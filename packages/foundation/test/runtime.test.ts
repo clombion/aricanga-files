@@ -1,5 +1,5 @@
 import type { HCommand, HState } from '#test/h-system';
-import { describe, expect, test, vi } from 'vitest';
+import { describe, test, vi } from 'vitest';
 import { erase, viewOf } from '#src/sim/system';
 import { heldScheduler, memoryStore } from '#src/testing/host-ports';
 import type { AnySystem } from '#src/sim/system';
@@ -106,7 +106,7 @@ function afterTwoLines(): Snapshot {
 }
 
 describe('the runtime pump', () => {
-  test('pump suspends on busy-commit and resumes on the matching CommitFired (#1, #3)', () => {
+  test('pump suspends on busy-commit and resumes on the matching CommitFired (#1, #3)', ({ expect }) => {
     expect.hasAssertions();
     const { fires, runtime } = world();
     // "Hello" is pumped; the system schedules a commit and goes busy.
@@ -120,7 +120,7 @@ describe('the runtime pump', () => {
     expect(hView(runtime).lines).toStrictEqual(['Hello', 'World']);
   });
 
-  test('a stale commit token is a no-op (#3)', () => {
+  test('a stale commit token is a no-op (#3)', ({ expect }) => {
     expect.hasAssertions();
     const { runtime } = world();
     runtime.step();
@@ -131,7 +131,7 @@ describe('the runtime pump', () => {
 });
 
 describe('the runtime effects', () => {
-  test('a Fetch effect round-trips to a DataArrived resume (#2)', () => {
+  test('a Fetch effect round-trips to a DataArrived resume (#2)', ({ expect }) => {
     expect.hasAssertions();
     const { deliveries, runtime } = world();
     runtime.send(player('fetch'), 'h');
@@ -142,7 +142,7 @@ describe('the runtime effects', () => {
     expect(hView(runtime).fetched).toBe(FETCHED);
   });
 
-  test('an unknown present kind is a typed error (#2)', () => {
+  test('an unknown present kind is a typed error (#2)', ({ expect }) => {
     expect.hasAssertions();
     const { runtime } = world();
     expect(() => {
@@ -150,7 +150,7 @@ describe('the runtime effects', () => {
     }).toThrow(/unknown present kind/u);
   });
 
-  test('a known present effect reaches the host sink (#2)', () => {
+  test('a known present effect reaches the host sink (#2)', ({ expect }) => {
     expect.hasAssertions();
     const { presented, runtime } = world();
     runtime.send(player('present-ok'), 'h');
@@ -159,7 +159,7 @@ describe('the runtime effects', () => {
 });
 
 describe('the runtime routing and ids', () => {
-  test('a player/resume input with an unknown target throws (#5)', () => {
+  test('a player/resume input with an unknown target throws (#5)', ({ expect }) => {
     expect.hasAssertions();
     const { runtime } = world();
     expect(() => {
@@ -167,7 +167,7 @@ describe('the runtime routing and ids', () => {
     }).toThrow(/no known target system/u);
   });
 
-  test('ids do not collide across snapshot/restore (#4)', () => {
+  test('ids do not collide across snapshot/restore (#4)', ({ expect }) => {
     expect.hasAssertions();
     const snap = afterTwoLines();
     expect(snap.idSeq).toBe(TWO_IDS);
@@ -178,7 +178,7 @@ describe('the runtime routing and ids', () => {
     expect(hView(runtime).ids).toStrictEqual(['id-0', 'id-1', THIRD_ID]);
   });
 
-  test('the runtime drives a vocabulary-agnostic system with no system import in foundation', () => {
+  test('the runtime drives a vocabulary-agnostic system with no system import in foundation', ({ expect }) => {
     expect.hasAssertions();
     // erase() builds the registry's shape from closures; the runtime never names a concrete system type.
     const input: Input<HState, HCommand> = { lifecycle: { kind: 'reset' }, source: 'lifecycle' };

@@ -9,7 +9,7 @@ import { COMMON, MAX_SIZE, RUNS, cloneKey, clones, noReport, onReported, reportO
 import type { Clone, Reported, Run, Runner } from '#lib/dupes.ts';
 import { EXIT_BROKEN, EXIT_CLEAN } from '#lib/exit-status.ts';
 import { EXIT_FAILURE, EXIT_SUCCESS } from '#lib/output.ts';
-import { afterEach, describe, expect, test } from 'vitest';
+import { afterEach, describe, test } from 'vitest';
 import { cleanRunner, failingRunner, growTo, plant, plantedScanRoots, removePlants, runMain } from './clones.plants.ts';
 import { Exemptions } from '#lint-rules/exemptions.ts';
 import type { Outcome } from '#lib/process.ts';
@@ -93,13 +93,13 @@ function reportedClones(reported: Reported, name: Run, root: string): readonly C
 }
 
 describe('the repository', () => {
-  test('has no copied code', async () => {
+  test('has no copied code', async ({ expect }) => {
     expect.hasAssertions();
     const { status, errors } = await runMain();
     expect([status, errors]).toStrictEqual([EXIT_SUCCESS, []]);
   });
 
-  test('main reports a clean scan and exits 0', async () => {
+  test('main reports a clean scan and exits 0', async ({ expect }) => {
     expect.hasAssertions();
     const { status, errors, out } = await runMain(cleanRunner);
     expect([status, errors]).toStrictEqual([EXIT_SUCCESS, []]);
@@ -107,13 +107,13 @@ describe('the repository', () => {
     expect(out).toStrictEqual([`no copied code in the ${files.length} held TypeScript files\n`]);
   });
 
-  test('main reports each problem and exits 1', async () => {
+  test('main reports each problem and exits 1', async ({ expect }) => {
     expect.hasAssertions();
     const { status, errors } = await runMain(failingRunner);
     expect([status, errors]).toStrictEqual([EXIT_FAILURE, ['cross-file: jscpd exited 2: planted\n', 'exact: jscpd exited 2: planted\n']]);
   });
 
-  test('states every flag and uses no ignore channel', async () => {
+  test('states every flag and uses no ignore channel', async ({ expect }) => {
     expect.hasAssertions();
     const flags = [...COMMON, ...RUNS.words.flatMap((name) => RUNS.of(name).flags)];
     expect(flags.filter((flag) => FLAGS_OUTSIDE_THE_SCRIPT.test(flag))).toStrictEqual([]);
@@ -127,7 +127,7 @@ describe('the scan of a clone', () => {
     await removePlants();
   });
 
-  test('fails a planted clone in both runs', async () => {
+  test('fails a planted clone in both runs', async ({ expect }) => {
     expect.hasAssertions();
     const { root, listed } = await plant({ 'a/one.ts': PLANT, 'b/two.ts': PLANT.replace('first', 'second') });
     await expect(scan({ listed, root, roots: ['a', 'b'] }, NONE)).resolves.toStrictEqual([
@@ -136,26 +136,26 @@ describe('the scan of a clone', () => {
     ]);
   });
 
-  test('still sees the planted clone past the floor', async () => {
+  test('still sees the planted clone past the floor', async ({ expect }) => {
     expect.hasAssertions();
     const { root } = await plant({ 'a/one.ts': PLANT, 'a/two.ts': PLANT });
     const raised = await reportOf(['--min-lines', '5', '--min-tokens', '70'], { root, roots: ['a'] });
     expect(reportedClones(raised, 'exact', root)).toHaveLength(ONE_CLONE);
   });
 
-  test('sees a small clone in two files in the cross-file run only', async () => {
+  test('sees a small clone in two files in the cross-file run only', async ({ expect }) => {
     expect.hasAssertions();
     const { root, listed } = await plant({ 'a/filler.ts': FILLER, 'a/one.ts': SMALL_PLANT, 'a/sub/two.ts': SMALL_PLANT });
     await expect(scan({ listed, root, roots: ['a'] }, NONE)).resolves.toStrictEqual(['clone (cross-file): a/one.ts and a/sub/two.ts']);
   });
 
-  test('leaves a small clone inside one file to the exact run', async () => {
+  test('leaves a small clone inside one file to the exact run', async ({ expect }) => {
     expect.hasAssertions();
     const { root, listed } = await plant({ 'a/filler.ts': FILLER, 'a/one.ts': `${SMALL_PLANT}\n${SMALL_PLANT.replace('pick', 'keep')}` });
     await expect(scan({ listed, root, roots: ['a'] }, NONE)).resolves.toStrictEqual([]);
   });
 
-  test('passes an allowed clone and fails a stale entry', async () => {
+  test('passes an allowed clone and fails a stale entry', async ({ expect }) => {
     expect.hasAssertions();
     const { root, listed } = await plant({ 'a/one.ts': PLANT, 'b/two.ts': PLANT });
     const reported = await reportOf(RUNS.of('exact').flags, { root, roots: ['a', 'b'] });
@@ -170,7 +170,9 @@ describe('the scan of a clone', () => {
 });
 
 describe('the roots jscpd is given', () => {
-  test("scans each holder's directory once, a nested member's inside the outer one, and each held file outside them", async () => {
+  test("scans each holder's directory once, a nested member's inside the outer one, and each held file outside them", async ({
+    expect,
+  }) => {
     expect.hasAssertions();
     await expect(plantedScanRoots()).resolves.toStrictEqual(['packages/a', 'harness', 'vitest.gate.config.ts']);
   });
@@ -181,14 +183,14 @@ describe('the scan of what jscpd reads', () => {
     await removePlants();
   });
 
-  test('fails a listed file jscpd did not scan, and lets a short one through', async () => {
+  test('fails a listed file jscpd did not scan, and lets a short one through', async ({ expect }) => {
     expect.hasAssertions();
     const short = Array.from({ length: SHORT_LINES }, (_value, index) => `export const short${index} = ${index};\n`).join('');
     const { root, listed } = await plant({ 'a/one.ts': FILLER, 'b/long.ts': FILLER, 'b/short.ts': short });
     await expect(scan({ listed, root, roots: ['a'] }, NONE)).resolves.toStrictEqual(['coverage: jscpd did not scan b/long.ts']);
   });
 
-  test('fails a file over the size limit', async () => {
+  test('fails a file over the size limit', async ({ expect }) => {
     expect.hasAssertions();
     const { root, listed } = await plant({ 'a/huge.ts': '', 'a/one.ts': FILLER });
     await growTo(root, 'a/huge.ts', MAX_SIZE + OVER_LIMIT);
@@ -201,12 +203,12 @@ describe('the scan of what jscpd reads', () => {
 describe('a run that gives no report', () => {
   const argv = ['jscpd'];
 
-  test.each([
+  test.for([
     [{ argv, kind: 'finished', status: EXIT_BROKEN, stderr: 'bad flag', stdout: '' } as const, 'jscpd exited 2: bad flag'],
     [{ argv, kind: 'timed-out', timeoutMs: 300_000 } as const, 'jscpd ran past 300000 ms'],
     [{ argv, kind: 'not-started', reason: 'not found' } as const, 'jscpd could not start (not found): run `pnpm install`'],
     [{ argv, kind: 'finished', status: EXIT_CLEAN, stderr: '', stdout: '' } as const, 'jscpd wrote no report'],
-  ])('is a problem of each run: %o', async (outcome: Outcome, problem) => {
+  ] as const)('is a problem of each run: %o', async ([outcome, problem]: readonly [Outcome, string], { expect }) => {
     expect.hasAssertions();
     const runner: Runner = async () => {
       const ran = await Promise.resolve(outcome);
@@ -217,12 +219,12 @@ describe('a run that gives no report', () => {
     );
   });
 
-  test('a finished run with its report is no problem', () => {
+  test('a finished run with its report is no problem', ({ expect }) => {
     expect.hasAssertions();
     expect(noReport({ argv, kind: 'finished', status: EXIT_CLEAN, stderr: '', stdout: '' }, true)).toBeUndefined();
   });
 
-  test('the report reader refuses a report of another shape', () => {
+  test('the report reader refuses a report of another shape', ({ expect }) => {
     expect.hasAssertions();
     expect(() => clones({ name: 'exact', sameFile: true }, [], tmpdir())).toThrow(/is not an object/u);
     expect(() => clones({ name: 'exact', sameFile: true }, { duplicates: 1 }, tmpdir())).toThrow(

@@ -7,7 +7,7 @@
 import type { Effect, Host } from '@narratives/foundation';
 import { InkRuntime, createExperience, erase } from '@narratives/foundation';
 import { compileInk, heldScheduler, memoryStore } from '@narratives/foundation/testing';
-import { describe, expect, test } from 'vitest';
+import { describe, test } from 'vitest';
 import { cardsSystem } from '@narratives/system-cards';
 import { chatSystem } from '@narratives/system-chat';
 
@@ -66,7 +66,7 @@ function drain(experience: Readonly<{ step: () => boolean }>): number {
 }
 
 describe('routing by tag ownership', () => {
-  test('a speaker-tagged step routes to chat even when cards is foreground', () => {
+  test('a speaker-tagged step routes to chat even when cards is foreground', ({ expect }) => {
     expect.hasAssertions();
     const { host, presented } = recordingHost();
     const experience = createExperience({
@@ -79,7 +79,7 @@ describe('routing by tag ownership', () => {
     expect(presented).toContain('chat/showNotification');
   });
 
-  test('a stat-tagged step routes to cards even when chat is foreground', () => {
+  test('a stat-tagged step routes to cards even when chat is foreground', ({ expect }) => {
     expect.hasAssertions();
     const { host, presented } = recordingHost();
     const experience = createExperience({
@@ -92,7 +92,7 @@ describe('routing by tag ownership', () => {
     expect(presented).toContain('cards/statChanged');
   });
 
-  test('createExperience fails loud on empty systems and unknown foreground', () => {
+  test('createExperience fails loud on empty systems and unknown foreground', ({ expect }) => {
     expect.hasAssertions();
     const { host } = recordingHost();
     expect(() => createExperience({ host, ink: ink(), systems: [] })).toThrow('at least one system');

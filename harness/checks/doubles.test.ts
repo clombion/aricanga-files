@@ -7,7 +7,7 @@
  */
 
 import { Scripted, TripwireError, checkTrips, drain, trip, tripped } from '#lib/doubles.ts';
-import { describe, expect, test } from 'vitest';
+import { describe, test } from 'vitest';
 import { runPlanted } from '#lib/planted-vitest.ts';
 
 const HARNESS_ID = 'doubles';
@@ -54,14 +54,14 @@ describe('second', () => {
 class Weather extends Scripted<string> {}
 
 describe('a scripted double', () => {
-  test('answers a scripted call and records it', () => {
+  test('answers a scripted call and records it', ({ expect }) => {
     expect.hasAssertions();
     const weather = new Weather({ Lisbon: 'sun' });
     expect(weather.answer('Lisbon')).toBe('sun');
     expect(weather.calls).toStrictEqual(['Lisbon']);
   });
 
-  test('trips on an unscripted call, past a catch', () => {
+  test('trips on an unscripted call, past a catch', ({ expect }) => {
     expect.hasAssertions();
     const weather = new Weather({});
     const outcome: { caught?: unknown } = {};
@@ -77,7 +77,7 @@ describe('a scripted double', () => {
     expect(outcome.caught).toBeInstanceOf(TripwireError);
   });
 
-  test('a recorded trip fails the check, and draining clears it', () => {
+  test('a recorded trip fails the check, and draining clears it', ({ expect }) => {
     expect.hasAssertions();
     expect(() => trip('planted')).toThrow(TripwireError);
     expect(() => {
@@ -86,7 +86,7 @@ describe('a scripted double', () => {
     expect(drain()).toStrictEqual([]);
   });
 
-  test('tripped fails when nothing tripped', () => {
+  test('tripped fails when nothing tripped', ({ expect }) => {
     expect.hasAssertions();
     expect(() => {
       tripped('never', () => {
@@ -97,7 +97,7 @@ describe('a scripted double', () => {
 });
 
 describe('the guards, through a planted Vitest run', () => {
-  test('fail a caught unscripted call and the test after a late trip, and pass the rest', async () => {
+  test('fail a caught unscripted call and the test after a late trip, and pass the rest', async ({ expect }) => {
     expect.hasAssertions();
     const outcomes = await runPlanted({ 'doubles.test.ts': PLANTED });
     expect([...outcomes].map(([name, { status }]: readonly [string, Readonly<{ status: string }>]) => [name, status])).toStrictEqual([

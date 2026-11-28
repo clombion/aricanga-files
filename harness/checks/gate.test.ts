@@ -14,7 +14,7 @@ import { EXIT_CLEAN, EXIT_FINDINGS } from '#lib/exit-status.ts';
 import type { Hook, Task } from '#lib/config.ts';
 import { LOCK_CHECK, lockCheckAfter, lockCheckArguments } from './gate.lock.ts';
 import { closure, hooks, repoHooks, runsTask, tasks } from '#lib/config.ts';
-import { describe, expect, test } from 'vitest';
+import { describe, test } from 'vitest';
 import { Accepted } from '#lint-rules/exemptions.ts';
 import { repoTasks } from '#lib/repo-tasks.ts';
 
@@ -155,20 +155,20 @@ function scriptsOf(read: ReadonlyMap<string, Task>): Readonly<Record<string, str
 }
 
 describe('the repository', () => {
-  test('the gate writes nothing and runs locked tools', async () => {
+  test('the gate writes nothing and runs locked tools', async ({ expect }) => {
     expect.hasAssertions();
     const repoTaskMap = await repoTasks();
     expect(gateProblems(repoTaskMap)).toStrictEqual([]);
   });
 
-  test('no task or hook runs an unlocked tool', async () => {
+  test('no task or hook runs an unlocked tool', async ({ expect }) => {
     expect.hasAssertions();
     const [repoTaskMap, repoHookList] = await Promise.all([repoTasks(), repoHooks()]);
     const commands = [...repoTaskMap.values()].flatMap((task) => task.commands);
     expect(runnerProblems([...commands, ...repoHookList.map((hook) => hook.run)])).toStrictEqual([]);
   });
 
-  test('the hooks run the gate', async () => {
+  test('the hooks run the gate', async ({ expect }) => {
     expect.hasAssertions();
     const repoHookList = await repoHooks();
     expect(hookProblems(repoHookList)).toStrictEqual([]);
@@ -176,7 +176,7 @@ describe('the repository', () => {
 });
 
 describe('the gate check', () => {
-  test.each([
+  test.for([
     'oxlint --fix',
     'oxfmt',
     'oxfmt .',
@@ -193,14 +193,14 @@ describe('the gate check', () => {
     'lefthook install',
     'git add .',
     'vitest run > report.txt',
-  ])('sees the planted writer %s', (command) => {
+  ])('sees the planted writer %s', (command, { expect }) => {
     expect.hasAssertions();
     expect(gateProblems(planted(command))).toHaveLength(ONE_PROBLEM);
   });
 });
 
 describe('the gate check, followed into tasks', () => {
-  test('follows pnpm run into a nested task, and lets a reader through', () => {
+  test('follows pnpm run into a nested task, and lets a reader through', ({ expect }) => {
     expect.hasAssertions();
     const nested = tasks({
       scripts: {
@@ -213,7 +213,7 @@ describe('the gate check, followed into tasks', () => {
     expect(gateProblems(planted('tsc --noEmit -p harness'))).toStrictEqual([]);
   });
 
-  test('sees a tool task without the lock check, and a gate of the wrong shape', () => {
+  test('sees a tool task without the lock check, and a gate of the wrong shape', ({ expect }) => {
     expect.hasAssertions();
     const unlocked = tasks({
       scripts: {
@@ -233,14 +233,17 @@ describe('the gate check, followed into tasks', () => {
     expect(gateProblems(shape)).toStrictEqual(['check:fast runs the tests', 'check is not check:fast plus the tests']);
   });
 
-  test.each(['npx jscpd', 'pnpm dlx knip', 'pnpx oxlint', 'bunx x', 'yarn dlx x', 'uvx ruff'])('sees the unlocked runner %s', (command) => {
-    expect.hasAssertions();
-    expect(runnerProblems([command, 'oxlint'])).toStrictEqual([`unlocked runner: ${command}`]);
-  });
+  test.for(['npx jscpd', 'pnpm dlx knip', 'pnpx oxlint', 'bunx x', 'yarn dlx x', 'uvx ruff'])(
+    'sees the unlocked runner %s',
+    (command, { expect }) => {
+      expect.hasAssertions();
+      expect(runnerProblems([command, 'oxlint'])).toStrictEqual([`unlocked runner: ${command}`]);
+    },
+  );
 });
 
 describe('the hook check', () => {
-  test('sees each planted hook', () => {
+  test('sees each planted hook', ({ expect }) => {
     expect.hasAssertions();
     const plantedHooks = hooks({
       'post-merge': { commands: { late: { run: 'pnpm run check' } } },
@@ -258,17 +261,17 @@ describe('the hook check', () => {
 });
 
 describe('the lock check', () => {
-  test('is the frozen, lockfile-only install', async () => {
+  test('is the frozen, lockfile-only install', async ({ expect }) => {
     expect.hasAssertions();
     await expect(lockCheckArguments()).resolves.toStrictEqual(['pnpm', 'install', '--frozen-lockfile', '--lockfile-only']);
   });
 
-  test('passes a lockfile current with package.json', async () => {
+  test('passes a lockfile current with package.json', async ({ expect }) => {
     expect.hasAssertions();
     await expect(lockCheckAfter('1.9.1', '1.9.1')).resolves.toStrictEqual({ outdated: false, status: EXIT_CLEAN });
   });
 
-  test('refuses a lockfile older than package.json', async () => {
+  test('refuses a lockfile older than package.json', async ({ expect }) => {
     expect.hasAssertions();
     await expect(lockCheckAfter('1.9.1', '1.9.0')).resolves.toStrictEqual({ outdated: true, status: EXIT_FINDINGS });
   });

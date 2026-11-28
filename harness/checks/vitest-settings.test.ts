@@ -16,7 +16,7 @@
  */
 
 import { EXIT_CLEAN, EXIT_FINDINGS } from '#lib/exit-status.ts';
-import { describe, expect, test } from 'vitest';
+import { describe, test } from 'vitest';
 import { gateTest, projectsOf, testOf } from './gate-config.ts';
 import { list, object, parsed, stringOf } from '#lib/config.ts';
 import { PLANTED_VITEST_COPIES } from '#lib/planted-vitest.ts';
@@ -257,7 +257,7 @@ async function timeoutBounded(): Promise<boolean> {
 }
 
 describe('each setting', () => {
-  test.for(PLANTS)('fails the $name plant in every project, and passes it in every project once reverted', async (plant) => {
+  test.for(PLANTS)('fails the $name plant in every project, and passes it in every project once reverted', async (plant, { expect }) => {
     expect.hasAssertions();
     const sequence = order(plant);
     const runs = await Promise.all([run(plant, sequence), run(plant, merge(sequence, plant.revert))]);
@@ -266,30 +266,30 @@ describe('each setting', () => {
 });
 
 describe('the defaults the gate keeps', () => {
-  test('fail the empty plant in every project', async () => {
+  test('fail the empty plant in every project', async ({ expect }) => {
     expect.hasAssertions();
     await expect(run(EMPTY, {})).resolves.toStrictEqual({ files: everyProject(FAILED), status: EXIT_FINDINGS });
   });
 
-  test('fail the run of an unhandled rejection, every project collected', async () => {
+  test('fail the run of an unhandled rejection, every project collected', async ({ expect }) => {
     expect.hasAssertions();
     await expect(run(UNHANDLED, {})).resolves.toStrictEqual({ files: everyProject(PASSED), status: EXIT_FINDINGS });
   });
 
-  test('the test timeout is set and bounded', async () => {
+  test('the test timeout is set and bounded', async ({ expect }) => {
     expect.hasAssertions();
     await expect(timeoutBounded()).resolves.toBe(true);
   });
 });
 
 describe('the plants', () => {
-  test('a clean spec passes in every project under the gate config', async () => {
+  test('a clean spec passes in every project under the gate config', async ({ expect }) => {
     expect.hasAssertions();
     const clean = { name: 'clean', ordered: false, revert: {}, text: `${IMPORTS}test('a', () => {\n  expect(1).toBe(1);\n});\n` };
     await expect(run(clean, {})).resolves.toStrictEqual({ files: everyProject(PASSED), status: EXIT_CLEAN });
   });
 
-  test("are planted in every project of the gate's config over the planted population", async () => {
+  test("are planted in every project of the gate's config over the planted population", async ({ expect }) => {
     expect.hasAssertions();
     await expect(plantedProjects()).resolves.toStrictEqual([...PROJECTS.keys()]);
   });

@@ -7,7 +7,7 @@
  * packages are read from the same lockfile, over every importer (`harness/lib/lock-splits.ts`).
  */
 
-import { describe, expect, test } from 'vitest';
+import { describe, test } from 'vitest';
 import { pinned, pins } from '#lib/pins.ts';
 import { ConfigError } from '#lib/config.ts';
 import { Exemptions } from '#lint-rules/exemptions.ts';
@@ -46,20 +46,20 @@ function pinProblems(found: readonly Pin[], upstream: ReadonlyMap<string, string
 }
 
 describe('the repository', () => {
-  test('every pin has its upstream and every upstream a pin', async () => {
+  test('every pin has its upstream and every upstream a pin', async ({ expect }) => {
     expect.hasAssertions();
     const problems = pinProblems(await pins(), UPSTREAM);
     expect(PENDING.unexempted(problems)).toStrictEqual([]);
   });
 
-  test('locks no directly declared package at two versions, under any importer', async () => {
+  test('locks no directly declared package at two versions, under any importer', async ({ expect }) => {
     expect.hasAssertions();
     await expect(repositoryLockSplits()).resolves.toStrictEqual([]);
   });
 });
 
 describe('the pin reader', () => {
-  test('read each importer of the lockfile, strip peer suffixes and skip workspace links', () => {
+  test('read each importer of the lockfile, strip peer suffixes and skip workspace links', ({ expect }) => {
     expect.hasAssertions();
     const found = pinned(
       [
@@ -86,7 +86,7 @@ describe('the pin reader', () => {
     ]);
   });
 
-  test('read a pinned packageManager and a manifest with no engines, and refuse a dependency that is not a string', () => {
+  test('read a pinned packageManager and a manifest with no engines, and refuse a dependency that is not a string', ({ expect }) => {
     expect.hasAssertions();
     expect(pinned([{ dir: '', manifest: { packageManager: 'pnpm@10.28.0' } }], LOCK)).toStrictEqual([
       { tool: 'node', version: undefined, where: ['package.json engines'] },
@@ -97,7 +97,7 @@ describe('the pin reader', () => {
 });
 
 describe('the lockfile reader', () => {
-  test("read only an importer's dependency groups, and a pin whose entry has no version as one with no version", () => {
+  test("read only an importer's dependency groups, and a pin whose entry has no version as one with no version", ({ expect }) => {
     expect.hasAssertions();
     const lockText = [
       'importers:',
@@ -132,7 +132,7 @@ describe('the lockfile reader', () => {
     ]);
   });
 
-  test('refuse a lockfile that is not YAML, naming the lockfile', () => {
+  test('refuse a lockfile that is not YAML, naming the lockfile', ({ expect }) => {
     expect.hasAssertions();
     const conflicted = ['importers:', '<<<<<<< ours', '  .: {}', '=======', '  .:', '    dependencies: {}', '>>>>>>> theirs', ''].join(
       '\n',
@@ -143,7 +143,7 @@ describe('the lockfile reader', () => {
 });
 
 describe('the lockfile reader over the group pnpm writes a pin in', () => {
-  test('read a pin that pnpm records in another dependency group than the manifest lists it in', () => {
+  test('read a pin that pnpm records in another dependency group than the manifest lists it in', ({ expect }) => {
     expect.hasAssertions();
     const lockText = [
       'importers:',
@@ -166,7 +166,7 @@ describe('the lockfile reader over the group pnpm writes a pin in', () => {
 });
 
 describe('the lockfile reader over the key forms pnpm writes', () => {
-  test('read each importer by the key pnpm writes: quoted, holding a colon, or with no dependencies', () => {
+  test('read each importer by the key pnpm writes: quoted, holding a colon, or with no dependencies', ({ expect }) => {
     expect.hasAssertions();
     const lockText = [
       'importers:',
@@ -206,7 +206,7 @@ describe('the lockfile reader over the key forms pnpm writes', () => {
 });
 
 describe('the pin check', () => {
-  test('see a new pin without a row, a pin without a version, and a row without a pin', () => {
+  test('see a new pin without a row, a pin without a version, and a row without a pin', ({ expect }) => {
     expect.hasAssertions();
     const found: readonly Pin[] = [
       { tool: 'node', version: '>=22.18.0', where: ['package.json engines'] },
@@ -229,7 +229,7 @@ describe('the pin check', () => {
     ]);
   });
 
-  test('let a fully named and pinned set through', () => {
+  test('let a fully named and pinned set through', ({ expect }) => {
     expect.hasAssertions();
     expect(
       pinProblems([{ tool: 'node', version: '>=22', where: ['package.json engines'] }], new Map([['node', 'nodejs/node']])),

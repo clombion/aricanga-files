@@ -195,6 +195,11 @@ const RULES: NonNullable<OxlintConfig['rules']> & Readonly<Partial<Record<Member
           name: ['PostcssResult', 'RuleContext', 'Rule', 'RuleBase', 'Problem', 'PostcssResult'],
           package: 'stylelint',
         },
+        {
+          from: 'package',
+          name: ['TestContext'],
+          package: 'vitest',
+        },
       ],
       treatMethodsAsReadonly: true,
     },

@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'vitest';
+import { describe, test } from 'vitest';
 import type { InkStep } from '@narratives/foundation';
 import { parseTag } from '@narratives/foundation';
 import { reduceStep } from '#src/reduce';
@@ -22,12 +22,12 @@ function step(text: string, rawTags: readonly string[] = []): InkStep {
 
 // The stub reduce maps an ink step to a message view-model.
 describe('the step parser', () => {
-  test('parses the speaker tag into the view-model', () => {
+  test('parses the speaker tag into the view-model', ({ expect }) => {
     expect.hasAssertions();
     expect(reduceStep(step('Hello', ['speaker: Pat']))).toStrictEqual({ speaker: 'Pat', text: 'Hello' });
   });
 
-  test('leaves the speaker empty when there is no speaker tag', () => {
+  test('leaves the speaker empty when there is no speaker tag', ({ expect }) => {
     expect.hasAssertions();
     expect(reduceStep(step('System line'))).toStrictEqual({ speaker: '', text: 'System line' });
   });

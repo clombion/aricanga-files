@@ -14,7 +14,7 @@
 import { Accepted, Exemptions } from '#lint-rules/exemptions.ts';
 import { FLOOR, ListingError, listing, tracked } from '#lib/source-files.ts';
 import { coverageReached, testsOutsideCoverage } from './gate-config.ts';
-import { describe, expect, test } from 'vitest';
+import { describe, test } from 'vitest';
 import { heldByProject, knipFiles, knipWorkspace, oxfmtFiles, oxlintFiles, projectMembers } from './scan-sets.sets.ts';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { population, typescriptFiles } from '#lib/scope.ts';
@@ -148,18 +148,18 @@ function projectProblems(
 }
 
 describe('the listing', () => {
-  test('is over its floor', async () => {
+  test('is over its floor', async ({ expect }) => {
     expect.hasAssertions();
     const listed = await tracked();
     expect(listed.length).toBeGreaterThanOrEqual(FLOOR);
   });
 
-  test('refuses a short listing instead of scanning nothing', async () => {
+  test('refuses a short listing instead of scanning nothing', async ({ expect }) => {
     expect.hasAssertions();
     await expect(listing('', tmpdir())).rejects.toThrow(ListingError);
   });
 
-  test('refuses a folder git cannot list', async () => {
+  test('refuses a folder git cannot list', async ({ expect }) => {
     expect.hasAssertions();
     const folder = await mkdtemp(`${tmpdir()}/unlisted-`);
     try {
@@ -169,7 +169,7 @@ describe('the listing', () => {
     }
   });
 
-  test('keeps existing files only', async () => {
+  test('keeps existing files only', async ({ expect }) => {
     expect.hasAssertions();
     const project = await Project.create({ linkModules: false });
     try {
@@ -183,7 +183,7 @@ describe('the listing', () => {
 });
 
 describe('the repository', () => {
-  test('every held TypeScript file is reached by oxlint, oxfmt, knip and coverage', async () => {
+  test('every held TypeScript file is reached by oxlint, oxfmt, knip and coverage', async ({ expect }) => {
     expect.hasAssertions();
     const files = await typescriptFiles();
     const [coverage, oxfmt, oxlint, knip] = await Promise.all([coverageReached(files), oxfmtFiles(files), oxlintFiles(), knipFiles(files)]);
@@ -191,7 +191,7 @@ describe('the repository', () => {
     expect(UNREACHED.unexempted(found)).toStrictEqual([]);
   });
 
-  test('every held TypeScript file is in a project, once in production, and no test is in production', async () => {
+  test('every held TypeScript file is in a project, once in production, and no test is in production', async ({ expect }) => {
     expect.hasAssertions();
     const [files, members, held, isTest] = await Promise.all([typescriptFiles(), projectMembers(), population(), testsOutsideCoverage()]);
     const problems = projectProblems(files, members, { isTest, projects: productionProjects(held) });
@@ -200,7 +200,7 @@ describe('the repository', () => {
 });
 
 describe("the reach check's reading of knip's configuration", () => {
-  test("reads a knip workspace's globs under its directory, its production marks dropped", () => {
+  test("reads a knip workspace's globs under its directory, its production marks dropped", ({ expect }) => {
     expect.hasAssertions();
     expect(knipWorkspace('packages/core', { entry: ['src/main.ts!'], project: ['src/**/*.ts!', 'test/**/*.ts'] })).toStrictEqual({
       dir: 'packages/core/',
@@ -208,7 +208,7 @@ describe("the reach check's reading of knip's configuration", () => {
     });
   });
 
-  test('refuses a negated knip glob, which knip and the reach check would read differently', () => {
+  test('refuses a negated knip glob, which knip and the reach check would read differently', ({ expect }) => {
     expect.hasAssertions();
     expect(() => knipWorkspace('packages/core', { project: ['src/**/*.ts!', '!src/generated/**'] })).toThrow(
       'packages/core: the reach check reads no negated knip glob, and the configuration holds !src/generated/**',
@@ -217,12 +217,12 @@ describe("the reach check's reading of knip's configuration", () => {
 });
 
 describe('the scan-set checks', () => {
-  test('see a file a planted scan set misses', () => {
+  test('see a file a planted scan set misses', ({ expect }) => {
     expect.hasAssertions();
     expect(unreached(['a.ts', 'b.ts'], { oxfmt: new Set(['a.ts', 'b.ts']), oxlint: new Set(['a.ts']) })).toStrictEqual(['b.ts: oxlint']);
   });
 
-  test('see a file in no project, in two production projects, and a test in production', () => {
+  test('see a file in no project, in two production projects, and a test in production', ({ expect }) => {
     expect.hasAssertions();
     const members = new Map([
       ['packages/foundation/tsconfig.json', new Set(['packages/foundation/src/a.ts', 'packages/foundation/src/a.test.ts', 'shared.ts'])],
@@ -253,7 +253,9 @@ describe('the scan-set checks', () => {
 });
 
 describe("the project check's holding", () => {
-  test("a project holds the files it lists of its holder's under its directory, the harness's a root configuration module, and a test project none of its member's sources", async () => {
+  test("a project holds the files it lists of its holder's under its directory, the harness's a root configuration module, and a test project none of its member's sources", async ({
+    expect,
+  }) => {
     expect.hasAssertions();
     const held = await plantedPopulation([], [['packages/core/', 'foundation']]);
     const listed = [
@@ -276,7 +278,7 @@ describe("the project check's holding", () => {
 });
 
 describe('the production projects of a planted population', () => {
-  test("a shipping member's project is a production project, a test-infrastructure member's is not", async () => {
+  test("a shipping member's project is a production project, a test-infrastructure member's is not", async ({ expect }) => {
     expect.hasAssertions();
     const held = await plantedPopulation(
       [],

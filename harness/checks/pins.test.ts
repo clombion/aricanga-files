@@ -1,7 +1,7 @@
 /** The pins of a population: which manifests are read, how pins of one tool merge, and how an importer key is read. */
 
 import { LOCK, reader } from './scope.plants.ts';
-import { describe, expect, test } from 'vitest';
+import { describe, test } from 'vitest';
 import { lockOf, pinned, pinsOf } from '#lib/pins.ts';
 import { ConfigError } from '#lib/config.ts';
 import { plantedPopulation } from '#lib/planted-population.ts';
@@ -43,7 +43,7 @@ function refusal(pinning: () => unknown): string {
 }
 
 describe('the pins of a population', () => {
-  test('read the root and the members, and no other listed manifest', async () => {
+  test('read the root and the members, and no other listed manifest', async ({ expect }) => {
     expect.hasAssertions();
     const held = await plantedPopulation(
       ['harness/lint-rules/package.json'],
@@ -60,7 +60,7 @@ describe('the pins of a population', () => {
 });
 
 describe("the pins of a member's manifest", () => {
-  test('read its dependencies as well as its devDependencies', async () => {
+  test('read its dependencies as well as its devDependencies', async ({ expect }) => {
     expect.hasAssertions();
     const held = await plantedPopulation([], [['packages/app/', 'view', { dependencies: { vite: '^8.0.0' } }]], {});
     await expect(pinsOf(held, reader({ 'pnpm-lock.yaml': LOCK }))).resolves.toStrictEqual([
@@ -72,7 +72,7 @@ describe("the pins of a member's manifest", () => {
 });
 
 describe('the pins of one tool', () => {
-  test('name every input that pins a tool at one version, a lockfile pin and a package.json field together', () => {
+  test('name every input that pins a tool at one version, a lockfile pin and a package.json field together', ({ expect }) => {
     expect.hasAssertions();
     const lockText = ['importers:', '  .:', '    devDependencies:', '      pnpm: {specifier: 10.28.0, version: 10.28.0}', ''].join('\n');
     const root = { devDependencies: { pnpm: '10.28.0' }, engines: { node: '>=22' }, packageManager: 'pnpm@10.28.0' };
@@ -84,7 +84,7 @@ describe('the pins of one tool', () => {
 });
 
 describe('the pins of one tool across inputs', () => {
-  test('keep a tool locked at two versions as two pins, and one locked twice at one version as one', () => {
+  test('keep a tool locked at two versions as two pins, and one locked twice at one version as one', ({ expect }) => {
     expect.hasAssertions();
     const lockText = [
       'importers:',
@@ -114,21 +114,21 @@ describe('the pins of one tool across inputs', () => {
     ]);
   });
 
-  test('read a tool locked under no importer of its manifest as a pin with no version', () => {
+  test('read a tool locked under no importer of its manifest as a pin with no version', ({ expect }) => {
     expect.hasAssertions();
     expect(pinned([{ dir: 'gone/', manifest: { devDependencies: { vite: '^8' } } }], LOCK)).toStrictEqual([
       { tool: 'vite', version: undefined, where: ['pnpm-lock.yaml (gone)'] },
     ]);
   });
 
-  test('read an importer key as the text pnpm wrote, a number-like one included', () => {
+  test('read an importer key as the text pnpm wrote, a number-like one included', ({ expect }) => {
     expect.hasAssertions();
     expect([...lockOf(['importers:', '  .: {}', '  1.0: {}', '  0x10: {}', ''].join('\n')).keys()]).toStrictEqual(['.', '1.0', '0x10']);
   });
 });
 
 describe('the empty versions a pin reads', () => {
-  test('refuse an empty version, from the lockfile and from packageManager, naming where it is written', () => {
+  test('refuse an empty version, from the lockfile and from packageManager, naming where it is written', ({ expect }) => {
     expect.hasAssertions();
     expect([refusal(emptyInLock), refusal(emptyInField)]).toStrictEqual([
       'ConfigError: pnpm-lock.yaml . devDependencies vite is an empty version',
@@ -136,7 +136,7 @@ describe('the empty versions a pin reads', () => {
     ]);
   });
 
-  test('refuse a version that is no string, and an empty Node floor, naming where each is written', () => {
+  test('refuse a version that is no string, and an empty Node floor, naming where each is written', ({ expect }) => {
     expect.hasAssertions();
     const mapped = ['importers:', '  .:', '    devDependencies:', "      vite: {specifier: '8', version: {a: b}}", ''].join('\n');
     expect([
@@ -150,7 +150,7 @@ describe('the empty versions a pin reads', () => {
     ]);
   });
 
-  test('refuse a lockfile with no importers', () => {
+  test('refuse a lockfile with no importers', ({ expect }) => {
     expect.hasAssertions();
     expect(() => pinned([{ dir: '', manifest: {} }], "lockfileVersion: '9.0'\n")).toThrow(
       new ConfigError('pnpm-lock.yaml importers is not an object: undefined'),
@@ -159,7 +159,7 @@ describe('the empty versions a pin reads', () => {
 });
 
 describe('the grouping of pins', () => {
-  test('give the same pins whatever order the manifests come in, a version and none kept apart', () => {
+  test('give the same pins whatever order the manifests come in, a version and none kept apart', ({ expect }) => {
     expect.hasAssertions();
     const manifests = [
       { dir: 'packages/app/', manifest: { devDependencies: { vite: '^8.0.0' } } },
@@ -172,7 +172,7 @@ describe('the grouping of pins', () => {
     expect([pinned(manifests, LOCK), pinned(manifests.toReversed(), LOCK)]).toStrictEqual([expected, expected]);
   });
 
-  test("name a version's importers by code unit, whatever order the members come in", () => {
+  test("name a version's importers by code unit, whatever order the members come in", ({ expect }) => {
     expect.hasAssertions();
     const lockText = [
       'importers:',
@@ -198,7 +198,7 @@ describe('the grouping of pins', () => {
 });
 
 describe('the order of the pins', () => {
-  test('order the pins by tool, then version, a name holding a character below the quote included', () => {
+  test('order the pins by tool, then version, a name holding a character below the quote included', ({ expect }) => {
     expect.hasAssertions();
     const lockText = [
       'importers:',

@@ -5,7 +5,7 @@
  */
 
 import { ROLE_WORDS, isRole, isTestInfrastructure } from '#lib/roles.ts';
-import { describe, expect, test } from 'vitest';
+import { describe, test } from 'vitest';
 import { inTestInfrastructure, isProduction, qualifiedName, scanOver, sourceOf } from '#lib/checker.ts';
 import type { Population } from '#lib/scope.ts';
 import type { ScanOpening } from '#lib/checker.ts';
@@ -66,12 +66,12 @@ async function probeAndView(): Promise<Population> {
 const scan = usePlanted([['planted/one.ts', 'export const one = 1;\n']], [['planted/', 'foundation']]);
 
 describe('a scan', () => {
-  test('refuses a path it does not cover, naming it', () => {
+  test('refuses a path it does not cover, naming it', ({ expect }) => {
     expect.hasAssertions();
     expect(() => sourceOf(scan(), 'planted/two.ts')).toThrow('the scan does not cover planted/two.ts');
   });
 
-  test('gives a missing symbol no qualified name', () => {
+  test('gives a missing symbol no qualified name', ({ expect }) => {
     expect.hasAssertions();
     const [statement] = sourceOf(scan(), 'planted/one.ts').statements;
     const { checker } = scan();
@@ -79,7 +79,7 @@ describe('a scan', () => {
     expect(qualifiedName(checker, symbol)).toBeUndefined();
   });
 
-  test('refused for a project the session lacks, releases the project and unmounts its files', async () => {
+  test('refused for a project the session lacks, releases the project and unmounts its files', async ({ expect }) => {
     expect.hasAssertions();
     const events: string[] = [];
     const held = await population();
@@ -89,7 +89,7 @@ describe('a scan', () => {
 });
 
 describe('the module classifiers', () => {
-  test("read a member's role, not which object the population holds for it", async () => {
+  test("read a member's role, not which object the population holds for it", async ({ expect }) => {
     expect.hasAssertions();
     const held = await probeAndView();
     const copied: Population = { ...held, memberOf: (file: string) => structuredClone(held.memberOf(file)) };
@@ -99,7 +99,9 @@ describe('the module classifiers', () => {
     ]);
   });
 
-  test("reads a member whose role does not ship as test infrastructure, and its modules, tests, Playwright specs and test support as not production, and a module Playwright does not match and the harness's check support as production", async () => {
+  test("reads a member whose role does not ship as test infrastructure, and its modules, tests, Playwright specs and test support as not production, and a module Playwright does not match and the harness's check support as production", async ({
+    expect,
+  }) => {
     expect.hasAssertions();
     const held = await probeAndView();
     const modules = [
@@ -126,7 +128,7 @@ describe('the module classifiers', () => {
 });
 
 describe('the roles', () => {
-  test('read test infrastructure as the roles whose tier does not ship, every role read', () => {
+  test('read test infrastructure as the roles whose tier does not ship, every role read', ({ expect }) => {
     expect.hasAssertions();
     expect(ROLE_WORDS.filter((word) => isRole(word)).map((role) => [role, isTestInfrastructure(role)])).toStrictEqual([
       ['experience', false],
@@ -139,7 +141,9 @@ describe('the roles', () => {
 });
 
 describe('a module below its member', () => {
-  test('reads a test directory below the member holding a module, never above it; a file of no member by its whole path', async () => {
+  test('reads a test directory below the member holding a module, never above it; a file of no member by its whole path', async ({
+    expect,
+  }) => {
     expect.hasAssertions();
     const held = await plantedPopulation(
       [],

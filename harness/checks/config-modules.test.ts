@@ -6,7 +6,7 @@
  */
 
 import { ROOT_CONFIG_MODULES, ROOT_MODULES } from '#lib/config-modules.ts';
-import { describe, expect, test } from 'vitest';
+import { describe, test } from 'vitest';
 import { repoTasks, runsOf } from '#lib/repo-tasks.ts';
 import { object } from '#lib/config.ts';
 import { population } from '#lib/scope.ts';
@@ -31,7 +31,9 @@ function unnamed(commands: readonly string[], naming: readonly [string, string, 
 }
 
 describe('the repository', () => {
-  test('every task names the configuration module of each computed-config tool it runs, so no rival file a tool would discover is read', async () => {
+  test('every task names the configuration module of each computed-config tool it runs, so no rival file a tool would discover is read', async ({
+    expect,
+  }) => {
     expect.hasAssertions();
     const repoTaskMap = await repoTasks();
     const commands = [...repoTaskMap.values()].flatMap((task) => task.commands);
@@ -42,7 +44,7 @@ describe('the repository', () => {
     ]).toStrictEqual([[], [], true]);
   });
 
-  test("maps each root configuration module into the harness's imports, and no other root file", async () => {
+  test("maps each root configuration module into the harness's imports, and no other root file", async ({ expect }) => {
     expect.hasAssertions();
     const held = await population();
     const imports = Object.keys(object(held.rootManifest['imports'], 'imports')).filter((key) => key.startsWith('#root/'));
@@ -51,7 +53,7 @@ describe('the repository', () => {
 });
 
 describe('the naming check', () => {
-  test('sees a tool run naming another configuration module, or none, and no other tool', () => {
+  test('sees a tool run naming another configuration module, or none, and no other tool', ({ expect }) => {
     expect.hasAssertions();
     const commands = ['oxlint -c oxlint.config.ts', 'oxlint -c oxlint.config.ts.old', 'oxlint', 'oxlintx -c other.json'];
     expect(unnamed(commands, ['oxlint', '-c', 'oxlint.config.ts'])).toStrictEqual([['-c', 'oxlint.config.ts.old'], []]);

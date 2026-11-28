@@ -1,5 +1,5 @@
 import { FIXTURE_TAG, fixtureSystem, fixtureSystemErased, runFixture } from '#src/testing/index';
-import { describe, expect, test } from 'vitest';
+import { describe, test } from 'vitest';
 import { erase, stateOf } from '#src/sim/system';
 import type { FixtureInput } from '#src/testing/harness';
 import { createExperience } from '#src/core/create-experience';
@@ -27,7 +27,7 @@ function toFixture(input: FixtureInput['input']): FixtureInput {
 }
 
 describe('the fixture system', () => {
-  test('turns a line tagged commit into a scheduled commit that closes its gate', async () => {
+  test('turns a line tagged commit into a scheduled commit that closes its gate', async ({ expect }) => {
     expect.hasAssertions();
     const run = await runFixture({
       story: `Wait. # ${FIXTURE_TAG}: on # commit: 1\nAfter. # ${FIXTURE_TAG}: on\n`,
@@ -37,7 +37,7 @@ describe('the fixture system', () => {
     expect(run.viewOf(fixtureSystem).lines).toStrictEqual(['Wait.', 'After.']);
   });
 
-  test('ignores a stale commit, a loaded story, a restore notice and a lifecycle input', async () => {
+  test('ignores a stale commit, a loaded story, a restore notice and a lifecycle input', async ({ expect }) => {
     expect.hasAssertions();
     const run = await runFixture({
       inputs: [
@@ -52,7 +52,7 @@ describe('the fixture system', () => {
     expect(run.viewOf(fixtureSystem)).toStrictEqual({ ...fixtureSystem.init(SEED), lines: ['Only line.'] });
   });
 
-  test('refuses a step two systems both claim', async () => {
+  test('refuses a step two systems both claim', async ({ expect }) => {
     expect.hasAssertions();
     await expect(
       runFixture({ story: `Both. # ${FIXTURE_TAG}: on # h: 1\n`, systems: [fixtureSystemErased, erase(hSystem)] }),
@@ -61,7 +61,7 @@ describe('the fixture system', () => {
 });
 
 describe('a system value read back by another system', () => {
-  test('is refused, naming both systems', () => {
+  test('is refused, naming both systems', ({ expect }) => {
     expect.hasAssertions();
     expect(() => stateOf(hSystem, { systemId: 'fixture', value: fixtureSystem.init(SEED) })).toThrow(
       'a value of system "fixture" was read back as system "h"',
@@ -70,7 +70,7 @@ describe('a system value read back by another system', () => {
 });
 
 describe('an experience', () => {
-  test('steps, sends, snapshots, restores and renders through its runtime', () => {
+  test('steps, sends, snapshots, restores and renders through its runtime', ({ expect }) => {
     expect.hasAssertions();
     const experience = createExperience({
       host: refusingHost({

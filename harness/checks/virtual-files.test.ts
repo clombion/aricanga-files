@@ -8,7 +8,7 @@
  * declares no file the disk already declares.
  */
 
-import { describe, expect, test } from 'vitest';
+import { describe, test } from 'vitest';
 import { mkdir, mkdtemp, rm, symlink, writeFile } from 'node:fs/promises';
 import { REPO_ROOT } from '#lib/paths.ts';
 import { VirtualFiles } from '#lib/virtual-files.ts';
@@ -20,7 +20,7 @@ const REAL = path.join(REPO_ROOT, 'harness', 'lib', 'present.ts');
 const ABSENT = path.join(REPO_ROOT, '.harness-scan', 'virtual-files-test');
 
 describe('an overlay of a path the disk holds', () => {
-  test('is refused as a mount, beside a path the disk does not hold, and none of them is served', () => {
+  test('is refused as a mount, beside a path the disk does not hold, and none of them is served', ({ expect }) => {
     expect.hasAssertions();
     const files = new VirtualFiles();
     const planted = path.join(ABSENT, 'planted.ts');
@@ -35,14 +35,14 @@ describe('an overlay of a path the disk holds', () => {
     expect([files.served(planted), files.served(REAL)]).toStrictEqual([undefined, undefined]);
   });
 
-  test('is served inside the run of overlaying alone, and as the disk has it after', () => {
+  test('is served inside the run of overlaying alone, and as the disk has it after', ({ expect }) => {
     expect.hasAssertions();
     const files = new VirtualFiles();
     const inside = files.overlaying(new Map([[REAL, 'export const overlay = 1;\n']]), () => files.served(REAL));
     expect([inside, files.served(REAL)]).toStrictEqual(['export const overlay = 1;\n', undefined]);
   });
 
-  test('refuses a run that returns a promise, its overlay gone', () => {
+  test('refuses a run that returns a promise, its overlay gone', ({ expect }) => {
     expect.hasAssertions();
     const files = new VirtualFiles();
     const later = async (): Promise<string | undefined> => {
@@ -57,19 +57,19 @@ describe('an overlay of a path the disk holds', () => {
 });
 
 describe('a new path that reaches the disk', () => {
-  test.each([
+  test.for([
     ['a nearer package beside a real module', 'experiences/sandbox/test/node_modules/solid-js/package.json'],
     ['a new package in a real node_modules directory', 'experiences/sandbox/node_modules/planted-package/index.js'],
     ['a package.json in a real directory', 'experiences/sandbox/test/package.json'],
     ['a new module beside real ones', 'experiences/sandbox/test/planted.ts'],
-  ])('is refused as a mount: %s', (_name, file) => {
+  ] as const)('is refused as a mount: %s', ([_name, file], { expect }) => {
     expect.hasAssertions();
     const files = new VirtualFiles();
     const absolute = path.join(REPO_ROOT, file);
     expect(() => files.mount(new Map([[absolute, '{}']]))).toThrow(`the session mounts no path that reaches the disk (${absolute})`);
   });
 
-  test('is none below a new directory, nor below a new package directory of its own, which is mounted', () => {
+  test('is none below a new directory, nor below a new package directory of its own, which is mounted', ({ expect }) => {
     expect.hasAssertions();
     const files = new VirtualFiles();
     const unmount = files.mount(
@@ -84,7 +84,7 @@ describe('a new path that reaches the disk', () => {
 });
 
 describe('the declaration rule', () => {
-  test('tells each declaration asked of it once, as it turns off, and none again at its next run', () => {
+  test('tells each declaration asked of it once, as it turns off, and none again at its next run', ({ expect }) => {
     expect.hasAssertions();
     const files = new VirtualFiles();
     const declaration = path.join(ABSENT, 'asked', 'sheet.d.css.ts');
@@ -98,7 +98,7 @@ describe('the declaration rule', () => {
 });
 
 describe('the records of what is served', () => {
-  test('hold a directory while it holds a served path, and not once its last one is unmounted', () => {
+  test('hold a directory while it holds a served path, and not once its last one is unmounted', ({ expect }) => {
     expect.hasAssertions();
     const files = new VirtualFiles();
     const unmount = files.mount(new Map([[path.join(ABSENT, 'held', 'deep', 'x.ts'), 'export {};\n']]));
@@ -112,7 +112,7 @@ describe('the records of what is served', () => {
     ]);
   });
 
-  test("mark the declaration beside a mounted file, and at the rule's entry each declaration asked while it was off", () => {
+  test("mark the declaration beside a mounted file, and at the rule's entry each declaration asked while it was off", ({ expect }) => {
     expect.hasAssertions();
     const files = new VirtualFiles();
     const declaration = path.join(ABSENT, 'marked', 'sheet.d.css.ts');
@@ -207,7 +207,9 @@ async function declaredOnDisk(folder: string): Promise<readonly unknown[]> {
 }
 
 describe('the disk beneath the served paths', () => {
-  test('a directory holds a served path through a symlinked directory, read afresh when the link changes between mounts', async () => {
+  test('a directory holds a served path through a symlinked directory, read afresh when the link changes between mounts', async ({
+    expect,
+  }) => {
     expect.hasAssertions();
     await expect(inFolder(throughLinks)).resolves.toStrictEqual([
       true,
@@ -217,7 +219,7 @@ describe('the disk beneath the served paths', () => {
     ]);
   });
 
-  test('a declaration on disk beside a stylesheet is read as the disk has it, never declared by the rule', async () => {
+  test('a declaration on disk beside a stylesheet is read as the disk has it, never declared by the rule', async ({ expect }) => {
     expect.hasAssertions();
     await expect(inFolder(declaredOnDisk)).resolves.toStrictEqual([undefined, 'export {};\n']);
   });

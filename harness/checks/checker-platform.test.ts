@@ -4,7 +4,7 @@
  * names `node_modules`, in a literal of any spelling. Tests are aside: they plant installed packages.
  */
 
-import { describe, expect, test } from 'vitest';
+import { describe, test } from 'vitest';
 import { isImportDeclaration, isLiteralLikeNode, isStringLiteral } from 'typescript/unstable/ast';
 import { nodes, parse } from '#lib/ts-source.ts';
 import { harnessModules } from '#lib/holders.ts';
@@ -39,7 +39,9 @@ function namesThePlatform(path: string, text: string): boolean {
 }
 
 describe("the platform's declarations", () => {
-  test("are told in checker.ts alone: no other module that reads TypeScript's checker, tests aside, names the platform's directory in any spelling", async () => {
+  test("are told in checker.ts alone: no other module that reads TypeScript's checker, tests aside, names the platform's directory in any spelling", async ({
+    expect,
+  }) => {
     expect.hasAssertions();
     const texts = await textsOf(harnessModules(await population()).filter((path) => !isRunnerTest(path)));
     const naming = texts.filter(([path, text]) => namesThePlatform(path, text));

@@ -13,7 +13,7 @@
  */
 
 import { HARNESS_CHECKS, HARNESS_DIRECTORIES, HARNESS_LIB, HARNESS_LINT_RULES } from '#lib/test-globs.ts';
-import { describe, expect, test } from 'vitest';
+import { describe, test } from 'vitest';
 import {
   isNoSubstitutionTemplateLiteral,
   isRegularExpressionLiteral,
@@ -124,13 +124,13 @@ async function rootDirectoryMap(): Promise<Readonly<Record<string, unknown>>> {
 }
 
 describe('the repository', () => {
-  test('every harness path is composed from its owner', async () => {
+  test('every harness path is composed from its owner', async ({ expect }) => {
     expect.hasAssertions();
     const texts = await textsOf(await composingModules());
     expect(texts.flatMap(([path, text]: readonly [string, string]) => spelledPaths(path, text))).toStrictEqual([]);
   });
 
-  test("the import maps name each harness directory as its owner spells it, the lint-rules package's its own", async () => {
+  test("the import maps name each harness directory as its owner spells it, the lint-rules package's its own", async ({ expect }) => {
     expect.hasAssertions();
     const [rootMap, text] = await Promise.all([rootDirectoryMap(), textOf(`${HARNESS_LINT_RULES}package.json`)]);
     const ownMap = object(object(parsed(text, 'manifest'), 'manifest')['imports'], 'imports');
@@ -140,7 +140,7 @@ describe('the repository', () => {
 });
 
 describe('the path scan', () => {
-  test.each([
+  test.for([
     ['harness/lib/plant.ts', "const owner = 'harness/lib/process.ts';", "'harness/lib/process.ts'"],
     ['harness/lib/plant.ts', ['const owner = `harness/scripts/', '$', '{name}.ts`;'].join(''), ['`harness/scripts/', '$', '{'].join('')],
     ['knip.config.ts', "import { x } from './harness/lib/x.ts';", "'./harness/lib/x.ts'"],
@@ -150,19 +150,19 @@ describe('the path scan', () => {
     ['harness/lib/plant.ts', "const pattern = new RegExp('^harness/lib/', 'u');", "'^harness/lib/'"],
     ['harness/lib/plant.ts', "const glob = '**/harness/lib/**';", "'**/harness/lib/**'"],
     ['harness/lib/plant.ts', ['const path = `', '$', '{root}/harness/scripts/a.ts`;'].join(''), '}/harness/scripts/a.ts`'],
-  ])('sees the spelled path in %s: %j', (path, text, what) => {
+  ] as const)('sees the spelled path in %s: %j', ([path, text, what], { expect }) => {
     expect.hasAssertions();
     expect(spelledPaths(path, text)).toStrictEqual([site(path, what)]);
   });
 
-  test.each([
+  test.for([
     ['const owner = `', '$', '{HARNESS_LIB}process.ts`;'].join(''),
     "const message = 'see the harness lib';",
     "const other = 'myharness/lib/x.ts';",
     "import { x } from '#lib/x.ts';",
     "const root = 'harness/';",
     "const other = 'harness/libs/x.ts';",
-  ])('lets a near miss through: %j', (text) => {
+  ])('lets a near miss through: %j', (text, { expect }) => {
     expect.hasAssertions();
     expect(spelledPaths('harness/lib/plant.ts', text)).toStrictEqual([]);
   });

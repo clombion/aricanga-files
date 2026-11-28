@@ -6,7 +6,7 @@
  */
 
 import { EXIT_FAILURE, EXIT_SUCCESS } from '#lib/output.ts';
-import { describe, expect, test } from 'vitest';
+import { describe, test } from 'vitest';
 import { refused, revisions, subjectsOf, updates } from '#lib/pushed.ts';
 import type { Finished } from '#lib/process.ts';
 import { Project } from '#lib/tools.ts';
@@ -20,17 +20,17 @@ const SHA_LENGTH = 40;
 const ZEROS = '0'.repeat(SHA_LENGTH);
 
 describe('the pushed-subjects rule', () => {
-  test.each(['fixup! parse the tag', 'squash! parse the tag', 'amend! parse the tag'])('refuses %s', (subject) => {
+  test.for(['fixup! parse the tag', 'squash! parse the tag', 'amend! parse the tag'])('refuses %s', (subject, { expect }) => {
     expect.hasAssertions();
     expect(refused([subject, 'feat(chat): parse the tag'])).toStrictEqual([subject]);
   });
 
-  test('lets a subject that only mentions a fold through', () => {
+  test('lets a subject that only mentions a fold through', ({ expect }) => {
     expect.hasAssertions();
     expect(refused(['fix: fixup! handling in the parser', 'docs: explain squash! commits'])).toStrictEqual([]);
   });
 
-  test('reads the pushed refs, drops a deleted ref, and ranges a new branch against the remotes', () => {
+  test('reads the pushed refs, drops a deleted ref, and ranges a new branch against the remotes', ({ expect }) => {
     expect.hasAssertions();
     const parsed = updates(
       `refs/heads/a aaa refs/heads/a bbb\nrefs/heads/b ${ZEROS} refs/heads/b ccc\nrefs/heads/c ddd refs/heads/c ${ZEROS}\n`,
@@ -88,7 +88,7 @@ async function pushOf(subjects: readonly string[]): Promise<number> {
 }
 
 describe('the pushed subjects', () => {
-  test('are read from the repository the range names, newest first', async () => {
+  test('are read from the repository the range names, newest first', async ({ expect }) => {
     expect.hasAssertions();
     const project = await Project.create({ linkModules: false });
     try {
@@ -101,12 +101,12 @@ describe('the pushed subjects', () => {
 });
 
 describe('the pre-push script', () => {
-  test('fails on a fold commit in the pushed range', async () => {
+  test('fails on a fold commit in the pushed range', async ({ expect }) => {
     expect.hasAssertions();
     await expect(pushOf(['feat: one', 'fixup! feat: one'])).resolves.toBe(EXIT_FAILURE);
   });
 
-  test('passes a range of ordinary commits', async () => {
+  test('passes a range of ordinary commits', async ({ expect }) => {
     expect.hasAssertions();
     await expect(pushOf(['feat: one', 'fix: fixup! handling'])).resolves.toBe(EXIT_SUCCESS);
   });

@@ -11,7 +11,7 @@
 
 import type { Contract, ContractSite } from '#lib/contracts.ts';
 import { contracts, respellings, widenings } from '#lib/contracts.ts';
-import { describe, expect, test } from 'vitest';
+import { describe, test } from 'vitest';
 import { usePlanted, useScan } from '#lib/scan-hooks.ts';
 import { Accepted } from '#lint-rules/exemptions.ts';
 import type { Scan } from '#lib/checker.ts';
@@ -134,13 +134,13 @@ function lost(scanOf: () => Scan, known: readonly Contract[], path: string): Con
 }
 
 describe('the repository', () => {
-  test('the derivation sees the algebra', () => {
+  test('the derivation sees the algebra', ({ expect }) => {
     expect.hasAssertions();
     const names = new Set(contracts(repoScan(), repoScan().paths).map((contract) => contract.name));
     expect([...ALGEBRA].filter((name) => !names.has(name))).toStrictEqual([]);
   });
 
-  test('no contract is widened or respelled', () => {
+  test('no contract is widened or respelled', ({ expect }) => {
     expect.hasAssertions();
     const known = contracts(repoScan(), repoScan().paths);
     const found = repoScan().paths.flatMap((path) => lost(repoScan, known, path));
@@ -149,7 +149,7 @@ describe('the repository', () => {
 });
 
 describe('the scan', () => {
-  test('derives a literal union and a discriminant', () => {
+  test('derives a literal union and a discriminant', ({ expect }) => {
     expect.hasAssertions();
     expect(planted().map((contract) => [contract.name, [...contract.words].toSorted()])).toStrictEqual([
       ['Mode', ['off', 'on']],
@@ -157,7 +157,7 @@ describe('the scan', () => {
     ]);
   });
 
-  test("derives no contract from a kernel member's test support", () => {
+  test("derives no contract from a kernel member's test support", ({ expect }) => {
     expect.hasAssertions();
     expect(contracts(plantedScan(), [OWNER, ...SUPPORT.map(([path]) => path)]).map((contract) => contract.name)).toStrictEqual([
       'Mode',
@@ -165,21 +165,21 @@ describe('the scan', () => {
     ]);
   });
 
-  test.each(PLANTS.map(([body, form, contract], index) => [index, form, contract, body] as const))(
+  test.for(PLANTS.map(([body, form, contract], index) => [index, form, contract, body] as const))(
     'sees planted widening %i (%s %s)',
-    (index, form, contract) => {
+    ([index, form, contract], { expect }) => {
       expect.hasAssertions();
       const found = lost(plantedScan, planted(), `packages/systems/__widen_${index}.ts`);
       expect(found.map((entry) => [entry.form, entry.contract])).toStrictEqual([[form, contract]]);
     },
   );
 
-  test.each(RESPELLED.map(([path]) => path))('sees the planted respelling in %s', (path) => {
+  test.for(RESPELLED.map(([path]) => path))('sees the planted respelling in %s', (path, { expect }) => {
     expect.hasAssertions();
     expect(lost(plantedScan, planted(), path).map((entry) => entry.form)).toStrictEqual(['respelled']);
   });
 
-  test.each([...NEAR_MISSES.map(([path]) => path), OWNER])('lets the near miss %s through', (path) => {
+  test.for([...NEAR_MISSES.map(([path]) => path), OWNER])('lets the near miss %s through', (path, { expect }) => {
     expect.hasAssertions();
     expect(lost(plantedScan, planted(), path)).toStrictEqual([]);
   });

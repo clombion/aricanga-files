@@ -9,7 +9,7 @@
 import { BlockError, Doc } from '#lib/docs.ts';
 import type { Files, Generators } from '#lib/generated.ts';
 import { GENERATORS, blocks, problems, rendered, run } from '#lib/generated.ts';
-import { describe, expect, test } from 'vitest';
+import { describe, test } from 'vitest';
 import { finished, isolatedEnv } from '#lib/tools.ts';
 import { EXIT_SUCCESS } from '#lib/output.ts';
 import { REPO_ROOT } from '#lib/paths.ts';
@@ -56,20 +56,20 @@ function orphans(generators: Generators, names: readonly string[]): string[] {
 }
 
 describe('the repository', () => {
-  test('every block is current and named by a generator, as the gate runs it', async () => {
+  test('every block is current and named by a generator, as the gate runs it', async ({ expect }) => {
     expect.hasAssertions();
     const done = await finished(['node', 'harness/scripts/gen-docs.ts', '--check'], { cwd: REPO_ROOT });
     expect({ status: done.status, stderr: done.stderr }).toStrictEqual({ status: EXIT_SUCCESS, stderr: '' });
   });
 
-  test('every block is current under a locale that orders letters otherwise', async () => {
+  test('every block is current under a locale that orders letters otherwise', async ({ expect }) => {
     expect.hasAssertions();
     const env = isolatedEnv({ LANG: 'lt_LT.UTF-8', LC_ALL: 'lt_LT.UTF-8' });
     const done = await finished(['node', 'harness/scripts/gen-docs.ts', '--check'], { cwd: REPO_ROOT, env });
     expect({ status: done.status, stderr: done.stderr }).toStrictEqual({ status: EXIT_SUCCESS, stderr: '' });
   });
 
-  test('every generator has a block', async () => {
+  test('every generator has a block', async ({ expect }) => {
     expect.hasAssertions();
     const found = await blocks();
     expect(
@@ -100,7 +100,7 @@ function withOrphan(): typeof GENERATORS {
 }
 
 describe('the generated-docs check', () => {
-  test('sees a hand-edited block as stale, and rendering restores it', async () => {
+  test('sees a hand-edited block as stale, and rendering restores it', async ({ expect }) => {
     expect.hasAssertions();
     const doc = new Doc('docs/planted.md', PLANTED);
     await expect(problems(doc, GENERATORS)).resolves.toStrictEqual([
@@ -110,7 +110,7 @@ describe('the generated-docs check', () => {
     await expect(problems(restored, GENERATORS)).resolves.toStrictEqual([]);
   });
 
-  test('refuses an unknown block name and leaves it as it is', async () => {
+  test('refuses an unknown block name and leaves it as it is', async ({ expect }) => {
     expect.hasAssertions();
     const doc = new Doc('docs/planted.md', PLANTED.replaceAll('tasks', 'planted'));
     await expect(problems(doc, GENERATORS)).resolves.toStrictEqual([
@@ -119,7 +119,7 @@ describe('the generated-docs check', () => {
     await expect(rendered(doc, GENERATORS)).resolves.toBe(doc.text);
   });
 
-  test('sees a generator with no block', async () => {
+  test('sees a generator with no block', async ({ expect }) => {
     expect.hasAssertions();
     const found = await blocks();
     expect(
@@ -130,19 +130,19 @@ describe('the generated-docs check', () => {
     ).toStrictEqual(['planted']);
   });
 
-  test.each([
+  test.for([
     '<!-- generated: a -->\n',
     '<!-- end: a -->\n',
     '<!-- generated: a -->\n<!-- end: b -->\n',
     '<!-- generated: a -->\n<!-- generated: b -->\n',
-  ])('refuses the unpaired marker in %j', (text) => {
+  ])('refuses the unpaired marker in %j', (text, { expect }) => {
     expect.hasAssertions();
     expect(() => new Doc('docs/planted.md', text).blocks()).toThrow(BlockError);
   });
 });
 
 describe('the generated-docs run', () => {
-  test('checking finds both blocks and writes nothing', async () => {
+  test('checking finds both blocks and writes nothing', async ({ expect }) => {
     expect.hasAssertions();
     const { files, texts } = plantedFiles();
     const left = await run(true, GENERATORS, files);
@@ -150,7 +150,7 @@ describe('the generated-docs run', () => {
     expect(texts.get('stale.md')).toBe(PLANTED);
   });
 
-  test('writing fixes the stale block, leaves the unknown one, and checking then finds the unknown one only', async () => {
+  test('writing fixes the stale block, leaves the unknown one, and checking then finds the unknown one only', async ({ expect }) => {
     expect.hasAssertions();
     const { files, texts } = plantedFiles();
     const written = await run(false, GENERATORS, files);

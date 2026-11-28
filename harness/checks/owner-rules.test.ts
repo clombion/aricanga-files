@@ -5,7 +5,7 @@
  */
 
 import type { Root, RuleName } from '#lib/owner-rules.ts';
-import { describe, expect, test } from 'vitest';
+import { describe, test } from 'vitest';
 import { ruleNamed, scopedOf } from './owner-registry.plants.ts';
 import { byKind } from '#lib/by-kind.ts';
 import { plantedPopulation } from '#lib/planted-population.ts';
@@ -23,7 +23,7 @@ function isFree(entry: Root): boolean {
 }
 
 describe('the rules', () => {
-  test('give a kernel owner to the nearest kernel root holding it, when kernel roots nest', async () => {
+  test('give a kernel owner to the nearest kernel root holding it, when kernel roots nest', async ({ expect }) => {
     expect.hasAssertions();
     const held = await plantedPopulation(
       [],
@@ -41,7 +41,7 @@ describe('the rules', () => {
 });
 
 describe("the rules' lookup of a path's root", () => {
-  test("gives a path its holder's root: a root configuration module the harness's, a path no holder holds none", async () => {
+  test("gives a path its holder's root: a root configuration module the harness's, a path no holder holds none", async ({ expect }) => {
     expect.hasAssertions();
     const held = await plantedPopulation([], [['packages/view/', 'view']]);
     const lookup = rootOf(ruleNamed(rulesOf(held), 'clock'), held);
@@ -51,7 +51,7 @@ describe("the rules' lookup of a path's root", () => {
 });
 
 describe('the rules over each tier', () => {
-  test('free a test-infrastructure member where its tier uses the API, with the reason', async () => {
+  test('free a test-infrastructure member where its tier uses the API, with the reason', async ({ expect }) => {
     expect.hasAssertions();
     const held = await plantedPopulation([], [['packages/probe/', 'test-infrastructure']]);
     const rules = rulesOf(held);
@@ -67,7 +67,7 @@ describe('the rules over each tier', () => {
 });
 
 describe('the rules over a population the harness or the kernel shapes', () => {
-  test('cover each kernel member, and give a kernel owner the member that holds it', async () => {
+  test('cover each kernel member, and give a kernel owner the member that holds it', async ({ expect }) => {
     expect.hasAssertions();
     const held = await plantedPopulation(
       [],

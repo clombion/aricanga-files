@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'vitest';
+import { describe, test } from 'vitest';
 import { heldScheduler, memoryStore } from '@narratives/foundation/testing';
 import type { DomainEvent } from '#src/services/event-bus';
 import { createEventBus } from '@narratives/foundation';
@@ -7,7 +7,7 @@ import { createEventBus } from '@narratives/foundation';
 const DELAY_MS = 10;
 
 describe('the event bus', () => {
-  test('delivers an event to the handlers of its type only, and to none after they unsubscribe', () => {
+  test('delivers an event to the handlers of its type only, and to none after they unsubscribe', ({ expect }) => {
     expect.hasAssertions();
     const bus = createEventBus();
     const heard: string[] = [];
@@ -24,7 +24,7 @@ describe('the event bus', () => {
     expect(heard).toStrictEqual(['a:tick', 'b:tock']);
   });
 
-  test('drops an event no handler subscribed to', () => {
+  test('drops an event no handler subscribed to', ({ expect }) => {
     expect.hasAssertions();
     const bus = createEventBus();
     const heard: DomainEvent[] = [];
@@ -35,7 +35,7 @@ describe('the event bus', () => {
     expect(heard).toStrictEqual([]);
   });
 
-  test('delivers to every handler of the event even when one unsubscribes another during delivery', () => {
+  test('delivers to every handler of the event even when one unsubscribes another during delivery', ({ expect }) => {
     expect.hasAssertions();
     const bus = createEventBus();
     const heard: string[] = [];
@@ -54,7 +54,7 @@ describe('the event bus', () => {
 });
 
 describe('the deterministic host ports', () => {
-  test('a held scheduler hands each timer to the test, and cancelling one leaves it with the test', () => {
+  test('a held scheduler hands each timer to the test, and cancelling one leaves it with the test', ({ expect }) => {
     expect.hasAssertions();
     const held: (() => void)[] = [];
     const fired: string[] = [];
@@ -71,7 +71,7 @@ describe('the deterministic host ports', () => {
     expect(fired).toStrictEqual(['fired']);
   });
 
-  test('a memory store loads nothing until saved, then the last save', () => {
+  test('a memory store loads nothing until saved, then the last save', ({ expect }) => {
     expect.hasAssertions();
     const store = memoryStore();
     expect(store.load()).toBeUndefined();

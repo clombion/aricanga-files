@@ -9,7 +9,7 @@
  */
 
 import { Exemptions, site } from '#lint-rules/exemptions.ts';
-import { describe, expect, test } from 'vitest';
+import { describe, test } from 'vitest';
 import { isRunnerTest } from '#lib/test-globs.ts';
 import { skips } from './skips.scan.ts';
 import { textsOf } from '#lib/source-files.ts';
@@ -36,7 +36,7 @@ function runnerSkips(texts: readonly (readonly [string, string])[]): readonly st
 }
 
 describe('the repository', () => {
-  test('every skip is listed', async () => {
+  test('every skip is listed', async ({ expect }) => {
     expect.hasAssertions();
     const texts = await textsOf(await typescriptFiles());
     expect(SKIPS.unexempted(runnerSkips(texts))).toStrictEqual([]);
@@ -44,7 +44,7 @@ describe('the repository', () => {
 });
 
 describe('the census', () => {
-  test('reads every module a runner runs, and no other', () => {
+  test('reads every module a runner runs, and no other', ({ expect }) => {
     expect.hasAssertions();
     const planted = ['p/a.test.ts', 'p/b.test.tsx', 'p/c.spec.ts', 'p/d.spec.tsx', 'p/e.ts'].map((path) => [path, SKIPPING] as const);
     expect(runnerSkips(planted)).toStrictEqual([site('p/a.test.ts', 'a'), site('p/b.test.tsx', 'a'), site('p/c.spec.ts', 'a')]);
@@ -54,7 +54,7 @@ describe('the census', () => {
 describe('the scan', () => {
   const PLANT = 'packages/plant/a.test.ts';
 
-  test.each([
+  test.for([
     ["import { test } from 'vitest';\ntest.skip('a', () => {});", 'a'],
     ["import { it } from 'vitest';\nit.todo('a');", 'a'],
     ["import { test } from 'vitest';\ntest.only('a', () => {});", 'a'],
@@ -69,22 +69,22 @@ describe('the scan', () => {
     ["import { test } from '@playwright/test';\ntest.fixme('a', async () => {});", 'a'],
     ["import { test } from '@playwright/test';\ntest.describe.skip('group', () => {});", 'group'],
     ["import { test } from '@playwright/test';\ntest('a', () => { test.fail(); });", 'a'],
-  ])('sees the planted skip in %j', (text, owner) => {
+  ] as const)('sees the planted skip in %j', ([text, owner], { expect }) => {
     expect.hasAssertions();
     expect(skips(PLANT, text)).toStrictEqual([site(PLANT, owner)]);
   });
 
-  test.each([
+  test.for([
     "import { test } from 'vitest';\ntest('a', () => { const s = 'test.skip'; });",
     "import { test } from 'vitest';\nconst list = { skip: 1 };\ntest('a', () => { list.skip; });",
     "import { test } from 'vitest';\ntest.each([1])('a %s', () => {});",
     'const test = { skip: () => {} };\ntest.skip();',
-  ])('lets a near miss through: %j', (text) => {
+  ])('lets a near miss through: %j', (text, { expect }) => {
     expect.hasAssertions();
     expect(skips(PLANT, text)).toStrictEqual([]);
   });
 
-  test('a listed skip passes and a stale one fails', () => {
+  test('a listed skip passes and a stale one fails', ({ expect }) => {
     expect.hasAssertions();
     const planted = skips(PLANT, "import { test } from 'vitest';\ntest.skip('a', () => {});");
     const listed = new Exemptions({ [site(PLANT, 'a')]: 'planted' });

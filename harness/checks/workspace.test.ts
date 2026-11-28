@@ -5,7 +5,7 @@
 
 import { BOM, causedRefusal, inWorkspaceFolder, manifest, refusalOf } from './scope.plants.ts';
 import { POPULATION_CASES, PopulationError, packagesOf, workspacePackages } from '#lib/workspace.ts';
-import { describe, expect, test, vi } from 'vitest';
+import { describe, test, vi } from 'vitest';
 import { mkdir, rm, symlink, writeFile } from 'node:fs/promises';
 import { ConfigError } from '#lib/config.ts';
 import { finished } from '#lib/tools.ts';
@@ -43,7 +43,9 @@ async function anotherPnpm(): Promise<string> {
 }
 
 describe('pnpm', () => {
-  test("refuses a workspace whose root manifest is broken, naming the root and pnpm's reason, which pnpm writes to stderr", async () => {
+  test("refuses a workspace whose root manifest is broken, naming the root and pnpm's reason, which pnpm writes to stderr", async ({
+    expect,
+  }) => {
     expect.hasAssertions();
     await inWorkspaceFolder('unlistable-', '{', async (folder) => {
       const refusal = await workspacePackages(folder)
@@ -57,7 +59,7 @@ describe('pnpm', () => {
     });
   });
 
-  test("refuses a workspace whose member manifest is broken with pnpm's reason, which pnpm writes to stdout", async () => {
+  test("refuses a workspace whose member manifest is broken with pnpm's reason, which pnpm writes to stdout", async ({ expect }) => {
     expect.hasAssertions();
     await inWorkspaceFolder('broken-member-', '{}', async (folder) => {
       await mkdir(path.join(folder, 'a', 'x'), { recursive: true });
@@ -71,7 +73,7 @@ describe('pnpm', () => {
     });
   });
 
-  test('answers the same packages through a symlink to the root', async () => {
+  test('answers the same packages through a symlink to the root', async ({ expect }) => {
     expect.hasAssertions();
     await inWorkspaceFolder('linked-', '{}', async (folder) => {
       const link = `${folder}-link`;
@@ -91,7 +93,7 @@ describe('pnpm', () => {
 });
 
 describe("a checkout's manifests", () => {
-  test('refuses a member manifest that is not JSON where pnpm lists the workspace, naming that file alone', async () => {
+  test('refuses a member manifest that is not JSON where pnpm lists the workspace, naming that file alone', async ({ expect }) => {
     expect.hasAssertions();
     await inWorkspaceFolder('unparsed-', '{}', async (folder) => {
       await mkdir(path.join(folder, 'a', 'x'), { recursive: true });
@@ -106,7 +108,7 @@ describe("a checkout's manifests", () => {
     });
   });
 
-  test('reaches the reading of the manifests with one pnpm reads and JSON.parse refuses, and names it', async () => {
+  test('reaches the reading of the manifests with one pnpm reads and JSON.parse refuses, and names it', async ({ expect }) => {
     expect.hasAssertions();
     await inWorkspaceFolder('marked-', '{}', async (folder) => {
       await mkdir(path.join(folder, 'a', 'x'), { recursive: true });
@@ -121,7 +123,7 @@ describe("a checkout's manifests", () => {
 });
 
 describe("pnpm's listing", () => {
-  test('lists a workspace whose packageManager names another pnpm, fetching nothing', async () => {
+  test('lists a workspace whose packageManager names another pnpm, fetching nothing', async ({ expect }) => {
     expect.hasAssertions();
     const pinning = JSON.stringify({ packageManager: `pnpm@${await anotherPnpm()}` });
     await inWorkspaceFolder('managed-', pinning, async (folder) => {
@@ -139,7 +141,9 @@ describe("pnpm's listing", () => {
 });
 
 describe("pnpm's answer", () => {
-  test("reads each package's path relative to the workspace and its name, none where pnpm gives none, and refuses a path that is no string", () => {
+  test("reads each package's path relative to the workspace and its name, none where pnpm gives none, and refuses a path that is no string", ({
+    expect,
+  }) => {
     expect.hasAssertions();
     expect(packagesOf(answer(['/w', '/w/a/x']), '/w')).toStrictEqual([
       { dir: '', name: 'x' },
@@ -152,9 +156,9 @@ describe("pnpm's answer", () => {
     expect(() => packagesOf(answer([undefined]), '/w')).toThrow(new ConfigError('pnpm ls entry 0 ("x") path is not a string: undefined'));
   });
 
-  test.each(['1', 'null', 'true', '{"ab":1}', '["x"]'])(
+  test.for(['1', 'null', 'true', '{"ab":1}', '["x"]'])(
     'refuses a package whose name is no string (%s), naming its manifest',
-    (name: string) => {
+    (name: string, { expect }) => {
       expect.hasAssertions();
       expect(() => packagesOf(`[{"name":${name},"path":"/w/b"}]`, '/w')).toThrow(
         new PopulationError('name', `b/package.json: the name ${name} is no string: a package's name is a string, or none`),
@@ -177,7 +181,7 @@ function classDoc(text: string): string {
 }
 
 describe("a population's refusal", () => {
-  test('is documented by its class for every state it is thrown for', async () => {
+  test('is documented by its class for every state it is thrown for', async ({ expect }) => {
     expect.hasAssertions();
     const words = classDoc(await textOf('harness/lib/workspace.ts'));
     expect(POPULATION_CASES.words.filter((state) => !words.includes(POPULATION_CASES.of(state)))).toStrictEqual([]);

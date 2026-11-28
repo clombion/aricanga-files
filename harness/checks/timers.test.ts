@@ -1,6 +1,6 @@
 /** The timer guard's wrappers, over stand-in real functions: a timer is pending until it fires or is cleared, and what is left is named with where it was set. */
 
-import { describe, expect, test } from 'vitest';
+import { describe, test } from 'vitest';
 import { Timers } from '#lib/timers.ts';
 
 /** The first item of a list. */
@@ -43,7 +43,9 @@ function standIn(): StandIn {
 }
 
 describe('the timer guard', () => {
-  test('names a timeout and an interval left pending, with where each was set, and clears them through the real functions', () => {
+  test('names a timeout and an interval left pending, with where each was set, and clears them through the real functions', ({
+    expect,
+  }) => {
     expect.hasAssertions();
     const real = standIn();
     const timers = new Timers();
@@ -56,7 +58,7 @@ describe('the timer guard', () => {
     expect(real.cleared).toHaveLength(left.length);
   });
 
-  test('forgets a timeout once it fires, and calls its handler', () => {
+  test('forgets a timeout once it fires, and calls its handler', ({ expect }) => {
     expect.hasAssertions();
     const real = standIn();
     const timers = new Timers();
@@ -70,7 +72,7 @@ describe('the timer guard', () => {
     expect([called, timers.clearLeft()]).toStrictEqual([['fired'], []]);
   });
 
-  test('forgets a timer that was cleared', () => {
+  test('forgets a timer that was cleared', ({ expect }) => {
     expect.hasAssertions();
     const real = standIn();
     const timers = new Timers();
@@ -79,7 +81,7 @@ describe('the timer guard', () => {
     expect([timers.clearLeft(), real.cleared]).toStrictEqual([[], [handle]]);
   });
 
-  test('fires a timeout whose handler is no function without calling it, and forgets it', () => {
+  test('fires a timeout whose handler is no function without calling it, and forgets it', ({ expect }) => {
     expect.hasAssertions();
     const real = standIn();
     const timers = new Timers();

@@ -1,5 +1,5 @@
 import { FIXTURE_TAG, fixtureSystem, fixtureSystemErased } from '#src/testing/fixture-system';
-import { describe, expect, test } from 'vitest';
+import { describe, test } from 'vitest';
 import type { FixtureCommand } from '#src/testing/fixture-system';
 import type { Input } from '#src/sim/input';
 import { canonical } from '#src/testing/serialize';
@@ -56,7 +56,7 @@ async function respondLater(): Promise<string> {
 }
 
 describe('the fixture harness drain', () => {
-  test('waits for a fetch whose data arrives later before the run is read', async () => {
+  test('waits for a fetch whose data arrives later before the run is read', async ({ expect }) => {
     expect.hasAssertions();
     const run = await runFixture({ fetch: respondLater, inputs: [player('fetch')], story: START, systems: [fixtureSystemErased] });
     expect(run.viewOf(fixtureSystem).fetched).toBe(FETCHED);
@@ -64,7 +64,7 @@ describe('the fixture harness drain', () => {
 });
 
 describe('the fixture harness', () => {
-  test('runFixture captures the full multi-family stream headlessly (#1, #2, #4)', async () => {
+  test('runFixture captures the full multi-family stream headlessly (#1, #2, #4)', async ({ expect }) => {
     expect.hasAssertions();
     const run = await runFixture({
       fetch: respond,
@@ -81,7 +81,7 @@ describe('the fixture harness', () => {
     expect(run.viewOf(fixtureSystem)).toMatchObject({ busy: false, fetched: FETCHED });
   });
 
-  test('same fixture + same seed ⇒ identical trace (#3)', async () => {
+  test('same fixture + same seed ⇒ identical trace (#3)', async ({ expect }) => {
     expect.hasAssertions();
     const opts = { fetch: respond, inputs: [player('schedule'), player('fetch')], story: START, systems: [fixtureSystemErased] };
     const first = await runFixture(opts);
@@ -89,14 +89,14 @@ describe('the fixture harness', () => {
     expect(canonical(first.trace)).toBe(canonical(second.trace));
   });
 
-  test('a choose-command drives an ink choice via DriveInk (#4)', async () => {
+  test('a choose-command drives an ink choice via DriveInk (#4)', async ({ expect }) => {
     expect.hasAssertions();
     const run = await runFixture({ inputs: [player('choose', { index: 0 })], story: CHOICE, systems: [fixtureSystemErased] });
     // The post-choice line was reached only because DriveInk(choose) advanced ink.
     expect(run.viewOf(fixtureSystem).lines).toContain('Resolved');
   });
 
-  test('golden tripwire: the canonical stream matches the recorded golden (#6)', async () => {
+  test('golden tripwire: the canonical stream matches the recorded golden (#6)', async ({ expect }) => {
     expect.hasAssertions();
     const run = await runFixture({
       fetch: respond,
@@ -110,7 +110,7 @@ describe('the fixture harness', () => {
 });
 
 describe('the canonical text', () => {
-  test('orders integer-like keys first, ascending, and the others by code unit, whatever order they were written in', () => {
+  test('orders integer-like keys first, ascending, and the others by code unit, whatever order they were written in', ({ expect }) => {
     expect.hasAssertions();
     const written = Object.fromEntries([
       ['bb', 'b'],
@@ -121,7 +121,7 @@ describe('the canonical text', () => {
     expect(canonical(written)).toBe('{\n  "9": "nine",\n  "10": "ten",\n  "aa": "a",\n  "bb": "b"\n}');
   });
 
-  test('orders keys by code unit, whatever order they were written in', () => {
+  test('orders keys by code unit, whatever order they were written in', ({ expect }) => {
     expect.hasAssertions();
     const written: readonly (readonly [string, string])[] = [
       ['bb', 'b'],

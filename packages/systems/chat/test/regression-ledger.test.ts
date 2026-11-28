@@ -1,5 +1,5 @@
 import { bugHeaders, physicsDispositions, waitedOnIssues } from '#test/ledger-audit';
-import { describe, expect, test } from 'vitest';
+import { describe, test } from 'vitest';
 import { effectsCarryChatId, notifyOnce, routingOwnership } from '@narratives/system-chat/testing';
 import { LEDGER } from '#test/regression-ledger';
 import { chatSystem } from '#src/system';
@@ -31,7 +31,7 @@ async function replay(name: string): Promise<Awaited<ReturnType<typeof runStream
 describe('the ledger audit', () => {
   // AC#2: audit teeth. Every BUG-NNN header in the ledger is dispositioned, and a
   // future untriaged BUG-NNN fails here.
-  test('every BUG-NNN entry in BUG-HISTORY.md is dispositioned in the manifest', async () => {
+  test('every BUG-NNN entry in BUG-HISTORY.md is dispositioned in the manifest', async ({ expect }) => {
     expect.hasAssertions();
     const markdown = await readFile('docs/agents/BUG-HISTORY.md', 'utf8');
     const headers = bugHeaders(markdown);
@@ -40,12 +40,12 @@ describe('the ledger audit', () => {
   });
 
   // AC#2: the legacy date-based entries (no stable id) are frozen.
-  test('the legacy date-based entries are frozen', () => {
+  test('the legacy date-based entries are frozen', ({ expect }) => {
     expect.hasAssertions();
     expect(LEDGER.filter((entry) => entry.legacy)).toHaveLength(LEGACY_ENTRIES);
   });
 
-  test('manifest ids are unique and every entry has a rationale', () => {
+  test('manifest ids are unique and every entry has a rationale', ({ expect }) => {
     expect.hasAssertions();
     expect(ids.size).toBe(LEDGER.length);
     expect(LEDGER.filter((entry) => entry.rationale === '')).toStrictEqual([]);
@@ -54,7 +54,7 @@ describe('the ledger audit', () => {
   // Every kernel-physics bug keeps a fixture and a predicate alive (so the durable
   // repro data can't silently rot), and every open issue a disposition waits on is
   // written as an issue reference.
-  test('every kernel-physics entry has a non-empty fixture and predicate', () => {
+  test('every kernel-physics entry has a non-empty fixture and predicate', ({ expect }) => {
     expect.hasAssertions();
     const physics = physicsDispositions();
     expect(physics).not.toStrictEqual([]);
@@ -62,7 +62,7 @@ describe('the ledger audit', () => {
     expect(physics.filter((disposition) => disposition.predicate === '')).toStrictEqual([]);
   });
 
-  test('every issue a disposition waits on is an issue reference', () => {
+  test('every issue a disposition waits on is an issue reference', ({ expect }) => {
     expect.hasAssertions();
     const issues = waitedOnIssues();
     expect(issues).toStrictEqual(['#13', '#18', '#38']);
@@ -72,7 +72,7 @@ describe('the ledger audit', () => {
 
 describe('the kernel-physics regressions', () => {
   // AC#3: the routing historical scenario is green now (asserts only routing).
-  test('routing regression (cross-chat) is green via routingOwnership', async () => {
+  test('routing regression (cross-chat) is green via routingOwnership', async ({ expect }) => {
     expect.hasAssertions();
     expect(routingOwnership(await replay('cross-chat-routing'))).toBeUndefined();
   });
@@ -80,14 +80,14 @@ describe('the kernel-physics regressions', () => {
   // AC#4: effectsCarryChatId is exercised over real chat effects (the notify
   // fixture produces chat/showNotification with a real chatId); the typing-specific
   // scenario lands with #38.
-  test('effectsCarryChatId holds over the notification fixture', async () => {
+  test('effectsCarryChatId holds over the notification fixture', async ({ expect }) => {
     expect.hasAssertions();
     expect(effectsCarryChatId(await replay('duplicate-notifications'))).toBeUndefined();
   });
 
   // The dup-notifications regression is dead: notify-once holds over its historical
   // scenario (two messages to one chat, exactly one notification).
-  test('the duplicate-notifications regression stays dead (notifyOnce green)', async () => {
+  test('the duplicate-notifications regression stays dead (notifyOnce green)', async ({ expect }) => {
     expect.hasAssertions();
     expect(notifyOnce(await replay('duplicate-notifications'))).toBeUndefined();
   });

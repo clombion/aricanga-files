@@ -1,5 +1,5 @@
 import { checkInvariant, inkStepArb, runFixture, runStream } from '#src/testing/index';
-import { describe, expect, test } from 'vitest';
+import { describe, test } from 'vitest';
 import { erase, viewOf } from '#src/sim/system';
 import { readerOf, unitCommands } from '#src/sim/parse';
 import { sample, constant as single } from 'fast-check';
@@ -62,14 +62,14 @@ const START: FixtureInput = { input: { command: { kind: 'start', payload: undefi
 const FETCH: FixtureInput = { input: { command: { kind: 'fetch', payload: undefined } satisfies HCommand, source: 'player' }, target: 'h' };
 
 describe('the fixture harness', () => {
-  test('refuses a run whose timers never drain', async () => {
+  test('refuses a run whose timers never drain', async ({ expect }) => {
     expect.hasAssertions();
     await expect(runFixture({ inputs: [START], story: 'Only line.\n', systems: [erase(loopSystem)] })).rejects.toThrow(
       'runFixture: drain did not converge',
     );
   });
 
-  test('passes a run its foreground, seed and fetch responder', async () => {
+  test('passes a run its foreground, seed and fetch responder', async ({ expect }) => {
     expect.hasAssertions();
     const run = await runStream({ fetch: () => ANSWER, foreground: 'h', seed: SEED, systems: [erase(hSystem)] }, [FETCH]);
     expect(run.viewOf(hSystem).fetched).toBe(ANSWER);
@@ -78,7 +78,7 @@ describe('the fixture harness', () => {
 });
 
 describe('the invariant check', () => {
-  test('reports a violation with its rule, its detail and the step it was found at', async () => {
+  test('reports a violation with its rule, its detail and the step it was found at', async ({ expect }) => {
     expect.hasAssertions();
     const found = await checkInvariant({ runs: RUNS, systems: [erase(hSystem)] }, single([]), () => ({
       at: STEP,
@@ -89,7 +89,7 @@ describe('the invariant check', () => {
     expect(found.message).toContain(`always: planted @${String(STEP)}`);
   });
 
-  test('reports a violation found at no particular step without one', async () => {
+  test('reports a violation found at no particular step without one', async ({ expect }) => {
     expect.hasAssertions();
     const found = await checkInvariant({ runs: RUNS, systems: [erase(hSystem)] }, single([]), () => ({
       detail: 'planted',
@@ -100,7 +100,7 @@ describe('the invariant check', () => {
 });
 
 describe('the step generator', () => {
-  test('draws texts from a fixed pool and tags from the speaker key by default', () => {
+  test('draws texts from a fixed pool and tags from the speaker key by default', ({ expect }) => {
     expect.hasAssertions();
     const pool = new Set(['one', 'two']);
     const steps = sample(inkStepArb({ texts: [...pool] }), SAMPLES);

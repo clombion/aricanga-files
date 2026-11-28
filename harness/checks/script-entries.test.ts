@@ -3,7 +3,7 @@
 import { EXIT_CLEAN, EXIT_FINDINGS } from '#lib/exit-status.ts';
 import { EXIT_FAILURE, EXIT_SUCCESS } from '#lib/output.ts';
 import { buildCheck, checkPushed, genDocs, stressHunt, typecheckAll } from '#lib/script-entries.ts';
-import { describe, expect, test } from 'vitest';
+import { describe, test } from 'vitest';
 import type { BuildResult } from '#lib/build.ts';
 import type { Finished } from '#lib/process.ts';
 import type { Hunt } from '#lib/stress.ts';
@@ -110,14 +110,14 @@ function tscRun(status: number, stdout: string): Finished {
 }
 
 describe('the build check', () => {
-  test('passes when every app builds and none writes into the checkout', async () => {
+  test('passes when every app builds and none writes into the checkout', async ({ expect }) => {
     expect.hasAssertions();
     const { report, said } = keeping();
     const status = await buildCheck({ apps: ['apps/a'], check: asking(new Scripted({ 'apps/a': BUILT }), itself), out: report });
     expect([status, said]).toStrictEqual([EXIT_SUCCESS, ['build:check: 1 apps, 0 failed, 0 writes\n']]);
   });
 
-  test('reports a failed build and a write into the checkout, and fails', async () => {
+  test('reports a failed build and a write into the checkout, and fails', async ({ expect }) => {
     expect.hasAssertions();
     const { report, said } = keeping();
     const builds = new Scripted({ 'apps/b': BROKEN, 'apps/c': WRITING });
@@ -134,7 +134,7 @@ describe('the build check', () => {
 });
 
 describe('the docs run', () => {
-  test('passes the check flag through and passes with nothing left stale', async () => {
+  test('passes the check flag through and passes with nothing left stale', async ({ expect }) => {
     expect.hasAssertions();
     const { report, said } = keeping();
     const runs = new Scripted({ check: [] });
@@ -142,7 +142,7 @@ describe('the docs run', () => {
     expect([status, said, runs.calls]).toStrictEqual([EXIT_SUCCESS, [], ['check']]);
   });
 
-  test('complains of each stale block and fails', async () => {
+  test('complains of each stale block and fails', async ({ expect }) => {
     expect.hasAssertions();
     const { report, said } = keeping();
     const problem = { line: 3, message: 'block "tasks" is stale', path: 'harness.md', writingFixesIt: true };
@@ -152,7 +152,7 @@ describe('the docs run', () => {
 });
 
 describe('the flake hunt', () => {
-  test('reports the seed and passes when every copy passed, with no replay line', async () => {
+  test('reports the seed and passes when every copy passed, with no replay line', async ({ expect }) => {
     expect.hasAssertions();
     const { report, said } = keeping();
     const hunts = new Scripted({ hunt: [{ output: '', seed: 7, status: EXIT_CLEAN }] });
@@ -163,7 +163,7 @@ describe('the flake hunt', () => {
     ]);
   });
 
-  test('reports each failing copy and the command that replays the hunt, and fails', async () => {
+  test('reports each failing copy and the command that replays the hunt, and fails', async ({ expect }) => {
     expect.hasAssertions();
     const { report, said } = keeping();
     const hunts = new Scripted({
@@ -186,7 +186,7 @@ describe('the flake hunt', () => {
 });
 
 describe('the type check', () => {
-  test('checks every project from the root and passes when each does', async () => {
+  test('checks every project from the root and passes when each does', async ({ expect }) => {
     expect.hasAssertions();
     const { report, said } = keeping();
     const runs = new Scripted({ '/planted:a/tsconfig.json': tscRun(EXIT_CLEAN, '') });
@@ -194,7 +194,7 @@ describe('the type check', () => {
     expect([status, said, runs.calls]).toStrictEqual([EXIT_SUCCESS, ['typecheck: 1 projects, 0 failed'], ['/planted:a/tsconfig.json']]);
   });
 
-  test('says each failing project with its output, in project order, and fails', async () => {
+  test('says each failing project with its output, in project order, and fails', async ({ expect }) => {
     expect.hasAssertions();
     const { report, said } = keeping();
     const runs = new Scripted({
@@ -212,7 +212,7 @@ describe('the type check', () => {
 });
 
 describe('the pre-push check', () => {
-  test('reads the pushed range in the repository and passes when nothing asks to be folded', async () => {
+  test('reads the pushed range in the repository and passes when nothing asks to be folded', async ({ expect }) => {
     expect.hasAssertions();
     const { report, said } = keeping();
     const logs = new Scripted({ '/planted:aaaa..bbbb': ['feat: a change'] });
@@ -220,7 +220,7 @@ describe('the pre-push check', () => {
     expect([status, said, logs.calls]).toStrictEqual([EXIT_SUCCESS, [], ['/planted:aaaa..bbbb']]);
   });
 
-  test('complains of each commit that asks to be folded, and fails', async () => {
+  test('complains of each commit that asks to be folded, and fails', async ({ expect }) => {
     expect.hasAssertions();
     const { report, said } = keeping();
     const logs = new Scripted({ '/planted:aaaa..bbbb': ['feat: a change', 'fixup! feat: a change'] });

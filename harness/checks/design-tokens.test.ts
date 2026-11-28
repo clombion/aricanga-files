@@ -1,6 +1,6 @@
 /** The `harness/design-tokens` rule, through the repository's stylelint: raw values outside the tokens are reported, the token file's own tokens are not. */
 
-import { describe, expect, test } from 'vitest';
+import { describe, test } from 'vitest';
 import { messages, rawTokenValues, reported, ruleName } from '#lib/design-tokens.ts';
 import { lintSheet } from '#lib/stylesheets.ts';
 
@@ -20,7 +20,7 @@ async function warnings(path: string, text: string): Promise<readonly string[]> 
 }
 
 describe('the raw values a token holds', () => {
-  test('are each size, duration, colour, easing and non-zero z-index, and a zero size is none', () => {
+  test('are each size, duration, colour, easing and non-zero z-index, and a zero size is none', ({ expect }) => {
     expect.hasAssertions();
     expect(rawTokenValues('1rem 0px 200ms #fff rgb(0 0 0) ease')).toStrictEqual([
       ['size', '1rem'],
@@ -34,19 +34,19 @@ describe('the raw values a token holds', () => {
 });
 
 describe('what a declaration has reported', () => {
-  test("is a declaration's raw sizes wherever it is", () => {
+  test("is a declaration's raw sizes wherever it is", ({ expect }) => {
     expect.hasAssertions();
     expect([reported('padding', '1rem', false), reported('padding', '1rem', true)]).toStrictEqual([[['size', '1rem']], [['size', '1rem']]]);
   });
 
-  test("is a custom property's raw values outside the token file, and nothing inside it", () => {
+  test("is a custom property's raw values outside the token file, and nothing inside it", ({ expect }) => {
     expect.hasAssertions();
     expect([reported('--tint', '#fff', false), reported('--tint', '#fff', true)]).toStrictEqual([[['colour', '#fff']], []]);
   });
 });
 
 describe('the rule', () => {
-  test('reports a raw size in a declaration and a raw colour in a custom property outside the token file', async () => {
+  test('reports a raw size in a declaration and a raw colour in a custom property outside the token file', async ({ expect }) => {
     expect.hasAssertions();
     await expect(warnings('plant/part.css', '.a {\n  --tint: #fff;\n  padding: 1rem;\n}\n')).resolves.toStrictEqual([
       messages.raw('colour', '#fff'),
@@ -54,7 +54,7 @@ describe('the rule', () => {
     ]);
   });
 
-  test('lets the token file define its tokens, and holds its other declarations to them', async () => {
+  test('lets the token file define its tokens, and holds its other declarations to them', async ({ expect }) => {
     expect.hasAssertions();
     await expect(warnings('plant/tokens.css', ':root {\n  --gap: 1rem;\n}\n\n.a {\n  padding: 2rem;\n}\n')).resolves.toStrictEqual([
       messages.raw('size', '2rem'),

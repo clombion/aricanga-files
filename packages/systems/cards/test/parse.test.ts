@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'vitest';
+import { describe, test } from 'vitest';
 import { cardsSystem } from '#src/system';
 import { parseTag } from '@narratives/foundation';
 import { throughSave } from '@narratives/foundation/testing';
@@ -10,14 +10,14 @@ const SEED = 0;
 const COURAGE = 2;
 
 describe('the cards parsers', () => {
-  test('refuse every command: the cards system takes none', () => {
+  test('refuse every command: the cards system takes none', ({ expect }) => {
     expect.hasAssertions();
     expect(() => cardsSystem.parseCommand({ kind: 'open', payload: { chatId: 'pat' } })).toThrow(
       'system "cards" refuses a command (the cards system takes none): {"kind":"open","payload":{"chatId":"pat"}}',
     );
   });
 
-  test('read a played deck back from saved text as the deck it is', () => {
+  test('read a played deck back from saved text as the deck it is', ({ expect }) => {
     expect.hasAssertions();
     const played = cardsSystem.reduce(
       cardsSystem.init(SEED),
@@ -31,7 +31,7 @@ describe('the cards parsers', () => {
     expect(cardsSystem.parseState(throughSave(played))).toStrictEqual(played);
   });
 
-  test('refuse a deck whose stat is not a number, naming the stat', () => {
+  test('refuse a deck whose stat is not a number, naming the stat', ({ expect }) => {
     expect.hasAssertions();
     expect(() => cardsSystem.parseState({ ...cardsSystem.init(SEED), stats: { courage: 'two' } })).toThrow(
       'system "cards" refuses stats.courage: "two"',

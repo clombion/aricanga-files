@@ -14,7 +14,7 @@
  */
 
 import { PLANTS, SHAPES, TSC_DEFAULT } from './typecheck-settings.plants.ts';
-import { describe, expect, test } from 'vitest';
+import { describe, test } from 'vitest';
 import { isTypeScript, textsOf, tracked } from '#lib/source-files.ts';
 import { HARNESS_LINT_RULES } from '#lib/test-globs.ts';
 import { Project } from '#lib/tools.ts';
@@ -130,7 +130,7 @@ function codesOf(found: ReadonlyMap<string, readonly string[]>, path: string): r
 }
 
 describe('the base config', () => {
-  test('fails each planted hole with its own diagnostic and passes the clean plant', async () => {
+  test('fails each planted hole with its own diagnostic and passes the clean plant', async ({ expect }) => {
     expect.hasAssertions();
     const found = await typecheck({});
     const plants = [...PLANTS, ...SHAPES];
@@ -142,13 +142,13 @@ describe('the base config', () => {
 });
 
 describe('each setting', () => {
-  test.for(PLANTS)('is what fails $path: removing it lets the plant through', async (plant) => {
+  test.for(PLANTS)('is what fails $path: removing it lets the plant through', async (plant, { expect }) => {
     expect.hasAssertions();
     const removed = await typecheck(plant.removal);
     expect(codesOf(removed, plant.path)).toStrictEqual([]);
   });
 
-  test('isolatedModules is implied by verbatimModuleSyntax: removing it alone keeps its plant failing', async () => {
+  test('isolatedModules is implied by verbatimModuleSyntax: removing it alone keeps its plant failing', async ({ expect }) => {
     expect.hasAssertions();
     const relaxed = await typecheck({ isolatedModules: false });
     expect(relaxed.get('src/isolated.ts')).toStrictEqual(['TS1205']);

@@ -6,7 +6,7 @@
  * timer, and the test after a leaking one pass.
  */
 
-import { describe, expect, test } from 'vitest';
+import { describe, test } from 'vitest';
 import { runPlanted } from '#lib/planted-vitest.ts';
 
 const HARNESS_ID = 'isolation';
@@ -40,7 +40,7 @@ test('the test after a leak starts clean', () => {
 `;
 
 describe('the guards, through a planted Vitest run', () => {
-  test('fail a pending timeout and interval, and pass a fired, a cleared and a clean test', async () => {
+  test('fail a pending timeout and interval, and pass a fired, a cleared and a clean test', async ({ expect }) => {
     expect.hasAssertions();
     const outcomes = await runPlanted({ 'isolation.test.ts': PLANTED });
     expect([...outcomes].map(([name, { status }]: readonly [string, Readonly<{ status: string }>]) => [name, status])).toStrictEqual([

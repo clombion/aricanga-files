@@ -8,7 +8,7 @@
  */
 
 import { Exemptions, Prefixes, site } from '#lint-rules/exemptions.ts';
-import { describe, expect, test } from 'vitest';
+import { describe, test } from 'vitest';
 import type { Prose } from '#lib/docs.ts';
 import { currentText } from '#lib/docs.ts';
 
@@ -41,7 +41,7 @@ function narration(lines: readonly Prose[]): string[] {
 }
 
 describe('the repository', () => {
-  test('no current text narrates history', async () => {
+  test('no current text narrates history', async ({ expect }) => {
     expect.hasAssertions();
     const found = narration(await currentText());
     expect(EXEMPT.unexempted(found)).toStrictEqual([]);
@@ -49,7 +49,7 @@ describe('the repository', () => {
 });
 
 describe('the narration scan', () => {
-  test.each([
+  test.for([
     ['Logs previously lived in /var/log.', 'previously'],
     ['The bus was originally a singleton.', 'originally'],
     ['Formerly a class, it is a function.', 'Formerly'],
@@ -59,12 +59,12 @@ describe('the narration scan', () => {
     ['We discovered the cache was stale.', 'We discovered'],
     ['The first time we ran it, it hung.', 'The first time we'],
     ['Before this PR the gate wrote files.', 'Before this PR'],
-  ])('sees the planted phrase in %j', (text, phrase) => {
+  ] as const)('sees the planted phrase in %j', ([text, phrase], { expect }) => {
     expect.hasAssertions();
     expect(narration([{ line: 1, path: 'docs/planted.md', text }])).toStrictEqual([site('docs/planted.md', phrase)]);
   });
 
-  test('sees a date in a comment of code only', () => {
+  test('sees a date in a comment of code only', ({ expect }) => {
     expect.hasAssertions();
     expect(narration([{ line: 1, path: 'src/planted.ts', text: 'fixed on 2026-04-25' }])).toStrictEqual([
       site('src/planted.ts', '2026-04-25'),
@@ -72,13 +72,13 @@ describe('the narration scan', () => {
     expect(narration([{ line: 1, path: 'docs/planted.md', text: 'Measured on 2026-11-08.' }])).toStrictEqual([]);
   });
 
-  test.each([
+  test.for([
     'A name no longer than 64 characters.',
     'Show the previous row.',
     'Wait until the lock is free.',
     'Format it for nowhere in particular.',
     'The original order is kept.',
-  ])('lets the near miss %j through', (text) => {
+  ])('lets the near miss %j through', (text, { expect }) => {
     expect.hasAssertions();
     expect(narration([{ line: 1, path: 'docs/planted.md', text }])).toStrictEqual([]);
   });

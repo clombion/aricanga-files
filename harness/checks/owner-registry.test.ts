@@ -11,7 +11,7 @@
 import { CANONICAL, FORMS, IN_A_TEST, MEMBERS, NEAR_MISSES, ruleNamed, scopedOf, unguarded } from './owner-registry.plants.ts';
 import type { Root, Rule, RuleName } from '#lib/owner-rules.ts';
 import { SHAPES, keyOf, ownerUses, rulesOf, sites } from '#lib/owners.ts';
-import { describe, expect, test } from 'vitest';
+import { describe, test } from 'vitest';
 import { usePlanted, useScan } from '#lib/scan-hooks.ts';
 import type { Scan } from '#lib/checker.ts';
 import type { Site } from '#lib/owners.ts';
@@ -178,30 +178,30 @@ function honoured(rules: readonly Rule[]): readonly string[] {
 }
 
 describe('the repository', () => {
-  test('no guarded API is used outside its owner', () => {
+  test('no guarded API is used outside its owner', ({ expect }) => {
     expect.hasAssertions();
     expect(sitesIn(repoScan, repoScan().paths)).toStrictEqual([]);
   });
 
-  test('honours every declared owner, so a member demoted from the kernel fails here', async () => {
+  test('honours every declared owner, so a member demoted from the kernel fails here', async ({ expect }) => {
     expect.hasAssertions();
     const rules = rulesOf(await population());
     expect(honoured(rules)).toStrictEqual(DECLARED.map(([name, owner]) => keyOf({ path: owner, rule: name })).toSorted());
   });
 
-  test('guards every member under some scope of every rule', async () => {
+  test('guards every member under some scope of every rule', async ({ expect }) => {
     expect.hasAssertions();
     const held = await population();
     const missed = unguarded(rulesOf(held), held);
     expect(missed, 'a member no root of a rule holds once: give its tier a policy in harness/lib/owner-rules.ts').toStrictEqual([]);
   });
 
-  test('frees some root and declares some owner, so the tests over each are not empty', () => {
+  test('frees some root and declares some owner, so the tests over each are not empty', ({ expect }) => {
     expect.hasAssertions();
     expect([FREED.length > NONE, DECLARED.length > NONE]).toStrictEqual([true, true]);
   });
 
-  test.each(FREED)('the %s rule frees %s, where a module uses its API', (name, root, why) => {
+  test.for(FREED)('the %s rule frees %s, where a module uses its API', ([name, root, why], { expect }) => {
     expect.hasAssertions();
     const scan = repoScan();
     const rule = ruleNamed(rulesOf(scan.population), name);
@@ -211,7 +211,7 @@ describe('the repository', () => {
     ).not.toStrictEqual([]);
   });
 
-  test.each(DECLARED)('the %s owner %s exists and uses its API', async (name, owner) => {
+  test.for(DECLARED)('the %s owner %s exists and uses its API', async ([name, owner], { expect }) => {
     expect.hasAssertions();
     const scan = repoScan();
     const rule = ruleNamed(rulesOf(scan.population), name);
@@ -221,7 +221,7 @@ describe('the repository', () => {
 });
 
 describe('the scan', () => {
-  test('sees each planted call form and each planted root', () => {
+  test('sees each planted call form and each planted root', ({ expect }) => {
     expect.hasAssertions();
     const planted = plants.map(([path]) => path).filter((path) => /__(?:form|root|in_a_test)/u.test(path));
     const found = sitesIn(plantedScan, planted)
@@ -230,7 +230,7 @@ describe('the scan', () => {
     expect(found).toStrictEqual(expected.map((site) => keyOf(site)).toSorted());
   });
 
-  test('plants a canonical use in every root of every rule, and each call form', () => {
+  test('plants a canonical use in every root of every rule, and each call form', ({ expect }) => {
     expect.hasAssertions();
     const roots = RULES.flatMap((rule) => scopedOf(rule).map((scope) => `${scope.root}__root_${rule.name}.ts`));
     const forms = FORMS.map((_form, index) => `packages/foundation/src/__form_${index}.ts`);
@@ -242,22 +242,22 @@ describe('the scan', () => {
     ).toStrictEqual([...roots, ...forms].toSorted());
   });
 
-  test('reads a file in a free root nested in a scoped one by the nearest, the free root', () => {
+  test('reads a file in a free root nested in a scoped one by the nearest, the free root', ({ expect }) => {
     expect.hasAssertions();
     expect(sitesIn(nestedFreeScan, [NESTED_FREE])).toStrictEqual([]);
   });
 
-  test('lets the owner of the nearest kernel root use its API, when kernel roots nest', () => {
+  test('lets the owner of the nearest kernel root use its API, when kernel roots nest', ({ expect }) => {
     expect.hasAssertions();
     expect(sitesIn(nestedScan, [NESTED_OWNER])).toStrictEqual([]);
   });
 
-  test.each(REDECLARED)('sees the use in %s of a guarded global that a held module redeclares', (path, rule) => {
+  test.for(REDECLARED)('sees the use in %s of a guarded global that a held module redeclares', ([path, rule], { expect }) => {
     expect.hasAssertions();
     expect(sitesIn(redeclaredScan, [path])).toStrictEqual([{ path, rule }]);
   });
 
-  test.each(NEAR_MISSES.map(([path]) => path))('lets the near miss %s through', (path) => {
+  test.for(NEAR_MISSES.map(([path]) => path))('lets the near miss %s through', (path, { expect }) => {
     expect.hasAssertions();
     expect(sitesIn(plantedScan, [path])).toStrictEqual([]);
   });

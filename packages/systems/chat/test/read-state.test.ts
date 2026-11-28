@@ -1,5 +1,5 @@
 import { close, cursorsOf, messagesOf, open, run, story } from '#test/support';
-import { describe, expect, test } from 'vitest';
+import { describe, test } from 'vitest';
 import type { ChatRun } from '#test/support';
 import type { ReadCursor } from '#src/state';
 import { chatSystem } from '#src/system';
@@ -22,25 +22,25 @@ function afterMessage(result: ChatRun, chatId: string, text: string): ReadCursor
 }
 
 describe('the read cursor', () => {
-  test('advances to the last message when you close a chat (#1)', async () => {
+  test('advances to the last message when you close a chat (#1)', async ({ expect }) => {
     expect.hasAssertions();
     const result = await run([open('pat'), story('A', ['targetChat: pat']), story('B', ['targetChat: pat']), close()]);
     expect(cursorsOf(result)['pat']).toStrictEqual(afterMessage(result, 'pat', 'B'));
   });
 
-  test('advances for the previous chat on chat-to-chat navigation (#1)', async () => {
+  test('advances for the previous chat on chat-to-chat navigation (#1)', async ({ expect }) => {
     expect.hasAssertions();
     const result = await run([open('pat'), story('A', ['targetChat: pat']), open('maria')]);
     expect(cursorsOf(result)['pat']).toStrictEqual(afterMessage(result, 'pat', 'A'));
   });
 
-  test('is not written on initial open or on receiving while viewing (#1)', async () => {
+  test('is not written on initial open or on receiving while viewing (#1)', async ({ expect }) => {
     expect.hasAssertions();
     const result = await run([open('pat'), story('A', ['targetChat: pat'])]);
     expect(cursorsOf(result)).not.toHaveProperty('pat');
   });
 
-  test('is left as it is by a close with no chat open', async () => {
+  test('is left as it is by a close with no chat open', async ({ expect }) => {
     expect.hasAssertions();
     const before = await run([story('A', ['targetChat: pat'])]);
     const result = await run([story('A', ['targetChat: pat']), close()]);
@@ -50,14 +50,14 @@ describe('the read cursor', () => {
 });
 
 describe('the unread anchor', () => {
-  test('anchors an empty chat at the top on its first notification (#2, #3)', async () => {
+  test('anchors an empty chat at the top on its first notification (#2, #3)', async ({ expect }) => {
     expect.hasAssertions();
     // From the hub, a background chat's message notifies it.
     const result = await run([story('Hi', ['targetChat: maria'])]);
     expect(cursorsOf(result)['maria']).toStrictEqual({ at: 'top' });
   });
 
-  test('is kept across later notifications: the anchor is not clobbered (#2)', async () => {
+  test('is kept across later notifications: the anchor is not clobbered (#2)', async ({ expect }) => {
     expect.hasAssertions();
     const result = await run([
       // Notifies, and anchors pat at the top.
@@ -72,7 +72,7 @@ describe('the unread anchor', () => {
     expect(cursorsOf(result)['pat']).toStrictEqual(afterMessage(result, 'pat', 'First'));
   });
 
-  test('hwmMonotonic holds over a notify, open and leave stream (#5)', async () => {
+  test('hwmMonotonic holds over a notify, open and leave stream (#5)', async ({ expect }) => {
     expect.hasAssertions();
     const result = await run([
       // Anchors maria at the top.

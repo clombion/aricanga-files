@@ -8,7 +8,7 @@
  */
 
 import { connectHost, fetchHost, isLocalHost } from '#lib/network.ts';
-import { describe, expect, test } from 'vitest';
+import { describe, test } from 'vitest';
 import { runPlanted } from '#lib/planted-vitest.ts';
 
 const HARNESS_ID = 'network-guard';
@@ -69,19 +69,19 @@ test('a connection to this machine passes', async () => {
 `;
 
 describe('the guard', () => {
-  test.each([
+  test.for([
     ['localhost', true],
     ['127.0.0.1', true],
     ['::1', true],
     [undefined, true],
     ['192.0.2.1', false],
     ['example.com', false],
-  ] as const)('tells %s apart (local: %s)', (host, local) => {
+  ] as const)('tells %s apart (local: %s)', ([host, local], { expect }) => {
     expect.hasAssertions();
     expect(isLocalHost(host)).toBe(local);
   });
 
-  test('reads the host of each connect form', () => {
+  test('reads the host of each connect form', ({ expect }) => {
     expect.hasAssertions();
     expect(connectHost([DISCARD_PORT, '192.0.2.1'])).toBe('192.0.2.1');
     expect(connectHost([{ host: 'example.com', port: 443 }])).toBe('example.com');
@@ -90,7 +90,7 @@ describe('the guard', () => {
     expect(connectHost([HTTP_PORT])).toBeUndefined();
   });
 
-  test('reads the host of each fetch form', () => {
+  test('reads the host of each fetch form', ({ expect }) => {
     expect.hasAssertions();
     expect(fetchHost('https://example.com/x')).toBe('example.com');
     expect(fetchHost(new Request('http://192.0.2.1/'))).toBe('192.0.2.1');
@@ -99,7 +99,7 @@ describe('the guard', () => {
 });
 
 describe('the guards, through a planted Vitest run', () => {
-  test('fail a connection, a lookup and a fetch of another host, and pass this machine', async () => {
+  test('fail a connection, a lookup and a fetch of another host, and pass this machine', async ({ expect }) => {
     expect.hasAssertions();
     const outcomes = await runPlanted({ 'network.test.ts': PLANTED });
     expect([...outcomes].map(([name, { status }]: readonly [string, Readonly<{ status: string }>]) => [name, status])).toStrictEqual([

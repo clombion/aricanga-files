@@ -7,7 +7,7 @@ import { COVERAGE_DIR, DEBT, main as floorMain } from '#lib/coverage.ts';
 import { REPO_ROOT, fromRoot } from '#lib/paths.ts';
 import { RUNS, recordBaseline } from '#lib/performance-baseline.ts';
 import { STOOD_IN, exitOf, lastArgument } from './scripts.run.ts';
-import { describe, expect, test, vi } from 'vitest';
+import { describe, test, vi } from 'vitest';
 import { err, out } from '#lib/output.ts';
 import { main as dupesMain } from '#lib/dupes.ts';
 import { finished } from '#lib/tools.ts';
@@ -29,19 +29,19 @@ vi.mock(import('#lib/performance-baseline.ts'), async (original) => {
 });
 
 describe('the owned entry scripts', () => {
-  test('coverage-floor holds the debt against the gate run', async () => {
+  test('coverage-floor holds the debt against the gate run', async ({ expect }) => {
     expect.hasAssertions();
     await expect(exitOf(import('#scripts/coverage-floor.ts'))).resolves.toBe(STOOD_IN);
     expect(floorMain).toHaveBeenCalledWith(err, DEBT, COVERAGE_DIR);
   });
 
-  test('dupes reports on both streams', async () => {
+  test('dupes reports on both streams', async ({ expect }) => {
     expect.hasAssertions();
     await expect(exitOf(import('#scripts/dupes.ts'))).resolves.toBe(STOOD_IN);
     expect(dupesMain).toHaveBeenCalledWith({ err, out });
   });
 
-  test('performance-baseline runs the spec with the locked runner and writes through the one writer', async () => {
+  test('performance-baseline runs the spec with the locked runner and writes through the one writer', async ({ expect }) => {
     expect.hasAssertions();
     await expect(exitOf(import('#scripts/performance-baseline.ts'))).resolves.toBeUndefined();
     const recording = lastArgument(vi.mocked(recordBaseline).mock.calls);

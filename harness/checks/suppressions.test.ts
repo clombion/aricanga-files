@@ -21,7 +21,7 @@
 import { CountedExemptions, Exemptions, StaleExemptionError, site } from '#lint-rules/exemptions.ts';
 import { census, isCensused } from './suppressions.census.ts';
 import { closeSession, parse } from '#lib/ts-source.ts';
-import { describe, expect, test } from 'vitest';
+import { describe, test } from 'vitest';
 import type { Census } from './suppressions.census.ts';
 import { EXIT_SUCCESS } from '#lib/output.ts';
 import { finished } from '#lib/tools.ts';
@@ -95,13 +95,13 @@ async function repoCensus(): Promise<Census> {
 }
 
 describe('the repository', () => {
-  test('every suppression names its rule, a tool that checks the file, and its reason', async () => {
+  test('every suppression names its rule, a tool that checks the file, and its reason', async ({ expect }) => {
     expect.hasAssertions();
     const { problems } = await repoCensus();
     expect(ADOPTING.unexemptedBy(problems, (found) => site(found.path, found.problem))).toStrictEqual([]);
   });
 
-  test('every suppression is counted with its reason', async () => {
+  test('every suppression is counted with its reason', async ({ expect }) => {
     expect.hasAssertions();
     const { sites } = await repoCensus();
     expect(SUPPRESSIONS.mismatches(sites)).toStrictEqual([]);
@@ -109,7 +109,7 @@ describe('the repository', () => {
 });
 
 describe('the census', () => {
-  test.each([
+  test.for([
     ['const x = 1; // oxlint-disable-line', 'a oxlint-disable names its rules and ends with -- <reason>'],
     ['// oxlint-disable-next-line no-console\nconsole.log(1);', 'a oxlint-disable names its rules and ends with -- <reason>'],
     ['/* oxlint-disable no-console because */', 'a oxlint-disable names its rules and ends with -- <reason>'],
@@ -123,26 +123,26 @@ describe('the census', () => {
       'a biome-ignore suppresses nothing: Biome is not one of the tools that check this repository',
     ],
     ['/* stylelint-disable-next-line color-named -- why */\nexport {};', 'stylelint does not check .ts files'],
-  ])('refuses %j in a module', (text, problem) => {
+  ] as const)('refuses %j in a module', ([text, problem], { expect }) => {
     expect.hasAssertions();
     expect(census('packages/plant/src/a.ts', text).problems.map((found) => found.problem)).toStrictEqual([problem]);
   });
 
-  test.each([
+  test.for([
     ['/* stylelint-disable-next-line color-named */\na { color: red; }', 'a stylelint-disable names its rules and ends with -- <reason>'],
     [
       '/* biome-ignore lint/style/noX: why */\na { color: red; }',
       'a biome-ignore suppresses nothing: Biome is not one of the tools that check this repository',
     ],
     ['/* oxlint-disable no-console -- why */\na { color: red; }', 'oxlint does not check .css files'],
-  ])('refuses %j in a stylesheet', (text, problem) => {
+  ] as const)('refuses %j in a stylesheet', ([text, problem], { expect }) => {
     expect.hasAssertions();
     expect(census('packages/plant/src/a.css', text).problems.map((found) => found.problem)).toStrictEqual([problem]);
   });
 });
 
 describe('the census of counted suppressions', () => {
-  test('counts a suppression written as a JSX comment', () => {
+  test('counts a suppression written as a JSX comment', ({ expect }) => {
     expect.hasAssertions();
     const text = [
       'export const view = (',
@@ -158,7 +158,7 @@ describe('the census of counted suppressions', () => {
     });
   });
 
-  test('counts each reasoned suppression under its tool and rule', () => {
+  test('counts each reasoned suppression under its tool and rule', ({ expect }) => {
     expect.hasAssertions();
     const text = [
       '// oxlint-disable-next-line no-console, no-alert -- the planted pair',
@@ -186,17 +186,17 @@ describe('the census of counted suppressions', () => {
 });
 
 describe('the census of near misses', () => {
-  test.each([
+  test.for([
     'const TEXT = "// oxlint-disable-line and // @ts-ignore inside a string";',
     ['const T = `/* @ts-nocheck */ $', '{1}`;'].join(''),
     '// a note about the oxlint-disable convention, not a directive: nothing to see',
     '/** Explains that @ts-ignore is refused here. */\nexport {};',
-  ])('lets a near miss through: %j', (text) => {
+  ])('lets a near miss through: %j', (text, { expect }) => {
     expect.hasAssertions();
     expect(census('packages/plant/src/a.ts', text)).toStrictEqual({ problems: [], sites: [] });
   });
 
-  test('lets a comment-like string in a stylesheet through', () => {
+  test('lets a comment-like string in a stylesheet through', ({ expect }) => {
     expect.hasAssertions();
     expect(census('packages/plant/src/a.css', 'a::before { content: "/* stylelint-disable */"; }')).toStrictEqual({
       problems: [],
@@ -204,7 +204,7 @@ describe('the census of near misses', () => {
     });
   });
 
-  test('a counted suppression that went away, or a new one, fails', () => {
+  test('a counted suppression that went away, or a new one, fails', ({ expect }) => {
     expect.hasAssertions();
     const once = new CountedExemptions({ [site('a.ts', 'oxlint:no-console')]: { count: 1, reason: 'planted' } });
     const twice = [site('a.ts', 'oxlint:no-console'), site('a.ts', 'oxlint:no-console')];
@@ -269,7 +269,7 @@ function childScript(): string {
 }
 
 describe('the source reader', () => {
-  test('closes its session once, and parses on a fresh session after', () => {
+  test('closes its session once, and parses on a fresh session after', ({ expect }) => {
     expect.hasAssertions();
     parse('packages/plant/src/a.ts', 'export const a = 1;\n');
     closeSession();
@@ -279,7 +279,7 @@ describe('the source reader', () => {
     expect(parse('packages/plant/src/b.ts', 'export const b = 2;\n').statements).toHaveLength(ONE_STATEMENT);
   });
 
-  test('lets a process that exits with its session open exit cleanly', async () => {
+  test('lets a process that exits with its session open exit cleanly', async ({ expect }) => {
     expect.hasAssertions();
     const reader = JSON.stringify(pathToFileURL(fromRoot('harness/lib/ts-source.ts')).href);
     const script = `const { parse } = await import(${reader}); parse('packages/plant/src/a.ts', 'export const a = 1;\\n');`;
@@ -287,7 +287,7 @@ describe('the source reader', () => {
     expect(done.status).toBe(EXIT_SUCCESS);
   });
 
-  test("ends a process's tsgo child once the process exits, on its closed standard input", async () => {
+  test("ends a process's tsgo child once the process exits, on its closed standard input", async ({ expect }) => {
     expect.hasAssertions();
     const done = await finished(['sh', '-c', TSGO_GONE, 'tsgo-gone', process.execPath, childScript()], { cwd: fromRoot() });
     expect([done.status, done.stdout.trim()]).toStrictEqual([EXIT_SUCCESS, 'gone 1']);

@@ -1,6 +1,6 @@
 /** The provided population: a worker of the gate's run reads it, and computes no population of the repository. */
 
-import { describe, expect, inject, test, vi } from 'vitest';
+import { describe, inject, test, vi } from 'vitest';
 import { REPO_ROOT } from '#lib/paths.ts';
 import { configOf } from '#lib/vitest-config.ts';
 import { plantedPopulation } from '#lib/planted-population.ts';
@@ -20,7 +20,7 @@ const UNPROVIDED = [
 ].join('\n');
 
 describe('a worker of the gate run', () => {
-  test("answers the repository's population and listing with pnpm and git off the PATH: it computes neither", async () => {
+  test("answers the repository's population and listing with pnpm and git off the PATH: it computes neither", async ({ expect }) => {
     expect.hasAssertions();
     vi.stubEnv('PATH', '');
     vi.resetModules();
@@ -33,7 +33,7 @@ describe('a worker of the gate run', () => {
     ]).toStrictEqual([REPO_ROOT, true, true]);
   });
 
-  test('is provided the population of the repository only', async () => {
+  test('is provided the population of the repository only', async ({ expect }) => {
     expect.hasAssertions();
     const run = inject('population');
     const [repository, elsewhere] = await Promise.all([providedFor(REPO_ROOT), providedFor('/elsewhere')]);
@@ -42,7 +42,7 @@ describe('a worker of the gate run', () => {
 });
 
 describe('a worker of a run whose config provides no population', () => {
-  test('reads none, so its caller computes', async () => {
+  test('reads none, so its caller computes', async ({ expect }) => {
     expect.hasAssertions();
     const outcomes = await runPlanted({ 'unprovided.test.ts': UNPROVIDED });
     expect(outcomes.get('reads none')).toStrictEqual({ failure: '', status: 'passed' });
@@ -50,7 +50,7 @@ describe('a worker of a run whose config provides no population', () => {
 });
 
 describe("a run's config", () => {
-  test("provides a checkout's population, and nothing for a population of no checkout", async () => {
+  test("provides a checkout's population, and nothing for a population of no checkout", async ({ expect }) => {
     expect.hasAssertions();
     const [repository, planted] = await Promise.all([population(), plantedPopulation([], [['packages/a/', 'view']])]);
     const [fromRepository, fromPlanted] = [repository, planted].map((held) => configOf(held).test?.provide);
@@ -59,7 +59,7 @@ describe("a run's config", () => {
 });
 
 describe('a process that is no Vitest worker', () => {
-  test('reads no provided population', async () => {
+  test('reads no provided population', async ({ expect }) => {
     expect.hasAssertions();
     await expect(providedFor(REPO_ROOT, {})).resolves.toBeUndefined();
   });

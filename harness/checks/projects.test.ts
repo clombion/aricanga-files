@@ -1,7 +1,7 @@
 /** One project is type-checked by the locked `tsc` from the root it is given, emitting nothing. */
 
 import { EXIT_CLEAN, EXIT_FINDINGS } from '#lib/exit-status.ts';
-import { describe, expect, test } from 'vitest';
+import { describe, test } from 'vitest';
 import type { Finished } from '#lib/process.ts';
 import { Project } from '#lib/tools.ts';
 import { typecheckProject } from '#lib/projects.ts';
@@ -30,13 +30,13 @@ async function checked(source: string): Promise<Finished> {
 }
 
 describe('a type-checked project', () => {
-  test('passes when its code is well typed', async () => {
+  test('passes when its code is well typed', async ({ expect }) => {
     expect.hasAssertions();
     const done = await checked('export const count: number = 1;\n');
     expect([done.status, done.stdout]).toStrictEqual([EXIT_CLEAN, '']);
   });
 
-  test('fails with the diagnostic when it is not', async () => {
+  test('fails with the diagnostic when it is not', async ({ expect }) => {
     expect.hasAssertions();
     const done = await checked('export const count: number = "one";\n');
     expect([done.status, done.stdout.includes('TS2322')]).toStrictEqual([EXIT_FINDINGS, true]);

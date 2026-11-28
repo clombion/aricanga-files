@@ -1,11 +1,11 @@
 /** The syntax readers: an empty JSX expression holds no comment, and only named imports of a name bind it. */
 
 import { comments, holdsNoRuntimeValue, importsFrom, nodes, parse } from '#lib/ts-source.ts';
-import { describe, expect, test } from 'vitest';
+import { describe, test } from 'vitest';
 import { isStringLiteral } from 'typescript/unstable/ast';
 
 describe('the comment reader', () => {
-  test('finds no comment inside an empty JSX expression, and one written there', () => {
+  test('finds no comment inside an empty JSX expression, and one written there', ({ expect }) => {
     expect.hasAssertions();
     const empty = parse('planted/empty.tsx', 'export const view = <p>{}</p>;\n');
     const written = parse('planted/written.tsx', 'export const view = <p>{/* planted */}</p>;\n');
@@ -15,7 +15,7 @@ describe('the comment reader', () => {
 });
 
 describe('the import reader', () => {
-  test('binds named imports by identifier, and nothing for a default import or a string name', () => {
+  test('binds named imports by identifier, and nothing for a default import or a string name', ({ expect }) => {
     expect.hasAssertions();
     const file = parse(
       'planted/imports.ts',
@@ -43,7 +43,9 @@ function runtimeAnswers(text: string): Readonly<Record<string, boolean>> {
 }
 
 describe('the runtime-value reader', () => {
-  test('reads a type, an interface, an alias and an import as holding no runtime value, and a value or a class member as holding one', () => {
+  test('reads a type, an interface, an alias and an import as holding no runtime value, and a value or a class member as holding one', ({
+    expect,
+  }) => {
     expect.hasAssertions();
     const text = [
       "import type { T } from './t';",

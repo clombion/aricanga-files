@@ -8,7 +8,7 @@
  */
 
 import { apps, checkBuild } from '#lib/build.ts';
-import { describe, expect, test } from 'vitest';
+import { describe, test } from 'vitest';
 import { EXIT_CLEAN } from '#lib/exit-status.ts';
 import { Project } from '#lib/tools.ts';
 import { importerOf } from '#lib/package-dirs.ts';
@@ -46,7 +46,7 @@ async function plantedBuild(main: string, config: string): ReturnType<typeof che
 }
 
 describe('the repository', () => {
-  test('builds every held app and writes nothing into the checkout', async () => {
+  test('builds every held app and writes nothing into the checkout', async ({ expect }) => {
     expect.hasAssertions();
     const [found, held] = await Promise.all([apps(), population()]);
     const memberApps = held.members
@@ -64,19 +64,19 @@ describe('the repository', () => {
 });
 
 describe('the build check', () => {
-  test('fails a planted broken import', async () => {
+  test('fails a planted broken import', async ({ expect }) => {
     expect.hasAssertions();
     const result = await plantedBuild("import { gone } from './missing';\nexport const x = gone;\n", QUIET_CONFIG);
     expect(result.status).not.toBe(EXIT_CLEAN);
   });
 
-  test('passes a planted clean module', async () => {
+  test('passes a planted clean module', async ({ expect }) => {
     expect.hasAssertions();
     const result = await plantedBuild('export const x = 1;\n', QUIET_CONFIG);
     expect([result.status, result.written]).toStrictEqual([EXIT_CLEAN, []]);
   });
 
-  test('sees a build that writes into its checkout', async () => {
+  test('sees a build that writes into its checkout', async ({ expect }) => {
     expect.hasAssertions();
     const result = await plantedBuild('export const x = 1;\n', WRITING_CONFIG);
     expect([result.status, result.written]).toStrictEqual([EXIT_CLEAN, ['app/made.json']]);

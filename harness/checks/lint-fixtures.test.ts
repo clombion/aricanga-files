@@ -4,7 +4,7 @@
  */
 
 import { FixtureError, compileProblems, runFixtures } from '#lib/lint-fixtures.ts';
-import { describe, expect, test } from 'vitest';
+import { describe, test } from 'vitest';
 import type { Fixture } from '#lib/lint-fixtures.ts';
 import { Project } from '#lib/tools.ts';
 import { compilePlanted } from '#lib/fixture-project.ts';
@@ -40,7 +40,7 @@ const UNDECLARED = viewFixture('undeclared', [], "export const planted: number =
 const DECLARED = viewFixture('declared', ['TS2322'], "export const planted: number = 'one';\n");
 
 describe('the fixtures of one run', () => {
-  test('refuse two planted at one path, naming it', async () => {
+  test('refuse two planted at one path, naming it', async ({ expect }) => {
     expect.hasAssertions();
     await expect(runFixtures([FIXTURE, { ...FIXTURE, file: 'planted/clean.fixture', kind: 'clean' }])).rejects.toThrow(
       new FixtureError('two fixtures are planted at src/planted.ts'),
@@ -49,7 +49,7 @@ describe('the fixtures of one run', () => {
 });
 
 describe('the compile of a run', () => {
-  test("refuses Solid 1.x's JSX import, a stale declaration and an undeclared error, and passes a declared one", async () => {
+  test("refuses Solid 1.x's JSX import, a stale declaration and an undeclared error, and passes a declared one", async ({ expect }) => {
     expect.hasAssertions();
     const planted = [SOLID_ONE_JSX, STALE, UNDECLARED, DECLARED];
     const found = await runFixtures(planted);
@@ -60,7 +60,7 @@ describe('the compile of a run', () => {
     ]);
   });
 
-  test('refuses an error in no fixture, naming its file', () => {
+  test('refuses an error in no fixture, naming its file', ({ expect }) => {
     expect.hasAssertions();
     expect(compileProblems([STALE], [{ code: 'TS2307', file: 'packages/foundation/src/index.ts' }])).toStrictEqual([
       'planted/clean-stale.fixture: compiles to none, declares TS2322',
@@ -68,7 +68,7 @@ describe('the compile of a run', () => {
     ]);
   });
 
-  test('reads an error tsc reports on no file, as one in no fixture', async () => {
+  test('reads an error tsc reports on no file, as one in no fixture', async ({ expect }) => {
     expect.hasAssertions();
     const project = await Project.create({ linkModules: false });
     try {

@@ -16,7 +16,7 @@
 import { Accepted, Exemptions, site } from '#lint-rules/exemptions.ts';
 import type { ArrowFunction, CallExpression, FunctionDeclaration, FunctionExpression, Identifier } from 'typescript/unstable/ast';
 import { chain, holdsNoRuntimeValue, isPropertyName, nodes, parse } from '#lib/ts-source.ts';
-import { describe, expect, test } from 'vitest';
+import { describe, test } from 'vitest';
 import {
   isArrowFunction,
   isBlock,
@@ -223,7 +223,7 @@ async function scannedModules(): Promise<readonly string[]> {
 }
 
 describe('the repository', () => {
-  test("reads a package.json only where the population reads the manifests, or for an exemption's reason", async () => {
+  test("reads a package.json only where the population reads the manifests, or for an exemption's reason", async ({ expect }) => {
     expect.hasAssertions();
     const texts = await textsOf(await scannedModules());
     expect(EXEMPT.unexempted(texts.flatMap(([path, text]: readonly [string, string]) => manifestReads(path, text)))).toStrictEqual([]);
@@ -231,7 +231,7 @@ describe('the repository', () => {
 });
 
 describe('the scan', () => {
-  test.each([
+  test.for([
     "const text = await textOf('package.json');",
     ['const text = await textOf(`', '$', '{dir}package.json`);'].join(''),
     'const text = await textOf(`packages/a/package.json`);',
@@ -246,12 +246,12 @@ describe('the scan', () => {
     "const manifest = await import('../../package.json', { with: { type: 'json' } });",
     "const lockText = await read(LOCKFILE);\nconst again = await read('package.json');",
     "const text = await project.read('packages/a/package.json');",
-  ])('sees the planted read: %j', (text) => {
+  ])('sees the planted read: %j', (text, { expect }) => {
     expect.hasAssertions();
     expect(manifestReads('harness/lib/plant.ts', text)).toStrictEqual([site('harness/lib/plant.ts', READ)]);
   });
 
-  test.each([
+  test.for([
     "const fields = object(parsed(text, path), 'package.json');",
     "await project.write('package.json', '{}');",
     "const plants = [['node_modules/x/package.json', '{}']];\nconst texts = await textsOf(listed.filter((path) => path.endsWith('.ts')));",
@@ -259,7 +259,7 @@ describe('the scan', () => {
     'const lockText = await read(LOCKFILE);',
     "const held = await population();\nconst scripts = held.rootManifest['scripts'];",
     "const options = { path: 'package.json' };\nconst text = await textOf(other.path);",
-  ])('lets a near miss through: %j', (text) => {
+  ])('lets a near miss through: %j', (text, { expect }) => {
     expect.hasAssertions();
     expect(manifestReads('harness/lib/plant.ts', text)).toStrictEqual([]);
   });

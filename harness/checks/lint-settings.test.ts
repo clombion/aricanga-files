@@ -20,7 +20,7 @@ import { ESLINT_DIRECTIVE_TEXT, UNUSED_DIRECTIVE_TEXT, WARNING_PLANT, WARNING_TE
 import { EXIT_CLEAN, EXIT_FINDINGS } from '#lib/exit-status.ts';
 import { UNUSED_DIRECTIVE, codeOf, oxlintDiagnostics } from '#lib/lint-rules.ts';
 import { config, lint, plantedCodes, repoConfig } from './lint-settings.run.ts';
-import { describe, expect, test } from 'vitest';
+import { describe, test } from 'vitest';
 import type { Options } from './lint-settings.run.ts';
 import { finished } from '#lib/tools.ts';
 import { fromRoot } from '#lib/paths.ts';
@@ -170,7 +170,9 @@ async function jsPlugins(): Promise<readonly unknown[]> {
 }
 
 describe("oxlint's report", () => {
-  test('reads a diagnostic with no rule code as an unused directive, or else as unrecognised with its message, and refuses a report with no diagnostics', () => {
+  test('reads a diagnostic with no rule code as an unused directive, or else as unrecognised with its message, and refuses a report with no diagnostics', ({
+    expect,
+  }) => {
     expect.hasAssertions();
     const report = {
       diagnostics: [
@@ -189,7 +191,7 @@ describe("oxlint's report", () => {
 });
 
 describe('the repository config', () => {
-  test('refuses the mechanics rule without its files, loudly, set bare or with an empty or missing option', async () => {
+  test('refuses the mechanics rule without its files, loudly, set bare or with an empty or missing option', async ({ expect }) => {
     expect.hasAssertions();
     const plant = { 'src/a.ts': 'export const value = 1;\n' };
     const bare = await lint(plant, await config({ rules: { 'aricanga/mechanics': 'error' } }));
@@ -203,13 +205,13 @@ describe('the repository config', () => {
     );
   });
 
-  test('fails each planted violation with exactly its rule, and passes the near misses', async () => {
+  test('fails each planted violation with exactly its rule, and passes the near misses', async ({ expect }) => {
     expect.hasAssertions();
     const [reported, expected] = await plantedCodes();
     expect(reported).toStrictEqual(expected);
   });
 
-  test('turns on exactly the rules of eslint-plugin-solid v2-strict, loaded as a JS plugin', async () => {
+  test('turns on exactly the rules of eslint-plugin-solid v2-strict, loaded as a JS plugin', async ({ expect }) => {
     expect.hasAssertions();
     const [plugins, rules, strict] = await Promise.all([jsPlugins(), repoRules(), v2Strict()]);
     expect(plugins).toContain('eslint-plugin-solid');
@@ -218,20 +220,20 @@ describe('the repository config', () => {
 });
 
 describe('the strictness of the config', () => {
-  test('turns every category on at error', async () => {
+  test('turns every category on at error', async ({ expect }) => {
     expect.hasAssertions();
     const repo = await repoConfig();
     expect(categoryProblems(repo)).toStrictEqual([]);
   });
 
-  test('declares every rule it turns off with its reason', async () => {
+  test('declares every rule it turns off with its reason', async ({ expect }) => {
     expect.hasAssertions();
     const repo = await repoConfig();
     const off = turnedOff(repo);
     expect(TURNED_OFF.unexempted(off)).toStrictEqual([]);
   });
 
-  test('sees a category left out or below error, and a rule turned off at the top or in an override', () => {
+  test('sees a category left out or below error, and a rule turned off at the top or in an override', ({ expect }) => {
     expect.hasAssertions();
     expect(categoryProblems({ categories: { correctness: 'error', style: 'warn' } })).toStrictEqual([
       'nursery is not at error',
@@ -250,7 +252,7 @@ describe('the strictness of the config', () => {
 });
 
 describe('each option, by removal', () => {
-  test('denyWarnings: a lone warning fails the run, and passes without it', async () => {
+  test('denyWarnings: a lone warning fails the run, and passes without it', async ({ expect }) => {
     expect.hasAssertions();
     const warn: AnyOxlintConfig['rules'] = { 'eslint/no-debugger': 'warn' };
     const denied = await lint({ [WARNING_PLANT]: WARNING_TEXT }, await config({ rules: warn }));
@@ -259,7 +261,7 @@ describe('each option, by removal', () => {
     expect(allowed.status).toBe(EXIT_CLEAN);
   });
 
-  test('reportUnusedDisableDirectives: an unused directive passes without it', async () => {
+  test('reportUnusedDisableDirectives: an unused directive passes without it', async ({ expect }) => {
     expect.hasAssertions();
     const run = await lint(
       { 'src/unused-directive.ts': UNUSED_DIRECTIVE_TEXT },
@@ -268,7 +270,7 @@ describe('each option, by removal', () => {
     expect(run.status).toBe(EXIT_CLEAN);
   });
 
-  test('respectEslintDisableDirectives: false, an eslint-disable comment silences its rule once respected', async () => {
+  test('respectEslintDisableDirectives: false, an eslint-disable comment silences its rule once respected', async ({ expect }) => {
     expect.hasAssertions();
     const run = await lint(
       { 'src/eslint-directive.ts': ESLINT_DIRECTIVE_TEXT },
@@ -279,7 +281,7 @@ describe('each option, by removal', () => {
 });
 
 describe('the rule comparison', () => {
-  test('sees a missing, an extra and a disabled rule, and reads severities', () => {
+  test('sees a missing, an extra and a disabled rule, and reads severities', ({ expect }) => {
     expect.hasAssertions();
     const rules = { other: 'error', 'solid/a': 'error', 'solid/b': NUMERIC_ERROR, 'solid/c': 'off', 'solid/d': ['warn', {}] };
     expect(enabled(rules, 'solid/')).toStrictEqual(['solid/a', 'solid/b', 'solid/d']);

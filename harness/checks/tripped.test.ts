@@ -1,10 +1,10 @@
 /** `tripped` lets through an error that is no trip, and fails a block that trips nothing. */
 
-import { describe, expect, test } from 'vitest';
+import { describe, test } from 'vitest';
 import { trip, tripped } from '#lib/doubles.ts';
 
 describe('expecting a trip', () => {
-  test('lets an error that is no trip through unchanged', () => {
+  test('lets an error that is no trip through unchanged', ({ expect }) => {
     expect.hasAssertions();
     const thrown = new RangeError('planted');
     expect(() => {
@@ -14,7 +14,7 @@ describe('expecting a trip', () => {
     }).toThrow(thrown);
   });
 
-  test('fails a block that trips nothing, naming what it expected', () => {
+  test('fails a block that trips nothing, naming what it expected', ({ expect }) => {
     expect.hasAssertions();
     expect(() => {
       tripped('planted', () => {
@@ -23,7 +23,7 @@ describe('expecting a trip', () => {
     }).toThrow('expected a trip naming "planted", got []');
   });
 
-  test('passes a block that trips a double with the expected message', () => {
+  test('passes a block that trips a double with the expected message', ({ expect }) => {
     expect.hasAssertions();
     expect(() => {
       tripped('planted', () => {

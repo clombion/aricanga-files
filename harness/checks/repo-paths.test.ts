@@ -8,7 +8,7 @@
  */
 
 import { Accepted, site } from '#lint-rules/exemptions.ts';
-import { describe, expect, test } from 'vitest';
+import { describe, test } from 'vitest';
 import { importsFrom, isPropertyName, nodes, parse } from '#lib/ts-source.ts';
 import { isIdentifier, isMetaProperty, isPropertyAccessExpression } from 'typescript/unstable/ast/is';
 import { textOf, textsOf } from '#lib/source-files.ts';
@@ -77,13 +77,13 @@ async function otherHarnessModules(): Promise<readonly string[]> {
 }
 
 describe('the repository', () => {
-  test('only paths.ts computes where the repository is', async () => {
+  test('only paths.ts computes where the repository is', async ({ expect }) => {
     expect.hasAssertions();
     const texts = await textsOf(await otherHarnessModules());
     expect(texts.flatMap(([path, text]: readonly [string, string]) => locating(path, text))).toStrictEqual([]);
   });
 
-  test('paths.ts is where the root is computed', async () => {
+  test('paths.ts is where the root is computed', async ({ expect }) => {
     expect.hasAssertions();
     const text = await textOf(OWNER);
     expect(locating(OWNER, text)).not.toStrictEqual([]);
@@ -91,7 +91,7 @@ describe('the repository', () => {
 });
 
 describe('the scan', () => {
-  test.each([
+  test.for([
     ['harness/checks/plant.test.ts', 'const here = new URL(import.meta.url);', 'import.meta.url'],
     ['harness/lib/plant.ts', 'const here = import.meta.dirname;', 'import.meta.dirname'],
     ['harness/scripts/plant.ts', 'const here = import.meta.filename;', 'import.meta.filename'],
@@ -99,18 +99,18 @@ describe('the scan', () => {
     ['harness/scripts/plant.ts', 'export const here = __filename;', '__filename'],
     ['harness/checks/plant.test.ts', "import { fileURLToPath } from 'node:url';", 'fileURLToPath'],
     ['harness/lib/plant.ts', "import { fileURLToPath as toPath } from 'url';", 'fileURLToPath'],
-  ])('sees the planted locator in %s: %j', (path, text, what) => {
+  ] as const)('sees the planted locator in %s: %j', ([path, text, what], { expect }) => {
     expect.hasAssertions();
     expect(locating(path, text)).toStrictEqual([site(path, what)]);
   });
 
-  test.each([
+  test.for([
     "import { fromRoot } from './paths.ts';\nconst file = fromRoot('package.json');",
     "const text = 'import.meta.url and __dirname inside a string';",
     'const env = import.meta.env;',
     "import { pathToFileURL } from 'node:url';",
     'const options = { __dirname: 1 }; const value = options.__dirname;',
-  ])('lets a near miss through: %j', (text) => {
+  ])('lets a near miss through: %j', (text, { expect }) => {
     expect.hasAssertions();
     expect(locating('harness/lib/plant.ts', text)).toStrictEqual([]);
   });

@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'vitest';
+import { describe, test } from 'vitest';
 import type { Effect } from '#src/sim/effect';
 import type { ReduceResult } from '#src/sim/context';
 import type { System } from '#src/sim/system';
@@ -45,13 +45,13 @@ function flakySystem(): System<Count, never, Effect, Count> {
 }
 
 describe('the determinism property', () => {
-  test('determinism: same stream replays to an identical canonical trace (#2)', async () => {
+  test('determinism: same stream replays to an identical canonical trace (#2)', async ({ expect }) => {
     expect.hasAssertions();
     const result = await checkDeterministic({ systems: [fixtureSystemErased] }, storyStreamArb({ tagKeys: ['note'] }));
     expect({ failed: result.failed }, result.message).toStrictEqual({ failed: false });
   });
 
-  test('the determinism property rejects a nondeterministic reducer (#2)', async () => {
+  test('the determinism property rejects a nondeterministic reducer (#2)', async ({ expect }) => {
     expect.hasAssertions();
     const result = await checkDeterministic({ systems: [erase(flakySystem())] }, storyStreamArb({ tagKeys: ['note'] }));
     expect({ failed: result.failed }, 'a reducer reading hidden state must fail the determinism property').toStrictEqual({

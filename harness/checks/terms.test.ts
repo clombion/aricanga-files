@@ -10,7 +10,7 @@
 import { Exemptions, Prefixes, site } from '#lint-rules/exemptions.ts';
 import type { Prose, Span } from '#lib/docs.ts';
 import { currentSpans, currentText } from '#lib/docs.ts';
-import { describe, expect, test } from 'vitest';
+import { describe, test } from 'vitest';
 import { object, stringRecord } from '#lib/config.ts';
 import { parse as parseToml } from '@iarna/toml';
 import { textOf } from '#lib/source-files.ts';
@@ -143,7 +143,7 @@ function key(use: Use): string {
 }
 
 describe('the repository', () => {
-  test('no current text uses a refused term', async () => {
+  test('no current text uses a refused term', async ({ expect }) => {
     expect.hasAssertions();
     const [text, lines, spans] = await Promise.all([textOf('docs/terms.toml'), currentText(), currentSpans()]);
     const found = uses(termsOf(text), lines, spans);
@@ -160,7 +160,7 @@ sentinel = "marker"
 `;
 
 describe('the terms check', () => {
-  test('sees a planted retired term, refused pattern and code-only pattern, and lets the near misses through', () => {
+  test('sees a planted retired term, refused pattern and code-only pattern, and lets the near misses through', ({ expect }) => {
     expect.hasAssertions();
     const terms = termsOf(PLANTED_TERMS);
     const prose = [
@@ -180,12 +180,12 @@ describe('the terms check', () => {
     ]);
   });
 
-  test('refuses a retired term without its replacement', () => {
+  test('refuses a retired term without its replacement', ({ expect }) => {
     expect.hasAssertions();
     expect(() => termsOf('[retired]\nsentinel = " "\n')).toThrow(/without a replacement/u);
   });
 
-  test('reads the repository terms file', async () => {
+  test('reads the repository terms file', async ({ expect }) => {
     expect.hasAssertions();
     const terms = termsOf(await textOf('docs/terms.toml'));
     expect([...terms.retired, ...terms.refused, ...terms.refusedInCode]).not.toStrictEqual([]);

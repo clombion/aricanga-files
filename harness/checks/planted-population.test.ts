@@ -1,6 +1,6 @@
 /** A planted population: built by production's rule, its members sorted, and refusing what production never holds. */
 
-import { describe, expect, test } from 'vitest';
+import { describe, test } from 'vitest';
 import type { PlantedMember } from '#lib/planted-population.ts';
 import { PopulationError } from '#lib/workspace.ts';
 import { plantedPopulation } from '#lib/planted-population.ts';
@@ -20,7 +20,7 @@ const ROLE_AT = 1;
 const WIDENED: readonly PlantedMember[] = [...OUT_OF_ORDER, ...OUT_OF_ORDER.map(([dir]): PlantedMember => [dir, 'system'])];
 
 describe('a planted population', () => {
-  test('lists its members by directory whatever order they are planted in, each with its manifest', async () => {
+  test('lists its members by directory whatever order they are planted in, each with its manifest', async ({ expect }) => {
     expect.hasAssertions();
     const held = await plantedPopulation([], OUT_OF_ORDER);
     expect(held.members.map((member) => [member.dir, member.manifest['devDependencies']])).toStrictEqual([
@@ -30,7 +30,9 @@ describe('a planted population', () => {
     ]);
   });
 
-  test('refuses at once what production never holds: a member or a plant given twice, fields holding aricanga, a plant in no member or the harness, a plant at a manifest, a declared member that is no member', async () => {
+  test('refuses at once what production never holds: a member or a plant given twice, fields holding aricanga, a plant in no member or the harness, a plant at a manifest, a declared member that is no member', async ({
+    expect,
+  }) => {
     expect.hasAssertions();
     const fields: Readonly<Record<string, unknown>> = { aricanga: { role: 'system' } };
     const planting = plantedPopulation(
@@ -50,7 +52,7 @@ describe('a planted population', () => {
     );
   });
 
-  test('refuses a member list widened with each directory twice', async () => {
+  test('refuses a member list widened with each directory twice', async ({ expect }) => {
     expect.hasAssertions();
     await expect(plantedPopulation([], WIDENED)).rejects.toThrow(
       new PopulationError(
@@ -62,7 +64,7 @@ describe('a planted population', () => {
 });
 
 describe("a planted population's one refusal", () => {
-  test("is the population's own, its class and text unchanged, when no planted list is refused", async () => {
+  test("is the population's own, its class and text unchanged, when no planted list is refused", async ({ expect }) => {
     expect.hasAssertions();
     const widened: PlantedMember = ['packages/b/', 'view'];
     Reflect.set(widened, ROLE_AT, NO_ROLE);
@@ -75,7 +77,7 @@ describe("a planted population's one refusal", () => {
     ]);
   });
 
-  test('names a member and a plant given twice beside a role that is no role', async () => {
+  test('names a member and a plant given twice beside a role that is no role', async ({ expect }) => {
     expect.hasAssertions();
     const widened: PlantedMember = ['packages/b/', 'view'];
     Reflect.set(widened, ROLE_AT, NO_ROLE);
@@ -90,7 +92,7 @@ describe("a planted population's one refusal", () => {
 });
 
 describe("a planted member's name", () => {
-  test("that is no string is named beside the lists' refused states, in one refusal", async () => {
+  test("that is no string is named beside the lists' refused states, in one refusal", async ({ expect }) => {
     expect.hasAssertions();
     await expect(
       plantedPopulation(
@@ -108,7 +110,7 @@ describe("a planted member's name", () => {
     );
   });
 
-  test("is refused by pnpm's listing's rule when it is no string, the refusal naming its manifest", async () => {
+  test("is refused by pnpm's listing's rule when it is no string, the refusal naming its manifest", async ({ expect }) => {
     expect.hasAssertions();
     await expect(plantedPopulation([], [['packages/a/', 'view', { name: 7 }]])).rejects.toThrow(
       new PopulationError('name', "packages/a/package.json: the name 7 is no string: a package's name is a string, or none"),

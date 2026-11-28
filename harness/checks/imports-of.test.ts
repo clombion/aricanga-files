@@ -5,7 +5,7 @@
  * decision D8).
  */
 
-import { describe, expect, test } from 'vitest';
+import { describe, test } from 'vitest';
 import { importedModules } from '#lib/imports-of.ts';
 import { sourceOf } from '#lib/checker.ts';
 import { usePlanted } from '#lib/scan-hooks.ts';
@@ -26,7 +26,9 @@ const scan = usePlanted(
 );
 
 describe('the modules a module imports', () => {
-  test("names a source file and a script file's ambient module, and neither the platform's declarations nor an augmentation", () => {
+  test("names a source file and a script file's ambient module, and neither the platform's declarations nor an augmentation", ({
+    expect,
+  }) => {
     expect.hasAssertions();
     const user = sourceOf(scan(), USER);
     expect(importedModules(scan(), user)).toStrictEqual(['harness/lib/__imports_source.ts', 'harness/lib/__imports_ambient.d.ts']);

@@ -22,7 +22,7 @@
 
 import { Accepted, Exemptions } from '#lint-rules/exemptions.ts';
 import { TYPESCRIPT, textOf, textsOf, typescriptGlob, typescriptKind, writeText } from '#lib/source-files.ts';
-import { describe, expect, test } from 'vitest';
+import { describe, test } from 'vitest';
 import {
   isNoSubstitutionTemplateLiteral,
   isRegularExpressionLiteral,
@@ -169,20 +169,22 @@ function strip(found: readonly string[]): readonly string[] {
 }
 
 describe('the held kinds', () => {
-  test('are written on their own by no held harness module but their owner', async () => {
+  test('are written on their own by no held harness module but their owner', async ({ expect }) => {
     expect.hasAssertions();
     const texts = await textsOf(await readModules());
     expect(RESTATED.unexempted(texts.flatMap(([path, text]: readonly [string, string]) => kindsWritten(path, text)))).toStrictEqual([]);
   });
 
-  test('are composed from the owner', () => {
+  test('are composed from the owner', ({ expect }) => {
     expect.hasAssertions();
     expect([typescriptGlob('**/*'), [...TYPESCRIPT]]).toStrictEqual(['**/*.{ts,tsx}', ['.ts', '.tsx']]);
   });
 });
 
 describe("the held-kinds scan's reading", () => {
-  test('sees the kinds written on their own, in a glob and in a pattern, a file name passing, and a glob passing in a test', () => {
+  test('sees the kinds written on their own, in a glob and in a pattern, a file name passing, and a glob passing in a test', ({
+    expect,
+  }) => {
     expect.hasAssertions();
     expect([strip(kindsWritten('a.ts', PLANTED_KINDS)), strip(kindsWritten('a.test.ts', PLANTED_KINDS))]).toStrictEqual([
       [
@@ -232,7 +234,7 @@ const FOLDER = 'node_modules/.harness-planted';
 const PLANTED = `${FOLDER}/written.txt`;
 
 describe("the fixers' writer", () => {
-  test('writes a file that reads back as written', async () => {
+  test('writes a file that reads back as written', async ({ expect }) => {
     expect.hasAssertions();
     await mkdir(fromRoot(FOLDER), { recursive: true });
     try {

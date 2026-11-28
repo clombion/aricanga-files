@@ -1,5 +1,5 @@
 import { checkInvariant, storyStreamArb } from '@narratives/foundation/testing';
-import { describe, expect, test } from 'vitest';
+import { describe, test } from 'vitest';
 import { chatSystem } from '#src/system';
 import { erase } from '@narratives/foundation';
 import { routingOwnership } from '@narratives/system-chat/testing';
@@ -8,7 +8,7 @@ import { routingOwnership } from '@narratives/system-chat/testing';
 // acceptance target of message routing. Also proves @narratives/system-chat/testing
 // is importable from a sibling test (the new subpath).
 describe('routing ownership', () => {
-  test('holds over generated targetChat streams', async () => {
+  test('holds over generated targetChat streams', async ({ expect }) => {
     expect.hasAssertions();
     const result = await checkInvariant(
       { foreground: 'chat', systems: [erase(chatSystem)] },

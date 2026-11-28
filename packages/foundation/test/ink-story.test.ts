@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'vitest';
+import { describe, test } from 'vitest';
 import { InkRuntime } from '#src/ink/ink-runtime';
 import type { InkStory } from '#src/ink/ink-runtime';
 
@@ -52,7 +52,7 @@ function absentStory(): InkStory {
 }
 
 describe('the ink runtime over the story surface inkjs declares', () => {
-  test('reads an absent line, absent tags and an absent choice tag list as empty', () => {
+  test('reads an absent line, absent tags and an absent choice tag list as empty', ({ expect }) => {
     expect.hasAssertions();
     expect(new InkRuntime(absentStory()).continue()).toStrictEqual({
       choices: [{ index: FIRST, tags: [], text: 'Go on' }],
@@ -63,7 +63,7 @@ describe('the ink runtime over the story surface inkjs declares', () => {
     });
   });
 
-  test('the double refuses a call it was not scripted for', () => {
+  test('the double refuses a call it was not scripted for', ({ expect }) => {
     expect.hasAssertions();
     expect(() => {
       new InkRuntime(absentStory()).choose(FIRST);

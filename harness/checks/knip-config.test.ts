@@ -7,7 +7,7 @@
  * in a member's test support.
  */
 
-import { describe, expect, test } from 'vitest';
+import { describe, test } from 'vitest';
 import { listing, reader } from './scope.plants.ts';
 import { pocNames, populationOf } from '#lib/scope.ts';
 import { knipConfigOf } from '#lib/knip-config.ts';
@@ -71,7 +71,7 @@ async function orphanNamed(): Promise<readonly (readonly boolean[])[]> {
 }
 
 describe('the knip configuration of a planted population', () => {
-  test('gives each member a workspace of its own top-level directories, production where its role ships', async () => {
+  test('gives each member a workspace of its own top-level directories, production where its role ships', async ({ expect }) => {
     expect.hasAssertions();
     const held = await plantedPopulation(FILES, [
       ['packages/core/', 'foundation'],
@@ -99,13 +99,13 @@ describe('the knip configuration of a planted population', () => {
     ]);
   });
 
-  test('gives a member no glob the listing leaves empty', async () => {
+  test('gives a member no glob the listing leaves empty', async ({ expect }) => {
     expect.hasAssertions();
     const held = await plantedPopulation(['packages/core/src/index.ts'], [['packages/core/', 'system']]);
     expect(knipConfigOf(held).workspaces['packages/core']).toStrictEqual({ project: ['src/**/*.{ts,tsx}!'] });
   });
 
-  test("reports an orphan in a member's test support, in default mode", async () => {
+  test("reports an orphan in a member's test support, in default mode", async ({ expect }) => {
     expect.hasAssertions();
     await expect(orphanNamed()).resolves.toStrictEqual([
       [false, true],
@@ -115,7 +115,7 @@ describe('the knip configuration of a planted population', () => {
 });
 
 describe('a nested member', () => {
-  test("leaves a nested member's files out of the member that holds it", async () => {
+  test("leaves a nested member's files out of the member that holds it", async ({ expect }) => {
     expect.hasAssertions();
     const held = await plantedPopulation(
       ['packages/core/src/a.ts', 'packages/core/kit/lib/b.ts'],
@@ -129,7 +129,7 @@ describe('a nested member', () => {
 });
 
 describe("a member's Playwright configs", () => {
-  test('names each Playwright config of a member to knip, a nested one included', async () => {
+  test('names each Playwright config of a member to knip, a nested one included', async ({ expect }) => {
     expect.hasAssertions();
     const held = await plantedPopulation(
       ['packages/probe/e2e/playwright.deep.config.ts', 'packages/probe/playwright.top.config.ts'],
@@ -140,7 +140,7 @@ describe("a member's Playwright configs", () => {
     });
   });
 
-  test("leaves a nested member's Playwright config to the nested member, never the outer one", async () => {
+  test("leaves a nested member's Playwright config to the nested member, never the outer one", async ({ expect }) => {
     expect.hasAssertions();
     const held = await plantedPopulation(
       ['packages/a/src/x.ts', 'packages/a/b/playwright.e2e.config.ts', 'packages/a/b/src/y.ts'],
@@ -154,7 +154,9 @@ describe("a member's Playwright configs", () => {
 });
 
 describe("a population's POC, and knip's configuration of it", () => {
-  test('reads the POC by kind, ignores every POC directory as a workspace, and a POC package as a dependency where a held manifest declares it, by any spec', async () => {
+  test('reads the POC by kind, ignores every POC directory as a workspace, and a POC package as a dependency where a held manifest declares it, by any spec', async ({
+    expect,
+  }) => {
     expect.hasAssertions();
     const held = await populationOf({
       listing: ['package.json', 'experiences/aricanga/package.json', 'packages/framework/package.json', 'utils/a.js'],
@@ -176,7 +178,7 @@ describe("a population's POC, and knip's configuration of it", () => {
     expect(config.ignoreDependencies).not.toContain('aricanga');
   });
 
-  test('keeps a POC package pnpm lists with no name, which no name refuses, and reads no POC manifest', async () => {
+  test('keeps a POC package pnpm lists with no name, which no name refuses, and reads no POC manifest', async ({ expect }) => {
     expect.hasAssertions();
     const nameless = await populationOf({
       listing: ['package.json', 'packages/framework/package.json'],

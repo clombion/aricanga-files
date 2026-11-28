@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'vitest';
+import { describe, test } from 'vitest';
 import type { ChatCommand } from '#src/system';
 import type { ChatState } from '#src/state';
 import type { Input } from '@narratives/foundation';
@@ -28,7 +28,7 @@ function lineFor(text: string, chatId: string): Input<ChatState, ChatCommand> {
 }
 
 describe('a chat restored from a save', () => {
-  test('anchors a notified chat with history and no cursor after its last message', () => {
+  test('anchors a notified chat with history and no cursor after its last message', ({ expect }) => {
     expect.hasAssertions();
     const empty = initChatState();
     const seen = chatSystem.reduce(empty, lineFor('Earlier', 'pat'), { nextId: () => FIRST_ID }).state;
@@ -39,7 +39,7 @@ describe('a chat restored from a save', () => {
 });
 
 describe('the chat system', () => {
-  test('leaves its state as it is for a resume or a lifecycle input', () => {
+  test('leaves its state as it is for a resume or a lifecycle input', ({ expect }) => {
     expect.hasAssertions();
     const state = initChatState();
     const ctx = { nextId: (): string => NEXT_ID };
