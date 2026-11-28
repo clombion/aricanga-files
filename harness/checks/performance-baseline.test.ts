@@ -2,7 +2,7 @@
 
 import { BASELINE, RUN_ARGUMENTS, recordBaseline, timingOf } from '#lib/performance-baseline.ts';
 import { Project, finished } from '#lib/tools.ts';
-import { afterEach, describe, test } from 'vitest';
+import { describe, test } from 'vitest';
 import { object, parsed, stringOf } from '#lib/config.ts';
 import { EXIT_CLEAN } from '#lib/exit-status.ts';
 import type { Finished } from '#lib/process.ts';
@@ -32,9 +32,6 @@ async function configuredProjects(): Promise<readonly string[]> {
   return projects.map((project: unknown) => stringOf(object(project, 'a listed project')['name'], 'a listed project name')).toSorted();
 }
 
-/** The planted projects not yet removed. */
-const planted: Project[] = [];
-
 /** Two runs of the spec, as the files each leaves in the results directory. */
 const RUN_FILES: readonly (readonly (readonly [string, string])[])[] = [
   [
@@ -47,13 +44,17 @@ const RUN_FILES: readonly (readonly (readonly [string, string])[])[] = [
 ];
 
 /**
- * A planted results directory, removed after the test.
+ * A planted results directory, removed when the test that plants it finishes, so a test running
+ * beside it keeps its own.
  *
+ * @param {Function} whenFinished - The planting test's `onTestFinished`, given the removal.
  * @returns {Promise<Project>} The directory.
  */
-async function results(): Promise<Project> {
+async function results(whenFinished: (removal: () => Promise<void>) => void): Promise<Project> {
   const project = await Project.create({ linkModules: false });
-  planted.push(project);
+  whenFinished(async () => {
+    await project.remove();
+  });
   return project;
 }
 
@@ -79,17 +80,9 @@ function runner(
 }
 
 describe('a recorded baseline', () => {
-  afterEach(async () => {
-    await Promise.all(
-      planted.splice(FIRST_RUN).map(async (project) => {
-        await project.remove();
-      }),
-    );
-  });
-
-  test("keeps each project's slowest render and updates across runs, sorted by project", async ({ expect }) => {
+  test("keeps each project's slowest render and updates across runs, sorted by project", async ({ expect, onTestFinished }) => {
     expect.hasAssertions();
-    const directory = await results();
+    const directory = await results(onTestFinished);
     const written = new Map<string, string>();
     const said: string[] = [];
     const runs = new Scripted({ 'run 0': '0', 'run 1': '1' });

@@ -12,18 +12,22 @@ import { Scripted } from '#lib/doubles.ts';
 import { plantedPopulation } from '#lib/planted-population.ts';
 import { tmpdir } from 'node:os';
 
-/** The planted roots not yet removed. */
-const roots = new Set<string>();
-
 /**
- * Plant files under a fresh temporary root.
+ * Plant files under a fresh temporary root, removed when the planting test finishes, so a test
+ * running beside it keeps its own.
  *
  * @param {Readonly<Record<string, string>>} files - Each file's text, by path.
+ * @param {Function} whenFinished - The planting test's `onTestFinished`, given the removal.
  * @returns {Promise<{ readonly root: string; readonly listed: readonly string[] }>} The root and the planted paths, sorted.
  */
-async function plant(files: Readonly<Record<string, string>>): Promise<{ readonly root: string; readonly listed: readonly string[] }> {
+async function plant(
+  files: Readonly<Record<string, string>>,
+  whenFinished: (removal: () => Promise<void>) => void,
+): Promise<{ readonly root: string; readonly listed: readonly string[] }> {
   const root = await mkdtemp(join(tmpdir(), 'clones-'));
-  roots.add(root);
+  whenFinished(async () => {
+    await rm(root, { force: true, recursive: true });
+  });
   await Promise.all(
     Object.entries(files).map(async ([path, text]: readonly [string, string]) => {
       await mkdir(dirname(join(root, path)), { recursive: true });
@@ -42,17 +46,6 @@ async function plant(files: Readonly<Record<string, string>>): Promise<{ readonl
  */
 async function growTo(root: string, path: string, bytes: number): Promise<void> {
   await truncate(join(root, path), bytes);
-}
-
-/** Remove every planted root. */
-async function removePlants(): Promise<void> {
-  const planted = [...roots];
-  roots.clear();
-  await Promise.all(
-    planted.map(async (root) => {
-      await rm(root, { force: true, recursive: true });
-    }),
-  );
 }
 
 /**
@@ -153,4 +146,4 @@ async function runMain(
   return { errors, out, status };
 }
 
-export { cleanRunner, failingRunner, growTo, plant, plantedScanRoots, removePlants, runMain };
+export { cleanRunner, failingRunner, growTo, plant, plantedScanRoots, runMain };
