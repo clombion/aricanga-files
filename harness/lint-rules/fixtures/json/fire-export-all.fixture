@@ -1,0 +1,3 @@
+// path: json-fire-export-all.ts
+// tsc: TS2498
+export * from './tsconfig.json';

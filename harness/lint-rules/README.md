@@ -49,9 +49,11 @@ the repository's own tools never lint or compile a must-fire case: the check lin
 in its planted project, which maps each member's `.` export by name and Solid's packages to their
 types. A fixture must compile there with no error, unless a second line, `// tsc: TS2322`, names the
 codes of the errors its source has on purpose; the check compares each fixture's codes with that line
-both ways, so an error it does not declare and a declared one it does not have both fail. Two fixtures declare
-one: `harness/lint-rules/fixtures/labels/fire-htmlfor.fixture` (`htmlFor` is no attribute of Solid's `<label>`, TS2322) and
-`harness/lint-rules/fixtures/view-imports/fire-model.fixture` (a subpath the member does not export, TS2307).
+both ways, so an error it does not declare and a declared one it does not have both fail. Three fixtures declare
+one: `harness/lint-rules/fixtures/labels/fire-htmlfor.fixture` (`htmlFor` is no attribute of Solid's `<label>`, TS2322),
+`harness/lint-rules/fixtures/view-imports/fire-model.fixture` (a subpath the member does not export, TS2307) and
+`harness/lint-rules/fixtures/json/fire-export-all.fixture` (a JSON module is an `export =` module, which `export *` cannot
+re-export, TS2498).
 
 ## Options
 
