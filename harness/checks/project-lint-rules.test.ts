@@ -37,6 +37,7 @@ const DECLARED = new Accepted([
   'mechanics',
   'mirrors',
   'own-keys',
+  'specifier',
   'statics',
   'store-owner',
   'style-prop',

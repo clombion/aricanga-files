@@ -4,7 +4,9 @@
  * Under oxlint, one import that must fail and one that must pass per boundary, by the role matrix
  * (`MAY` in `harness/lib/import-boundaries.ts`): foundation imports no other
  * member; a system imports only foundation; a view only foundation; an experience foundation,
- * systems and views; no role its own role's other members; every module may import the test
+ * systems and views; no shipping role its own role's other members, by every literal specifier
+ * form (a template, an import type and a triple-slash path or types directive refused by the form
+ * rules the test counts, `BOUNDARY_RULES`); every module may import the test
  * infrastructure by name (the whole chain below refuses it to a production module); nothing in the
  * rebuild imports the POC, by name or any subpath, and no relative specifier holds a `..` segment,
  * wherever its climb lands. A

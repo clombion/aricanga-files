@@ -14,11 +14,18 @@ import { population } from '#lib/scope.ts';
 /** A rule setting's options, after its severity. */
 const OPTIONS = 1;
 
-/** The rules the boundaries are. */
+/**
+ * The rules the boundaries are: the role matrix's name lint and the restricted globals and properties,
+ * and the form rules that refuse a specifier the name lint cannot read (a template, an import type,
+ * a triple-slash path or types directive), so every literal specifier form is refused and counted.
+ */
 const BOUNDARY_RULES: Accepted<string> = new Accepted<string>([
+  'aricanga(specifier)',
   'eslint(no-restricted-globals)',
   'eslint(no-restricted-imports)',
   'eslint(no-restricted-properties)',
+  'typescript(consistent-type-imports)',
+  'typescript(triple-slash-reference)',
 ]);
 
 /**
@@ -35,8 +42,6 @@ async function boundaryDiagnostics(fixtures: readonly Fixture[]): Promise<readon
     const outcome = await project.tool(
       'oxlint',
       ...(await plantedLintRun()),
-      '-A',
-      'all',
       '--format',
       'json',
       ...fixtures.map((fixture) => fixture.path),

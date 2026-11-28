@@ -53,6 +53,36 @@ const FIXTURES: readonly Fixture[] = [
     reason: CLIMB,
     text: "export * from './model/../../../cards/src/system';\n",
   },
+  {
+    fails: true,
+    path: 'packages/foundation/src/static.ts',
+    text: "import { chatSystem } from '@narratives/system-chat';\nexport const chat = chatSystem;\n",
+  },
+  {
+    fails: true,
+    path: 'packages/foundation/src/equals.ts',
+    text: "import chat = require('@narratives/system-chat');\nexport const view = chat;\n",
+  },
+  {
+    fails: true,
+    path: 'packages/foundation/src/template.ts',
+    text: 'export const later = async (): Promise<unknown> => import(`@narratives/system-cards`);\n',
+  },
+  {
+    fails: true,
+    path: 'packages/foundation/src/import-type.ts',
+    text: "export type View = import('@narratives/system-chat').ChatViewModel;\n",
+  },
+  {
+    fails: true,
+    path: 'packages/foundation/src/reference-path.ts',
+    text: '/// <reference path="../../systems/chat/src/index.ts" />\nexport const marked = true;\n',
+  },
+  {
+    fails: true,
+    path: 'packages/foundation/src/reference-types.ts',
+    text: '/// <reference types="@narratives/system-chat" />\nexport const marked = true;\n',
+  },
   { fails: true, path: 'packages/foundation/src/type.ts', text: "export type { ChatViewModel } from '@narratives/system-chat';\n" },
   {
     fails: true,

@@ -31,6 +31,7 @@ exemptions"), through which every list a rule consults is declared.
 | `aricanga/mechanics` | No solid-js or @solidjs/* import in a mechanics module (the `files` globs: a foundation member, a system model). |
 | `aricanga/mirrors` | No effect whose only work is calling a setter; derive the value. |
 | `aricanga/own-keys` | A record keyed by story words is read through its own entries: Object.hasOwn, never in or a defaulted read. |
+| `aricanga/specifier` | A module is named by a string, never a template. |
 | `aricanga/statics` | No this inside a static method, static field or static block; name the class. |
 | `aricanga/store-owner` | createStore and reconcile only in the snapshot adapter (the `owners` globs). |
 | `aricanga/style-prop` | No style prop in JSX; set dynamic values with a class or a ref. |

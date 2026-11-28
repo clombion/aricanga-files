@@ -144,13 +144,35 @@ function memberName(node: Node): string | undefined {
   return nameOf(property);
 }
 
+/** A template's substitutions when it has none. */
+const NO_SUBSTITUTION = 0;
+
 /**
- * The module a module-level import, re-export or dynamic import names.
+ * A template's text when it has no substitution.
+ * @param {Node} template - A `TemplateLiteral`.
+ * @returns {string | undefined} Its cooked text, or undefined when it has a substitution.
+ */
+function templateText(template: Node): string | undefined {
+  const [quasi] = children(template, 'quasis');
+  const value = quasi?.['value'];
+  if (children(template, 'expressions').length !== NO_SUBSTITUTION || typeof value !== 'object' || value === null) {
+    return undefined;
+  }
+  const cooked: unknown = Reflect.get(value, 'cooked');
+  return typeof cooked === 'string' ? cooked : undefined;
+}
+
+/**
+ * The module a module-level import, re-export or dynamic import names: a string, or a template
+ * with no substitution, which names one module as a string does.
  * @param {Node} node - The import, export or import expression.
  * @returns {string | undefined} The module specifier, or undefined when it is not a literal.
  */
 function moduleSource(node: Node): string | undefined {
   const source = child(node, 'source');
+  if (source?.type === 'TemplateLiteral') {
+    return templateText(source);
+  }
   return source?.type === 'Literal' ? text(source, 'value') : undefined;
 }
 

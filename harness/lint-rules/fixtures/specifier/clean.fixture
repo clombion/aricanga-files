@@ -1,0 +1,2 @@
+// path: specifier-clean.ts
+export { later } from './specifier-fire';

@@ -1,0 +1,2 @@
+// path: specifier-fire.ts
+export const later = async (): Promise<unknown> => await import(`./specifier-clean`);

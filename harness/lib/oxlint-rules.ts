@@ -27,6 +27,7 @@ const RULES: NonNullable<OxlintConfig['rules']> & Readonly<Partial<Record<Member
   'aricanga/json': 'error',
   'aricanga/labels': 'error',
   'aricanga/own-keys': 'error',
+  'aricanga/specifier': 'error',
   'aricanga/statics': 'error',
   'aricanga/style-prop': 'error',
   'aricanga/total-reads': 'error',
@@ -206,6 +207,7 @@ const RULES: NonNullable<OxlintConfig['rules']> & Readonly<Partial<Record<Member
   ],
   'typescript/restrict-template-expressions': 'error',
   'typescript/switch-exhaustiveness-check': 'error',
+  'typescript/triple-slash-reference': ['error', { lib: 'always', path: 'never', types: 'never' }],
   'vitest/consistent-test-filename': [
     'error',
     {
