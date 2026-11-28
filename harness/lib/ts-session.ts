@@ -17,6 +17,7 @@ import { REPO_ROOT } from './paths.ts';
 import type { Snapshot } from 'typescript/unstable/sync';
 import { VirtualFiles } from './virtual-files.ts';
 import { isEmpty } from './lists.ts';
+import { reachesDisk } from './disk-paths.ts';
 
 /** The projects and files a snapshot opens or closes, by absolute path; `snapshot` adds the file changes itself. */
 type SnapshotRequest = Readonly<{
@@ -134,14 +135,15 @@ function overlaying<Result>(files: Readonly<ReadonlyMap<string, string>>, run: (
 }
 
 /**
- * A scan's files: those the disk does not hold, mounted until `unmount`; those it holds, served inside
- * each run of `serving` alone.
+ * A scan's files: those that cannot change what a project over the disk's files reads, mounted until
+ * `unmount`; the others (`reachesDisk`: a path the disk holds, a new one beside it, a nearer package),
+ * served inside each run of `serving` alone.
  *
  * @param {Readonly<ReadonlyMap<string, string>>} files - Each file's text, by absolute path.
  * @returns {ScanFiles} How to read them, and unmount them.
  */
 function mountScan(files: Readonly<ReadonlyMap<string, string>>): ScanFiles {
-  const overlays = new Map([...files].filter(([name]: readonly [string, string]) => VirtualFiles.isOnDisk(name)));
+  const overlays = new Map([...files].filter(([name]: readonly [string, string]) => reachesDisk(name)));
   const unmount = mount(new Map([...files].filter(([name]: readonly [string, string]) => !overlays.has(name))));
   return { serving: <Result>(run: () => Result): Result => overlaying(overlays, run), unmount };
 }

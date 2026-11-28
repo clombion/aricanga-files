@@ -5,7 +5,8 @@
  * through a symlinked directory (a workspace package under `node_modules`) reads as the real path it
  * names. Mounts may overlap: a path is served while some mount holds it, as the latest of them gives it.
  * A mount stands across turns, and every project opened while it stands reads it, any scan's, so a
- * mount of a path the disk holds is refused: such a path is overlaid by `overlaying` alone, for one
+ * mount of a path that reaches the disk (`disk-paths.ts`: a path the disk holds, a new one beside it, a
+ * nearer package) is refused: such a path is overlaid by `overlaying` alone, for one
  * synchronous run, in which no other scan can open a project.
  * Every path whose answer may have changed is kept until the session tells TypeScript's server, which
  * caches what it read. While the declaration rule is on, each file TypeScript does not load itself (a
@@ -14,8 +15,8 @@
  * such declaration exists, so the file is in a project's list like any module.
  */
 
+import { ancestors, onDisk, reachesDisk } from './disk-paths.ts';
 import { declarationOf, declaredFile } from './declaration-paths.ts';
-import { realpathSync, statSync } from 'node:fs';
 import { isEmpty } from './lists.ts';
 import nodePath from 'node:path';
 
@@ -35,33 +36,6 @@ const DECLARED = 'export {};\n';
 interface Layer {
   readonly mount: number;
   readonly text: string;
-}
-
-/**
- * What the disk holds at a path: a file, a directory with its real path, or nothing.
- *
- * @param {string} name - An absolute path.
- * @returns {Readonly<{ file: boolean; real: string }> | undefined} The entry, or none.
- */
-function onDisk(name: string): Readonly<{ file: boolean; real: string }> | undefined {
-  // oxlint-disable-next-line node/no-sync -- TypeScript's file system callbacks are synchronous: its server waits on each answer
-  const entry = statSync(name, { throwIfNoEntry: false });
-  // oxlint-disable-next-line node/no-sync -- TypeScript's file system callbacks are synchronous: its server waits on each answer
-  return entry === undefined ? undefined : { file: entry.isFile(), real: entry.isFile() ? name : realpathSync(name) };
-}
-
-/**
- * The directories above a path, nearest first, the root excluded.
- *
- * @param {string} name - An absolute path.
- * @returns {readonly string[]} Its ancestor directories.
- */
-function ancestors(name: string): readonly string[] {
-  const found: string[] = [];
-  for (let dir = nodePath.dirname(name); dir !== nodePath.dirname(dir); dir = nodePath.dirname(dir)) {
-    found.push(dir);
-  }
-  return found;
 }
 
 /** What the session's TypeScript API reads, and the paths it must be told have changed. */
@@ -87,17 +61,17 @@ class VirtualFiles {
 
   /**
    * Serve `files` until the returned function is called. A path another live mount serves too reads as
-   * the later mount's text while both stand, and as the other's once this one is unmounted. A path the
-   * disk holds is refused: overlay it with `overlaying`.
+   * the later mount's text while both stand, and as the other's once this one is unmounted. A path that
+   * reaches the disk (`reachesDisk`) is refused: overlay it with `overlaying`.
    *
-   * @param {Readonly<ReadonlyMap<string, string>>} files - Each file's text, by absolute path; none the disk holds.
+   * @param {Readonly<ReadonlyMap<string, string>>} files - Each file's text, by absolute path; none reaching the disk.
    * @returns {() => void} Unmounts the files; a second call does nothing.
    */
   public mount(files: Readonly<ReadonlyMap<string, string>>): () => void {
-    const real = [...files.keys()].find((name) => VirtualFiles.isOnDisk(name));
+    const real = [...files.keys()].find((name) => reachesDisk(name));
     if (real !== undefined) {
       throw new Error(
-        `the session mounts no path the disk holds (${real}): every project opened while the mount stands would read it; overlay it with \`overlaying\``,
+        `the session mounts no path that reaches the disk (${real}): every project opened while the mount stands would read it; overlay it with \`overlaying\``,
       );
     }
     return this.layer(files);
@@ -140,16 +114,6 @@ class VirtualFiles {
       this.declaring -= STEP;
       this.toggled();
     }
-  }
-
-  /**
-   * Whether the disk holds a path: a file or a directory, through symlinks.
-   *
-   * @param {string} name - An absolute path.
-   * @returns {boolean} Whether it does.
-   */
-  public static isOnDisk(name: string): boolean {
-    return onDisk(name) !== undefined;
   }
 
   /**

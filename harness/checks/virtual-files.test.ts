@@ -1,6 +1,7 @@
 /**
- * The session's virtual file system answers what is mounted now. A mount of a path the disk holds is
- * refused, since every project opened while it stands would read it; `overlaying` serves such a path for
+ * The session's virtual file system answers what is mounted now. A mount of a path that reaches the
+ * disk (one it holds, a new one beside it, a nearer package) is refused, since every project opened while
+ * it stands would read it; `overlaying` serves such a path for
  * one synchronous run alone and refuses a run that awaits. A directory is held while it holds a served
  * path, by its spelling or through a symlinked directory read afresh at each mount; every path whose
  * answer may have changed is marked, the declaration beside a mounted file included, and the rule
@@ -30,7 +31,7 @@ describe('an overlay of a path the disk holds', () => {
           [REAL, 'export const overlay = 1;\n'],
         ]),
       ),
-    ).toThrow(`the session mounts no path the disk holds (${REAL})`);
+    ).toThrow(`the session mounts no path that reaches the disk (${REAL})`);
     expect([files.served(planted), files.served(REAL)]).toStrictEqual([undefined, undefined]);
   });
 
@@ -52,6 +53,33 @@ describe('an overlay of a path the disk holds', () => {
       'an overlay is served for one synchronous run',
     );
     expect(files.served(REAL)).toBeUndefined();
+  });
+});
+
+describe('a new path that reaches the disk', () => {
+  test.each([
+    ['a nearer package beside a real module', 'experiences/sandbox/test/node_modules/solid-js/package.json'],
+    ['a new package in a real node_modules directory', 'experiences/sandbox/node_modules/planted-package/index.js'],
+    ['a package.json in a real directory', 'experiences/sandbox/test/package.json'],
+    ['a new module beside real ones', 'experiences/sandbox/test/planted.ts'],
+  ])('is refused as a mount: %s', (_name, file) => {
+    expect.hasAssertions();
+    const files = new VirtualFiles();
+    const absolute = path.join(REPO_ROOT, file);
+    expect(() => files.mount(new Map([[absolute, '{}']]))).toThrow(`the session mounts no path that reaches the disk (${absolute})`);
+  });
+
+  test('is none below a new directory, nor below a new package directory of its own, which is mounted', () => {
+    expect.hasAssertions();
+    const files = new VirtualFiles();
+    const unmount = files.mount(
+      new Map([
+        [path.join(REPO_ROOT, 'experiences', 'sandbox', 'test', 'planted-dir', 'x.ts'), 'export {};\n'],
+        [path.join(ABSENT, 'node_modules', 'pooled', 'index.ts'), 'export {};\n'],
+      ]),
+    );
+    expect(files.served(path.join(ABSENT, 'node_modules', 'pooled', 'index.ts'))).toBe('export {};\n');
+    unmount();
   });
 });
 
@@ -125,7 +153,7 @@ async function relink(link: string, target: string): Promise<void> {
 
 /**
  * What one mount at `target` answers through `link`: whether the directory sub below it holds a served path, and
- * the text of the module f.ts in it.
+ * the text of the module f.ts in that directory.
  *
  * @param {string} link - A symlinked directory naming `target`.
  * @param {string} target - Its target.
@@ -136,10 +164,10 @@ function mountedThrough(link: string, target: string, files: Readonly<VirtualFil
   const unmount = files.mount(
     new Map([
       [path.join(target, 'sub', 'x.ts'), 'export {};\n'],
-      [path.join(target, 'f.ts'), `export const at = '${path.basename(target)}';\n`],
+      [path.join(target, 'sub', 'f.ts'), `export const at = '${path.basename(target)}';\n`],
     ]),
   );
-  const answers = [files.holdsServed(path.join(link, 'sub')), files.served(path.join(link, 'f.ts'))];
+  const answers = [files.holdsServed(path.join(link, 'sub')), files.served(path.join(link, 'sub', 'f.ts'))];
   unmount();
   return answers;
 }
@@ -173,13 +201,9 @@ async function declaredOnDisk(folder: string): Promise<readonly unknown[]> {
   await writeFile(path.join(folder, 'sheet.css'), '.a {}\n');
   await writeFile(path.join(folder, 'sheet.d.css.ts'), 'export declare const tone: string;\n');
   const files = new VirtualFiles();
-  const unmount = files.mount(new Map([[path.join(folder, 'other.css'), '.b {}\n']]));
-  const answers = files.declaringWhile(() => [
-    files.served(path.join(folder, 'sheet.d.css.ts')),
-    files.served(path.join(folder, 'other.d.css.ts')),
-  ]);
-  unmount();
-  return answers;
+  return files.overlaying(new Map([[path.join(folder, 'other.css'), '.b {}\n']]), () =>
+    files.declaringWhile(() => [files.served(path.join(folder, 'sheet.d.css.ts')), files.served(path.join(folder, 'other.d.css.ts'))]),
+  );
 }
 
 describe('the disk beneath the served paths', () => {

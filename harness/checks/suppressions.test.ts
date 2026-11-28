@@ -38,7 +38,7 @@ const SUPPRESSIONS = new CountedExemptions({
     count: 1,
     reason: 'replaceSync is CSSOM, not Node I/O: the async replace would let a shadow root paint unstyled first',
   },
-  [site('harness/lib/virtual-files.ts', 'oxlint:node/no-sync')]: {
+  [site('harness/lib/disk-paths.ts', 'oxlint:node/no-sync')]: {
     count: 2,
     reason: "TypeScript's file system callbacks are synchronous: its server waits on each answer",
   },
