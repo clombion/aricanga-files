@@ -7,6 +7,14 @@ import type { PlantedMember } from '#lib/planted-population.ts';
 /** The whole chain's planted states: every form, every importer kind, every case of the relation. */
 const CHAIN: readonly ChainPlant[] = [
   ...FORM_PLANTS,
+  // A production module reaching two files of test support: each is told on its own line.
+  {
+    loads: [`${FOUNDATION}src/testing/__chain_two_a.ts`, `${FOUNDATION}src/testing/__chain_two_b.ts`],
+    path: `${FOUNDATION}src/__chain_two.ts`,
+    text: "export { v } from './testing/__chain_two_a.ts';\nexport { v as w } from './testing/__chain_two_b.ts';\n",
+  },
+  { path: `${FOUNDATION}src/testing/__chain_two_a.ts`, text: MODULE },
+  { path: `${FOUNDATION}src/testing/__chain_two_b.ts`, text: MODULE },
   // A production module reaching test support through another production module: both are named.
   {
     loads: [`${FOUNDATION}src/testing/__chain_via.ts`],
@@ -129,21 +137,21 @@ const CHAIN: readonly ChainPlant[] = [
   { path: `${FOUNDATION}test/__chain_clash.d.ts`, text: "declare module 'chain-clash' {\n  export const v: number;\n}\n" },
   // What no file answers, and what only a bundler reads (F1b2-C3).
   ...[
-    "import 'chain-styled/gone.css';\n",
-    "import 'chain-styled/conditional.css';\n",
-    "import 'chain-absent';\n",
-    "import 'chain-absent/x.css';\n",
-    "import '~testing/x.css';\n",
-    "import '~testing/setup';\n",
-    "import './__chain_nothing_here';\n",
-    "import '#src/__chain_nothing_here.css';\n",
+    'chain-styled/gone.css',
+    'chain-styled/conditional.css',
+    'chain-absent',
+    'chain-absent/x.css',
+    '~testing/x.css',
+    '~testing/setup',
+    './__chain_nothing_here',
+    '#src/__chain_nothing_here.css',
   ].map(
-    (text, index) =>
+    (specifier, index) =>
       ({
         path: `${SANDBOX}src/__chain_leftover_${index}.ts`,
         refused: true,
-        text: `${text}export const b = 1;\n`,
-        unanswered: true,
+        text: `import '${specifier}';\nexport const b = 1;\n`,
+        unanswered: specifier,
       }) as const,
   ),
   // A name nothing declares: no file answers it.
@@ -186,19 +194,26 @@ const FOUR_WAYS =
 const UNREAD_TOLD =
   'the whole chain cannot read it in a production module, so respell it as a form the chain reads, or move it into a non-production module';
 
+/** What the report says of a production module reaching test support, after its files. */
+const REACHES_TOLD =
+  'a non-production module, by an import or a name only its declarations answer: a production module reaches no test support or test infrastructure, so move what it uses into a production module, or use it from a non-production one';
+
 /** What the report says of a refusal no file answers, after its form. */
 const UNANSWERED_TOLD =
   'no file the production project lists answers it, so name what a file or an installed package declares, or remove it';
 
 /**
- * What the report tells of planted production modules, by importer: one reaching test support, and a
- * refusal of each cause, the chain unable to read the form (a bundler form, a query) or no file
- * answering it (a specifier only a pattern declaration answers, an absent package, a name nothing declares).
+ * What the report tells of planted production modules, by importer, a line per finding: one reaching
+ * test support, one reaching two files of it, and a refusal of each cause, the chain unable to read
+ * the form (a bundler form, a query) or no file answering it (a specifier only a pattern declaration
+ * answers, an absent package, a name nothing declares).
  */
-const TOLD: readonly (readonly [string, string])[] = [
+const TOLD: readonly (readonly [string, ...string[]])[] = [
+  [`${FOUNDATION}src/__chain_via.ts`, `${FOUNDATION}src/__chain_via.ts reaches ${FOUNDATION}src/testing/__chain_via.ts, ${REACHES_TOLD}`],
   [
-    `${FOUNDATION}src/__chain_via.ts`,
-    `${FOUNDATION}src/__chain_via.ts reaches ${FOUNDATION}src/testing/__chain_via.ts, a non-production module, by an import or a name only its declarations answer: a production module reaches no test support or test infrastructure, so move what it uses into a production module, or use it from a non-production one`,
+    `${FOUNDATION}src/__chain_two.ts`,
+    `${FOUNDATION}src/__chain_two.ts reaches ${FOUNDATION}src/testing/__chain_two_a.ts, ${REACHES_TOLD}`,
+    `${FOUNDATION}src/__chain_two.ts reaches ${FOUNDATION}src/testing/__chain_two_b.ts, ${REACHES_TOLD}`,
   ],
   ['oxlint.config.ts', `oxlint.config.ts is refused (import.meta.glob): ${UNREAD_TOLD}`],
   [

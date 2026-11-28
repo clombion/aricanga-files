@@ -234,18 +234,20 @@ describe('the whole chain', () => {
 describe('the whole chain told', () => {
   const chainScan = usePlanted(CHAIN_PLANTS, CHAIN_MEMBERS, CHAIN_MOUNTED);
 
-  test('names the four ways no file answers a specifier, for each way none does', ({ expect }) => {
+  test('names the four ways no file answers a specifier, and the specifier, for each way none does', ({ expect }) => {
     expect.hasAssertions();
     const unanswered = CHAIN.filter((plant) => plant.unanswered !== undefined);
-    expect(unanswered.map((plant) => formsOf(chainOf(chainScan), plant.path).map((form) => form.startsWith(FOUR_WAYS)))).toStrictEqual(
-      unanswered.map(() => [true]),
-    );
+    expect(
+      unanswered.map((plant) =>
+        formsOf(chainOf(chainScan), plant.path).map((form) => [form.startsWith(FOUR_WAYS), form.includes(`${plant.unanswered}`)]),
+      ),
+    ).toStrictEqual(unanswered.map(() => [[true, true]]));
   });
 
   test('tells its reader each finding with its files, its reason and its remedy', ({ expect }) => {
     expect.hasAssertions();
     const report = chainReport(chainOf(chainScan));
-    expect(TOLD.map(([from]) => report.filter((line) => line.startsWith(`${from} `)))).toStrictEqual(TOLD.map(([, line]) => [line]));
+    expect(TOLD.map(([from]) => report.filter((line) => line.startsWith(`${from} `)))).toStrictEqual(TOLD.map(([, ...lines]) => lines));
   });
 });
 
