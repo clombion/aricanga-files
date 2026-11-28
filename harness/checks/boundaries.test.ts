@@ -6,7 +6,8 @@
  * member; a system imports only foundation; a view only foundation; an experience foundation,
  * systems and views; no role its own role's other members; every module may import the test
  * infrastructure by name (the whole chain below refuses it to a production module); nothing in the
- * rebuild imports the POC, by name or any subpath, and no specifier climbs out of its directory. A
+ * rebuild imports the POC, by name or any subpath, and no relative specifier holds a `..` segment,
+ * wherever its climb lands. A
  * package's name is refused exactly, so a relative path, another package's segment or another case
  * that spells it passes. Each refusal names its reason. The reducer-purity rule (ADR-0007) refuses
  * `Date` and `Math.random` in a system's reducer surface. Each fixture is written at its real path in

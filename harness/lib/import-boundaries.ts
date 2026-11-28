@@ -42,8 +42,13 @@ const MAY: Vocabulary<Readonly<Record<Importer, readonly ShippingRole[]>>> = new
   view: ['foundation'],
 });
 
-/** Every relative climb, wherever it sits in a specifier: the parent alone, a climb before a path, after one, and inside one. */
-const CLIMBS: readonly string[] = ['..', '../**', '**/..', '**/../**'];
+/**
+ * Every relative climb, wherever it sits in a specifier, as two globs: one for a specifier ending in
+ * `..` (the parent alone, a climb after a path), one for a `..` before a further segment (a climb
+ * before a path, inside one). Under oxlint's matcher the bare `..` and `../**` refuse nothing these
+ * two do not, so they are not listed.
+ */
+const CLIMBS: readonly string[] = ['**/..', '**/../**'];
 
 /** One reason's refusal in `no-restricted-imports`: the package names it refuses exactly, the patterns it refuses (their subpaths, the climbs), and why. */
 interface Group {
@@ -108,7 +113,12 @@ function groupsOf(held: Population, importing: Readonly<Importing>): Group[] {
       `${importer} modules import ${allowed(importer)} (the role matrix: MAY in ${HARNESS_LIB}import-boundaries.ts)`,
     ),
     specifiers(pocNames(held), 'nothing in the rebuild imports the POC (ADR-0006, "Scope")'),
-    { group: [...CLIMBS], message: 'a module reaches another member only by its package name, never by a relative climb', names: [] },
+    {
+      group: [...CLIMBS],
+      message:
+        "no relative specifier climbs through a `..` segment: a module outside its importer's directory is named by its package or an import alias, where the importer may import it",
+      names: [],
+    },
   ];
   return groups.filter((entry) => !isEmpty(entry.group));
 }

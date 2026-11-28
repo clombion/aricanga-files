@@ -13,6 +13,10 @@ interface Fixture {
 /** The message of a role-matrix refusal, after the importer's allowed roles. */
 const MATRIX = '(the role matrix: MAY in harness/lib/import-boundaries.ts)';
 
+/** The message of a climb's refusal, wherever the climb lands. */
+const CLIMB =
+  "no relative specifier climbs through a `..` segment: a module outside its importer's directory is named by its package or an import alias, where the importer may import it";
+
 /** The lint's fixtures, each at its real path. */
 const FIXTURES: readonly Fixture[] = [
   {
@@ -24,9 +28,14 @@ const FIXTURES: readonly Fixture[] = [
   { fails: false, path: 'packages/foundation/src/near.ts', text: "export { Story } from 'inkjs';\n" },
   { fails: true, path: 'packages/systems/cards/src/plant.ts', text: "export { chatSystem } from '@narratives/system-chat';\n" },
   { fails: false, path: 'packages/systems/cards/src/near.ts', text: "export { erase } from '@narratives/foundation';\n" },
-  { fails: true, path: 'packages/systems/chat/src/plant.ts', text: "export * from '../../cards/src/system';\n" },
+  { fails: true, path: 'packages/systems/chat/src/plant.ts', reason: CLIMB, text: "export * from '../../cards/src/system';\n" },
   { fails: false, path: 'packages/systems/chat/src/near.ts', text: "export * from './state';\n" },
-  { fails: true, path: 'experiences/sandbox/src/plant.ts', text: "export * from '../../aricanga/src/aricanga-experience.js';\n" },
+  {
+    fails: true,
+    path: 'experiences/sandbox/src/plant.ts',
+    reason: CLIMB,
+    text: "export * from '../../aricanga/src/aricanga-experience.js';\n",
+  },
   { fails: false, path: 'experiences/sandbox/src/near.ts', text: "export { chatSystem } from '@narratives/system-chat';\n" },
   {
     fails: true,
@@ -41,7 +50,7 @@ const FIXTURES: readonly Fixture[] = [
   {
     fails: true,
     path: 'packages/systems/chat/src/climb.ts',
-    reason: 'a module reaches another member only by its package name, never by a relative climb',
+    reason: CLIMB,
     text: "export * from './model/../../../cards/src/system';\n",
   },
   { fails: true, path: 'packages/foundation/src/type.ts', text: "export type { ChatViewModel } from '@narratives/system-chat';\n" },
@@ -70,9 +79,14 @@ const FIXTURES: readonly Fixture[] = [
   { fails: true, path: 'harness/lib/poc-subpath.ts', text: "export * from '@narratives/test-utils/fakes';\n" },
   { fails: true, path: 'experiences/sandbox/src/poc-package.ts', text: "export * from 'aricanga';\n" },
   { fails: true, path: 'oxlint.config.ts', text: "export * from '@narratives/framework';\n" },
-  { fails: true, path: 'harness/lib/climb.ts', text: "export * from '../../packages/foundation/src/index';\n" },
-  { fails: true, path: 'packages/foundation/src/up.ts', text: "export * from '..';\n" },
-  { fails: true, path: 'packages/foundation/src/dot-up.ts', text: "export * from './..';\n" },
+  { fails: true, path: 'harness/lib/climb.ts', reason: CLIMB, text: "export * from '../../packages/foundation/src/index';\n" },
+  { fails: true, path: 'packages/foundation/src/up.ts', reason: CLIMB, text: "export * from '..';\n" },
+  { fails: true, path: 'packages/foundation/src/dot-up.ts', reason: CLIMB, text: "export * from './..';\n" },
+  { fails: true, path: 'packages/foundation/src/path-up.ts', reason: CLIMB, text: "export * from './model/..';\n" },
+  { fails: true, path: 'packages/foundation/src/up-inside.ts', reason: CLIMB, text: "export * from './model/../index';\n" },
+  { fails: true, path: 'harness/checks/climb-within.ts', reason: CLIMB, text: "export * from '../lib/near';\n" },
+  { fails: true, path: 'packages/foundation/src/climb-harness.ts', reason: CLIMB, text: "export * from '../../../harness/lib/paths';\n" },
+  { fails: true, path: 'packages/foundation/src/climb-unheld.ts', reason: CLIMB, text: "export * from '../../../docs/roadmap/x';\n" },
   { fails: true, path: 'packages/systems/cards/src/bare.ts', text: "export * from 'sandbox';\n" },
   { fails: false, path: 'packages/systems/cards/src/bare-relative.ts', text: "export * from './sandbox';\n" },
   { fails: false, path: 'packages/systems/cards/src/bare-segment.ts', text: "export * from '@narratives/foundation/sandbox';\n" },
