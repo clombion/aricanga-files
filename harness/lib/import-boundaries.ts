@@ -58,11 +58,8 @@ interface Group {
   readonly message: string;
 }
 
-/** Whose modules a set of groups refuses: the importer, and its own member (none for the harness). */
-interface Importing {
-  readonly importer: Importer;
-  readonly own: MemberDir | undefined;
-}
+/** Whose modules a set of groups refuses: a member's, by its role, with its own directory; or the harness's, which has none. */
+type Importing = Readonly<{ importer: Role; own: MemberDir }> | Readonly<{ importer: 'harness' }>;
 
 /**
  * The refusal of some packages' specifiers, for one reason: each name exactly, and every subpath of
@@ -108,7 +105,8 @@ function allowed(importer: Importer): string {
  * @returns {Group[]} The non-empty groups.
  */
 function groupsOf(held: Population, importing: Readonly<Importing>): Group[] {
-  const { importer, own } = importing;
+  const { importer } = importing;
+  const own = importing.importer === 'harness' ? undefined : importing.own;
   const forbidden = held.shipping.filter((other) => other.dir !== own && !MAY.of(importer).some((role) => role === other.role));
   const groups: readonly Group[] = [
     specifiers(
@@ -158,7 +156,7 @@ function refusing(files: readonly string[], groups: readonly Group[]): GateOverr
 function boundariesOf(held: Population): GateOverride[] {
   return [
     ...held.members.map((member) => refusing([`${member.dir}**`], groupsOf(held, { importer: member.role, own: member.dir }))),
-    refusing(HARNESS_CODE, groupsOf(held, { importer: 'harness', own: undefined })),
+    refusing(HARNESS_CODE, groupsOf(held, { importer: 'harness' })),
   ];
 }
 
